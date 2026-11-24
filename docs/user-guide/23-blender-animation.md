@@ -124,6 +124,27 @@ runs (ThIDE counts them before it starts) and are removed when the movie is writ
 texts are added last, changing one does not need the scene rendered again: see `--compose-only`
 under [From the command line](#from-the-command-line).
 
+## Labels that appear and go
+
+Labels need not be there for the whole movie. A render spec (the JSON a preset holds) can say when
+a group of them is shown and hidden, under `labels.events`:
+
+```json
+"events": [
+  { "target": "ComponentLabels", "showFrame": 1, "fadeSeconds": 3 },
+  { "target": "StationLabels", "showFrame": 60, "hideFrame": 240 }
+]
+```
+
+`target` is `StationLabels`, `ComponentLabels`, `LeadMarkers` (the markers with their captions) or
+`Overlays` (the title, the scale bar, the north arrow and the depth legend). The group is hidden
+until `showFrame` and from `hideFrame` on; `fadeSeconds` is how long it takes to appear.
+
+The player **fades** the labels in: they become solid little by little, at their full size, and a
+lead marker goes on pulsing while it does. Hiding is at once. (The script generator shows and hides
+on the same frames, but instead of a fade it grows the labels from nothing.) A preview shows the
+fade as a cut: the labels are simply there from `showFrame` on.
+
 ## Two scene builders
 
 ThIDE has two ways of building the scene in Blender, and **Scene builder (advanced)** chooses
@@ -134,8 +155,7 @@ between them:
 - **Player** — the newer builder. ThIDE writes the scene as data (a *scene plan*) and a fixed
   program in Blender plays it. It writes the texts in the second stage, renders previews, and can
   go on with a render that was stopped. Asked for by name, it refuses a scene it cannot show
-  completely and says what it cannot show: at present an HDRI image as lighting, and the timed
-  showing and hiding of labels.
+  completely and says what it cannot show: at present an HDRI image as lighting.
 - **Generator** — the earlier builder, kept as it was for comparison and for what the player does
   not do yet. It writes one Python script per scene. It draws the title, the scale bar, the north
   arrow and the depth legend as objects in the scene (where a wall can hide them) and does not
@@ -244,9 +264,9 @@ text in `scene-plan.json` was changed. Captions are in the bundle as subtitles a
   render. The full render stays one option away: `--render-plan` chooses `full`, `draft` or
   `both` (the draft first, then the full plan). `draft` and `both` need `--draft`.
 - The same model and settings always give the same zip under the same name, byte for byte.
-- A scene plan cannot yet say everything a render spec can: the timed showing and hiding of
-  labels and the HDRI light rig are left out. The command warns about each one it leaves out, and
-  the bundle's `README.txt` lists them.
+- A scene plan cannot yet say everything a render spec can: the HDRI light rig is left out. The
+  command warns about what it leaves out, and the bundle's `README.txt` lists it. The timed showing
+  and hiding of labels is in the plan (its `changes`), so a bundle plays it.
 
 ## Requirements & tips
 

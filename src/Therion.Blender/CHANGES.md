@@ -1,5 +1,101 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-24 — timed changes in the plan: things appear, go, fade, take a tint, are stretched
+
+### Breaking changes
+- **The plan's `changes` section is defined.** It was a reserved name whose value had to be an
+  array and travelled in `ScenePlan.Sections`. `ScenePlan.Changes` holds it now, as a list of
+  `PlanChange`; it no longer arrives in `Sections`, and `ScenePlanSerializer.Read` refuses a key
+  in it that the schema does not have. Migration: a plan that wrote the empty reserved array
+  (`"changes": []`) still reads and is still valid without the module; one that kept data of its
+  own under that name moves it to a section of another name.
+- **`ScenePlanBuilder.NotCarried` no longer names `labels.events`**: a plan carries a spec's
+  visibility events now. Only `lighting.hdriPath` is left. With the builder on `Auto`, a spec
+  with events is therefore built by the player and no longer by the script generator, and
+  `SceneBuilder.Player` no longer refuses it. Migration: code that looked for `labels.events` in
+  `NotCarried` (to warn, or to pick a builder) can drop the check; whoever wants the generator's
+  grow-in for such a spec asks for `SceneBuilder.Generator` by name. What differs in the picture
+  is under "Behaviour changes".
+- **`ScenePlan.PlayerFeatures` has one more entry**, `changes`, between `labels` and `texts`.
+  Migration: none for code that looks a module up by name; code that counted on positions in the
+  list counts again.
+
+### Additive API
+- **Changes** (`ScenePlan.Changes`, JSON `changes`, played by the new player module `changes`;
+  `ScenePlan.ChangesFeature`). A `PlanChange` names a `Target` — the one thing with an `Id` (a
+  model, a text or a marker of the plan) or every thing with a `Role` (stated in its section, or
+  `model`, `label`, `marker`) — and gives each property that changes its keys, in rising order of
+  time: at `T` seconds the property has the key's value. Between two keys the value moves as the
+  later key's `Easing` says (`PlanEasing`): `Linear` (the default, and not written), `Smooth`
+  (3x² − 2x³ of the way at the share x of the time, exactly) or `Constant` (it holds, and jumps at
+  the key's time). **Before its first key a property has that key's value and after its last it
+  keeps it, so one key is a value for the whole clip**: a tint or an opacity that does not change
+  is a change of one key.
+
+  | Property | Keys | What it is |
+  |---|---|---|
+  | `Visible` | `PlanVisibleKey(T, Value, Fade)` | shown or hidden from `T` on. With a `Fade` the change starts at `T` and takes that many seconds: the target appears little by little, or goes little by little and is hidden when it has gone. Each key says the opposite of the one before; before the first key the target is the other way round |
+  | `Opacity` | `PlanNumberKey(T, Value, Easing)` | how much of the target is there, 0 to 1, over what its material lets through by itself (a terrain that is 0.4 solid is at most that) |
+  | `Tint` | `PlanTintKey(T, Color, Strength, Easing)` | a colour laid over the target's own colours (a ramp, an image, vertex colours) by `Strength`, before light falls on it: the shading stays |
+  | `Scale` | `PlanVectorKey(T, Value, Easing)` | a model's stretch along its own axes, as `PlanModel.Scale`; `(1, 1, 2)` doubles the heights. Models only |
+  | `WorldColor` | `PlanColorKey(T, Value, Easing)` | the colour of `look.world`, in a change **without** a target; the world must be of the kind `color` |
+
+  In the JSON a target and each key take one line:
+  `{ "target": { "role": "component-label" }, "visible": [ { "t": 0, "value": true, "fade": 3 } ] }`.
+- **Nothing here touches the size of a text or a marker.** Showing and hiding is the object's own
+  switch; a fade, an opacity and a tint are numbers on the object (custom properties `thide_fade`,
+  `thide_opacity`, `thide_tint`, `thide_tint_strength`, keyed) that its material reads, so a
+  marker goes on pulsing and keeps the size its distance from the camera gives it while it fades,
+  and objects that share a material change one by one. A change that only cuts (no fade) touches
+  no material. Every curve is one Blender works out by itself: a scene saved as a `.blend` plays
+  the changes with no Python.
+- **What the validator refuses, with the path of the field**: a target that is not exactly an id
+  or a role, or that names nothing the plan has (checked when every feature of the plan is this
+  library's; a module from elsewhere may make things only the player can see); a change with no
+  keys; keys that are not in rising order, that share a frame or lie after the clip; values out of
+  range; a `Scale` of anything but a model; a `WorldColor` with a target, or under a world that is
+  a sky or not there; two changes of the same property of the same thing; a fade, an opacity or a
+  tint of a model that has no material. The player refuses the same when it meets them, and
+  always checks that a target names something in the scene. Changes need their module in
+  `features`, after `look`, `textured_materials` and `labels`; an empty list does not.
+- **A spec's visibility events are lowered** by `ScenePlanBuilder.FromSpec`: station labels to the
+  role `station-label`, component labels to `component-label`, lead markers to `lead-marker` and
+  `lead-text` (a caption goes with its marker, as in the generated scripts). A show event is a
+  key that shows from its frame, a hide event one that hides from its frame; of two on one frame
+  the later event decides. Events beyond the clip are left out, and a group that would appear
+  only after it is hidden throughout. **The events of the overlays are not changes**: the title,
+  the scale bar, the north arrow and the depth legend are written in the second stage, so their
+  events become the `start`, `end` and `fadeIn` of those texts (a text shown twice is written
+  twice, the second as `<id>#2`); a still has the overlays that are there on its frame.
+- The schema describes the section (`$defs/easing` is new); a producer that validates against it
+  catches a misspelt property as an unknown key.
+
+### Behaviour changes
+- The player calls itself **1.3**. The plan stays version 1: a player 1.2 refuses a plan that
+  lists `changes` by name ("the plan needs the module "changes", which this player does not
+  have"), and an earlier build of this library refuses the section's keys on reading, so neither
+  plays a plan with changes as one without.
+- **A label fade is a fade.** Where a generated script grows a group in from nothing
+  (`VisibilityEvent.FadeSeconds`), the player fades it in at its full size, evenly, over the same
+  frames. The frames on which a group is shown and hidden are the same in both builders; hiding
+  is at once in both. A second show event for a group that is already shown does nothing in the
+  player (the script shrinks the group and grows it again).
+- **Not carried: a change of a material's image** (a terrain that swaps or cross-fades its
+  picture). There is no such property; a plan that writes one is refused by its name
+  (`changes[n].image is not known to player 1.3`). Two terrains with a `visible` track each do
+  carry a cut from one to the other.
+- A closed shape that is half there shows its far side through its near side, as a material's
+  alpha does: half-way through a fade a cave covers three quarters of the pixels it covers when
+  solid, not half.
+- A height ramp is by height in the scene, so stretching a model moves it through its ramp's
+  colours; texts and markers stay where their section puts them.
+- **The draft look** (Blender's solid view) draws no material: a fade is a cut there, and an
+  opacity or a tint is not shown. The player says so in one warning. Showing, hiding, a model's
+  stretch and the world's colour are shown.
+- `api.fcurves` of the player asks an action for the curves of the datablock's own slot first.
+  From Blender 4.4 a world and its node tree share one action, and the action's own list is that
+  of its first slot only. Nothing changes for a datablock with an action of its own.
+
 ## 2026-11-20 (later) — a turn for each camera pose, the player's licence in its files and bundles
 
 ### Breaking change

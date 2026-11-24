@@ -133,6 +133,30 @@ randarea (ThIDE le socotește înainte să pornească) și sunt șterse când fi
 textele se adaugă la sfârșit, schimbarea unuia nu cere randarea din nou a scenei: vedeți
 `--compose-only` la [Din linia de comandă](#din-linia-de-comandă).
 
+## Etichete care apar și dispar
+
+Etichetele nu trebuie să fie prezente pe toată durata filmului. O specificație de randare (JSON-ul
+pe care îl păstrează o presetare) poate spune când este afișat și când este ascuns un grup de
+etichete, la `labels.events`:
+
+```json
+"events": [
+  { "target": "ComponentLabels", "showFrame": 1, "fadeSeconds": 3 },
+  { "target": "StationLabels", "showFrame": 60, "hideFrame": 240 }
+]
+```
+
+`target` este `StationLabels` (etichetele stațiilor), `ComponentLabels` (etichetele
+componentelor), `LeadMarkers` (marcajele pistelor, cu textele lor) sau `Overlays` (titlul, scara
+grafică, săgeata nordului și legenda adâncimii). Grupul este ascuns până la `showFrame` și
+începând cu `hideFrame`; `fadeSeconds` spune în cât timp apare.
+
+Playerul face etichetele să apară **treptat**: devin din ce în ce mai opace, la mărimea lor
+întreagă, iar un marcaj de pistă continuă să pulseze în acest timp. Ascunderea se face dintr-odată.
+(Generatorul de scripturi afișează și ascunde pe aceleași cadre, dar, în loc să le facă treptat
+opace, mărește etichetele pornind de la nimic.) O previzualizare arată apariția treptată ca pe o
+tăietură: etichetele sunt pur și simplu prezente începând cu `showFrame`.
+
 ## Doi constructori de scenă
 
 ThIDE are două moduri de a construi scena în Blender, iar **Constructor de scenă (avansat)** alege
@@ -144,8 +168,7 @@ ThIDE are două moduri de a construi scena în Blender, iar **Constructor de sce
 - **Player** — constructorul mai nou. ThIDE scrie scena ca date (un *plan de scenă*), iar un
   program fix din Blender o redă. El scrie textele în a doua etapă, randează previzualizările și
   poate continua o randare care a fost oprită. Cerut pe nume, refuză o scenă pe care nu o poate
-  arăta complet și spune ce nu poate arăta: deocamdată o imagine HDRI ca iluminare și afișarea și
-  ascunderea temporizată a etichetelor.
+  arăta complet și spune ce nu poate arăta: deocamdată o imagine HDRI ca iluminare.
 - **Generator** — constructorul mai vechi, păstrat așa cum era, pentru comparație și pentru ce nu
   face încă playerul. Scrie câte un script Python pentru fiecare scenă. Desenează titlul, scara
   grafică, săgeata nordului și legenda adâncimii ca obiecte în scenă (unde un perete le poate
@@ -262,9 +285,10 @@ din `scene-plan.json` a fost schimbat. Subtitrările sunt deja în pachet ca fi�
   previzualizarea, apoi planul complet). `draft` și `both` cer `--draft`.
 - Același model cu aceleași setări dă întotdeauna, sub același nume, aceeași arhivă, octet cu
   octet.
-- Un plan de scenă nu poate exprima încă tot ce poate o specificație de randare: afișarea și
-  ascunderea temporizată a etichetelor și iluminarea HDRI sunt omise. Comanda avertizează pentru
-  fiecare element omis, iar fișierul `README.txt` al pachetului le enumeră.
+- Un plan de scenă nu poate exprima încă tot ce poate o specificație de randare: iluminarea HDRI
+  este omisă. Comanda avertizează pentru ce omite, iar fișierul `README.txt` al pachetului
+  enumeră ce a fost omis. Afișarea și ascunderea temporizată a etichetelor se află în plan (la
+  `changes`), așa că un pachet le redă.
 
 ## Cerințe și sfaturi
 
