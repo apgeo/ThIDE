@@ -205,7 +205,9 @@ public sealed record OverlaySpec
         => !string.IsNullOrWhiteSpace(Title) || ScaleBar || NorthArrow || DepthLegend || HasFlatOnlyTexts;
 }
 
-/// <summary>A keyframed show/hide/fade applied to a whole label group (FR-05).</summary>
+/// <summary>A keyframed show/hide/fade applied to a whole label group (FR-05). A scene plan
+/// carries it as the group's changes (<see cref="Plan.ScenePlan.Changes"/>), or, for the overlays,
+/// as the times of the texts that stand for them.</summary>
 public sealed record VisibilityEvent
 {
     public required VisibilityTarget Target { get; init; }
@@ -216,7 +218,9 @@ public sealed record VisibilityEvent
     /// <summary>Frame the group disappears (null = never hidden).</summary>
     public int? HideFrame { get; init; }
 
-    /// <summary>Cross-fade duration in seconds (0 = a hard cut).</summary>
+    /// <summary>How long the group takes to appear, from <see cref="ShowFrame"/> on, in seconds
+    /// (0 = at once): the player fades it in, a generated script grows it from nothing. Hiding
+    /// is at once in both.</summary>
     public double FadeSeconds { get; init; }
 }
 
