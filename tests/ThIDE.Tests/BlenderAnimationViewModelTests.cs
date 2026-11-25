@@ -467,7 +467,8 @@ public class BlenderAnimationViewModelTests
 
             vm.SelectedPreset = vm.Presets.Single(p => p.Name == "With texts");
             Assert.Equal(("Survey: the invented team", "The end", 6.0), (vm.Credits, vm.EndCardText, vm.EndCardSeconds));
-            // What the panel has no field for stays in the scene: a title, an end card's subtitle.
+            // What the panel has no field for stays in the scene: an end card's subtitle. (And
+            // the title, which has one now, is the preset's.)
             vm.SelectedPreset = new PresetItem("by hand", null, false, new RenderPreset
             {
                 Name = "by hand",

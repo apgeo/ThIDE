@@ -3,6 +3,7 @@
              xmlns:vm="using:ThIDE.ViewModels.Docking"
              xmlns:vmm="using:ThIDE.ViewModels"
              xmlns:l="using:ThIDE.Resources"
+             xmlns:local="using:ThIDE.Views.Docking"
              x:Class="ThIDE.Views.Docking.BlenderAnimationToolView"
              AutomationProperties.AutomationId="Blender.View"
              x:DataType="vm:BlenderAnimationToolViewModel">
@@ -115,12 +116,84 @@
                 <ComboBox AutomationProperties.AutomationId="Blender.LeadMarkerSize" AutomationProperties.Name="{l:Loc Blender_UI_LeadMarkerSize}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LeadMarkerSizings}" SelectedItem="{Binding Blender.LeadMarkerSizing}" ToolTip.Tip="{l:Loc Blender_UI_LeadMarkerSize_Tip}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_LabelRoof}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <ComboBox AutomationProperties.AutomationId="Blender.LabelRoof" AutomationProperties.Name="{l:Loc Blender_UI_LabelRoof}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LabelRoofSources}" SelectedItem="{Binding Blender.LabelRoof}" ToolTip.Tip="{l:Loc Blender_UI_LabelRoof_Tip}" /></DockPanel>
+
+            <!-- texts over the picture -->
+            <TextBlock Text="{l:Loc Blender_UI_Texts}" FontWeight="Bold" />
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Title}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox AutomationProperties.AutomationId="Blender.Title" AutomationProperties.Name="{l:Loc Blender_UI_Title}" Text="{Binding Blender.Title}" ToolTip.Tip="{l:Loc Blender_UI_Title_Tip}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Credits}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.Credits" AutomationProperties.Name="{l:Loc Blender_UI_Credits}" Text="{Binding Blender.Credits}" ToolTip.Tip="{l:Loc Blender_UI_Credits_Tip}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_EndCard}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.EndCard" AutomationProperties.Name="{l:Loc Blender_UI_EndCard}" Text="{Binding Blender.EndCardText}" AcceptsReturn="True" TextWrapping="Wrap" ToolTip.Tip="{l:Loc Blender_UI_EndCard_Tip}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_EndCardSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
                 <TextBox AutomationProperties.AutomationId="Blender.EndCardSeconds" AutomationProperties.Name="{l:Loc Blender_UI_EndCardSeconds}" Text="{Binding Blender.EndCardSeconds}" /></DockPanel>
+
+            <!-- captions: a text, and the seconds it is shown from and to -->
+            <DockPanel>
+                <Button AutomationProperties.AutomationId="Blender.AddCaption" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_AddCaption}" Command="{Binding Blender.AddCaptionCommand}" ToolTip.Tip="{l:Loc Blender_UI_AddCaption_Tip}" />
+                <TextBlock Text="{l:Loc Blender_UI_Captions}" VerticalAlignment="Center" ToolTip.Tip="{l:Loc Blender_UI_Captions_Tip}" />
+            </DockPanel>
+            <Grid ColumnDefinitions="22,*,64,64,30" IsVisible="{Binding Blender.HasCaptions}">
+                <TextBlock Grid.Column="1" Text="{l:Loc Blender_UI_CaptionText}" FontSize="11" Opacity="0.7" />
+                <TextBlock Grid.Column="2" Text="{l:Loc Blender_UI_CaptionStart}" FontSize="11" Opacity="0.7" Margin="4,0,0,0" />
+                <TextBlock Grid.Column="3" Text="{l:Loc Blender_UI_CaptionEnd}" FontSize="11" Opacity="0.7" Margin="4,0,0,0" />
+            </Grid>
+            <ItemsControl AutomationProperties.AutomationId="Blender.Captions" AutomationProperties.Name="{l:Loc Blender_UI_Captions}" ItemsSource="{Binding Blender.Captions}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmm:CaptionRowViewModel">
+                        <Grid ColumnDefinitions="22,*,64,64,30" Margin="0,0,0,4">
+                            <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center" Opacity="0.7" />
+                            <TextBox Grid.Column="1" AutomationProperties.AutomationId="{Binding TextId}" AutomationProperties.Name="{l:Loc Blender_UI_CaptionText}"
+                                     Watermark="{l:Loc Blender_UI_CaptionText}" Text="{Binding Text}" />
+                            <TextBox Grid.Column="2" AutomationProperties.AutomationId="{Binding StartId}" AutomationProperties.Name="{l:Loc Blender_UI_CaptionStart}"
+                                     Text="{Binding Start}" Margin="4,0,0,0" ToolTip.Tip="{l:Loc Blender_UI_CaptionStart_Tip}" />
+                            <TextBox Grid.Column="3" AutomationProperties.AutomationId="{Binding EndId}" AutomationProperties.Name="{l:Loc Blender_UI_CaptionEnd}"
+                                     Text="{Binding End}" Margin="4,0,0,0" ToolTip.Tip="{l:Loc Blender_UI_CaptionEnd_Tip}" />
+                            <Button Grid.Column="4" AutomationProperties.AutomationId="{Binding RemoveId}" AutomationProperties.Name="{l:Loc Blender_UI_RemoveCaption}"
+                                    Content="&#x2715;" Padding="6,2" Margin="4,0,0,0" VerticalAlignment="Center"
+                                    ToolTip.Tip="{l:Loc Blender_UI_RemoveCaption}"
+                                    Command="{Binding $parent[ItemsControl].((vm:BlenderAnimationToolViewModel)DataContext).Blender.RemoveCaptionCommand}"
+                                    CommandParameter="{Binding}" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- the captions along the clip: each where its seconds fall -->
+            <StackPanel IsVisible="{Binding Blender.HasCaptions}" Spacing="2">
+                <Border AutomationProperties.AutomationId="Blender.CaptionStrip" AutomationProperties.Name="{l:Loc Blender_UI_CaptionStrip}"
+                        Height="20" BorderBrush="#80808080" BorderThickness="1" CornerRadius="2" ClipToBounds="True"
+                        ToolTip.Tip="{l:Loc Blender_UI_CaptionStrip_Tip}">
+                    <Grid>
+                        <!-- the clip itself, where a caption runs past its end -->
+                        <local:CaptionStripPanel>
+                            <Border Background="#22808080" local:CaptionStripPanel.Start="0" local:CaptionStripPanel.End="{Binding Blender.ClipEndOnStrip}" />
+                        </local:CaptionStripPanel>
+                        <ItemsControl ItemsSource="{Binding Blender.Captions}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><local:CaptionStripPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerTheme>
+                                <ControlTheme TargetType="ContentPresenter" x:DataType="vmm:CaptionRowViewModel">
+                                    <Setter Property="local:CaptionStripPanel.Start" Value="{Binding StripStart}" />
+                                    <Setter Property="local:CaptionStripPanel.End" Value="{Binding StripEnd}" />
+                                </ControlTheme>
+                            </ItemsControl.ItemContainerTheme>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vmm:CaptionRowViewModel">
+                                    <Border Background="#B04A90D9" BorderBrush="#FF2F6DB0" BorderThickness="1,0" Margin="0,2"
+                                            IsVisible="{Binding IsShown}" ToolTip.Tip="{Binding Text}">
+                                        <TextBlock Text="{Binding Number}" FontSize="10" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" FontSize="11" Opacity="0.7" Text="{Binding Blender.CaptionStripSeconds, StringFormat='{}{0:0.##} s'}" />
+                    <TextBlock FontSize="11" Opacity="0.7" Text="0 s" />
+                </DockPanel>
+            </StackPanel>
 
             <Separator />
 
