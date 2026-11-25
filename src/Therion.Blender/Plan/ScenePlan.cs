@@ -10,12 +10,13 @@
 //
 // The sections: frame and timeline (what every part shares), models, camera, look, output, the
 // optional lines (lines through given points, drawn as thin tubes), texturedMaterials (an image
-// draped over a model: a terrain), labels (texts and markers in the scene), changes (what appears,
-// goes, fades, takes a tint, is stretched or moved, and how the lights and the world change while
-// the clip runs), texts (what is written over the picture, in two dimensions) and blend (the
-// built scene saved as a Blender file), and features — the player modules the plan needs, in the
-// order they run. Any other section belongs to a module outside this library and travels in Sections;
-// "annotations" is a reserved name for a later version.
+// draped over a model: a terrain), labels (texts and markers in the scene), annotations (a label,
+// a callout with a line to what it is about, a marker or a photo at a point of the scene or of a
+// model), changes (what appears, goes, fades, takes a tint, is stretched or moved, and how the
+// lights and the world change while the clip runs), texts (what is written over the picture, in
+// two dimensions) and blend (the built scene saved as a Blender file), and features — the player
+// modules the plan needs, in the order they run. Any other section belongs to a module outside
+// this library and travels in Sections.
 //
 // A plan with texts is rendered in two stages. The first renders the scene as numbered PNG
 // frames; the second lays the texts over those frames in Blender's video editor and writes the
@@ -564,6 +565,134 @@ public sealed record PlanLabels
     public PlanMarkers? Markers { get; init; }
 }
 
+/// <summary>What an annotation is.</summary>
+public enum PlanAnnotationKind
+{
+    /// <summary>A text that turns to face the camera, centred on its anchor.</summary>
+    Label,
+    /// <summary>A text that stands away from its anchor, with a line from the anchor to it.</summary>
+    Callout,
+    /// <summary>A glowing ball on its anchor.</summary>
+    Marker,
+    /// <summary>A picture from an image file.</summary>
+    Photo,
+}
+
+/// <summary>Which way a photo faces.</summary>
+public enum PlanFacing
+{
+    /// <summary>It faces the camera: it stays parallel to the picture and upright in it,
+    /// wherever the camera is and however it is turned, so it is always seen as the rectangle
+    /// it is.</summary>
+    Camera,
+    /// <summary>It faces along <see cref="PlanAnnotation.Normal"/> and stays so: a card that
+    /// stands in the scene.</summary>
+    Fixed,
+}
+
+/// <summary>A border about a photo, in the picture's own plane.</summary>
+public sealed record PlanPhotoFrame
+{
+    /// <summary>How wide the border is, in metres.</summary>
+    public double Width { get; init; } = 0.05;
+
+    public ColorRgb Color { get; init; } = new(0.9, 0.9, 0.9);
+}
+
+/// <summary>
+/// One thing that points something out in the scene: a label, a callout, a marker or a photo
+/// (<see cref="Kind"/>), at <see cref="At"/>. Everything of it is given; the player only makes it.
+/// It is there for the whole clip unless a change shows and hides it: a change names it by its
+/// <see cref="Id"/> or by its <see cref="Role"/> (<see cref="PlanChange.Visible"/> with a fade,
+/// <see cref="PlanChange.Opacity"/>, <see cref="PlanChange.Tint"/>).
+/// </summary>
+public sealed record PlanAnnotation
+{
+    /// <summary>The annotation's name in the scene; unique among everything the plan names
+    /// there (models, lines, labels, lights, annotations).</summary>
+    public string Id { get; init; } = "";
+
+    /// <summary>What the annotation is, for whoever looks for it in the scene: lower-case words
+    /// joined by '-'. Null is the kind's own word: "label", "callout", "marker", "photo".</summary>
+    public string? Role { get; init; }
+
+    public PlanAnnotationKind Kind { get; init; } = PlanAnnotationKind.Label;
+
+    /// <summary>The anchor: the point the annotation is about. In the plan's frame, or, with
+    /// <see cref="Model"/>, in that model's own coordinates.</summary>
+    public CaveVector3 At { get; init; }
+
+    /// <summary>The id of a model or a line the anchor belongs to: <see cref="At"/> is then a
+    /// point of that model as its file has it (a station of it), before the model is stretched,
+    /// turned and moved, and the annotation goes where that point goes, also while a change
+    /// stretches or moves the model. The annotation itself is not stretched or turned. Null for
+    /// a point of the scene.</summary>
+    public string? Model { get; init; }
+
+    /// <summary>What a label or a callout says.</summary>
+    public string? Text { get; init; }
+
+    /// <summary>The height of the letters of a label or a callout, in metres.</summary>
+    public double? Size { get; init; }
+
+    /// <summary>The radius of a marker, in metres.</summary>
+    public double? Radius { get; init; }
+
+    /// <summary>Where the text of a callout, or the middle of a photo, stands from the anchor,
+    /// in metres along the frame's axes. A callout needs one; a photo without one is centred on
+    /// its anchor.</summary>
+    public CaveVector3? Offset { get; init; }
+
+    /// <summary>How thick the line from the anchor to a callout's text is, in metres; null is a
+    /// twelfth of the letters' height. A photo that stands away from its anchor has such a line
+    /// only when this is set.</summary>
+    public double? LineWidth { get; init; }
+
+    /// <summary>The colour a label, a callout or a marker glows in; null is the colour the
+    /// plan's labels have by default (cream for a text, orange-red for a marker). A photo has
+    /// its own colours.</summary>
+    public ColorRgb? Color { get; init; }
+
+    /// <summary>How strongly it glows: null is 1.5 for a text, 2 for a marker, and 1 for a
+    /// photo, which shows its image as a screen would, whatever the light.</summary>
+    public double? Strength { get; init; }
+
+    /// <summary>The image file of a photo, relative to the plan: a <c>.png</c> or a
+    /// <c>.jpg</c>.</summary>
+    public string? Image { get; init; }
+
+    /// <summary>The width of a photo, in metres.</summary>
+    public double? Width { get; init; }
+
+    /// <summary>The height of a photo, in metres; null is what the image's own shape gives for
+    /// <see cref="Width"/>.</summary>
+    public double? Height { get; init; }
+
+    /// <summary>Which way a photo faces; null is <see cref="PlanFacing.Camera"/>.</summary>
+    public PlanFacing? Facing { get; init; }
+
+    /// <summary>The way a photo with <see cref="PlanFacing.Fixed"/> faces: out of its front.</summary>
+    public CaveVector3? Normal { get; init; }
+
+    /// <summary>Where the top of a photo with <see cref="PlanFacing.Fixed"/> points, as near as
+    /// its <see cref="Normal"/> lets it; null is up (Z), or north (Y) for a photo that lies
+    /// flat.</summary>
+    public CaveVector3? Up { get; init; }
+
+    /// <summary>A border about a photo; null is none.</summary>
+    public PlanPhotoFrame? Frame { get; init; }
+
+    /// <summary>The role of an annotation that states none: the word of its kind.</summary>
+    public static string DefaultRole(PlanAnnotationKind kind) => kind switch
+    {
+        PlanAnnotationKind.Label => "label",
+        PlanAnnotationKind.Callout => "callout",
+        PlanAnnotationKind.Marker => "marker",
+        PlanAnnotationKind.Photo => "photo",
+        _ => "annotation",
+    };
+}
+
 /// <summary>What a thing written over the picture is.</summary>
 public enum PlanScreenItemKind
 {
@@ -711,9 +840,9 @@ public enum PlanColorMix
 }
 
 /// <summary>What a change is of: the one thing with <see cref="Id"/>, or every thing with
-/// <see cref="Role"/>. A model, a line, a text, a marker and a light each have an id, and a role
-/// (stated, or "model", "line", "label", "marker"; a light's is "light"). Exactly one of the two
-/// is set.</summary>
+/// <see cref="Role"/>. A model, a line, a text, a marker, an annotation and a light each have an
+/// id, and a role (stated, or "model", "line", "label", "marker", an annotation's kind; a light's
+/// is "light"). Exactly one of the two is set.</summary>
 public sealed record PlanChangeTarget
 {
     public string? Id { get; init; }
@@ -840,6 +969,10 @@ public sealed record ScenePlan
     /// (<see cref="TexturedMaterials"/>).</summary>
     public const string TexturedMaterialsFeature = "textured_materials";
 
+    /// <summary>The module that makes the labels, callouts, markers and photos
+    /// (<see cref="Annotations"/>).</summary>
+    public const string AnnotationsFeature = "annotations";
+
     /// <summary>The module that keys what changes while the clip runs
     /// (<see cref="Changes"/>).</summary>
     public const string ChangesFeature = "changes";
@@ -856,11 +989,11 @@ public sealed record ScenePlan
     public static readonly IReadOnlyList<string> BasicFeatures = ["models", "camera_track", "look", "output"];
 
     /// <summary>Every module of the player in this library, in the order a plan runs them.
-    /// The look gives models and lines their materials; labels turn to the camera; what changes
-    /// is made by the modules before; the scene is saved when all have built it and before the
-    /// output renders it.</summary>
+    /// The look gives models and lines their materials; labels and annotations turn to the
+    /// camera; what changes is made by the modules before; the scene is saved when all have
+    /// built it and before the output renders it.</summary>
     public static readonly IReadOnlyList<string> PlayerFeatures =
-        ["models", LinesFeature, "camera_track", "look", TexturedMaterialsFeature, LabelsFeature, ChangesFeature, TextsFeature, BlendFileFeature, "output"];
+        ["models", LinesFeature, "camera_track", "look", TexturedMaterialsFeature, LabelsFeature, AnnotationsFeature, ChangesFeature, TextsFeature, BlendFileFeature, "output"];
 
     public int Version { get; init; } = BlenderModule.ScenePlanSchemaVersion;
 
@@ -898,6 +1031,10 @@ public sealed record ScenePlan
     /// <see cref="LabelsFeature"/>.</summary>
     public PlanLabels? Labels { get; init; }
 
+    /// <summary>Labels, callouts, markers and photos that point things out in the scene;
+    /// played by the module <see cref="AnnotationsFeature"/>, after the camera and the models.</summary>
+    public IReadOnlyList<PlanAnnotation>? Annotations { get; init; }
+
     /// <summary>What changes while the clip runs; played by the module
     /// <see cref="ChangesFeature"/>, after the modules that make what it changes.</summary>
     public IReadOnlyList<PlanChange>? Changes { get; init; }
@@ -912,8 +1049,8 @@ public sealed record ScenePlan
     /// <see cref="BlendFileFeature"/>.</summary>
     public PlanBlendFile? Blend { get; init; }
 
-    /// <summary>Every other section, by name: what a module outside this library reads, and
-    /// the sections reserved for later versions. Kept as it was read.</summary>
+    /// <summary>Every other section, by name: what a module outside this library reads. Kept as
+    /// it was read.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Sections { get; init; }
 

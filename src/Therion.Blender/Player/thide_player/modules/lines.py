@@ -30,7 +30,6 @@ KEYS = [{
     "strips": [{"points": None, "colors": None}],
 }]
 
-SIDES = 6            # of a tube
 COLOURS = "Col"      # the colour attribute the points' colours are in
 
 
@@ -61,7 +60,7 @@ def build(ctx, lines):
                 raise api.PlanError("%s.colors: a strip has a colour for every point or none" % at)
             if given is not None:
                 given = [colour_of(value, "%s.colors[%d]" % (at, i)) for i, value in enumerate(given)]
-            pieces += add_tube(points, given, width / 2.0, vertices, faces, colours)
+            pieces += api.tube(points, given, width / 2.0, vertices, faces, colours)
 
         mesh = bpy.data.meshes.new(line["id"])
         mesh.from_pydata(vertices, [], faces)
@@ -94,50 +93,3 @@ def colour_of(value, where):
             isinstance(part, (int, float)) and not isinstance(part, bool) and 0.0 <= part <= 1.0 for part in value):
         raise api.PlanError("%s: a colour is three numbers from 0 to 1" % where)
     return (value[0], value[1], value[2], 1.0)
-
-
-def add_tube(points, colours, radius, vertices, faces, vertex_colours):
-    """Adds the tube of one strip to the mesh being made, and returns how many straight pieces it
-    has. A ring of vertices stands about every point, across the way the strip runs there (at a
-    bend: half-way between the way in and the way out), and is carried from point to point
-    without a twist. Points that lie on the point before them are left out."""
-    kept, kept_colours = [points[0]], [colours[0]] if colours else None
-    for index in range(1, len(points)):
-        if (points[index] - kept[-1]).length > 1e-9:
-            kept.append(points[index])
-            if colours:
-                kept_colours.append(colours[index])
-    if len(kept) < 2:
-        return 0
-    ways = [(b - a).normalized() for a, b in zip(kept, kept[1:])]
-
-    first = len(vertices)
-    along = ways[0]
-    # Any direction across the first piece: the frame's axis the piece runs least along.
-    across = along.cross(mathutils.Vector(min(((1, 0, 0), (0, 1, 0), (0, 0, 1)), key=lambda axis: abs(along.dot(axis)))))
-    across.normalize()
-    for index, point in enumerate(kept):
-        if 0 < index < len(kept) - 1:
-            way = ways[index - 1] + ways[index]
-            way = way.normalized() if way.length > 1e-6 else ways[index].copy()  # it doubles back
-        else:
-            way = ways[min(index, len(ways) - 1)]
-        across = along.rotation_difference(way) @ across
-        along = way
-        side = along.cross(across)
-        for step in range(SIDES):
-            angle = 2.0 * math.pi * step / SIDES
-            vertices.append(point + radius * (math.cos(angle) * across + math.sin(angle) * side))
-            if colours:
-                vertex_colours.append(kept_colours[index])
-
-    for index in range(len(kept) - 1):
-        ring, following = first + index * SIDES, first + (index + 1) * SIDES
-        for step in range(SIDES):
-            onward = (step + 1) % SIDES
-            faces.append((ring + step, ring + onward, following + onward, following + step))
-    # Closed at both ends, each end facing away from the tube.
-    last = first + (len(kept) - 1) * SIDES
-    faces.append(tuple(first + step for step in reversed(range(SIDES))))
-    faces.append(tuple(last + step for step in range(SIDES)))
-    return len(kept) - 1

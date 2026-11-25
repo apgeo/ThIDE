@@ -25,6 +25,8 @@ internal static class PlayerRunner
 
     public static string DraftColoursScript => Path.Combine(AppContext.BaseDirectory, "Player", "draft_colours.py");
 
+    public static string AnnotationPartsScript => Path.Combine(AppContext.BaseDirectory, "Player", "annotation_parts.py");
+
     /// <summary>A new, empty folder for one case.</summary>
     public static string NewCase(string name)
     {

@@ -82,6 +82,16 @@ public class ScenePlanChangesTests
             "        { \"t\": 0, \"value\": 0.5 },\n" +
             "        { \"t\": 1.2, \"value\": 0.05 }\n" +
             "      ]\n" +
+            "    },\n" +
+            "    {\n" +
+            "      \"target\": { \"id\": \"photo-hall\" },\n" +
+            "      \"visible\": [\n" +
+            "        { \"t\": 0.4, \"value\": true, \"fade\": 0.2 },\n" +
+            "        { \"t\": 1.4, \"value\": false, \"fade\": 0.2, \"easing\": \"smooth\" }\n" +
+            "      ],\n" +
+            "      \"opacity\": [\n" +
+            "        { \"t\": 0, \"value\": 0.9 }\n" +
+            "      ]\n" +
             "    }\n" +
             "  ],\n" +
             "  \"texts\": {\n", FullJson);
@@ -411,7 +421,7 @@ public class ScenePlanChangesTests
         Assert.True(order.IndexOf(ScenePlan.TexturedMaterialsFeature) < order.IndexOf(ScenePlan.ChangesFeature));
         Assert.True(order.IndexOf(ScenePlan.LabelsFeature) < order.IndexOf(ScenePlan.ChangesFeature));
         Assert.True(order.IndexOf(ScenePlan.ChangesFeature) < order.IndexOf(ScenePlan.BlendFileFeature));
-        Assert.Equal("1.4", PlayerFiles.Version);
+        Assert.Equal("1.5", PlayerFiles.Version);
         Assert.Equal(1, PlayerFiles.PlanVersion);
     }
 }

@@ -122,6 +122,8 @@ public class PlayerKnownKeysTests : IDisposable
         { "labels/markers/pulse", "labels.markers.pulse.tint" },
         { "labels/markers/byDistance", "labels.markers.byDistance.tint" },
         { "labels/markers/items/1", "labels.markers.items[1].tint" },
+        { "annotations/0", "annotations[0].tint" },
+        { "annotations/3/frame", "annotations[3].frame.tint" },
         { "changes/0/target", "changes[0].target.tint" },
         { "changes/0/visible/1", "changes[0].visible[1].tint" },
         { "changes/1/opacity/0", "changes[1].opacity[0].tint" },

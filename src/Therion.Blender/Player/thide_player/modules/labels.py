@@ -12,8 +12,6 @@ is the marker's child: it grows with the ball and stays where it stands relative
 
 import math
 
-import bmesh
-import bpy
 import mathutils
 
 from thide_player import api
@@ -45,7 +43,7 @@ def build(ctx, labels):
     followers, placed = [], {}
     if texts.get("items"):
         colour = rgba(texts["color"])
-        material = glowing("LabelText", colour, texts.get("strength", 1.5))
+        material = api.glowing("LabelText", colour, texts.get("strength", 1.5))
         for index, item in enumerate(texts["items"]):
             text = add_text(ctx.scene, camera, item, material, colour)
             if item.get("follows") is not None:
@@ -53,7 +51,7 @@ def build(ctx, labels):
 
     if markers.get("items"):
         colour = rgba(markers["color"])
-        material = glowing("LeadMarker", colour, markers.get("strength", 2.0))  # as the generated scripts name it
+        material = api.glowing("LeadMarker", colour, markers.get("strength", 2.0))  # as the generated scripts name it
         pulse = markers.get("pulse")
         sizing = markers.get("byDistance")
         # A pulse lasts a whole number of frames: the frame its period falls on.
@@ -77,59 +75,16 @@ def rgba(colour):
     return (colour[0], colour[1], colour[2], 1.0)
 
 
-def glowing(name, colour, strength):
-    """A material that emits its colour, so a label reads in a cave no light reaches."""
-    material = bpy.data.materials.new(name)
-    material.diffuse_color = colour  # in Blender's solid view
-    material.use_nodes = True
-    tree = material.node_tree
-    tree.nodes.clear()
-    emission = tree.nodes.new("ShaderNodeEmission")
-    emission.inputs["Color"].default_value = colour
-    emission.inputs["Strength"].default_value = strength
-    output = tree.nodes.new("ShaderNodeOutputMaterial")
-    tree.links.new(emission.outputs["Emission"], output.inputs["Surface"])
-    return material
-
-
 def add_text(scene, camera, item, material, colour):
-    curve = bpy.data.curves.new(item["id"], type="FONT")
-    curve.body = item["text"]
-    curve.size = item["size"]
-    curve.align_x = "CENTER"
-    curve.align_y = "CENTER"
-    curve.materials.append(material)
-    obj = bpy.data.objects.new(item["id"], curve)
-    place(scene, obj, item, colour, "label")
-    facing = obj.constraints.new(type="TRACK_TO")
-    facing.target = camera
-    facing.track_axis = "TRACK_Z"
-    facing.up_axis = "UP_Y"
+    obj = api.text_facing(camera, item["id"], item["text"], item["size"], material)
+    api.stand(scene, obj, item["at"], colour, item.get("role", "label"), item["id"])
     return obj
 
 
 def add_marker(scene, item, material, colour):
-    ball = bmesh.new()
-    bmesh.ops.create_icosphere(ball, subdivisions=2, radius=item["radius"])
-    mesh = bpy.data.meshes.new(item["id"])
-    ball.to_mesh(mesh)
-    ball.free()
-    mesh.materials.append(material)
-    obj = bpy.data.objects.new(item["id"], mesh)
-    place(scene, obj, item, colour, "marker")
+    obj = api.ball(item["id"], item["radius"], material)
+    api.stand(scene, obj, item["at"], colour, item.get("role", "marker"), item["id"])
     return obj
-
-
-def place(scene, obj, item, colour, role):
-    obj.location = item["at"]
-    # Where it stands is known at once, not only when the scene is next worked out: a marker
-    # sized by its distance from the camera measures from its own place the first time already.
-    obj.matrix_world = mathutils.Matrix.Translation(item["at"])
-    # What the solid view and the draft look show: they draw no glow. Which of the object's and
-    # the material's colour they take differs between Blender versions, so both are set.
-    obj.color = colour
-    scene.collection.objects.link(obj)
-    api.stamp(obj, item.get("role", role), item["id"])
 
 
 def follow(text, marker, marker_at):

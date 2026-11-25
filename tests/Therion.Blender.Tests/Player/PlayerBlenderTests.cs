@@ -1041,7 +1041,7 @@ public class PlayerBlenderTests
     {
         var (_, job) = PlayerRunner.WriteJob("refuse-missing-mesh", Small.Value, Orbit, plan => plan with
         {
-            Sections = new() { ["annotations"] = JsonSerializer.SerializeToElement(new[] { new { id = "a1", text = "Big Hall" } }) },
+            Sections = new() { ["surveyors"] = JsonSerializer.SerializeToElement(new[] { new { id = "a1", text = "Big Hall" } }) },
         });
         File.Delete(Path.Combine(job.Folder, "model.ply"));
 
@@ -1049,7 +1049,7 @@ public class PlayerBlenderTests
 
         Assert.StartsWith("models[0].path: file not found:", error);
         Assert.Equal(
-            ["the plan's \"annotations\" section is not played: no module in \"features\" reads it"],
+            ["the plan's \"surveyors\" section is not played: no module in \"features\" reads it"],
             PlayerRunner.Reported(log, "warning"));
     }
 

@@ -42,10 +42,10 @@ own switch; a fade, an opacity and a tint are numbers on the object (custom prop
 that its material reads, so objects that share a material change one by one. Every curve is one
 Blender works out by itself: a saved scene needs no Python to play them.
 
-Runs after the modules that make what it changes: "look", "textured_materials", "labels". The
-draft look (Blender's solid view) draws no material. There a model shows its tint in the colours
-the draft gives it, and shows how much of it is there by that share of its faces; of a text or a
-marker a fade is a cut, and an opacity or a tint is not shown.
+Runs after the modules that make what it changes: "look", "textured_materials", "labels",
+"annotations". The draft look (Blender's solid view) draws no material. There a model shows its
+tint in the colours the draft gives it, and shows how much of it is there by that share of its
+faces; of a text, a marker or a photo a fade is a cut, and an opacity or a tint is not shown.
 """
 
 import bpy
@@ -219,36 +219,8 @@ def materials_of(obj, where):
 
 # ---- values ----
 
-def number(value, where):
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value:
-        raise api.PlanError("%s: a number is needed" % where)
-    return float(value)
-
-
-def unit(value, where):
-    value = number(value, where)
-    if not 0.0 <= value <= 1.0:
-        raise api.PlanError("%s: a number from 0 to 1 is needed" % where)
-    return value
-
-
-def amount(value, where):
-    value = number(value, where)
-    if value < 0.0 or value == float("inf"):
-        raise api.PlanError("%s: a number that is not negative is needed" % where)
-    return value
-
-
-def colour(value, where):
-    if not isinstance(value, list) or len(value) != 3:
-        raise api.PlanError("%s: a colour is three numbers from 0 to 1" % where)
-    return [unit(channel, where) for channel in value]
-
-
-def vector(value, where):
-    if not isinstance(value, list) or len(value) != 3:
-        raise api.PlanError("%s: three numbers are needed" % where)
-    return [number(part, where) for part in value]
+# The checks of a key's value, which every module that reads numbers shares.
+number, unit, amount, colour, vector = api.number, api.unit, api.amount, api.colour, api.vector
 
 
 def stretch(key, where):
@@ -578,7 +550,7 @@ def show_in_draft(faded, coloured):
                     for part in range(parts) if parts else (None,):
                         follow(obj, path, part, name)
     if labels:
-        api.warn("the draft shows a fade of a text or a marker as a cut, and no change of its opacity or tint")
+        api.warn("the draft shows a fade of a text, a marker or a photo as a cut, and no change of its opacity or tint")
     for name in left:
         api.warn('the draft shows no change of opacity or tint of "%s": it has no colours the solid view shows' % name)
 

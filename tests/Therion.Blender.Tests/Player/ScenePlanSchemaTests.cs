@@ -33,13 +33,11 @@ public class ScenePlanSchemaTests
         => Assert.Equal(["$.camera.track: fewer than 1 items"], Problems(ScenePlanSerializer.Write(new ScenePlan())));
 
     [Fact]
-    public void SectionsOfOtherModules_AreAllowed_AndTheReservedOneIsAnArray()
+    public void SectionsOfOtherModules_AreAllowed()
     {
-        string withCustom = FullPlan.TrimEnd().TrimEnd('}') + ",\n  \"marker_cube\": { \"points\": [] },\n  \"annotations\": []\n}\n";
-        string reservedMisused = FullPlan.TrimEnd().TrimEnd('}') + ",\n  \"annotations\": {}\n}\n";
+        string withCustom = FullPlan.TrimEnd().TrimEnd('}') + ",\n  \"marker_cube\": { \"points\": [] },\n  \"surveyors\": []\n}\n";
 
         Assert.Empty(Problems(withCustom));
-        Assert.Equal(["$.annotations: expected array, found Object"], Problems(reservedMisused));
     }
 
     [Theory]

@@ -200,6 +200,7 @@ public static class ScenePlanBuilder
         if (plan.Lines is not null) features = WithFeature(features, ScenePlan.LinesFeature);
         if (plan.TexturedMaterials is not null) features = WithFeature(features, ScenePlan.TexturedMaterialsFeature);
         if (plan.Labels is not null) features = WithFeature(features, ScenePlan.LabelsFeature);
+        if (plan.Annotations is { Count: > 0 }) features = WithFeature(features, ScenePlan.AnnotationsFeature);
         if (plan.Changes is { Count: > 0 }) features = WithFeature(features, ScenePlan.ChangesFeature);
         if (plan.Texts is not null) features = WithFeature(features, ScenePlan.TextsFeature);
         if (plan.Blend is not null) features = WithFeature(features, ScenePlan.BlendFileFeature);

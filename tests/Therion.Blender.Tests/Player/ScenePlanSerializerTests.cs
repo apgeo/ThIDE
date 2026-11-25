@@ -238,14 +238,14 @@ public class ScenePlanSerializerTests
     public void OtherSections_AreKeptAsTheyWere()
     {
         string json = ScenePlanSerializer.Write(PlanFixtures.Full())
-            .TrimEnd().TrimEnd('}') + ",\n  \"annotations\": [{ \"id\": \"a1\", \"text\": \"Sala Mare\" }],\n  \"marker_cube\": { \"points\": [[1, 2, 3]] }\n}\n";
+            .TrimEnd().TrimEnd('}') + ",\n  \"surveyors\": [{ \"id\": \"a1\", \"text\": \"Sala Mare\" }],\n  \"marker_cube\": { \"points\": [[1, 2, 3]] }\n}\n";
 
         var plan = ScenePlanSerializer.Read(json);
 
-        Assert.Equal(["annotations", "marker_cube"], plan.Sections!.Keys.Order());
+        Assert.Equal(["marker_cube", "surveyors"], plan.Sections!.Keys.Order());
         string rewritten = ScenePlanSerializer.Write(plan);
         using var doc = JsonDocument.Parse(rewritten);
-        Assert.Equal("Sala Mare", doc.RootElement.GetProperty("annotations")[0].GetProperty("text").GetString());
+        Assert.Equal("Sala Mare", doc.RootElement.GetProperty("surveyors")[0].GetProperty("text").GetString());
         Assert.Equal(3, doc.RootElement.GetProperty("marker_cube").GetProperty("points")[0][2].GetInt32());
     }
 

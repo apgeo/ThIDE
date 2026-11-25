@@ -10,7 +10,7 @@
     "generator": { "type": "string", "description": "What wrote the plan." },
     "name": { "type": "string" },
     "features": {
-      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, lines, camera_track, look, textured_materials, labels, changes, texts, blend_file, output.",
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, lines, camera_track, look, textured_materials, labels, annotations, changes, texts, blend_file, output.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -327,14 +327,14 @@
       }
     },
     "changes": {
-      "description": "Played by the module 'changes', after the modules that make what it changes ('look', 'textured_materials', 'labels'): what changes while the clip runs. Each entry names a target and gives every property that changes its keys, in rising order of time: at 't' seconds the property has the key's value. Between two keys it moves as the later key's 'easing' says; before its first key a property has that key's value and after its last one it keeps it, so a single key is a value for the whole clip. A key may lie after the clip's last frame: the clip then ends on the way to it. Two keys of a property may fall on one frame (not of 'visible'): the first is where the value was going, the second, whose easing is 'constant', the value it has from that frame on. An entry without a target is of the scene itself (worldColor, worldStrength). Two entries do not change the same property of the same thing. Not carried: a change of a material's image.",
+      "description": "Played by the module 'changes', after the modules that make what it changes ('look', 'textured_materials', 'labels', 'annotations'): what changes while the clip runs. Each entry names a target and gives every property that changes its keys, in rising order of time: at 't' seconds the property has the key's value. Between two keys it moves as the later key's 'easing' says; before its first key a property has that key's value and after its last one it keeps it, so a single key is a value for the whole clip. A key may lie after the clip's last frame: the clip then ends on the way to it. Two keys of a property may fall on one frame (not of 'visible'): the first is where the value was going, the second, whose easing is 'constant', the value it has from that frame on. An entry without a target is of the scene itself (worldColor, worldStrength). Two entries do not change the same property of the same thing. Not carried: a change of a material's image.",
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
           "target": {
-            "description": "The one thing with this id (a model, a line, a text, a marker or a light of the plan), or every thing with this role (stated in its section, or 'model', 'line', 'label', 'marker'; every light has the role 'light'). One of the two.",
+            "description": "The one thing with this id (a model, a line, a text, a marker, an annotation or a light of the plan), or every thing with this role (stated in its section, or 'model', 'line', 'label', 'marker', an annotation's kind; every light has the role 'light'). One of the two.",
             "type": "object",
             "additionalProperties": false,
             "minProperties": 1,
@@ -493,7 +493,45 @@
         "path": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.[bB][lL][eE][nN][dD]$", "description": "A .blend file, relative to the plan." }
       }
     },
-    "annotations": { "type": "array", "description": "Reserved: labels, callouts, markers and photos anchored in the scene." },
+    "annotations": {
+      "description": "Played by the module 'annotations', after 'models', 'lines' and 'camera_track' and before 'changes': things that point something out in the scene. Each has a kind (a label, a callout, a marker or a photo) and an anchor, the point it is about. Everything of it is given: where it stands, how large it is, what it says or shows. An annotation is there for the whole clip unless an entry of 'changes' shows and hides it: such an entry names it by its id or its role, and its 'visible' keys, with a 'fade', are the times it appears and goes ('opacity' and 'tint' change it too). Ids are unique among everything the plan names in the scene: models, lines, labels, lights and annotations.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "at"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "The annotation's name in the scene; what an entry of 'changes' names it by." },
+          "role": { "$ref": "#/$defs/role", "description": "What the annotation is, for whoever looks for it in the scene, and for an entry of 'changes' that names a whole group. Default: its kind." },
+          "kind": { "enum": ["label", "callout", "marker", "photo"], "description": "label: a text that turns to face the camera, centred on the anchor (needs text, size). callout: a text that stands 'offset' away from the anchor, with a line from the anchor to it (needs text, size, offset). marker: a glowing ball on the anchor (needs radius). photo: a picture from an image file (needs image, width). A key that belongs to another kind is refused." },
+          "at": { "$ref": "#/$defs/vector", "description": "The anchor: the point the annotation is about, in the plan's frame; with 'model', in that model's own coordinates." },
+          "model": { "type": "string", "minLength": 1, "description": "The id of a model or a line the anchor belongs to. 'at' is then a point of that model as its file has it (a station of it), before the model's scale, rotation and translation, and the annotation goes where that point goes, also while 'changes' stretch or move the model. The annotation itself is not stretched or turned." },
+          "text": { "type": "string", "minLength": 1, "description": "What a label or a callout says." },
+          "size": { "type": "number", "exclusiveMinimum": 0, "description": "The height of the letters of a label or a callout, in metres." },
+          "radius": { "type": "number", "exclusiveMinimum": 0, "description": "Of a marker, in metres." },
+          "offset": { "$ref": "#/$defs/vector", "description": "Where the text of a callout, or the middle of a photo, stands from the anchor, in metres along the frame's axes. A callout needs one that is not zero; its text stands on the end of the line: above it when the offset points up, below it otherwise. A photo without one is centred on the anchor." },
+          "lineWidth": { "type": "number", "exclusiveMinimum": 0, "description": "How thick the line from the anchor is, in metres. Default for a callout: a twelfth of 'size'. A photo with an offset has a line only when this is given." },
+          "color": { "$ref": "#/$defs/color", "description": "The colour a label, a callout or a marker glows in. Default: cream for a text, orange-red for a marker." },
+          "strength": { "type": "number", "minimum": 0, "description": "How strongly it glows. Default 1.5 for a text, 2 for a marker, 1 for a photo. A photo shows its image as a screen would, whatever the light, and lights nothing itself." },
+          "image": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([pP][nN][gG]|[jJ][pP][eE]?[gG])$", "description": "The image of a photo: a .png or .jpg file, relative to the plan. It is drawn whole and solid; its transparency, if it has any, is not used." },
+          "width": { "type": "number", "exclusiveMinimum": 0, "description": "Of a photo, in metres." },
+          "height": { "type": "number", "exclusiveMinimum": 0, "description": "Of a photo, in metres. Default: what the image's own shape gives for 'width'." },
+          "facing": { "enum": ["camera", "fixed"], "description": "camera (the default): the photo faces the camera: it stays parallel to the picture and upright in it, wherever the camera is and however it is turned, so it is always seen as the rectangle it is. fixed: it faces along 'normal' and stays so, a card that stands in the scene." },
+          "normal": { "$ref": "#/$defs/vector", "description": "Of a fixed photo: the way it faces, out of its front. Any length but zero." },
+          "up": { "$ref": "#/$defs/vector", "description": "Of a fixed photo: where its top points, as near as 'normal' lets it. Default [0, 0, 1], or [0, 1, 0] for a photo that lies flat." },
+          "frame": {
+            "description": "A border about a photo, in the picture's own plane.",
+            "type": "object",
+            "required": ["width"],
+            "additionalProperties": false,
+            "properties": {
+              "width": { "type": "number", "exclusiveMinimum": 0, "description": "In metres." },
+              "color": { "$ref": "#/$defs/color", "description": "Default [0.9, 0.9, 0.9]." }
+            }
+          }
+        }
+      }
+    },
     "texts": {
       "description": "Played by the module 'texts': what is written over the picture, in two dimensions. A plan with texts is rendered in two stages: the scene as numbered PNG frames, then those frames with the texts over them, in Blender's video editor, as the output. Places and sizes are shares of the picture: x from its left edge, y from its bottom edge, each 0 to 1. Later items lie over earlier ones.",
       "type": "object",

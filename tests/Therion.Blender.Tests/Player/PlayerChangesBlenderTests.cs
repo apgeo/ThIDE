@@ -366,7 +366,7 @@ public partial class PlayerChangesBlenderTests
         string log = await File.ReadAllTextAsync(Path.Combine(job.Folder, "run.log"));
 
         Assert.Equal("BLENDER_WORKBENCH", report.Scene.Engine);
-        Assert.Single(PlayerRunner.Reported(log, "warning"), w => w == "the draft shows a fade of a text or a marker as a cut, and no change of its opacity or tint");
+        Assert.Single(PlayerRunner.Reported(log, "warning"), w => w == "the draft shows a fade of a text, a marker or a photo as a cut, and no change of its opacity or tint");
         var stations = report.WithRole(ProbeRoles.StationLabel);
         Assert.NotEmpty(stations);
         Assert.All(stations, o => Assert.Equal(
