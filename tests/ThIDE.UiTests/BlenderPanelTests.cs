@@ -107,6 +107,33 @@ public class BlenderPanelTests
     }
 
     [UiFact]
+    public async Task A_failed_render_keeps_its_log_in_the_temp_folder_the_test_gave_the_app()
+    {
+        if (!OnPath("therion")) return;
+        var dir = await BuiltDemoCaveAsync();
+        var environment = new Dictionary<string, string>
+        {
+            ["PATH"] = StubBlenderDirectory() + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"),
+            ["THIDE_STUB_BLENDER_FAIL"] = "1",
+        };
+
+        await using var app = await ThideApp.StartAsync(environment, dir, "demo.thconfig");
+        await OpenPanelAsync(app, Path.Combine(dir, "renders"));
+        await app.InvokeAsync("#Blender.Render");
+        await app.WaitAsync("role:Text;name:Render failed.", timeoutMs: 60_000);
+
+        // The app's own account of the job. Its folder is kept, for the log, and is under the temp
+        // folder this app was given: not under the machine's, where a ThIDE the developer has open
+        // keeps its jobs (and clears out old ones).
+        var jobRoot = Path.Combine(app.TempDirectory, "ThIDE", "blender-jobs");
+        var jobs = (await app.GetAsync("#Blender.Builder", "DataContext.Blender.Jobs"))
+            .GetProperty("properties").GetProperty("DataContext.Blender.Jobs").GetString()!;
+        var log = System.Text.RegularExpressions.Regex.Match(jobs, @"JobLogPath = (.+?), Duration = ").Groups[1].Value;
+        Assert.True(log.StartsWith(Path.Combine(jobRoot, "job-"), StringComparison.Ordinal), jobs);
+        Assert.True(File.Exists(log), log);
+    }
+
+    [UiFact]
     public async Task A_title_and_captions_typed_into_the_panel_are_written_over_the_movie_and_as_subtitles()
     {
         if (!OnPath("therion")) return;

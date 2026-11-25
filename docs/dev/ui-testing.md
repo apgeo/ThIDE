@@ -136,3 +136,9 @@ Tools: `ui_windows`, `ui_tree`, `ui_find`, `ui_get`, `ui_invoke`, `ui_menu`, `ui
   KeyDown event follows only when no binding took the key.
 - The C# suite isolates the profile through `XDG_*`, which .NET honours on Linux and macOS. Windows
   ignores it, so the suite skips every UI test there rather than run against your real ThIDE profile.
+- The C# suite also gives each app a temp folder of its own (`TMPDIR`; `/tmp/thui-<id>`, deleted with
+  the app), because ThIDE keeps render jobs, tool probes and viewer models under fixed names in
+  `<temp>/ThIDE`, where a ThIDE you have open keeps its own. The folder is short and free of symbolic
+  links on purpose: .NET puts Unix sockets in the temp folder, and with a temp path too long for a
+  socket path (about 100 bytes) the app never finishes starting. A `uidrive` session does not do this
+  yet: its app shares `<temp>/ThIDE` with yours.
