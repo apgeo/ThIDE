@@ -17,7 +17,7 @@ Only bpy, mathutils and the standard library are used: a Blender packaged by a L
 runs on the system Python and has no numpy.
 """
 
-PLAYER_VERSION = "1.5"
+PLAYER_VERSION = "1.6"
 
 # The newest scene-plan version this player reads.
 PLAN_VERSION = 1

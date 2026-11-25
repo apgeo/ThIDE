@@ -162,7 +162,7 @@ public static class RenderBundleWriter
         var conversion = CaveConversionPipeline.ConvertResolvedFull(source, new ConversionOptions
         {
             OutputDirectory = workDirectory,
-            Geometry = geometry ?? new GeometryOptions(),
+            Geometry = RevealPlanner.GeometryFor(spec, geometry, source.Path),
             Leads = leads ?? [],
             IncludeSurface = spec.Surface.Mode != SurfaceMode.Off,
         });

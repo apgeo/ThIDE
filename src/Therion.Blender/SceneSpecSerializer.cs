@@ -48,6 +48,13 @@ public static class SceneSpecSerializer
             foreach (var property in type.Properties)
                 if (property.Name == "annotations")
                     property.ShouldSerialize = (_, value) => value is IReadOnlyList<AnnotationSpec> { Count: > 0 };
+                else if (property.Name == "reveal")
+                    property.ShouldSerialize = (_, value) => value is not null; // later than the annotations
+        }
+        if (type.Type == typeof(RevealSpec))
+        {
+            foreach (var property in type.Properties)
+                if (property.Name is "from" or "datesPath" or "end") property.ShouldSerialize = (_, value) => value is not null;
         }
         if (type.Type == typeof(AnnotationSpec))
         {

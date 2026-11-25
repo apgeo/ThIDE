@@ -125,7 +125,10 @@ internal sealed record ProbeUvSample(double[] Position, double[] Uv, double[]? I
 /// times its opacity.</param>
 /// <param name="Tinted">The object's tint is mixed over its shader's colour by the tint's
 /// strength.</param>
-internal sealed record ProbeMaterial(string Name, bool SeeThrough, bool Tinted);
+/// <param name="Revealed">What it lets through is also cut by the object's threshold against
+/// the reveal values of the mesh.</param>
+/// <param name="Glowing">An emission in the object's glow colour is mixed in behind that threshold.</param>
+internal sealed record ProbeMaterial(string Name, bool SeeThrough, bool Tinted, bool Revealed = false, bool Glowing = false);
 
 /// <summary>What can change of a mesh, a text or a curve, as it is at one frame.</summary>
 internal sealed record ProbeThing
@@ -157,6 +160,20 @@ internal sealed record ProbeThing
     public double? Opacity { get; init; }
     public double[]? Tint { get; init; }
     public double? TintStrength { get; init; }
+
+    /// <summary>The threshold of its reveal, and how the edge looks.</summary>
+    public double? Reveal { get; init; }
+    public double? RevealEdge { get; init; }
+    public double[]? RevealGlow { get; init; }
+    public double? RevealGlowStrength { get; init; }
+    public double? RevealGlowWidth { get; init; }
+
+    /// <summary>For a revealed model: the area of the faces that are there at this frame, the
+    /// area it was built with, and the highest reveal value that any face which is left has at
+    /// its lowest corner (null when none is left).</summary>
+    public double? Area { get; init; }
+    public double? AreaBuilt { get; init; }
+    public double? LastShown { get; init; }
 }
 
 /// <summary>The world at one frame.</summary>

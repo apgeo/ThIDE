@@ -422,6 +422,72 @@ public sealed class BlenderRenderToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task A_reveal_is_added_to_the_presets_or_changes_the_kind_of_the_presets_own()
+    {
+        File.WriteAllBytes(_fixture.PathTo("out", "dates.3d"), [1, 2, 3]);
+        var (render, status) = await ToolsAsync();
+
+        var started = await render.StartRender(model: "out/cave.3d", reveal: "Date", revealDates: "out/dates.3d");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        var reveal = _blender.Renderer.LastSpec!.Reveal!;
+        Assert.Equal((RevealBy.Date, WorkspacePaths.Canonicalize(_fixture.PathTo("out", "dates.3d")), null), (reveal.By, reveal.DatesPath, reveal.From));
+
+        started = await render.StartRender(model: "out/cave.3d", reveal: "distance", revealFrom: " a0 ");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        Assert.Equal((RevealBy.Distance, "a0"), (_blender.Renderer.LastSpec!.Reveal!.By, _blender.Renderer.LastSpec.Reveal.From));
+
+        // The preset that reveals keeps its times when only the kind is asked for, and a preset
+        // that does not is rendered whole.
+        started = await render.StartRender(preset: "Map reveal", model: "out/cave.3d", reveal: "order");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        Assert.Equal((RevealBy.Order, 0.5, 9.5), (_blender.Renderer.LastSpec!.Reveal!.By, _blender.Renderer.LastSpec.Reveal.Start, _blender.Renderer.LastSpec.Reveal.End));
+        started = await render.StartRender(model: "out/cave.3d");
+        await FinishedAsync(status, started.Data!.JobId);
+        Assert.Null(_blender.Renderer.LastSpec!.Reveal);
+    }
+
+    [Fact]
+    public async Task A_file_of_dates_that_a_saved_preset_names_outside_the_workspace_is_not_read()
+    {
+        string elsewhere = Path.Combine(_scratch, "elsewhere", "dates.3d");
+        _blender.Saved.Add(BuiltInPresets.OrbitShowcase() with
+        {
+            Name = "History",
+            BuiltIn = false,
+            Spec = BuiltInPresets.OrbitShowcase().Spec with { Reveal = new RevealSpec { By = RevealBy.Date, DatesPath = elsewhere } },
+        });
+        var (render, status) = await ToolsAsync();
+
+        var started = await render.StartRender(preset: "History", model: "out/cave.3d");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+
+        Assert.Equal((RevealBy.Date, null), (_blender.Renderer.LastSpec!.Reveal!.By, _blender.Renderer.LastSpec.Reveal.DatesPath));
+    }
+
+    [Theory]
+    [InlineData("depth", null, null, ToolErrorCodes.InvalidArgument, "Unknown reveal 'depth'. Use one of: date, order, distance.")]
+    [InlineData(null, "a0", null, ToolErrorCodes.InvalidArgument, "revealFrom and revealDates go with a reveal")]
+    [InlineData("order", "a0", null, ToolErrorCodes.InvalidArgument, "revealFrom names the station a reveal by distance is measured from")]
+    [InlineData("distance", null, "out/cave.3d", ToolErrorCodes.InvalidArgument, "revealDates names the file with the survey dates of a reveal by date")]
+    [InlineData("date", null, "../outside.3d", ToolErrorCodes.PathOutsideWorkspace, "outside")]
+    [InlineData("date", null, "out/none.3d", ToolErrorCodes.FileNotFound, "No such file: out/none.3d")]
+    [InlineData("date", null, "notes.txt", ToolErrorCodes.InvalidArgument, "'notes.txt' is not a model file (.3d or .lox).")]
+    public async Task A_reveal_that_cannot_be_made_is_refused_before_a_job_starts(string? reveal, string? from, string? dates, string code, string said)
+    {
+        var (render, _) = await ToolsAsync();
+
+        var refused = await render.StartRender(model: "out/cave.3d", reveal: reveal, revealFrom: from, revealDates: dates);
+
+        Assert.Equal(code, refused.Error!.Code);
+        Assert.Contains(said, refused.Error.Message);
+        Assert.Empty(_blender.Requests);
+    }
+
+    [Fact]
     public async Task Annotations_come_from_a_file_of_the_workspace_with_their_photos_named_from_where_it_lies()
     {
         Directory.CreateDirectory(_fixture.PathTo("trip", "pictures"));

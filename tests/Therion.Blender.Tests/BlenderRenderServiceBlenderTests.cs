@@ -156,6 +156,51 @@ public class BlenderRenderServiceBlenderTests : IDisposable
     }
 
     [BlenderFact]
+    public async Task ASpecWithAReveal_IsRenderedByThePlayer_TheCaveGrowingFromFrameToFrame_AndTheGeneratorLeavesItOut()
+    {
+        // The cave, seen from one place on nothing, appears from its entrance over the first
+        // three quarters of a second; the frames are kept.
+        var spec = Orbit(new OverlaySpec()) with
+        {
+            Engine = new EngineSpec { Kind = RenderEngineKind.Cycles, Samples = 4, Denoise = false, Gpu = GpuMode.CpuOnly, TransparentBackground = true },
+            Camera = new CameraSpec { Template = CameraTemplate.Static },
+            Reveal = new RevealSpec { By = RevealBy.Distance, End = 0.75 },
+        };
+        string frames = Path.Combine(_root, "frames");
+        static double Cover(string png)
+        {
+            var (width, height, rgba) = Png.Decode(File.ReadAllBytes(png));
+            return Enumerable.Range(0, width * height).Average(p => rgba[p * 4 + 3] / 255.0);
+        }
+
+        var result = await Service().RenderAsync(spec, Cave(), new RenderOptions { FramesDirectory = frames, KeepFrames = true });
+
+        Assert.True(result.Succeeded, $"{result.FailureKind}: {result.ErrorMessage}\n  log: {result.JobLogPath}");
+        Assert.Equal(SceneBuilder.Player, result.Builder);
+        Assert.Empty(result.Warnings);
+        Assert.Empty(result.LeftOut);
+        var cover = Enumerable.Range(1, 8).Select(f => Cover(Path.Combine(frames, $"frame_{f:0000}.png"))).ToList();
+        string covers = string.Join(", ", cover.Select(c => c.ToString("F4")));
+        Assert.True(cover[0] == 0, $"something is there at the first frame: {covers}");
+        for (int f = 1; f <= 6; f++) Assert.True(cover[f] > cover[f - 1], $"the cave does not grow at frame {f + 1}: {covers}");
+        Assert.True(cover[7] > 0.01 && cover[7] >= cover[6] * 0.98, $"the cave is not all there at the end: {covers}");
+
+        // By date, a .lox has nothing to be revealed by: the cave is rendered whole, and the
+        // render says why.
+        var undated = await Service().RenderAsync(
+            spec with { Reveal = new RevealSpec { By = RevealBy.Date } }, Cave(), new RenderOptions { FramesDirectory = frames, KeepFrames = true });
+        Assert.True(undated.Succeeded, $"{undated.FailureKind}: {undated.ErrorMessage}\n  log: {undated.JobLogPath}");
+        Assert.Contains(undated.Warnings, w => w.StartsWith("The model has no survey dates to reveal it by", StringComparison.Ordinal));
+        Assert.InRange(Cover(Path.Combine(frames, "frame_0001.png")), cover[7] * 0.9, cover[7] * 1.1);
+
+        // The script generator draws the whole cave throughout, and the result says what it left out.
+        var generated = await Service().RenderAsync(spec, Cave(), new RenderOptions { Builder = SceneBuilder.Generator });
+        Assert.True(generated.Succeeded, $"{generated.FailureKind}: {generated.ErrorMessage}\n  log: {generated.JobLogPath}");
+        Assert.Equal(SceneBuilder.Generator, generated.Builder);
+        Assert.Equal(["reveal"], generated.LeftOut);
+    }
+
+    [BlenderFact]
     public async Task ADraft_IsTheQuickLook_AndTheScriptGeneratorStillRendersWhenAskedFor()
     {
         var spec = Orbit(new OverlaySpec { Title = "Invented Cave" });

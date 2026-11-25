@@ -90,6 +90,7 @@ public static class SceneSpecValidator
 
         // ---- annotations ----
         ValidateAnnotations(spec.Annotations, Bad);
+        if (spec.Reveal is { } reveal) ValidateReveal(reveal, spec.Animation.DurationSeconds, Bad);
 
         // ---- animation (only consumed by animated outputs, but keep it always sane
         //      so switching output kind never resurrects an invalid value) ----
@@ -189,6 +190,38 @@ public static class SceneSpecValidator
             if (!(e.FadeSeconds >= 0) || double.IsNaN(e.FadeSeconds))
                 bad($"labels.events[{i}].fadeSeconds", "Fade seconds must be non-negative.");
         }
+    }
+
+    public const double MaxRevealEdge = 0.5;
+
+    private static void ValidateReveal(RevealSpec reveal, double duration, Action<string, string> bad)
+    {
+        if (!Enum.IsDefined(reveal.By))
+            bad("reveal.by", "A cave is revealed by date, by order or by distance.");
+        if (reveal.From is not null)
+        {
+            if (string.IsNullOrWhiteSpace(reveal.From))
+                bad("reveal.from", "The station to measure from needs a name.");
+            else if (reveal.By != RevealBy.Distance)
+                bad("reveal.from", "A station to measure from goes with a reveal by distance.");
+        }
+        if (reveal.DatesPath is not null)
+        {
+            if (string.IsNullOrWhiteSpace(reveal.DatesPath))
+                bad("reveal.datesPath", "The file with the survey dates needs a path.");
+            else if (reveal.By != RevealBy.Date)
+                bad("reveal.datesPath", "A file with survey dates goes with a reveal by date.");
+        }
+        if (!(reveal.Start >= 0) || !double.IsFinite(reveal.Start))
+            bad("reveal.start", "The reveal starts at a time in seconds, not negative.");
+        else if (reveal.Start >= duration)
+            bad("reveal.start", "The reveal starts before the clip ends.");
+        if (reveal.End is { } end && !(end > reveal.Start && double.IsFinite(end)))
+            bad("reveal.end", "The reveal ends after it starts.");
+        if (!(reveal.Edge >= 0 && reveal.Edge <= MaxRevealEdge))
+            bad("reveal.edge", $"The edge is a share of the reveal, within 0–{MaxRevealEdge}.");
+        if (!IsUnitColor(reveal.GlowColor))
+            bad("reveal.glowColor", "Colour channels must be within 0–1.");
     }
 
     private static void ValidateAnnotations(IReadOnlyList<AnnotationSpec> annotations, Action<string, string> bad)

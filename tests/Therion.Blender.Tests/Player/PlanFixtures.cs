@@ -252,4 +252,51 @@ internal static class PlanFixtures
         Output = new PlanOutput { Kind = PlanOutputKind.Video, Container = PlanContainer.Webm, Directory = "out", BaseName = "clip" },
         Blend = new PlanBlendFile { Path = "project/scene.blend" },
     };
+
+    /// <summary><see cref="Full"/> with a reveal: its survey lines have a year at every point,
+    /// appear in the order of those years with a soft, glowing edge, and a counter shows the
+    /// year the reveal has got to. Every field the format has for a reveal is set.</summary>
+    public static ScenePlan Revealed()
+    {
+        var full = Full();
+        var line = full.Lines![0];
+        return full with
+        {
+            Lines =
+            [
+                line with
+                {
+                    Strips =
+                    [
+                        line.Strips[0] with { Reveal = [1987.5, 1987.5, 1994.25] },
+                        line.Strips[1] with { Reveal = [2003, 2003.8] },
+                    ],
+                },
+            ],
+            Changes =
+            [
+                .. full.Changes!.Select(c => c.Target?.Id != line.Id ? c : c with
+                {
+                    Reveal = [new PlanNumberKey(0.4, 1987.5), new PlanNumberKey(1.8, 2005.3, PlanEasing.Smooth)],
+                    RevealFront = new PlanRevealFront
+                    {
+                        Attribute = "reveal", Edge = 0.5, Glow = new PlanRevealGlow { Color = new ColorRgb(1, 0.6, 0.1), Strength = 2.5, Width = 1.2 },
+                    },
+                }),
+            ],
+            Texts = full.Texts! with
+            {
+                Items =
+                [
+                    .. full.Texts.Items,
+                    new PlanScreenItem
+                    {
+                        Id = "year", Role = "reveal-counter", Kind = PlanScreenItemKind.Text, At = new PlanPoint(0.05, 0.17), Text = "anul {}",
+                        Size = 0.08, AlignX = PlanAlignX.Left, AlignY = PlanAlignY.Bottom, Start = 0.4, FadeIn = 0.2,
+                        Counter = new PlanCounter { Target = new PlanChangeTarget { Id = line.Id }, Decimals = 1, Min = 1987, Max = 2003 },
+                    },
+                ],
+            },
+        };
+    }
 }

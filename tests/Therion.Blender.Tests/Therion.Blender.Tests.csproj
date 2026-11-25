@@ -35,6 +35,7 @@
     <None Update="Player\two_part_glb.py" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Player\draft_colours.py" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Player\annotation_parts.py" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Player\reveal_strips.py" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

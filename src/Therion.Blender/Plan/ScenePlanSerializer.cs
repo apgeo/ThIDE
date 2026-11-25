@@ -73,6 +73,12 @@ public static class ScenePlanSerializer
             foreach (var property in type.Properties)
                 if (property.Name is "hold" or "fromBlack" or "toBlack") property.ShouldSerialize = (_, value) => value is not 0.0;
         }
+        else if (type.Type == typeof(PlanRevealFront))
+        {
+            // The edge of a reveal is a cut unless it says otherwise.
+            foreach (var property in type.Properties)
+                if (property.Name == "edge") property.ShouldSerialize = (_, value) => value is not 0.0;
+        }
         else if (type.Type == typeof(PlanTexturedMaterial))
         {
             // A model casts shadows unless its material says otherwise.
@@ -314,6 +320,7 @@ public static class ScenePlanSerializer
     {
         public required List<CaveVector3> Points { get; init; }
         public List<ColorRgb>? Colors { get; init; }
+        public List<double>? Reveal { get; init; }
     }
 
     private sealed class LineStripConverter : JsonConverter<PlanLineStrip>
@@ -321,7 +328,7 @@ public static class ScenePlanSerializer
         public override PlanLineStrip Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
         {
             var strip = JsonSerializer.Deserialize<StripJson>(ref reader, options) ?? throw new JsonException("Expected a strip of a line.");
-            return new PlanLineStrip(strip.Points, strip.Colors);
+            return new PlanLineStrip(strip.Points, strip.Colors) { Reveal = strip.Reveal };
         }
 
         public override void Write(Utf8JsonWriter writer, PlanLineStrip value, JsonSerializerOptions options)
@@ -329,6 +336,7 @@ public static class ScenePlanSerializer
             var line = new StringBuilder(StripIndent);
             line.Append("{ \"points\": [").AppendJoin(", ", (value.Points ?? []).Select(Text)).Append(']');
             if (value.Colors is { } colors) line.Append(", \"colors\": [").AppendJoin(", ", colors.Select(Text)).Append(']');
+            if (value.Reveal is { } reveal) line.Append(", \"reveal\": [").AppendJoin(", ", reveal.Select(Num)).Append(']');
             writer.WriteRawValue(line.Append(" }").ToString());
         }
     }
@@ -433,6 +441,15 @@ public static class ScenePlanSerializer
         public double? FadeOut { get; init; }
         public List<TurnJson>? Turn { get; init; }
         public string? Slot { get; init; }
+        public CounterJson? Counter { get; init; }
+    }
+
+    private sealed record CounterJson
+    {
+        public required PlanChangeTarget Target { get; init; }
+        public int Decimals { get; init; }
+        public double? Min { get; init; }
+        public double? Max { get; init; }
     }
 
     private sealed class ScreenItemConverter : JsonConverter<PlanScreenItem>
@@ -448,6 +465,9 @@ public static class ScenePlanSerializer
                 Opacity = item.Opacity, Backing = item.Backing, Wrap = item.Wrap, Start = item.Start, End = item.End,
                 FadeIn = item.FadeIn, FadeOut = item.FadeOut, Slot = item.Slot,
                 Turn = item.Turn?.Select(t => new PlanTurn(t.T, t.Degrees)).ToList(),
+                Counter = item.Counter is { } counter
+                    ? new PlanCounter { Target = counter.Target, Decimals = counter.Decimals, Min = counter.Min, Max = counter.Max }
+                    : null,
             };
         }
 
@@ -480,6 +500,14 @@ public static class ScenePlanSerializer
                     line.Append(i == 0 ? "" : ",").Append(TurnIndent)
                         .Append("{ \"t\": ").Append(Num(turns[i].T)).Append(", \"degrees\": ").Append(Num(turns[i].Degrees)).Append(" }");
                 line.Append(turns.Count == 0 ? "]" : ScreenIndent + "]");
+            }
+            if (value.Counter is { } counter)
+            {
+                line.Append(", \"counter\": { \"target\": ").Append(Text(counter.Target, options));
+                if (counter.Decimals != 0) line.Append(", \"decimals\": ").Append(counter.Decimals.ToString(CultureInfo.InvariantCulture));
+                Number("min", counter.Min);
+                Number("max", counter.Max);
+                line.Append(" }");
             }
             line.Append(" }");
             writer.WriteRawValue(line.ToString());
@@ -522,12 +550,16 @@ public static class ScenePlanSerializer
         }
 
         public override void Write(Utf8JsonWriter writer, PlanChangeTarget value, JsonSerializerOptions options)
-        {
-            var parts = new List<string>(2);
-            if (value.Id is { } id) parts.Add($"\"id\": {Quoted(id, options)}");
-            if (value.Role is { } role) parts.Add($"\"role\": {Quoted(role, options)}");
-            writer.WriteRawValue(parts.Count == 0 ? "{}" : "{ " + string.Join(", ", parts) + " }");
-        }
+            => writer.WriteRawValue(Text(value, options));
+    }
+
+    /// <summary>A target on one line.</summary>
+    private static string Text(PlanChangeTarget? target, JsonSerializerOptions options)
+    {
+        var parts = new List<string>(2);
+        if (target?.Id is { } id) parts.Add($"\"id\": {Quoted(id, options)}");
+        if (target?.Role is { } role) parts.Add($"\"role\": {Quoted(role, options)}");
+        return parts.Count == 0 ? "{}" : "{ " + string.Join(", ", parts) + " }";
     }
 
     private sealed record VisibleKeyJson

@@ -107,7 +107,7 @@
             "maxItems": 3
           },
           "strips": {
-            "description": "The runs of the line. Either every strip gives its points colours or none does.",
+            "description": "The runs of the line. Either every strip gives its points colours or none does, and the same of reveal values.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -116,7 +116,8 @@
               "additionalProperties": false,
               "properties": {
                 "points": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/vector" }, "description": "Where the strip runs, in order; two points are one straight piece." },
-                "colors": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/color" }, "description": "A colour for every point; the line blends from one to the next. Shown by a material of the kind vertexColor." }
+                "colors": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/color" }, "description": "A colour for every point; the line blends from one to the next. Shown by a material of the kind vertexColor." },
+                "reveal": { "type": "array", "minItems": 2, "items": { "type": "number" }, "description": "A reveal value for every point: what a change's 'reveal' shows the line by, part by part. Between two points the line is there up to where the threshold has got to between their values. Either every strip of a line has them or none has." }
               }
             }
           }
@@ -327,7 +328,7 @@
       }
     },
     "changes": {
-      "description": "Played by the module 'changes', after the modules that make what it changes ('look', 'textured_materials', 'labels', 'annotations'): what changes while the clip runs. Each entry names a target and gives every property that changes its keys, in rising order of time: at 't' seconds the property has the key's value. Between two keys it moves as the later key's 'easing' says; before its first key a property has that key's value and after its last one it keeps it, so a single key is a value for the whole clip. A key may lie after the clip's last frame: the clip then ends on the way to it. Two keys of a property may fall on one frame (not of 'visible'): the first is where the value was going, the second, whose easing is 'constant', the value it has from that frame on. An entry without a target is of the scene itself (worldColor, worldStrength). Two entries do not change the same property of the same thing. Not carried: a change of a material's image.",
+      "description": "Played by the module 'changes', after the modules that make what it changes ('look', 'textured_materials', 'labels', 'annotations'): what changes while the clip runs. Each entry names a target and gives every property that changes its keys, in rising order of time: at 't' seconds the property has the key's value. Between two keys it moves as the later key's 'easing' says; before its first key a property has that key's value and after its last one it keeps it, so a single key is a value for the whole clip. A key may lie after the clip's last frame: the clip then ends on the way to it. Two keys of a property may fall on one frame (not of 'visible'): the first is where the value was going, the second, whose easing is 'constant', the value it has from that frame on. An entry without a target is of the scene itself (worldColor, worldStrength). Two entries do not change the same property of the same thing. 'reveal' is the one property that shows a target part by part: see there. Not carried: a change of a material's image.",
       "type": "array",
       "items": {
         "type": "object",
@@ -467,6 +468,40 @@
                 "mix": { "$ref": "#/$defs/mix" }
               }
             }
+          },
+          "reveal": {
+            "description": "Of a model or a line only: the threshold it is shown by, part by part. Every vertex of the model's mesh has a reveal value (see 'revealFront.attribute'), and so has every point of a line (its strips' 'reveal'); at every moment the parts whose value lies below the threshold are there and the rest is not. The values are in units of their own (years, metres, a count), and so is the threshold. One track shows a whole cave system in the order its values give: by the date of the survey, by the survey's order, by the distance from an entrance. The target needs a material.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number", "minimum": 0 },
+                "value": { "type": "number", "description": "The threshold at 't', in the units of the reveal values." },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "revealFront": {
+            "description": "How the edge of 'reveal' looks, for an entry that has 'reveal'. Without it the edge is a clean cut.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "attribute": { "type": "string", "minLength": 1, "description": "The name of the mesh attribute that holds the reveal values, one number for every vertex. Default 'reveal', which is the vertex property of that name in a PLY file; in a GLB file the attribute is spelt _REVEAL (a name of its own, as glTF asks for one), and is found under either name. A line's values are those of its strips." },
+              "edge": { "type": "number", "minimum": 0, "description": "How far behind the threshold a part is wholly there, in the units of the reveal values: a part appears over this much of the threshold's way. Default 0: a cut." },
+              "glow": {
+                "description": "A glow behind the edge: what has just appeared shines in a colour, strongest at the edge.",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "color": { "$ref": "#/$defs/color", "description": "Default [1, 0.55, 0.15]." },
+                  "strength": { "type": "number", "minimum": 0, "description": "How strongly it shines, as an emission strength. Default 3." },
+                  "width": { "type": "number", "exclusiveMinimum": 0, "description": "How far behind the threshold the glow reaches, in the units of the reveal values. Default 1." }
+                }
+              }
+            }
           }
         }
       }
@@ -578,6 +613,28 @@
                     "t": { "type": "number", "minimum": 0 },
                     "degrees": { "type": "number" }
                   }
+                }
+              },
+              "counter": {
+                "description": "Makes a text a counter: at every frame it shows, in place of the {} in 'text', the number the threshold of a reveal has got to: a year counter over the history of an exploration. The number is cut down to 'decimals' decimals (1987.9 shows as 1987) and kept between 'min' and 'max'; after the clip's last frame it stays as it was there.",
+                "type": "object",
+                "required": ["target"],
+                "additionalProperties": false,
+                "properties": {
+                  "target": {
+                    "description": "The target of the entry of 'changes' whose 'reveal' is counted, named as that entry names it.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "minProperties": 1,
+                    "maxProperties": 1,
+                    "properties": {
+                      "id": { "type": "string", "minLength": 1 },
+                      "role": { "$ref": "#/$defs/role" }
+                    }
+                  },
+                  "decimals": { "type": "integer", "minimum": 0, "maximum": 6, "description": "Default 0: whole numbers." },
+                  "min": { "type": "number", "description": "The least the counter shows. A threshold starts below the first value there is; a counter of years should not." },
+                  "max": { "type": "number", "description": "The most the counter shows." }
                 }
               }
             }

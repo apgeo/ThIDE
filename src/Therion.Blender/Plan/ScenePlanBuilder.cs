@@ -13,7 +13,9 @@
 // plan fades it in over the same frames. The events of the overlays become the times of the
 // texts, which are drawn where no change of the scene reaches. The annotations of the spec become
 // the plan's, each at the place of its station or its point, and the times it is there become
-// changes that show and hide it (AnnotationPlanner). Not carried, because the player has no
+// changes that show and hide it (AnnotationPlanner). The reveal of the spec becomes one more
+// change, of the cave's model: a threshold that runs over the reveal values the conversion gave
+// the mesh, with a counter of the years for a reveal by date (RevealPlanner). Not carried, because the player has no
 // module for it: the HDRI light rig. NotCarried lists what a given spec loses; Notices says what
 // a render of the plan cannot say for itself.
 //
@@ -91,6 +93,9 @@ public static class ScenePlanBuilder
         var timeline = new PlanTimeline { Fps = spec.Animation.Fps, FrameCount = camera.FrameCount };
         var annotations = AnnotationPlanner.Plan(spec.Annotations, meta, framing.LocalBounds, planCamera, timeline);
         if (annotations.Changes.Count > 0) changes = [.. changes ?? [], .. annotations.Changes];
+        var (reveal, counter) = RevealPlanner.Plan(spec, meta, camera.FrameCount, ModelId);
+        if (reveal is not null) changes = [.. changes ?? [], reveal];
+        if (counter is not null) texts = (texts ?? new PlanScreenTexts()) with { Items = [.. texts?.Items ?? [], counter] };
         var features = ScenePlan.BasicFeatures;
         if (terrain is not null) features = WithFeature(features, ScenePlan.TexturedMaterialsFeature);
         if (labels is not null) features = WithFeature(features, ScenePlan.LabelsFeature);
@@ -287,8 +292,9 @@ public static class ScenePlanBuilder
     /// <summary>
     /// What a render of the plan of <paramref name="spec"/> shows less of than the spec asks for,
     /// and cannot say itself, because a plan holds only what is there: station labels that were
-    /// thinned out, a terrain or a surface image the model does not have. A generated script
-    /// prints the same sentences; whoever plays the plan passes them on.
+    /// thinned out, a terrain or a surface image the model does not have, a reveal the model has
+    /// no values for. A generated script prints the same sentences of what it draws; whoever
+    /// plays the plan passes them on.
     /// </summary>
     /// <param name="meta">As for <see cref="FromSpec"/>: without it there are no labels.</param>
     /// <param name="framing">As for <see cref="FromSpec"/>. With it the annotations that are
@@ -305,6 +311,7 @@ public static class ScenePlanBuilder
                 spec.Annotations, meta, framing.LocalBounds, Camera(camera, spec.Animation.Fps),
                 new PlanTimeline { Fps = spec.Animation.Fps, FrameCount = camera.FrameCount }).Notices);
         }
+        if (RevealPlanner.Notice(spec, meta) is { } revealed) notices.Add(revealed);
         if (spec.Surface.Mode != SurfaceMode.Off)
         {
             if (string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath))

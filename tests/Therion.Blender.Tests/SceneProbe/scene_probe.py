@@ -247,7 +247,12 @@ def uv_samples(obj):
 
 # The numbers the player's "changes" module puts on an object for its material to read.
 CHANGE_NUMBERS = (("fade", "thide_fade"), ("opacity", "thide_opacity"), ("tint", "thide_tint"),
-                  ("tintStrength", "thide_tint_strength"))
+                  ("tintStrength", "thide_tint_strength"), ("reveal", "thide_reveal"), ("revealEdge", "thide_reveal_edge"),
+                  ("revealGlow", "thide_reveal_glow"), ("revealGlowStrength", "thide_reveal_glow_strength"),
+                  ("revealGlowWidth", "thide_reveal_glow_width"))
+
+# The mesh attribute the player keeps a revealed thing's values in.
+REVEAL_VALUES = "thide_reveal"
 
 
 def thing_at(obj, depsgraph):
@@ -268,7 +273,20 @@ def thing_at(obj, depsgraph):
         mesh = evaluated.data
         info["faces"] = len(mesh.polygons)
         info["facesBuilt"] = len(obj.data.polygons)
-        shown = mesh.color_attributes.active_color or mesh.color_attributes.get(obj.data.color_attributes.active_color.name)
+        built = obj.data.color_attributes.active_color
+        shown = mesh.color_attributes.active_color or (mesh.color_attributes.get(built.name) if built else None)
+        values = mesh.attributes.get(REVEAL_VALUES)
+        if values is not None and values.domain == "POINT" and len(mesh.polygons):
+            # Of a revealed model: how much of what was built is there, as area, and the highest
+            # reveal value any face that is left has at its lowest corner.
+            numbers = [0.0] * len(values.data)
+            values.data.foreach_get("value", numbers)
+            info["area"] = round(sum(polygon.area for polygon in mesh.polygons), 4)
+            info["areaBuilt"] = round(sum(polygon.area for polygon in obj.data.polygons), 4)
+            info["lastShown"] = round(max(min(numbers[v] for v in polygon.vertices) for polygon in mesh.polygons), 5)
+        elif REVEAL_VALUES in obj.data.attributes:
+            info["area"] = 0.0
+            info["areaBuilt"] = round(sum(polygon.area for polygon in obj.data.polygons), 4)
         if shown is not None and len(shown.data):
             values = [0.0] * (len(shown.data) * 4)
             shown.data.foreach_get("color", values)
@@ -305,12 +323,28 @@ def object_number_read(socket):
     return node.attribute_name if node.type == "ATTRIBUTE" and node.attribute_type == "OBJECT" else None
 
 
+def numbers_read(socket, depth=8):
+    """The numbers a socket's value is worked out from, as (where it is read from, its name):
+    every Attribute node upstream of it."""
+    if socket is None or not socket.is_linked or depth == 0:
+        return set()
+    node = socket.links[0].from_node
+    if node.type == "ATTRIBUTE":
+        return {(node.attribute_type, node.attribute_name)}
+    read = set()
+    for upstream in node.inputs:
+        read |= numbers_read(upstream, depth - 1)
+    return read
+
+
 def describe_material(material):
     """Whether the material reads the numbers of the object it is on: seeThrough when its surface
     is mixed with a transparent one by the object's fade times its opacity, tinted when the
-    object's tint is mixed over its shader's colour by the tint's strength. Read from the links
-    alone, whatever the nodes are called."""
-    info = {"name": material.name, "seeThrough": False, "tinted": False}
+    object's tint is mixed over its shader's colour by the tint's strength, revealed when what
+    it lets through is also cut by the object's threshold against the reveal values of the mesh,
+    and glowing when an emission in the object's glow colour is mixed in behind that threshold.
+    Read from the links alone, whatever the nodes are called."""
+    info = {"name": material.name, "seeThrough": False, "tinted": False, "revealed": False, "glowing": False}
     tree = material.node_tree
     outputs = [node for node in tree.nodes if node.type == "OUTPUT_MATERIAL"] if tree is not None else []
     output = next((node for node in outputs if node.is_active_output), outputs[0] if outputs else None)
@@ -319,12 +353,28 @@ def describe_material(material):
     shader = output.inputs["Surface"].links[0].from_node
     if shader.type == "MIX_SHADER" and shader.inputs[0].is_linked and shader.inputs[1].is_linked and shader.inputs[2].is_linked:
         share = shader.inputs[0].links[0].from_node
+        cut = set()
+        if (share.type == "MATH" and share.operation == "MULTIPLY" and share.inputs[0].is_linked
+                and share.inputs[0].links[0].from_node.type == "MATH"):
+            # fade x opacity, times how far the threshold is past the place
+            cut = numbers_read(share.inputs[1])
+            share = share.inputs[0].links[0].from_node
         read = set()
         if share.type == "MATH" and share.operation == "MULTIPLY":
             read = {object_number_read(share.inputs[0]), object_number_read(share.inputs[1])}
         if read == {"thide_fade", "thide_opacity"} and shader.inputs[1].links[0].from_node.type == "BSDF_TRANSPARENT":
             info["seeThrough"] = True
+            info["revealed"] = cut == {("OBJECT", "thide_reveal"), ("OBJECT", "thide_reveal_edge"), ("GEOMETRY", REVEAL_VALUES)}
             shader = shader.inputs[2].links[0].from_node
+            if (info["revealed"] and shader.type == "MIX_SHADER" and shader.inputs[1].is_linked and shader.inputs[2].is_linked
+                    and shader.inputs[2].links[0].from_node.type == "EMISSION"):
+                shine = shader.inputs[2].links[0].from_node
+                info["glowing"] = (
+                    numbers_read(shine.inputs["Color"]) == {("OBJECT", "thide_reveal_glow")}
+                    and numbers_read(shine.inputs["Strength"]) == {("OBJECT", "thide_reveal_glow_strength")}
+                    and numbers_read(shader.inputs[0]) >= {("OBJECT", "thide_reveal"), ("OBJECT", "thide_reveal_glow_width"),
+                                                           ("GEOMETRY", REVEAL_VALUES)})
+                shader = shader.inputs[1].links[0].from_node
     colour = shader.inputs.get("Base Color") or shader.inputs.get("Color")
     if colour is not None and colour.is_linked:
         mix = colour.links[0].from_node

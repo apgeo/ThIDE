@@ -13,6 +13,12 @@ picture and seconds; nothing is laid out here. An item is a text, a box of one c
 that turns about its middle with a letter at its tip. Later items lie over earlier ones. The
 letters are Blender's own font, white unless the plan says otherwise, with a dark outline and
 shadow so that they read over any picture.
+
+A text with a "counter" shows a number that changes: the threshold of a reveal of the plan's
+changes, as it is at every frame, in place of the {} in the text (a year counter over the history
+of an exploration). The number is worked out here from the same keys the reveal is keyed with,
+the way Blender works out the curve, and is written as one strip for every stretch of frames it
+stays the same over.
 """
 
 import math
@@ -30,6 +36,7 @@ KEYS = {
         "height": None, "alignX": None, "alignY": None, "color": None, "opacity": None, "backing": None,
         "wrap": None, "start": None, "end": None, "fadeIn": None, "fadeOut": None, "slot": None,
         "turn": [{"t": None, "degrees": None}],
+        "counter": {"target": {"id": None, "role": None}, "decimals": None, "min": None, "max": None},
     }],
 }
 # A text changes no frame of the first stage: only the second stage runs again.
@@ -42,6 +49,8 @@ ALIGN_Y = {"top": "TOP", "center": "CENTER", "bottom": "BOTTOM"}
 # The frames lie on channel 1 of the video editor; the items go above them.
 FIRST_CHANNEL = 2
 LAST_CHANNEL = 128
+
+COUNTER_PLACE = "{}"  # where the number of a counter goes in its text
 
 DARK = (0.0, 0.0, 0.0)
 ARROW_PIXELS = 128    # the side of the arrow's picture; it is drawn larger or smaller as needed
@@ -58,6 +67,9 @@ def build(ctx, texts):
     """The first stage draws no text. It checks them, so that a text the second stage could not
     draw is refused before the long render and not after it."""
     check(texts or {})
+    for index, item in enumerate((texts or {}).get("items", [])):
+        if item.get("counter") is not None:
+            counted(ctx, item, "texts.items[%d]" % index)
 
 
 def check(texts):
@@ -76,6 +88,11 @@ def check(texts):
         for key in ("at",) + needed:
             if item.get(key) is None:
                 raise api.PlanError("%s.%s: a %s needs it" % (where, key, kind))
+        if item.get("counter") is not None:
+            if kind != "text":
+                raise api.PlanError("%s.counter: only a text is a counter" % where)
+            if COUNTER_PLACE not in item["text"]:
+                raise api.PlanError("%s.text: a counter's text says where its number goes: %s" % (where, COUNTER_PLACE))
 
 
 def compose(ctx, texts):
@@ -133,14 +150,86 @@ def in_their_slots(ctx, items, last):
 # ---- the kinds ----
 
 def place_text(ctx, item, channel, first, last):
-    strip = text(ctx, item["id"], channel, first, last, item["text"], item["at"], item["size"],
+    if item.get("counter") is not None:
+        return place_counter(ctx, item, channel, first, last)
+    strip = written(ctx, item, item["id"], channel, first, last, item["text"])
+    fade(ctx, strip, item, first, last)
+    return 1
+
+
+def written(ctx, item, name, channel, first, last, body):
+    strip = text(ctx, name, channel, first, last, body, item["at"], item["size"],
                  item.get("alignX", "center"), item.get("alignY", "center"), item.get("color"), item.get("wrap", 0.9))
     if item.get("backing"):
         strip.use_box = True
         strip.box_color = (0.0, 0.0, 0.0, 0.6)
         strip.box_margin = 0.012
-    fade(ctx, strip, item, first, last)
+    return strip
+
+
+def place_counter(ctx, item, channel, first, last):
+    """A counter is a text for every stretch of frames its number stays the same over, one after
+    the other on one channel: "<id>.1", "<id>.2" and so on. They fade as one text would."""
+    say = counted(ctx, item, "texts.items")
+    keys = fade_keys(ctx, item, first, last)
+    start, body, number = first, say(first), 0
+    for frame in range(first + 1, last + 2):
+        following = say(frame) if frame <= last else None
+        if following == body:
+            continue
+        number += 1
+        strip = written(ctx, item, "%s.%d" % (item["id"], number), channel, start, frame - 1, body)
+        strip.blend_alpha = opacity_at(keys, start, item.get("opacity", 1.0))
+        if keys and any(a <= frame - 1 and start <= b for (a, _), (b, _) in zip(keys[::2], keys[1::2])):
+            # A fade runs over this piece: it has the opacity of every one of its frames.
+            key_opacity(strip, [(at, opacity_at(keys, at, item.get("opacity", 1.0))) for at in range(start - 1, frame + 1)])
+        start, body = frame, following
     return 1
+
+
+def counted(ctx, item, where):
+    """What a counter says at a frame: its text with the number in it. The number is the
+    threshold of the reveal its target has in the plan's changes, at that frame of the scene
+    (after the scene's last frame: as it was there), cut down to the counter's decimals and kept
+    between its least and its most."""
+    from thide_player.modules import changes
+
+    counter = item["counter"]
+    target = counter.get("target") if isinstance(counter, dict) else None
+    if not isinstance(target, dict) or (target.get("id") is None) == (target.get("role") is None):
+        raise api.PlanError('%s.counter.target: a target is an "id" or a "role"' % where)
+    curve = None
+    for index, change in enumerate(ctx.plan.get("changes") or []):
+        if change.get("reveal") and change.get("target") == target:
+            at = "changes[%d].reveal" % index
+            curve = changes.curve_of(
+                changes.points_of(ctx, change["reveal"], at, lambda key, place: changes.finite(key.get("value"), place + ".value")),
+                ctx.frame_count)
+    if curve is None:
+        raise api.PlanError(
+            '%s.counter.target: no change of the plan reveals this target; a counter shows the threshold of a reveal'
+            % where)
+    decimals = counter.get("decimals", 0)
+    if isinstance(decimals, bool) or not isinstance(decimals, int) or not 0 <= decimals <= 6:
+        raise api.PlanError("%s.counter.decimals: a counter shows from 0 to 6 decimals" % where)
+    low, high = counter.get("min"), counter.get("max")
+    for name, limit in (("min", low), ("max", high)):
+        if limit is not None:
+            changes.finite(limit, "%s.counter.%s" % (where, name))
+    steps = 10 ** decimals
+
+    def say(frame):
+        value = changes.value_at(curve, min(frame, ctx.frame_count))
+        if low is not None:
+            value = max(value, low)
+        if high is not None:
+            value = min(value, high)
+        # Cut down, not rounded: 1987.9 is still 1987. A number that is a whole one but for the
+        # last bit of the arithmetic counts as that whole one.
+        value = math.floor(value * steps + 1.0e-6) / steps
+        return item["text"].replace(COUNTER_PLACE, "%.*f" % (decimals, value))
+
+    return say
 
 
 def place_box(ctx, item, channel, first, last):
@@ -255,8 +344,13 @@ def box(ctx, name, channel, first, last, at, width, height, colour):
 def fade(ctx, strip, item, first, last):
     """The item's opacity, rising over its fade-in from the frame before it appears and falling
     over its fade-out to the frame after it has gone."""
+    strip.blend_alpha = item.get("opacity", 1.0)
+    key_opacity(strip, fade_keys(ctx, item, first, last))
+
+
+def fade_keys(ctx, item, first, last):
+    """The keys of an item's opacity, two for each of its fades: where it starts and where it ends."""
     opacity = item.get("opacity", 1.0)
-    strip.blend_alpha = opacity
     length = last - first + 1
     fade_in = min(ctx.frame_at(item.get("fadeIn") or 0.0) - 1, length // 2)
     fade_out = min(ctx.frame_at(item.get("fadeOut") or 0.0) - 1, length // 2)
@@ -265,7 +359,20 @@ def fade(ctx, strip, item, first, last):
         keys += [(first - 1, 0.0), (first - 1 + fade_in, opacity)]
     if fade_out > 0:
         keys += [(last + 1 - fade_out, opacity), (last + 1, 0.0)]
-    key_opacity(strip, keys)
+    return keys
+
+
+def opacity_at(keys, frame, opacity):
+    """The opacity the keys of fade_keys give at a frame: evenly from key to key over a fade,
+    the item's own outside one."""
+    for (start, low), (end, high) in zip(keys[::2], keys[1::2]):
+        if start <= frame <= end:
+            return low + (high - low) * (frame - start) / float(end - start)
+    if keys and frame < keys[0][0] and keys[0][1] == 0.0:
+        return 0.0
+    if keys and frame > keys[-1][0] and keys[-1][1] == 0.0:
+        return 0.0
+    return opacity
 
 
 def key_opacity(strip, keys):

@@ -77,8 +77,10 @@ public class ScenePlanVisibilityEventsTests
     }
 
     [Fact]
-    public void TheMapRevealPreset_FadesItsComponentLabelsIn_OverThreeSeconds()
+    public void TheMapRevealPreset_FadesItsComponentLabelsIn_WhenTheCaveIsThere()
     {
+        // Planned over metadata without reveal values, the preset keeps its labels and says
+        // nothing of a reveal (ScenePlanRevealTests has the reveal itself).
         var plan = PlanFixtures.PlanOf(BuiltInPresets.MapReveal().Spec with
         {
             Labels = BuiltInPresets.MapReveal().Spec.Labels with { Components = new ComponentLabelSpec { Show = true, MinStationCount = 1 } },
@@ -86,7 +88,7 @@ public class ScenePlanVisibilityEventsTests
 
         var change = Assert.Single(plan.Changes!);
         Assert.Equal(ScenePlanBuilder.ComponentLabelRole, change.Target!.Role);
-        Assert.Equal([new PlanVisibleKey(0, true, 3)], change.Visible);
+        Assert.Equal([new PlanVisibleKey(9, true, 2)], change.Visible);
         Assert.Contains(ScenePlan.ChangesFeature, plan.Features);
         Assert.Empty(ScenePlanBuilder.NotCarried(BuiltInPresets.MapReveal().Spec));
         Assert.Empty(ScenePlanValidator.Validate(plan));

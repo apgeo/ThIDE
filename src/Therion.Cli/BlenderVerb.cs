@@ -4,7 +4,8 @@
 // be a quick draft (--draft), built by either scene builder (--builder), keep its frames
 // (--keep-frames) and be written again from them after a text changed (--compose-only); a
 // render in two stages that is stopped goes on when the same command is run again. Labels,
-// callouts, markers and photos come from a JSON file (--annotations). Kept in its
+// callouts, markers and photos come from a JSON file (--annotations), and the cave can appear
+// part by part (--reveal). Kept in its
 // own class (not a Program.cs local function) so it is unit-testable with in-memory writers and no
 // real Blender.
 
@@ -359,7 +360,77 @@ public static class BlenderVerb
             }
             spec = preset.Spec;
         }
-        return TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec);
+        return TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec) && TryAddReveal(args, stderr, ref spec);
+    }
+
+    /// <summary>
+    /// The reveal that is given on the command line, over the preset's or the spec's:
+    /// <c>--reveal date|order|distance</c> shows the cave part by part, by the dates of its
+    /// survey, by the survey's order or by the distance from an entrance;
+    /// <c>--reveal-from &lt;station&gt;</c> measures the distance from a station,
+    /// <c>--reveal-dates &lt;file.3d&gt;</c> names the file that has the dates, and
+    /// <c>--reveal-seconds &lt;start&gt;-&lt;end&gt;</c> says when it runs.
+    /// </summary>
+    private static bool TryAddReveal(IReadOnlyList<string> args, TextWriter stderr, ref SceneSpec spec)
+    {
+        string? by = Option(args, "--reveal"), from = Option(args, "--reveal-from"), dates = Option(args, "--reveal-dates"),
+                seconds = Option(args, "--reveal-seconds");
+        if (by is null && from is null && dates is null && seconds is null) return true;
+
+        var reveal = spec.Reveal ?? new RevealSpec();
+        if (by is not null)
+        {
+            if (!Enum.TryParse(by, ignoreCase: true, out RevealBy source) || !Enum.IsDefined(source) || int.TryParse(by, out _))
+            {
+                stderr.WriteLine($"error: --reveal takes date, order or distance, not '{by}'.");
+                return false;
+            }
+            // What went with another kind of reveal does not go with this one.
+            reveal = reveal with { By = source, From = source == RevealBy.Distance ? reveal.From : null, DatesPath = source == RevealBy.Date ? reveal.DatesPath : null };
+        }
+        else if (spec.Reveal is null)
+        {
+            stderr.WriteLine("error: --reveal-from, --reveal-dates and --reveal-seconds go with a reveal (--reveal date|order|distance).");
+            return false;
+        }
+        if (from is not null)
+        {
+            if (reveal.By != RevealBy.Distance)
+            {
+                stderr.WriteLine("error: --reveal-from names the station a reveal by distance is measured from (--reveal distance).");
+                return false;
+            }
+            reveal = reveal with { From = from };
+        }
+        if (dates is not null)
+        {
+            if (reveal.By != RevealBy.Date)
+            {
+                stderr.WriteLine("error: --reveal-dates names the file with the survey dates of a reveal by date (--reveal date).");
+                return false;
+            }
+            if (!File.Exists(dates))
+            {
+                stderr.WriteLine($"error: file not found: {dates}");
+                return false;
+            }
+            reveal = reveal with { DatesPath = Path.GetFullPath(dates) };
+        }
+        if (seconds is not null)
+        {
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
+            int dash = seconds.IndexOf('-', StringComparison.Ordinal);
+            if (dash <= 0
+                || !double.TryParse(seconds[..dash], System.Globalization.NumberStyles.Float, culture, out double start)
+                || !double.TryParse(seconds[(dash + 1)..], System.Globalization.NumberStyles.Float, culture, out double end))
+            {
+                stderr.WriteLine($"error: --reveal-seconds takes \"<start>-<end>\" in seconds (\"1-9.5\"), not '{seconds}'.");
+                return false;
+            }
+            reveal = reveal with { Start = start, End = end };
+        }
+        spec = spec with { Reveal = reveal };
+        return true;
     }
 
     /// <summary>
