@@ -199,7 +199,7 @@
                                         <TextBox Width="180"
                                                  AutomationProperties.AutomationId="Document.Shots.Filter" AutomationProperties.Name="{l:Loc File_ShotsFilterWm}"
                                                  Text="{Binding Measurements.FilterText, Mode=TwoWay}"
-                                                 Watermark="{l:Loc File_ShotsFilterWm}" />
+                                                 PlaceholderText="{l:Loc File_ShotsFilterWm}" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
                                         <TextBlock Text="{l:Loc File_GroupBy}" VerticalAlignment="Center" />
@@ -319,7 +319,7 @@
                                         <TextBox Width="180"
                                                  AutomationProperties.AutomationId="Document.Stations.Filter" AutomationProperties.Name="{l:Loc File_StationsFilterWm}"
                                                  Text="{Binding Measurements.StationsFilterText, Mode=TwoWay}"
-                                                 Watermark="{l:Loc File_StationsFilterWm}" />
+                                                 PlaceholderText="{l:Loc File_StationsFilterWm}" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
                                         <TextBlock Text="{l:Loc File_GroupBy}" VerticalAlignment="Center" />

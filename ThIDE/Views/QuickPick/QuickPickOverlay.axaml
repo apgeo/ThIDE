@@ -33,7 +33,7 @@
                            FontSize="11" Margin="4,2,4,4" />
                 <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Margin="2"
                          AutomationProperties.AutomationId="QuickPick.Search" AutomationProperties.Name="{Binding Watermark}"
-                         Watermark="{Binding Watermark}"
+                         PlaceholderText="{Binding Watermark}"
                          Text="{Binding SearchText, Mode=TwoWay}" />
                 <!-- 15 rows × 26px (22px of content + 2px padding top/bottom). Fluent's default
                      ListBoxItem MinHeight/Padding is pinned below so the row height — and with it

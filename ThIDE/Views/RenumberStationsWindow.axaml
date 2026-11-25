@@ -15,7 +15,7 @@
             <ComboBox x:Name="FirstInput" Grid.Column="1" ItemsSource="{Binding Surveys}" SelectedItem="{Binding Survey, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,0,0,6"
                       AutomationProperties.AutomationId="Renumber.Survey" />
             <TextBlock Grid.Row="1" Text="{l:Loc Renumber_OldPrefix}" VerticalAlignment="Center" Margin="0,0,8,6" />
-            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OldPrefix, Mode=TwoWay}" Watermark="{l:Loc Renumber_OldPrefixHint}" Margin="0,0,0,6"
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OldPrefix, Mode=TwoWay}" PlaceholderText="{l:Loc Renumber_OldPrefixHint}" Margin="0,0,0,6"
                      AutomationProperties.AutomationId="Renumber.OldPrefix" />
             <TextBlock Grid.Row="2" Text="{l:Loc Renumber_NewPrefix}" VerticalAlignment="Center" Margin="0,0,8,6" />
             <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding NewPrefix, Mode=TwoWay}" Margin="0,0,0,6"
