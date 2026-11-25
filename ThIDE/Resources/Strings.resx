@@ -430,10 +430,10 @@
   <data name="Blender_UI_Width" xml:space="preserve"><value>Width</value></data>
   <data name="Blender_UI_Height" xml:space="preserve"><value>Height</value></data>
   <data name="Blender_UI_BaseName" xml:space="preserve"><value>File name</value></data>
-  <data name="Blender_UI_SelfContained" xml:space="preserve"><value>Self-contained script</value></data>
-  <data name="Blender_UI_SelfContained_Tip" xml:space="preserve"><value>An exported script carries the scene's data (labels, legend) itself instead of reading scene-meta.json beside it. The model's mesh stays beside it, unless it is embedded too.</value></data>
+  <data name="Blender_UI_SelfContained" xml:space="preserve"><value>Self-contained script (one file)</value></data>
+  <data name="Blender_UI_SelfContained_Tip" xml:space="preserve"><value>The export is one script that carries everything it needs (the scene, the player, the meshes and the images) instead of a folder: a much larger file that renders anywhere. With the script generator, the script carries the scene's data (labels, legend) itself, and the model's mesh stays beside it unless it is embedded too.</value></data>
   <data name="Blender_UI_EmbedMesh" xml:space="preserve"><value>Embed the meshes in the script</value></data>
-  <data name="Blender_UI_EmbedMesh_Tip" xml:space="preserve"><value>The self-contained script also carries the model's mesh, and the terrain with its image: one file that renders anywhere, but a much larger one.</value></data>
+  <data name="Blender_UI_EmbedMesh_Tip" xml:space="preserve"><value>For the script generator: its self-contained script also carries the model's mesh, and the terrain with its image: one file that renders anywhere, but a much larger one. The player's one file always carries them.</value></data>
   <data name="Blender_UI_Labels" xml:space="preserve"><value>Labels</value></data>
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Station labels</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Lead markers</value></data>
@@ -2145,7 +2145,7 @@ This cannot be undone.</value></data>
   <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Render folder</value></data>
   <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Where the video, frames or still are saved. Leave empty to keep them in the temporary job folder.</value></data>
   <data name="Blender_UI_Builder" xml:space="preserve"><value>Scene builder (advanced)</value></data>
-  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>What makes the scene in Blender. Auto: the player, which shows everything a scene asks for. Player: the same, asked for by name; it writes the texts over the finished frames, so nothing hides them. Generator: the earlier builder, kept for comparison; it draws the title in the scene and no credits, end card or captions, and does not turn an HDRI image. A preview is always the player's.</value></data>
+  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>What makes the scene in Blender when it is rendered, exported or opened in Blender. Auto: the player, which shows everything a scene asks for. Player: the same, asked for by name; it writes the texts over the finished frames, so nothing hides them. Generator: the earlier builder, kept for comparison; it draws the title in the scene and no credits, end card or captions, no annotations and no reveal, and does not turn an HDRI image. A preview is always the player's.</value></data>
   <data name="Blender_UI_Preview" xml:space="preserve"><value>Preview</value></data>
   <data name="Blender_UI_Preview_Tip" xml:space="preserve"><value>A quick draft of the render: half the size, without lights and shadows, a fraction of a second per frame. For checking the camera move, the framing and the texts before the long render. It is saved beside the render, with -draft added to its name.</value></data>
   <data name="Blender_UI_Credits" xml:space="preserve"><value>Credits line</value></data>
@@ -2175,6 +2175,72 @@ This cannot be undone.</value></data>
   <data name="Blender_Builder_LeftOutGenerator" xml:space="preserve"><value>The script generator does not draw {0}.</value></data>
   <data name="Blender_Builder_LeftOutPreview" xml:space="preserve"><value>The preview does not show {0}.</value></data>
   <data name="Blender_Fail_BuilderRefused" xml:space="preserve"><value>The player cannot make this scene: it does not carry {0}. Choose the script generator, or Auto.</value></data>
+  <data name="Blender_UI_Light" xml:space="preserve"><value>Light</value></data>
+  <data name="Blender_UI_LightRig" xml:space="preserve"><value>Light rig</value></data>
+  <data name="Blender_UI_LightRig_Tip" xml:space="preserve"><value>What lights the scene. Headlamp: a lamp on the camera, the look of a caver's head torch. SunSky: a sun and a sky. ThreePoint: three lights, as in a studio. HdriFile: an image all round the scene (an HDRI), which lights it and is what is seen behind the cave.</value></data>
+  <data name="Blender_UI_LightStrength" xml:space="preserve"><value>Light strength</value></data>
+  <data name="Blender_UI_LightStrength_Tip" xml:space="preserve"><value>How brightly the light shines: 1 is the rig, or the image, as it is; 2 is twice as bright.</value></data>
+  <data name="Blender_UI_HdriPath" xml:space="preserve"><value>HDRI image</value></data>
+  <data name="Blender_UI_HdriPath_Tip" xml:space="preserve"><value>The image the scene is lit by when the light rig is HdriFile: a Radiance .hdr or an OpenEXR .exr file, twice as wide as it is high. The file stays where it is; ThIDE copies it for the render.</value></data>
+  <data name="Blender_UI_Browse" xml:space="preserve"><value>Browse…</value></data>
+  <data name="Blender_UI_BrowseHdri" xml:space="preserve"><value>Choose the HDRI image</value></data>
+  <data name="Blender_UI_HdriRotation" xml:space="preserve"><value>HDRI rotation (degrees)</value></data>
+  <data name="Blender_UI_HdriRotation_Tip" xml:space="preserve"><value>How far the image is turned about the vertical, counterclockwise seen from above: it brings the sun of the picture round to where the light should come from. Only the player turns it.</value></data>
+  <data name="Blender_UI_Reveal" xml:space="preserve"><value>Reveal</value></data>
+  <data name="Blender_UI_RevealBy" xml:space="preserve"><value>Reveal the cave by</value></data>
+  <data name="Blender_UI_RevealBy_Tip" xml:space="preserve"><value>Shows the cave part by part while the clip runs. Off: all of it from the first frame. Distance: from the entrances inwards. Order: leg by leg, in the survey's own order. Date: in the order of the survey dates, with a counter of the years. A still shows the whole cave, and only the player draws a reveal.</value></data>
+  <data name="Blender_UI_RevealFrom" xml:space="preserve"><value>From station</value></data>
+  <data name="Blender_UI_RevealFrom_Tip" xml:space="preserve"><value>By distance: the name of the station the distances are measured from, as the model has it. Empty measures from the entrances.</value></data>
+  <data name="Blender_UI_RevealDates" xml:space="preserve"><value>Dates file</value></data>
+  <data name="Blender_UI_RevealDates_Tip" xml:space="preserve"><value>By date: a .3d file of the same cave that has the survey dates, for a .lox model, which has none. Empty uses a .3d of the same name beside the model.</value></data>
+  <data name="Blender_UI_BrowseRevealDates" xml:space="preserve"><value>Choose the file with the survey dates</value></data>
+  <data name="Blender_UI_RevealStart" xml:space="preserve"><value>Reveal starts (seconds)</value></data>
+  <data name="Blender_UI_RevealStart_Tip" xml:space="preserve"><value>When the reveal starts, in seconds from the start of the clip: until then nothing of the cave is there.</value></data>
+  <data name="Blender_UI_RevealToClipEnd" xml:space="preserve"><value>Reveal until the end of the clip</value></data>
+  <data name="Blender_UI_RevealToClipEnd_Tip" xml:space="preserve"><value>The whole cave is there when the clip ends. Not ticked, it is there at the second below and stays whole for the rest of the clip.</value></data>
+  <data name="Blender_UI_RevealEnd" xml:space="preserve"><value>Reveal ends (seconds)</value></data>
+  <data name="Blender_UI_RevealEnd_Tip" xml:space="preserve"><value>When the whole cave is there, in seconds from the start of the clip.</value></data>
+  <data name="Blender_UI_RevealEdge" xml:space="preserve"><value>Reveal edge</value></data>
+  <data name="Blender_UI_RevealEdge_Tip" xml:space="preserve"><value>How soft the edge of the reveal is, as a share of the whole reveal: what appears takes that much of it to become solid. 0 is a clean cut; the default is 0.03.</value></data>
+  <data name="Blender_UI_RevealGlow" xml:space="preserve"><value>Glow where the cave appears</value></data>
+  <data name="Blender_UI_RevealGlow_Tip" xml:space="preserve"><value>What has just appeared shines until the reveal has moved on.</value></data>
+  <data name="Blender_UI_Annotations" xml:space="preserve"><value>Annotations</value></data>
+  <data name="Blender_UI_Annotations_Tip" xml:space="preserve"><value>Labels, callouts, markers and photos of your own, each at a station or at a point: a JSON list in a file, the one the command line takes with --annotations. A photo's image is named from where the file lies. Loading a file replaces the annotations the scene has. Only the player draws them.</value></data>
+  <data name="Blender_UI_AnnotationsPath" xml:space="preserve"><value>Annotations file (.json)</value></data>
+  <data name="Blender_UI_BrowseAnnotations" xml:space="preserve"><value>Choose an annotations file</value></data>
+  <data name="Blender_UI_LoadAnnotations" xml:space="preserve"><value>Load</value></data>
+  <data name="Blender_UI_LoadAnnotations_Tip" xml:space="preserve"><value>Reads the file and takes its annotations in place of the scene's. Load it again after changing it.</value></data>
+  <data name="Blender_UI_ClearAnnotations" xml:space="preserve"><value>Clear</value></data>
+  <data name="Blender_UI_ClearAnnotations_Tip" xml:space="preserve"><value>Takes the annotations out of the scene. The file stays as it is.</value></data>
+  <data name="Blender_UI_AnnotationProblems" xml:space="preserve"><value>Problems with the annotations</value></data>
+  <data name="Blender_Annotations_None" xml:space="preserve"><value>No annotations.</value></data>
+  <data name="Blender_Annotations_Count_One" xml:space="preserve"><value>{0} annotation</value></data>
+  <data name="Blender_Annotations_Count_Few" xml:space="preserve"><value>{0} annotations</value></data>
+  <data name="Blender_Annotations_Count_Many" xml:space="preserve"><value>{0} annotations</value></data>
+  <data name="Blender_Annotations_Kinds" xml:space="preserve"><value>labels {0}, callouts {1}, markers {2}, photos {3}</value></data>
+  <data name="Blender_Annotations_NotAList" xml:space="preserve"><value>{0} was not loaded: {1}</value></data>
+  <data name="Blender_Annotations_NotRead" xml:space="preserve"><value>{0} could not be read: {1}.</value></data>
+  <data name="Blender_Annotations_PhotoMissing" xml:space="preserve"><value>{0}: the photo {1} was not found.</value></data>
+  <data name="Blender_Annotations_PhotoRefused" xml:space="preserve"><value>{0}: the photo {1} cannot be used: {2}.</value></data>
+  <data name="Blender_UI_Subtitle" xml:space="preserve"><value>Subtitle</value></data>
+  <data name="Blender_UI_Subtitle_Tip" xml:space="preserve"><value>A smaller line under the title; empty for none. It is not shown without a title.</value></data>
+  <data name="Blender_UI_ScaleBar" xml:space="preserve"><value>Scale bar</value></data>
+  <data name="Blender_UI_ScaleBar_Tip" xml:space="preserve"><value>A round length (50 m, 2 km) in the bottom left corner, at the distance of what the camera looks at.</value></data>
+  <data name="Blender_UI_NorthArrow" xml:space="preserve"><value>North arrow</value></data>
+  <data name="Blender_UI_NorthArrow_Tip" xml:space="preserve"><value>An arrow in the top right corner that turns with the camera, its N at its tip.</value></data>
+  <data name="Blender_UI_DepthLegend" xml:space="preserve"><value>Depth legend</value></data>
+  <data name="Blender_UI_DepthLegend_Tip" xml:space="preserve"><value>The colors of the depth tint along the right edge of the picture, the top of the cave first.</value></data>
+  <data name="Blender_UI_FadeFromBlack" xml:space="preserve"><value>Fade in (seconds)</value></data>
+  <data name="Blender_UI_FadeToBlack" xml:space="preserve"><value>Fade out (seconds)</value></data>
+  <data name="Blender_UI_Fade_Tip" xml:space="preserve"><value>How long the movie takes to come out of black at its start, and to go to black at its end. 0 is no fade.</value></data>
+  <data name="Blender_UI_Export_Tip" xml:space="preserve"><value>Writes the scene that Render would show into the export folder, to render with Blender on any machine: the scene plan, the player, the meshes and the images, with a README and scripts that start Blender. With Self-contained script ticked it is one file. Scene builder says what makes the scene: the script generator writes a script of its own instead.</value></data>
+  <data name="Blender_UI_OpenInBlender_Tip" xml:space="preserve"><value>Opens the scene that Render would show in Blender's own window, seen through its camera, to look at or to change by hand. Nothing is rendered.</value></data>
+  <data name="Blender_OpenInBlender_TextsNote" xml:space="preserve"><value>The texts over the picture are not in Blender's window: the player writes them over the finished frames, after the scene is rendered.</value></data>
+  <data name="Blender_Blocker_HdriKind" xml:space="preserve"><value>The HDRI image must be a Radiance .hdr or an OpenEXR .exr file.</value></data>
+  <data name="Blender_Blocker_FileNotFound" xml:space="preserve"><value>File not found: {0}</value></data>
+  <data name="Blender_Pick_HdriImages" xml:space="preserve"><value>HDRI images (.hdr, .exr)</value></data>
+  <data name="Blender_Pick_Models" xml:space="preserve"><value>Cave models (.3d, .lox)</value></data>
+  <data name="Blender_Pick_Annotations" xml:space="preserve"><value>Annotations (.json)</value></data>
   <data name="Count_Warnings_One" xml:space="preserve"><value>{0} warning</value></data>
   <data name="Count_Warnings_Few" xml:space="preserve"><value>{0} warnings</value></data>
   <data name="Count_Warnings_Many" xml:space="preserve"><value>{0} warnings</value></data>

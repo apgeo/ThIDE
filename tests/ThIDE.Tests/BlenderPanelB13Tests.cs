@@ -73,7 +73,13 @@ public class BlenderPanelB13Tests
     {
         public bool Result { get; set; } = true;
         public string? Launched { get; private set; }
-        public bool Launch(string scriptPath) { Launched = scriptPath; return Result; }
+        public IReadOnlyList<string>? Arguments { get; private set; }
+        public bool Launch(string scriptPath, IReadOnlyList<string>? scriptArguments = null)
+        {
+            Launched = scriptPath;
+            Arguments = scriptArguments;
+            return Result;
+        }
     }
 
     private static BlenderAnimationViewModel Vm(FakeRender? render = null, FakeNotifications? notify = null, FakeShell? shell = null, FakeGui? gui = null)

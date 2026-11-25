@@ -5,6 +5,8 @@
 # script; the stub reads where the output goes from whichever it was given. It keeps a copy of
 # each script, and of each plan, in $THIDE_STUB_BLENDER_SCRIPTS, so a test can check what the
 # application made. With THIDE_STUB_BLENDER_FAIL set, a run ends as a Blender that crashed does.
+# Started to show a scene in its window (the player's "--build-only"), it renders nothing and
+# keeps the plan as built-plan-<n>.json: the name says how it was started.
 import json
 import os
 import re
@@ -40,9 +42,14 @@ if keep:
     os.makedirs(keep, exist_ok=True)
     number = len(os.listdir(keep))
     if os.path.exists(plan_path):
-        shutil.copy(plan_path, os.path.join(keep, "scene-plan-%d.json" % number))
+        name = "built-plan-%d.json" if "--build-only" in own else "scene-plan-%d.json"
+        shutil.copy(plan_path, os.path.join(keep, name % number))
     else:
         shutil.copy(script, os.path.join(keep, "render-%d.py" % number))
+
+if "--build-only" in own:
+    say("phase=scene", "built=1")
+    sys.exit(0)
 
 if os.path.exists(plan_path):
     # The player: one stage, or the first (frames) and the second (compose) of two.
