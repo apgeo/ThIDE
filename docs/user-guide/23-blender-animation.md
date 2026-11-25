@@ -163,6 +163,14 @@ starts: a `.3d` file's title, or the title of the survey at the top of a `.lox` 
 the Title field shows `{cave}` until you type something else. A text that is nothing but the
 name is left out when the model has none.
 
+**Two numbers of the model.** `{length}` stands for the length of the model's centreline and
+`{depth}` for its vertical range, each in whole metres with its unit ("1234 m", "87 m"). They are
+what the model itself holds: `{length}` is the sum of its legs, without the legs it flags as
+surface, splay or duplicate, and `{depth}` is the height from its lowest station to its highest.
+That is not always the surveyed length and depth a report states (a model may hold part of a
+cave, or surface legs that are not flagged); type the numbers yourself where they must be the
+official ones. A text that is nothing but a number the model does not give is left out.
+
 **Texts in presets.** A preset keeps the texts with everything else. **Save preset** stores the
 title and its subtitle, the credits line, the end card, the scale bar, the north arrow, the depth
 legend, the fades and the captions as they are in the panel, and choosing the preset later brings
@@ -183,6 +191,16 @@ goes on under it, instead of holding the last frame: the movie is then no longer
 
 ```json
 "endCard": { "text": "Thank you", "seconds": 4, "backdrop": 0.5, "overScene": true }
+```
+
+**How long they fade.** In a render spec, `"fade"` on the end card says how many seconds it takes
+to appear (0 is at once; without it, half a second), and `"titleFade"` beside the title says how
+long the title takes to appear and, when it is a card, to go (without it a title is there from
+the first frame and a card goes in 0.8 s):
+
+```json
+"title": "{cave}", "titleSeconds": 3, "titleFade": 1.5,
+"endCard": { "text": "Thank you", "seconds": 4, "fade": 2 }
 ```
 
 **Captions are also written as subtitles**: `<name>.srt` and `<name>.vtt` beside the movie, for a
@@ -331,7 +349,9 @@ and lights nothing itself. A text and a marker glow, like the labels.
 **Photos.** A photo is a PNG or a JPEG of at most 32 MiB, 16,384 pixels a side and 64 million
 pixels; anything else is refused before Blender starts. A picture 2,000 pixels wide is more than
 a movie shows: smaller files make smaller bundles and faster renders. The files stay where they
-are; ThIDE copies them for the render, and into a bundle (its `photos` folder).
+are; ThIDE copies them for the render, and into a bundle (its `photos` folder). Where a PNG is
+clear (a picture cut out of its background), the photo is not there and the cave behind it is
+seen; a preview's mosaic shows the whole rectangle.
 
 **In the panel.** Under **Annotations**, type the file's path or pick it with **Browse…**, and
 press **Load**: the scene takes the file's annotations *in place of* those it had, and the line

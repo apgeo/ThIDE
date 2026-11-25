@@ -1,5 +1,104 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-25 (later) — keys before the clip and three on a frame, a backdrop apart from the light, bands, photos over the picture
+
+The plan stays **version 1**, and this is the same player **1.9** as the entry below: the two
+were made in one step. Everything here is a new key or a rule that became wider, so every plan of
+yesterday plays as it did. A plan that uses one of the new keys needs a player 1.9 (a player 1.8
+refuses the key by name; a key before the clip or a third key on a frame it refuses with "keys
+are in rising order of time" or "no more than two keys").
+
+### Breaking changes
+- None in this library's API. `ScenePlanValidator` no longer refuses a change key with a negative
+  time, and takes three keys on a frame where it took two: a producer that relied on those
+  refusals to catch its own mistakes checks them itself.
+- `SceneMeta` (`scene-meta.json`, still version 1) has one more field, `centerlineLength`; a
+  document without it reads as before.
+
+### Changes: keys before the first frame
+- **A key's `t` may be negative** (`changes[].*[].t`, also of `visible`): the clip then begins on
+  the way from that key, part of the way through a move, a smooth move or a fade. A smooth move
+  from −1 s to 1 s is half done on the first frame, and is the same curve it would be from 0.
+  A `visible` key at −0.5 s with a fade of 1 s has the target half there on the first frame.
+  Before, such keys were refused, and a producer had to work out the first frame's value and
+  could not say "part of a smooth move" at all.
+
+### Changes: a third key on a frame
+- **Up to three keys of a property may fall on one frame.** The first is where the value was
+  going, the second (`constant`) is what the frame shows and has from then on, and a third
+  (`constant`) is **the value the move to the next key starts from, which no frame shows**: the
+  frame after is one frame along a move that began at the third key's value. For a track that
+  restarts a curve at a cut: `[…, {t: 2, value: 20}, {t: 2, value: 50, easing: "constant"},
+  {t: 2, value: 100, easing: "constant"}, {t: 3, value: 200}]` shows 50 on the frame at 2 s and
+  110 a tenth of a second later (at 10 fps). The curve is still one Blender works out by itself.
+
+### The world: a backdrop apart from the light
+- **`PlanWorld.Backdrop`** (`look.world.backdrop`) is how bright the camera sees the world, set
+  apart from `strength`, which is then only how strongly the world lights the scene. Without it
+  nothing changes: one strength for both.
+- **`PlanChange.WorldBackdrop`** (`changes[].worldBackdrop`, no target) keys it; `worldStrength`
+  then keys the light alone. A sky that stays behind a cave while its light goes out underground
+  is `worldStrength` to 0 with `worldBackdrop` left at 1; a world that lights and is not seen is
+  `backdrop: 0`. Either sets the world apart; a world that is set apart no longer shows its
+  backdrop following `worldStrength`.
+- **`PlanChange.WorldRotation`** (`changes[].worldRotation`, no target) keys how far the world's
+  image is turned, in degrees, as `look.world.rotation` has it: an HDRI that turns while the
+  clip runs. For a world of the kind `image`.
+
+### Materials: a ramp in bands
+- **`PlanMaterial.Banded`** (`look.materials[].banded`, written only when true): the colour of a
+  stop holds from the stop up to the next one and changes there at once. It replaces two stops
+  a ten-thousandth apart at every edge: bands by depth are one stop each, `{ at: <where the
+  band begins>, color }`, in rising order. In a draft a band ends along the faces of the mesh.
+
+### Texts: an image over the picture, and fade lengths
+- **`PlanScreenItemKind.Image`** (`texts.items[].kind: "image"`, with `image`): a PNG or a JPEG
+  laid over the frames in the second stage, as a text is: `width` is its width as a share of the
+  picture's width, `height` (optional) its height as a share of the picture's height, `at` the
+  point that `alignX`/`alignY` name, and it has `start`, `end`, `fadeIn`, `fadeOut`, `opacity`
+  and `slot` as every item has. Where a PNG is clear the picture shows through. Its file
+  travels with the plan (`PlayerWriter.FilesOf`, a bundle, a single file) and is checked as a
+  photo is. It changes no frame of the first stage: `--stage compose` is enough after one changes.
+- **`ScreenTextPlanner.PhotoInset(id, image, imageInfo, pictureWidth, pictureHeight,
+  wholePicture, start, end, fade)`** lays a photo out as such an item: in the lower right corner
+  (at most 0.3 of the width and 0.35 of the height, above the credits line) or over the whole
+  picture inside the margin, keeping its shape. **Not built:** a `SceneSpec` annotation that asks
+  for an inset, and with it the panel, the command line and the MCP tools; a producer of plans
+  adds the item itself.
+- **`EndCardSpec.Fade`** (`endCard.fade`) and **`OverlaySpec.TitleFade`** (`titleFade`), both in
+  seconds and written only when set: how long the end card takes to appear, and how long the
+  title takes to appear and (a title card) to go. `SceneBuilders.NotDrawnByTheGenerator` names
+  `labels.overlays.titleFade`.
+
+### Photos: transparency
+- A photo annotation whose PNG has an alpha channel is **not there where the image is clear**
+  (a mix with nothing, by the image's alpha). A tint, a fade and an opacity work on it as on any
+  photo. A JPEG, and a PNG without alpha, have the material they had. The draft's mosaic is whole.
+
+### Placeholders
+- **`{length}`** and **`{depth}`** (`TextPlaceholders.Length`, `.Depth`) beside `{cave}`: the
+  length of the model's centreline (`SceneMeta.CenterlineLength`: the sum of its legs, without
+  those flagged surface, splay or duplicate) and its vertical range (lowest to highest station),
+  in whole metres with the unit. They are the model's own numbers, said as such in the guide;
+  a model that gives none leaves the text out.
+
+### Not built
+- A line whose width stays the same on the screen. It needs the tubes rebuilt at every frame
+  from the camera's place (geometry nodes), in three Blender versions, for the render, the
+  draft, a reveal and a saved scene alike; the cost was out of proportion to this step.
+
+### Verified
+- Without Blender: the validator's and the serializer's rules for every new key, the schema and
+  the player's known keys in step, the photo inset's layout, the fades from the spec to the
+  texts, the placeholders against an invented cave's own legs and heights.
+- In Blender 4.2.23, 4.5.16 and 5.0.1: the value of a light's energy, a model's place, its fade
+  and its opacity at each of twenty frames, for a clip that begins half-way through a smooth
+  move and inside a fade and for a frame with three keys; a world that lights and is not seen,
+  then is seen and lights nothing, by the pixels of the corner and of the cave; a world's image
+  turned by a key against the same image turned by `rotation` (the same picture); a ramp in
+  bands against a blended one (a fifth of the in-between pixels, the edges' own); a photo with a
+  clear half, tinted; an image in the corner and over the whole picture, by its columns and rows.
+
 ## 2026-11-25 — a cave seen from far away: unlit materials, a lamp that reaches, and four findings
 
 The plan stays **version 1**. The player calls itself **1.9**: a material of the look may be

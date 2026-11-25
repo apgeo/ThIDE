@@ -176,6 +176,15 @@ când pornește randarea: titlul unui fișier `.3d` sau titlul ridicării din v�
 folosesc pentru titlurile lor, de aceea câmpul Titlu arată `{cave}` până scrieți altceva. Un text
 care nu este altceva decât numele este lăsat deoparte când modelul nu are nume.
 
+**Două numere ale modelului.** `{length}` ține locul lungimii axei topografice a modelului, iar
+`{depth}` al întinderii lui pe verticală, fiecare în metri întregi, cu unitatea („1234 m”, „87 m”).
+Sunt ceea ce conține modelul însuși: `{length}` este suma vizelor lui, fără cele pe care le are
+semnalate ca fiind de suprafață, radiante (splay) sau duplicate, iar `{depth}` este înălțimea de la
+stația cea mai de jos la cea mai de sus. Acestea nu sunt întotdeauna dezvoltarea și denivelarea
+dintr-un raport (un model poate conține doar o parte a peșterii sau vize de suprafață nesemnalate);
+scrieți numerele de mână acolo unde trebuie să fie cele oficiale. Un text care nu este altceva decât
+un număr pe care modelul nu îl dă este lăsat deoparte.
+
 **Texte în presetări.** O presetare păstrează textele împreună cu toate celelalte. **Salvează**
 stochează titlul și subtitlul lui, linia de credite, cadrul de final, scara grafică, săgeata
 nordului, legenda adâncimii, trecerile și subtitrările așa cum sunt în panou, iar alegerea
@@ -196,6 +205,17 @@ cadru: filmul nu mai este atunci mai lung din cauza lui.
 
 ```json
 "endCard": { "text": "Mulțumim", "seconds": 4, "backdrop": 0.5, "overScene": true }
+```
+
+**Cât durează apariția și dispariția.** Într-o specificație de randare, `"fade"` la cadrul de
+final spune în câte secunde apare (0 înseamnă dintr-odată; fără el, o jumătate de secundă), iar
+`"titleFade"` lângă titlu spune cât durează apariția titlului și, când este un cadru de titlu,
+dispariția lui (fără el, titlul este prezent de la primul cadru, iar un cadru de titlu dispare în
+0,8 s):
+
+```json
+"title": "{cave}", "titleSeconds": 3, "titleFade": 1.5,
+"endCard": { "text": "Mulțumim", "seconds": 4, "fade": 2 }
 ```
 
 **Subtitrările sunt scrise și ca fișiere de subtitrare**: `<nume>.srt` și `<nume>.vtt` lângă film,
@@ -349,6 +369,10 @@ Se scriu ca o listă JSON, într-un fișier al lor:
 O fotografie care stă cu fața spre cameră rămâne paralelă cu imaginea și dreaptă în ea, așa că se
 vede mereu ca dreptunghiul care este. Își arată imaginea așa cum ar arăta-o un ecran, oricare ar fi
 lumina din peșteră, și nu luminează nimic. Un text și un marcaj strălucesc, ca etichetele.
+
+**Transparență.** Acolo unde un PNG este transparent (o imagine decupată de pe fundalul ei),
+fotografia lipsește și se vede peștera din spatele ei; mozaicul unei previzualizări arată tot
+dreptunghiul.
 
 **Fotografii.** O fotografie este un PNG sau un JPEG de cel mult 32 MiB, 16 384 de pixeli pe o
 latură și 64 de milioane de pixeli; orice altceva este respins înainte ca Blender să pornească. O
