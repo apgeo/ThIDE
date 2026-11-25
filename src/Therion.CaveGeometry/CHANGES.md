@@ -1,5 +1,44 @@
 # Therion.CaveGeometry — changes for consumers
 
+## 2026-11-25 — reveal values on the vertices of a mesh
+
+### Additive API
+- **`RevealField`** works out a number for every leg of a cave, at its two ends, which an
+  animated threshold is compared with to show the cave part by part (`RevealLeg`, in the order
+  and with the legs of `TubeMesher.Legs`: no splays, surface legs or duplicates). Three sources
+  (`RevealSource`, `RevealOptions`):
+  - `Date`: the day the leg was surveyed (`CaveShot.DateFrom`), as a decimal year
+    (`RevealField.DecimalYear`), the same at both ends. A model without dates can take them from
+    a second model of the same cave (`RevealOptions.Dates`: a `.lox` has the walls, the `.3d`
+    the dates): legs are matched by where their two stations are, to the centimetre, in the
+    files' own coordinates. A leg without a date has the earliest one (`LegsWithoutDate` counts
+    them); a model without a single date has no field (`Build` returns null).
+  - `Order`: leg *i* runs from *i* to *i* + 1, from its end that is already there to its new one.
+  - `Distance`: metres along the passages from the entrances, or from `FromStation`; a part of
+    the cave that is joined to nothing starts at its own entrances, or at the first station of
+    its first leg (`Starts` names them all). A station the model has not, or one on no leg, is an
+    `ArgumentException`.
+- **`GeometryOptions.Reveal`** makes the geometry stage build the field
+  (`GeometryResult.Reveal`) and give the wall mesh its values (**`CaveMesh.Reveal`**,
+  `HasReveal`; `Combine` keeps them only when every part has them):
+  - tubes: every vertex has the value of the end of the leg its ring stands at
+    (`RevealField.OnTubes`);
+  - surveyed walls (scraps): every vertex has the value of the nearest place on the centreline,
+    looked for at every metre of every leg (`RevealField.OnWalls`).
+- **`PlyWriter`** writes the values as the float vertex property `reveal`
+  (`PlyWriter.RevealProperty`), after the colours and the texture coordinates; Blender's PLY
+  importer (4.2, 4.5, 5.0) keeps it as a mesh attribute of that name. **`GlbWriter`** writes them
+  as the float `SCALAR` attribute `_REVEAL` (`GlbWriter.RevealAttribute`), between the positions
+  and the indices in the buffer. STL and OBJ leave them out.
+
+### Behaviour to know
+- **With values, a tube mesh can have more vertices than without.** Where two legs that share a
+  ring of vertices at a station have different values there (a leg of 1987 meets one of 2003; a
+  junction in a reveal by order), the ring is written once for each, so that no triangle lies
+  across two dates and neither leg shows before its time. The triangles, and where every corner
+  of them is, are the same. A reveal by distance never needs it. Without
+  `GeometryOptions.Reveal` the mesh is, byte for byte, what it was.
+
 ## 2026-11-20 — recentring moves surfaces too
 
 ### Behaviour change

@@ -1,5 +1,143 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-25 — reveal: a cave that appears part by part, by one animated number
+
+The plan stays **version 1** and everything here is additive to it. The player calls itself
+**1.6**: a player 1.5 refuses a plan with a reveal by the key it does not know
+("changes[0].reveal is not known to player 1.5; a newer player may be needed"), so it never plays
+a revealed cave as a whole one. The script generator is as it was: it draws no reveal, and says so.
+
+### Breaking changes
+- **"Map reveal" is in `BuiltInPresets.All` again**, between "Full flythrough" and "Documentation
+  stills", and `ByName("Map reveal")` finds it: it reveals the cave now (by distance from its
+  entrances, from 0.5 s to 9.5 s of its 12), and its component labels fade in at 9 s instead of
+  from the first frame. Migration: code that counted four presets counts five.
+- **A file that is not JSON is reported by where it stops being JSON, and by nothing of what is
+  in it.** `SceneSpecSerializer.Read`, `ScenePlanSerializer.Read` and `PresetSerializer.Read`
+  used to pass the parser's own words on, which quote the text ("'n' is an invalid start of a
+  value…"): the contents of whatever file somebody named by mistake. The messages are now
+  "Malformed render spec JSON: the text is not JSON at line 3, byte 14." (likewise "scene plan",
+  "preset"), as `AnnotationsFile` has had it. JSON of the wrong shape is still named by its key
+  ("The JSON value could not be converted to System.Int32. Path: $.seed | …"), in one line, cut
+  after 300 characters. Migration: code that matched the parser's wording matches the new one.
+- **The validator's sentence for a change without a target** names the reveal too: "A change of
+  visibility, opacity, tint, scale, offset, energy or reveal needs a target."
+- `SceneBuilders.NotDrawnByTheGenerator` can name `reveal`.
+- In the player, `api.tube` takes two more optional arguments (`values`, `vertex_values`), and a
+  material that `changes` made see-through for a revealed thing has one more factor in its mix
+  (see below). A module from elsewhere that walks those nodes finds the product of fade and
+  opacity one Multiply node further up.
+
+### Additive API: a reveal in a plan
+
+One more property of `changes`, of a model or a line:
+
+```json
+"changes": [
+  { "target": { "id": "CaveModel" },
+    "reveal": [
+        { "t": 1, "value": 1962.3 },
+        { "t": 9, "value": 2024.9 } ],
+    "revealFront": { "edge": 1.5, "glow": { "color": [1, 0.55, 0.15], "strength": 3, "width": 2 } } }
+],
+"texts": { "items": [
+  { "id": "year", "kind": "text", "at": [0.05, 0.17], "text": "{}", "size": 0.08, "alignX": "left", "alignY": "bottom",
+    "counter": { "target": { "id": "CaveModel" }, "min": 1962, "max": 2024 } } ] }
+```
+
+- **`reveal`** (`PlanChange.Reveal`, keys of `PlanNumberKey`) is a **threshold**. Every vertex of
+  the target's mesh has a **reveal value**, one number; at every moment the parts whose value lies
+  below the threshold are there and the rest is not. The values are in units of their own —
+  years, metres, a count — and so is the threshold. Its keys are those of any number of
+  `changes`: easings, a key after the clip, two keys on a frame.
+- **Where the values are.** In a PLY file, the float vertex property `reveal`; in a GLB file, the
+  float `SCALAR` attribute `_REVEAL` (glTF's spelling of a name of one's own; found under the
+  plan's name too); for a line, `strips[].reveal`, a number for every point
+  (`PlanLineStrip.Reveal`; either every strip of a line has them or none). `revealFront.attribute`
+  names another attribute than `reveal`. The player keeps them on the mesh as the attribute
+  `thide_reveal`.
+- **`revealFront`** (`PlanRevealFront`) is how the edge looks, all optional. `edge`: how far
+  behind the threshold a part is wholly there, so a part appears over that much of the
+  threshold's way (0, the default, is a cut). `glow` (`PlanRevealGlow`): what has just appeared
+  shines in `color` by `strength`, all of it at the threshold and none of it `width` behind.
+  Edge and width are in the units of the values.
+- **A part is there once the threshold is past it**: how much of it is `(threshold − value) /
+  edge`, between 0 and 1. So nothing is there while the threshold is at the lowest value, and
+  everything is, with no glow left, once it is past the highest by the edge or the glow's width,
+  whichever is more.
+- **A counter** (`PlanScreenItem.Counter`, `PlanCounter`) makes a text of `texts` show the number
+  the threshold has got to, at every frame, in place of the `{}` in its text
+  (`ScenePlanValidator.CounterPlace`): a year counter. `target` is the target of the change whose
+  reveal is counted, named as that change names it. The number is cut down to `decimals` decimals
+  (1987.9 shows as 1987), kept between `min` and `max`, and after the clip's last frame (an end
+  card) it stays as it was. The module works it out from the same keys, the way Blender works out
+  the curve, and writes one strip for every stretch of frames the number lasts (`<id>.1`,
+  `<id>.2`, …), which fade as one text would.
+- **How it is played.** The threshold is a number on the object (`thide_reveal`, keyed), with
+  the edge and the glow beside it, so objects that share a material are revealed one by one, and
+  a saved `.blend` plays it with no Python. Two things read it. The **material** multiplies what
+  it lets through by `(threshold − value) / edge` and mixes the glow in. A **modifier**
+  (`ThideRevealCut`, geometry nodes) takes away every face that lies wholly beyond the threshold:
+  a ray does not have to pass through the hidden walls of a whole cave to reach the one that is
+  there (Cycles gives up after eight see-through surfaces), and the draft shows the reveal.
+- **The draft** (Blender's solid view) shows a reveal as a cut along the faces of the mesh. With
+  an edge or a glow it warns once: "the draft shows a reveal as a cut along the faces of the mesh,
+  without its soft edge or its glow".
+- **Refused, by name**: a reveal of a text, a marker, an annotation or a light (only a model or
+  a line has one); of a model without a material; of a line without values, by the validator, and
+  of a mesh without the attribute, by the player ("changes[0].reveal: "CaveModel" has no reveal
+  values: its mesh has no attribute "reveal" (a number for every vertex)"); `revealFront` without
+  `reveal`; a counter that is not a text, has no `{}`, or whose target no change reveals.
+- `RevealPlanner.Centreline(field, id, width, material)` makes the centreline of a converted cave
+  a line of the plan, one strip a leg, with the reveal values of its ends: for a plan that
+  reveals the survey lines with the walls, or before them.
+
+### Additive API: a reveal in a spec
+
+`SceneSpec.Reveal` (`RevealSpec`, `RevealBy`), written only when it is set, so a spec without one
+is the JSON, and has the hash, it had:
+
+```json
+"reveal": { "by": "Date", "start": 1, "end": 9, "edge": 0.03, "glow": true, "counter": true }
+```
+
+| Field | Meaning | Default |
+|---|---|---|
+| `by` | `Date` (the day each leg was surveyed), `Order` (the order of the legs) or `Distance` (along the passages, from the entrances) | `Distance` |
+| `from` | for `Distance`: the station to measure from | the entrances; without any, the first station of the first leg |
+| `datesPath` | for `Date`: a model file of the same cave that has the dates | a `.3d` of the model's name beside it |
+| `start`, `end` | seconds: when the reveal begins and when the whole cave is there | 0, the last frame |
+| `edge` | how soft the edge is, as a share of the range of the values (0–0.5) | 0.03 |
+| `glow`, `glowColor` | whether what has just appeared shines, and in what colour | true, orange |
+| `counter` | for `Date`: the year the reveal has got to, written above the scale bar | true |
+
+- **The conversion works the values out** when it is told to: `RevealPlanner.GeometryFor(spec,
+  geometry, modelPath)` gives the `GeometryOptions` for a spec (the render service and
+  `RenderBundleWriter.FromModel` use it), the PLY then has the property `reveal`, and
+  `scene-meta.json` says what it holds: `SceneMeta.Reveal` (`by`, `min`, `max`,
+  `legsWithoutDate`, `from`). See Therion.CaveGeometry's changes for how the values are made.
+- **`ScenePlanBuilder.FromSpec` lowers it** (`RevealPlanner.Plan`) to one change of `CaveModel`,
+  two keys from the lowest value to past the highest, over the range that `meta.Reveal` gives;
+  the edge and the glow's width (4 % of the range) become units of the values; and for `Date` a
+  counter (`reveal-counter`) between the years of the first and the last survey.
+- **`ScenePlanBuilder.Notices` says what a render cannot**: "The model has no survey dates to
+  reveal it by (a .lox file has none; name the .3d file of the same cave); rendering without the
+  reveal.", "6 legs have no survey date; they are shown from the start of the reveal.", "A still
+  shows the whole cave; the reveal is left out." (a still and a set of stills:
+  `RevealPlanner.Applies`).
+- **Only the player draws it.** `ScenePlanBuilder.NotCarried` is as it was (the HDRI rig), so
+  `Auto` gives a spec with a reveal to the player; a spec that also has what the player does not
+  carry goes to the script generator, with `reveal` in `RenderResult.LeftOut`.
+- A station to measure from that the model has not, and a file of dates that is not there or is
+  no model, stop the conversion with an `ArgumentException` that names them.
+
+### Command line and MCP
+- `therion-cli blender … --reveal date|order|distance [--reveal-from <station>] [--reveal-dates
+  <file.3d>] [--reveal-seconds <start>-<end>]`, with a render and with `--bundle`. Over a preset
+  that reveals, `--reveal` changes the kind and keeps the times.
+- `start_render` has `reveal`, `revealFrom` and `revealDates` (a file of the workspace). A file
+  of dates that a saved preset names outside the workspace is not read.
+
 ## 2026-11-25 — annotations: labels, callouts, markers and photos that point things out
 
 The plan stays **version 1** and everything here is additive to it. The player calls itself
