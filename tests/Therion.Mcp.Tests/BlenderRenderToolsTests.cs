@@ -618,6 +618,113 @@ public sealed class BlenderRenderToolsTests : IDisposable
         Assert.Equal(("blender", "out/cave.3d", "externalFile", 1), (result.Data.Directory, result.Data.Model, result.Data.ModelKind, result.Data.Frames));
         Assert.True(File.Exists(_fixture.PathTo("blender", "render.py")));
         Assert.Equal(ToolErrorCodes.JobNotFound, (await status.RenderStatus()).Error!.Code);
+        // The player's, as a render is, in a folder; with what the scene shows less of.
+        Assert.Equal(("player", false), (result.Data.Builder, result.Data.OneFile));
+        Assert.Empty(result.Data.LeftOut!);
+        Assert.Equal(["a notice"], result.Data.Warnings);
+        Assert.Equal((SceneBuilder.Auto, false), (_blender.Renderer.LastExportOptions!.Builder, _blender.Renderer.LastExportOptions.SingleFile));
+    }
+
+    [Fact]
+    public async Task An_export_takes_what_a_render_takes_as_one_file_or_by_the_script_generator_when_asked()
+    {
+        Directory.CreateDirectory(_fixture.PathTo("trip"));
+        File.WriteAllText(_fixture.PathTo("trip", "notes.json"), """[{ "kind": "label", "station": "a0", "text": "Sala Mare" }]""");
+        File.WriteAllBytes(_fixture.PathTo("trip", "sky.hdr"), [1, 2, 3]);
+        var (render, _) = await ToolsAsync();
+
+        var one = await render.ExportRenderScript("blender", model: "out/cave.3d", oneFile: true,
+            title: "Demo: {cave}", credits: "the team", endCard: "The end", endCardSeconds: 2, captions: ["1-2:Intrarea"],
+            annotations: "trip/notes.json", reveal: "distance", revealFrom: "a0", hdri: "trip/sky.hdr", hdriStrength: 1.5, hdriRotation: 90);
+
+        Assert.True(one.Ok, one.Error?.Message);
+        Assert.Equal(("player", true), (one.Data!.Builder, one.Data.OneFile));
+        Assert.True(_blender.Renderer.LastExportOptions!.SingleFile);
+        var spec = _blender.Renderer.LastExportSpec!;
+        var overlays = spec.Labels.Overlays;
+        Assert.Equal(("Demo: {cave}", "the team", "The end", 2.0), (overlays.Title, overlays.Credits, overlays.EndCard!.Text, overlays.EndCard.Seconds));
+        Assert.Equal(new CaptionSpec { Text = "Intrarea", Start = 1, End = 2 }, Assert.Single(overlays.Captions));
+        Assert.Equal("Sala Mare", Assert.Single(spec.Annotations).Text);
+        Assert.Equal((RevealBy.Distance, "a0"), (spec.Reveal!.By, spec.Reveal.From));
+        Assert.Equal(
+            (LightingRig.HdriFile, WorkspacePaths.Canonicalize(_fixture.PathTo("trip", "sky.hdr")), 1.5, 90.0),
+            (spec.Lighting.Rig, spec.Lighting.HdriPath, spec.Lighting.Strength, spec.Lighting.HdriRotation));
+        Assert.Equal(_fixture.PathTo("blender"), spec.Output.OutputDirectory);
+
+        // The earlier builder, by name: its script, and what that leaves out.
+        var generated = await render.ExportRenderScript("blender", model: "out/cave.3d", builder: "Generator", credits: "the team");
+        Assert.True(generated.Ok, generated.Error?.Message);
+        Assert.Equal(("generator", false), (generated.Data!.Builder, generated.Data.OneFile));
+        Assert.Equal(["labels.overlays.credits"], generated.Data.LeftOut);
+        Assert.Equal(SceneBuilder.Generator, _blender.Renderer.LastExportOptions!.Builder);
+
+        var unknown = await render.ExportRenderScript("blender", model: "out/cave.3d", builder: "blender");
+        Assert.Equal(ToolErrorCodes.InvalidArgument, unknown.Error!.Code);
+        Assert.Contains("auto, player, generator", unknown.Error.Message);
+        // What a render refuses, an export refuses: a photo or an image from outside the workspace.
+        Assert.Equal(ToolErrorCodes.PathOutsideWorkspace, (await render.ExportRenderScript("blender", model: "out/cave.3d", hdri: "../sky.hdr")).Error!.Code);
+        Assert.Equal(ToolErrorCodes.PathOutsideWorkspace, (await render.ExportRenderScript("blender", model: "out/cave.3d", annotations: "../notes.json")).Error!.Code);
+    }
+
+    // ---- the image a scene is lit by ------------------------------------------------------------
+
+    [Fact]
+    public async Task An_image_the_scene_is_lit_by_comes_from_the_workspace_with_its_strength_and_its_turn()
+    {
+        Directory.CreateDirectory(_fixture.PathTo("skies"));
+        File.WriteAllBytes(_fixture.PathTo("skies", "evening.EXR"), [1, 2, 3]);
+        var (render, status) = await ToolsAsync();
+
+        var started = await render.StartRender(model: "out/cave.3d", hdri: "skies/evening.EXR", hdriStrength: 2, hdriRotation: -45);
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        var lighting = _blender.Renderer.LastSpec!.Lighting;
+        Assert.Equal(
+            (LightingRig.HdriFile, WorkspacePaths.Canonicalize(_fixture.PathTo("skies", "evening.EXR")), 2.0, -45.0),
+            (lighting.Rig, lighting.HdriPath, lighting.Strength, lighting.HdriRotation));
+
+        // The image alone keeps the preset's strength, and is not turned; without one the
+        // preset's lighting stays.
+        started = await render.StartRender(model: "out/cave.3d", hdri: "skies/evening.EXR");
+        await FinishedAsync(status, started.Data!.JobId);
+        var plain = _blender.Renderer.LastSpec!.Lighting;
+        Assert.Equal((LightingRig.HdriFile, BuiltInPresets.OrbitShowcase().Spec.Lighting.Strength, 0.0), (plain.Rig, plain.Strength, plain.HdriRotation));
+        started = await render.StartRender(model: "out/cave.3d");
+        await FinishedAsync(status, started.Data!.JobId);
+        Assert.Equal(BuiltInPresets.OrbitShowcase().Spec.Lighting, _blender.Renderer.LastSpec!.Lighting);
+
+        // A saved preset that is lit by an image takes a turn and a strength without naming it
+        // again, and its turn can be taken back to none. Its image is the user's own choice.
+        _blender.Saved.Add(new RenderPreset
+        {
+            Name = "Under a sky",
+            Spec = new SceneSpec { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "/elsewhere/sky.hdr", HdriRotation = 30 } },
+        });
+        started = await render.StartRender(preset: "Under a sky", model: "out/cave.3d", hdriRotation: 0, hdriStrength: 0.5);
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        Assert.Equal(("/elsewhere/sky.hdr", 0.5, 0.0), (_blender.Renderer.LastSpec!.Lighting.HdriPath, _blender.Renderer.LastSpec.Lighting.Strength, _blender.Renderer.LastSpec.Lighting.HdriRotation));
+    }
+
+    [Theory]
+    [InlineData("../sky.hdr", null, null, ToolErrorCodes.PathOutsideWorkspace, "outside")]
+    [InlineData("skies/none.hdr", null, null, ToolErrorCodes.FileNotFound, "No such file: skies/none.hdr")]
+    [InlineData("notes.txt", null, null, ToolErrorCodes.InvalidArgument, "name a Radiance .hdr or an OpenEXR .exr file")]
+    [InlineData(null, 2.0, null, ToolErrorCodes.InvalidArgument, "hdriStrength and hdriRotation go with an image")]
+    [InlineData(null, null, 90.0, ToolErrorCodes.InvalidArgument, "hdriStrength and hdriRotation go with an image")]
+    [InlineData("skies/evening.hdr", -1.0, null, ToolErrorCodes.InvalidArgument, "lighting.strength")]
+    [InlineData("skies/evening.hdr", null, double.NaN, ToolErrorCodes.InvalidArgument, "lighting.hdriRotation")]
+    public async Task An_image_that_cannot_light_the_scene_is_refused_before_a_job_starts(string? hdri, double? strength, double? rotation, string code, string said)
+    {
+        Directory.CreateDirectory(_fixture.PathTo("skies"));
+        File.WriteAllBytes(_fixture.PathTo("skies", "evening.hdr"), [1, 2, 3]);
+        var (render, _) = await ToolsAsync();
+
+        var refused = await render.StartRender(model: "out/cave.3d", hdri: hdri, hdriStrength: strength, hdriRotation: rotation);
+
+        Assert.Equal(code, refused.Error!.Code);
+        Assert.Contains(said, refused.Error.Message);
+        Assert.Empty(_blender.Requests);
     }
 
     [Theory]
@@ -771,6 +878,28 @@ public sealed class BlenderRenderToolsTests : IDisposable
             var script = Path.Combine(outputDir, "render.py");
             File.WriteAllText(script, "# render\n");
             return Task.FromResult(script);
+        }
+
+        public SceneSpec? LastExportSpec { get; private set; }
+        public ExportOptions? LastExportOptions { get; private set; }
+
+        /// <summary>Writes the script, as the service does for either builder, and answers as it does.</summary>
+        public async Task<RenderExport> ExportAsync(SceneSpec spec, RenderSource source, string outputDir, ExportOptions options,
+            IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+        {
+            LastExportSpec = spec;
+            LastExportOptions = options;
+            bool generator = options.Builder == SceneBuilder.Generator;
+            return new RenderExport
+            {
+                ScriptPath = await ExportScriptAsync(spec, source, outputDir, progress, ct),
+                Directory = outputDir,
+                Builder = generator ? SceneBuilder.Generator : SceneBuilder.Player,
+                SingleFile = options.SingleFile,
+                FrameCount = SceneSpecValidator.FrameCount(spec),
+                LeftOut = generator ? SceneBuilders.NotDrawnByTheGenerator(spec) : [],
+                Notices = generator ? [] : ["a notice"],
+            };
         }
     }
 }
