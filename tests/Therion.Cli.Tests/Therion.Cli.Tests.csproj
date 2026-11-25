@@ -29,6 +29,7 @@
     <Compile Include="..\Shared\WritePath\*.cs" LinkBase="Shared\WritePath" />
     <!-- Invented caves for the render-bundle tests: no surveyed data. -->
     <Compile Include="..\Therion.Blender.Tests\SceneProbe\InventedCave.cs" Link="Blender\InventedCave.cs" />
+    <Compile Include="..\Therion.Blender.Tests\Survex3dFixtureBuilder.cs" Link="Blender\Survex3dFixtureBuilder.cs" />
   </ItemGroup>
 
 </Project>

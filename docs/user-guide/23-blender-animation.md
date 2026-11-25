@@ -38,6 +38,9 @@ describes one *render job*; nothing runs until you press **Render** or **Preview
    - **Orbit showcase** — a full turntable with studio lighting.
    - **Helix descent** — a spiral from the top of the cave to the bottom.
    - **Full flythrough** — a head-torch fly-through of the longest passage.
+   - **Map reveal** — a pass from almost straight above in which the cave appears little by
+     little, from its entrances inwards (see
+     [Revealing the cave part by part](#revealing-the-cave-part-by-part)).
    - **Documentation stills** — framed top / front / side / isometric images.
 
    A preset fills in the camera, materials, lighting and output all at once. You can then tweak
@@ -155,6 +158,56 @@ lead marker goes on pulsing while it does. Hiding is at once. (The script genera
 on the same frames, but instead of a fade it grows the labels from nothing.) A preview shows the
 fade as a cut: the labels are simply there from `showFrame` on.
 
+## Revealing the cave part by part
+
+A cave need not be all there from the first frame. With a **reveal** it appears part by part while
+the clip runs, in an order the survey itself gives:
+
+| Reveal | The cave appears… | It needs |
+|---|---|---|
+| `distance` | from its entrances inwards, each place when the reveal has got as far along the passages as that place lies | nothing: every model has it. A cave without a marked entrance starts at the first station of its first leg; `from` names another station to start at |
+| `order` | leg by leg, in the order the survey has its legs in, each leg growing from the end that is already there | nothing |
+| `date` | in the order of the **survey dates**: the history of the exploration, with a **counter of the years** in a corner of the picture | survey dates |
+
+The preset **Map reveal** reveals by distance. Any other preset or spec takes a reveal from the
+command line (`--reveal date`, see [below](#from-the-command-line)), from the MCP tools
+(`reveal`), or in the render spec itself:
+
+```json
+"reveal": { "by": "Date", "start": 1, "end": 9, "edge": 0.03, "glow": true, "counter": true }
+```
+
+- `start` and `end` are when the reveal begins and when the whole cave is there, in seconds;
+  without `end` it ends with the clip. Give the cave a second or two at the end.
+- `edge` is how soft the edge is, as a share of the whole reveal: what appears takes that much of
+  it to become solid. `0` is a clean cut.
+- `glow` makes what has just appeared shine (in `glowColor`, a warm orange unless you say
+  otherwise) until the reveal has moved on.
+- `counter` (for `date`) writes the year the reveal has got to above the scale bar.
+- `from` (for `distance`) is the name of the station the distances are measured from.
+- `datesPath` (for `date`) names the file that has the dates.
+
+**Where the dates come from.** A `.3d` file carries the day each leg was surveyed; a `.lox` file
+does not. For a `.3d` model the dates are simply there. For a `.lox` model, which is the one with
+the real walls, ThIDE takes the dates from the `.3d` of the same cave: a `.3d` of the same name
+beside the `.lox`, or the one you name (`--reveal-dates cave.3d`, `datesPath`). The legs of the two
+files are matched by where their stations are, so both must come from the same survey data.
+
+- A leg without a date is shown from the start of the reveal; the render says how many there are.
+- A model with no dates at all is rendered whole, and the render says why.
+- A cave surveyed in three expeditions appears in three steps. With surveyed walls (a `.lox`),
+  each piece of wall appears with the leg it lies nearest to.
+
+**What to know.**
+
+- **Only the player draws a reveal.** A scene the script generator builds shows the whole cave
+  throughout, and the result says so.
+- A still, and a set of stills, show the whole cave.
+- A preview shows the reveal as a cut along the faces of the model, without its soft edge or its
+  glow, and says so.
+- Labels and annotations are not revealed with the cave: give them times of their own
+  (`labels.events`, an annotation's `from`), as the preset **Map reveal** does for its labels.
+
 ## Annotations: labels, callouts, markers and photos
 
 Beside the labels ThIDE makes from the model (its stations, its leads), a scene can have
@@ -230,8 +283,9 @@ between them:
 - **Generator** — the earlier builder, kept as it was for comparison and for what the player does
   not do yet. It writes one Python script per scene. It draws the title, the scale bar, the north
   arrow and the depth legend as objects in the scene (where a wall can hide them) and does not
-  draw the credits line, captions, the end card, the fades or the
-  [annotations](#annotations-labels-callouts-markers-and-photos).
+  draw the credits line, captions, the end card, the fades, the
+  [annotations](#annotations-labels-callouts-markers-and-photos) or a
+  [reveal](#revealing-the-cave-part-by-part).
 
 A preview is always the player's, whatever is chosen here. **Export script…** and **Open in
 Blender…** use the script generator.
@@ -262,7 +316,9 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--draft] [--builder auto|player|generator] \
                     [--keep-frames] [--compose-only] [--frames <dir>] \
                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] \
-                    [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]...
+                    [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]... \
+                    [--reveal date|order|distance [--reveal-from <station>] \
+                     [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]]
 ```
 
 `--export` writes the script and assets without running Blender; otherwise it renders. Produced
@@ -280,6 +336,13 @@ failure, `2` on a usage or spec error.
   [Annotations](#annotations-labels-callouts-markers-and-photos). It goes with `--bundle` too. A
   script written with `--export` is the script generator's and leaves them out, as it leaves out
   captions; the command says so.
+- `--reveal date`, `--reveal order` or `--reveal distance` shows the cave part by part: see
+  [Revealing the cave part by part](#revealing-the-cave-part-by-part). `--reveal-from main.12`
+  measures a reveal by distance from that station instead of the entrances; `--reveal-dates
+  cave.3d` names the file with the survey dates for a model that has none; `--reveal-seconds 1-9.5`
+  says when the reveal starts and when the whole cave is there. Over a preset that reveals
+  already, `--reveal` changes what it reveals by and keeps its times. It goes with `--bundle` too;
+  a script written with `--export` leaves it out, and the command says so.
 - **A render that was stopped goes on.** A render with texts keeps its frames in
   `<out>/<name>-frames` while it runs. Run the same command again after it was stopped (or after
   the computer was): the frames that are there are kept and only the missing ones are rendered.
@@ -308,7 +371,7 @@ end in `.zip`), for rendering on any computer with Blender 4.2 or newer and with
 therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
                     --bundle cave-bundle.zip [--draft] [--render [--render-plan full|draft|both]] \
                     [--out <dir>] [--blender <path>] [--readme-language en|ro] \
-                    [--annotations <file.json>]...
+                    [--annotations <file.json>]... [--reveal date|order|distance ...]
 ```
 
 The bundle holds the scene plan (`scene-plan.json`: the camera move, the look and the output, as
@@ -358,6 +421,16 @@ any program can write, and it can say more than the scenes ThIDE makes use of:
   (`worldColor`, `worldStrength`). A key may lie after the end of the clip, two keys on one frame
   are a move that ends in a jump, and a colour can go from key to key as a screen mixes colours
   (`"mix": "srgb"`).
+- Also under `changes`, a model or a line is shown part by part (`reveal`): the keys are a
+  threshold, and at every moment the parts whose **reveal value** lies below it are there. The
+  values are one number for every vertex of the model's mesh: the vertex property `reveal` of a
+  PLY file (ThIDE writes it when a spec has a reveal; `scene-meta.json` says what the values are
+  and what range they span, under `reveal`), the attribute `_REVEAL` of a GLB file, or the `reveal`
+  of a line's strips, one number for every point. They are in units of their own (years, metres, a
+  count), and so is the threshold. `revealFront` says how the edge looks: `edge` (how far behind
+  the threshold a part is solid), `glow` (`color`, `strength`, `width`) and `attribute` (another
+  name for the values). A text with a `counter` shows the number the threshold has got to, in
+  place of the `{}` in it.
 - Under `annotations`, the labels, callouts, markers and photos, each with its place and its size
   in metres. An annotation can belong to a model (`"model"`): it then goes where its point of the
   model goes while the model is stretched or moved. When one is there is a change of it, by its
@@ -369,7 +442,7 @@ any program can write, and it can say more than the scenes ThIDE makes use of:
   away to close by.
 
 A draft shows a model's tint, and how much of a fading model is there by the share of its faces
-it draws; a photo is a mosaic of its colours there. The schema that describes every field is in the ThIDE repository
+it draws; a reveal is a cut along the faces; a photo is a mosaic of its colours there. The schema that describes every field is in the ThIDE repository
 (`src/Therion.Blender/Plan/scene-plan.schema.json`).
 
 ## Requirements & tips

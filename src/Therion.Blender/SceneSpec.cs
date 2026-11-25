@@ -202,6 +202,11 @@ public sealed record SceneSpec
     /// Drawn by the player only.</summary>
     public IReadOnlyList<AnnotationSpec> Annotations { get; init; } = [];
 
+    /// <summary>Shows the cave part by part while the clip runs, by survey date, survey order or
+    /// distance from an entrance; null shows all of it throughout. Drawn by the player only, and
+    /// not in a still.</summary>
+    public RevealSpec? Reveal { get; init; }
+
     public AnimationSpec Animation { get; init; } = new();
 
     public OutputSpec Output { get; init; } = new();

@@ -61,7 +61,8 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                + "draft: true renders a quick preview first (seconds, not minutes): look at it before the "
                + "long render. title, credits, endCard and captions are written over the picture; a movie "
                + "with captions also gets them as .srt and .vtt subtitles. annotations names a JSON file of "
-               + "labels, callouts, markers and photos that stand in the scene.")]
+               + "labels, callouts, markers and photos that stand in the scene. reveal shows the cave part "
+               + "by part while the clip runs: by survey date, survey order or distance from an entrance.")]
     public async Task<ToolResult<RenderJobStatus>> StartRender(
         [Description("Preset name from list_render_presets. Defaults to \"Orbit showcase\".")]
         string preset = DefaultPreset,
@@ -109,6 +110,19 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                    + "workspace), \"size\" in metres, and when it is there: \"from\" and \"to\" in seconds, or \"within\" "
                    + "metres of the camera, with \"fade\" }. Only the player draws them.")]
         string? annotations = null,
+        [Description("Shows the cave part by part while the clip runs instead of all of it from the first frame: "
+                   + "date (in the order of the survey dates, with a counter of the years: the history of the "
+                   + "exploration), order (leg by leg, in the survey's own order) or distance (from the entrances "
+                   + "inwards). Omit to keep the preset's; the preset \"Map reveal\" reveals by distance. Not in a "
+                   + "still. Only the player draws it.")]
+        string? reveal = null,
+        [Description("With reveal: distance, the name of the station the distances are measured from, in place of "
+                   + "the entrances.")]
+        string? revealFrom = null,
+        [Description("With reveal: date, a workspace-relative .3d file of the same cave that has the survey dates, "
+                   + "for a model that has none: a .lox has the walls and no dates. Without it a .3d of the same "
+                   + "name beside the model is used.")]
+        string? revealDates = null,
         CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
@@ -116,7 +130,8 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
 
         var (plan, refused) = Plan(snapshot!.Root, preset, model, outputKind, width, height, durationSeconds,
             samples, outputDirectory, baseName, reExport, needsDirectory: false,
-            new RenderTexts(title, credits, endCard, endCardSeconds, captions), annotations);
+            new RenderTexts(title, credits, endCard, endCardSeconds, captions), annotations,
+            new RenderReveal(reveal, revealFrom, revealDates));
         if (refused is not null) return ToolResult<RenderJobStatus>.Failure(refused);
 
         // Which builder, and whether it can build this scene, before a job is started for it.
@@ -278,6 +293,9 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
     /// <summary>The texts over the picture a caller adds to the preset's.</summary>
     private sealed record RenderTexts(string? Title, string? Credits, string? EndCard, double EndCardSeconds, string[]? Captions);
 
+    /// <summary>The reveal a caller asks for, over the preset's.</summary>
+    private sealed record RenderReveal(string? By, string? From, string? Dates);
+
     /// <summary>
     /// The scene and model request for a render or export, or the error to answer with. Every path is
     /// held to the workspace; the output folder may not be the project's config folder.
@@ -285,7 +303,7 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
     private (RenderPlan? Plan, ToolError? Error) Plan(
         string root, string preset, string? model, string? outputKind, int width, int height,
         double durationSeconds, int samples, string? outputDirectory, string? baseName, bool reExport,
-        bool needsDirectory, RenderTexts? texts = null, string? annotations = null)
+        bool needsDirectory, RenderTexts? texts = null, string? annotations = null, RenderReveal? reveal = null)
     {
         static (RenderPlan?, ToolError?) Refuse(string code, string message) => (null, new ToolError(code, message));
 
@@ -373,6 +391,44 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                 held.Add(annotation with { Image = photo });
             }
             spec = spec with { Annotations = [.. spec.Annotations, .. held] };
+        }
+
+        // A file with survey dates is read from the workspace, like everything else an agent names; one
+        // that a user preset carries from elsewhere is left where it is.
+        if (spec.Reveal is { DatesPath: { } carried } && !WorkspacePaths.TryResolve(root, carried, out _, out _))
+            spec = spec with { Reveal = spec.Reveal with { DatesPath = null } };
+        if (reveal is not null && (!string.IsNullOrWhiteSpace(reveal.By) || !string.IsNullOrWhiteSpace(reveal.From) || !string.IsNullOrWhiteSpace(reveal.Dates)))
+        {
+            var asked = spec.Reveal ?? new RevealSpec();
+            if (!string.IsNullOrWhiteSpace(reveal.By))
+            {
+                if (!ToolEnums.TryParse<RevealBy>(reveal.By, out var by))
+                    return Refuse(ToolErrorCodes.InvalidArgument, $"Unknown reveal '{reveal.By}'. Use one of: {ToolEnums.Names<RevealBy>()}.");
+                asked = asked with { By = by, From = by == RevealBy.Distance ? asked.From : null, DatesPath = by == RevealBy.Date ? asked.DatesPath : null };
+            }
+            else if (spec.Reveal is null)
+            {
+                return Refuse(ToolErrorCodes.InvalidArgument, "revealFrom and revealDates go with a reveal: say which (reveal: date, order or distance).");
+            }
+            if (!string.IsNullOrWhiteSpace(reveal.From))
+            {
+                if (asked.By != RevealBy.Distance)
+                    return Refuse(ToolErrorCodes.InvalidArgument, "revealFrom names the station a reveal by distance is measured from (reveal: distance).");
+                asked = asked with { From = reveal.From.Trim() };
+            }
+            if (!string.IsNullOrWhiteSpace(reveal.Dates))
+            {
+                if (asked.By != RevealBy.Date)
+                    return Refuse(ToolErrorCodes.InvalidArgument, "revealDates names the file with the survey dates of a reveal by date (reveal: date).");
+                if (!WorkspacePaths.TryResolve(root, reveal.Dates, out var dates, out var reason))
+                    return Refuse(ToolErrorCodes.PathOutsideWorkspace, reason);
+                if (!File.Exists(dates))
+                    return Refuse(ToolErrorCodes.FileNotFound, $"No such file: {reveal.Dates}");
+                if (!dates.EndsWith(".3d", StringComparison.OrdinalIgnoreCase) && !dates.EndsWith(".lox", StringComparison.OrdinalIgnoreCase))
+                    return Refuse(ToolErrorCodes.InvalidArgument, $"'{reveal.Dates}' is not a model file (.3d or .lox).");
+                asked = asked with { DatesPath = dates };
+            }
+            spec = spec with { Reveal = asked };
         }
 
         // Always replaced: a user preset may carry the folder it was saved with, which is no business of

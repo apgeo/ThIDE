@@ -1,9 +1,10 @@
 // Binary PLY writer — the module's transport format (D-06): Blender's native C++ PLY
 // importer is always present headless, and the format is a trivial dependency-free
 // write. Emits binary_little_endian 1.0 with float32 positions, optional uchar RGB
-// vertex colours (depth tint), optional float32 texture coordinates, and uchar-count/int32
-// triangle faces. Texture coordinates are named s/t: Blender's PLY importer (4.2, 4.5 and
-// 5.0) turns s/t into a UV map as they are, while it ignores vertex properties named u/v.
+// vertex colours (depth tint), optional float32 texture coordinates, an optional float32 reveal
+// value, and uchar-count/int32 triangle faces. Texture coordinates are named s/t: Blender's PLY
+// importer (4.2, 4.5 and 5.0) turns s/t into a UV map as they are, while it ignores vertex
+// properties named u/v.
 
 using System.Buffers.Binary;
 using System.Globalization;
@@ -14,6 +15,11 @@ namespace Therion.CaveGeometry.Writers;
 /// <summary>Writes a <see cref="Therion.CaveGeometry.CaveMesh"/> as a binary PLY file.</summary>
 public static class PlyWriter
 {
+    /// <summary>The vertex property the reveal values are written as. Blender's PLY importer
+    /// (4.2, 4.5 and 5.0) keeps a vertex property it does not know as an attribute of the mesh
+    /// under the property's name.</summary>
+    public const string RevealProperty = "reveal";
+
     public static void WriteFile(CaveMesh mesh, string path)
         => File.WriteAllBytes(path, Write(mesh));
 
@@ -26,6 +32,9 @@ public static class PlyWriter
         bool mapped = mesh.HasTextureCoordinates;
         if (mapped && mesh.TextureCoordinates!.Count != mesh.Vertices.Count)
             throw new InvalidOperationException("Texture coordinate count must match vertex count.");
+        bool revealed = mesh.HasReveal;
+        if (revealed && mesh.Reveal!.Count != mesh.Vertices.Count)
+            throw new InvalidOperationException("Reveal value count must match vertex count.");
 
         using var stream = new MemoryStream();
 
@@ -40,6 +49,8 @@ public static class PlyWriter
             header.Append("property uchar red\nproperty uchar green\nproperty uchar blue\n");
         if (mapped)
             header.Append("property float s\nproperty float t\n");
+        if (revealed)
+            header.Append("property float " + RevealProperty + "\n");
         header.Append(CultureInfo.InvariantCulture, $"element face {mesh.Triangles.Count}\n");
         header.Append("property list uchar int vertex_indices\n");
         header.Append("end_header\n");
@@ -65,6 +76,8 @@ public static class PlyWriter
                 WriteFloat(stream, f4, (float)uv.U);
                 WriteFloat(stream, f4, (float)uv.V);
             }
+            if (revealed)
+                WriteFloat(stream, f4, (float)mesh.Reveal![i]);
         }
 
         foreach (var t in mesh.Triangles)

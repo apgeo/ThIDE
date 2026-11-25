@@ -12,7 +12,8 @@
 // optional lines (lines through given points, drawn as thin tubes), texturedMaterials (an image
 // draped over a model: a terrain), labels (texts and markers in the scene), annotations (a label,
 // a callout with a line to what it is about, a marker or a photo at a point of the scene or of a
-// model), changes (what appears, goes, fades, takes a tint, is stretched or moved, and how the
+// model), changes (what appears, goes, fades, takes a tint, is stretched or moved, what is
+// revealed part by part by a threshold that moves over the values on its vertices, and how the
 // lights and the world change while the clip runs), texts (what is written over the picture, in
 // two dimensions) and blend (the built scene saved as a Blender file), and features — the player
 // modules the plan needs, in the order they run. Any other section belongs to a module outside
@@ -425,7 +426,15 @@ public sealed record PlanLook
 /// the way to the next; null for a line in the colour of its material. Either every strip of a
 /// line has them or none has. A material of the kind <see cref="PlanMaterialKind.VertexColor"/>
 /// shows them.</param>
-public sealed record PlanLineStrip(IReadOnlyList<CaveVector3> Points, IReadOnlyList<ColorRgb>? Colors = null);
+public sealed record PlanLineStrip(IReadOnlyList<CaveVector3> Points, IReadOnlyList<ColorRgb>? Colors = null)
+{
+    /// <summary>A reveal value for every point: what a change's <see cref="PlanChange.Reveal"/>
+    /// shows the line by, part by part, as it shows a model by the values on its vertices. The
+    /// line is there, between two points, up to where the threshold has got to between their
+    /// values. Null for a line that is not revealed. Either every strip of a line has them or
+    /// none has.</summary>
+    public IReadOnlyList<double>? Reveal { get; init; }
+}
 
 /// <summary>
 /// A line drawn through given points, as a thin tube: the legs of a survey, a route, an outline.
@@ -796,6 +805,33 @@ public sealed record PlanScreenItem
     /// one that started last is drawn, and an earlier one goes when it appears. Captions share
     /// one. Lower-case words joined by '-'.</summary>
     public string? Slot { get; init; }
+
+    /// <summary>Makes a text a counter: it shows, at every frame, the number a reveal's threshold
+    /// has got to (a year counter over the history of an exploration), in place of the
+    /// <c>{}</c> in <see cref="Text"/>.</summary>
+    public PlanCounter? Counter { get; init; }
+}
+
+/// <summary>
+/// What a counter shows: the threshold of the reveal that the plan's changes give
+/// <see cref="Target"/> (<see cref="PlanChange.Reveal"/>), as it is at each frame, cut down to
+/// <see cref="Decimals"/> decimals (1987.9 shows as 1987) and kept between <see cref="Min"/> and
+/// <see cref="Max"/>. After the clip's last frame it keeps the number it had there.
+/// </summary>
+public sealed record PlanCounter
+{
+    /// <summary>The target of the change whose reveal is counted, named as that change names it.</summary>
+    public PlanChangeTarget Target { get; init; } = new();
+
+    public int Decimals { get; init; }
+
+    /// <summary>The least the counter shows; null is no limit. A threshold starts below the
+    /// first value there is, and a counter of years should not.</summary>
+    public double? Min { get; init; }
+
+    /// <summary>The most the counter shows; null is no limit. A threshold ends above the last
+    /// value there is.</summary>
+    public double? Max { get; init; }
 }
 
 /// <summary>What is written over the picture, in two dimensions: titles, captions, credits, a
@@ -925,6 +961,51 @@ public sealed record PlanChange
     /// <summary>The strength of the world (<see cref="PlanWorld.Strength"/>), for a change
     /// without a target; 0 is a world that lights nothing. The look must have a world.</summary>
     public IReadOnlyList<PlanNumberKey>? WorldStrength { get; init; }
+
+    /// <summary>The threshold a model or a line is shown by, part by part: at every moment the
+    /// parts whose reveal value lies below the threshold are there and the rest is not. The
+    /// values are on the vertices of the model's mesh (<see cref="PlanRevealFront.Attribute"/>)
+    /// or at the points of the line (<see cref="PlanLineStrip.Reveal"/>), in units of their
+    /// own: years, metres, a count. One track shows a whole cave system in the order its values
+    /// give. Only a model or a line has one, and it needs a material.</summary>
+    public IReadOnlyList<PlanNumberKey>? Reveal { get; init; }
+
+    /// <summary>How the edge of <see cref="Reveal"/> looks; null is a clean cut.</summary>
+    public PlanRevealFront? RevealFront { get; init; }
+}
+
+/// <summary>The edge of a reveal: where the threshold is in the model at a given moment.</summary>
+public sealed record PlanRevealFront
+{
+    /// <summary>The name of the mesh attribute that holds the reveal values: one number for
+    /// every vertex. Null is <see cref="DefaultAttribute"/>, which is what the PLY files of this
+    /// library have; in a GLB file the same attribute is spelt <c>_REVEAL</c>, and is found under
+    /// either name. A line's values are those of its strips.</summary>
+    public string? Attribute { get; init; }
+
+    /// <summary>How far behind the threshold a part is wholly there, in the units of the reveal
+    /// values: a part appears over this much of the threshold's way. 0 is a cut.</summary>
+    public double Edge { get; init; }
+
+    /// <summary>A glow along the edge; null is none.</summary>
+    public PlanRevealGlow? Glow { get; init; }
+
+    public const string DefaultAttribute = "reveal";
+}
+
+/// <summary>A glow behind the edge of a reveal: the parts that have just appeared shine in
+/// <see cref="Color"/>, strongest at the edge and fading to their own look over
+/// <see cref="Width"/>.</summary>
+public sealed record PlanRevealGlow
+{
+    public ColorRgb Color { get; init; } = new(1.0, 0.55, 0.15);
+
+    /// <summary>How strongly it shines, as an emission strength.</summary>
+    public double Strength { get; init; } = 3.0;
+
+    /// <summary>How far behind the threshold the glow reaches, in the units of the reveal
+    /// values; above 0.</summary>
+    public double Width { get; init; } = 1.0;
 }
 
 public sealed record PlanOutput

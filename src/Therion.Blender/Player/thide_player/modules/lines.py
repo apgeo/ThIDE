@@ -10,6 +10,10 @@ thick; a strip of two points is one straight piece. A strip may give every point
 the tube takes on at that point and blends along the way to the next. The tubes are a mesh the
 player builds, so nobody has to write one to a file.
 
+A strip may also give every point a reveal value ("reveal"): the number a change's "reveal"
+shows the line by, part by part, as it shows a model by the values on its vertices. They are kept
+as the mesh attribute "reveal".
+
 In everything else a line is a model: it is placed by "translation", "rotation" and "scale" as a
 model is, it wears the material of the look that it names (a colour of its own, a ramp over
 height, or "vertexColor" for the colours of its points), and what changes of a model changes of
@@ -27,10 +31,11 @@ SECTION = "lines"
 KEYS = [{
     "id": None, "role": None, "width": None, "material": None, "translation": None,
     "rotation": {"axis": None, "degrees": None}, "scale": None,
-    "strips": [{"points": None, "colors": None}],
+    "strips": [{"points": None, "colors": None, "reveal": None}],
 }]
 
 COLOURS = "Col"      # the colour attribute the points' colours are in
+REVEAL = "reveal"    # the attribute the points' reveal values are in
 
 
 def build(ctx, lines):
@@ -49,7 +54,11 @@ def build(ctx, lines):
         if any(coloured) and not all(coloured):
             raise api.PlanError("%s.strips: either every strip gives its points colours or none does" % where)
 
-        vertices, faces, colours = [], [], []
+        revealed = [strip.get("reveal") is not None for strip in line["strips"]]
+        if any(revealed) and not all(revealed):
+            raise api.PlanError("%s.strips: either every strip gives its points reveal values or none does" % where)
+
+        vertices, faces, colours, values = [], [], [], []
         for number, strip in enumerate(line["strips"]):
             at = "%s.strips[%d]" % (where, number)
             points = [point_of(value, "%s.points[%d]" % (at, i)) for i, value in enumerate(strip.get("points") or [])]
@@ -60,7 +69,12 @@ def build(ctx, lines):
                 raise api.PlanError("%s.colors: a strip has a colour for every point or none" % at)
             if given is not None:
                 given = [colour_of(value, "%s.colors[%d]" % (at, i)) for i, value in enumerate(given)]
-            pieces += api.tube(points, given, width / 2.0, vertices, faces, colours)
+            reveal = strip.get("reveal")
+            if reveal is not None:
+                if not isinstance(reveal, list) or len(reveal) != len(points):
+                    raise api.PlanError("%s.reveal: a strip has a reveal value for every point or none" % at)
+                reveal = [finite(value, "%s.reveal[%d]" % (at, i)) for i, value in enumerate(reveal)]
+            pieces += api.tube(points, given, width / 2.0, vertices, faces, colours, reveal, values)
 
         mesh = bpy.data.meshes.new(line["id"])
         mesh.from_pydata(vertices, [], faces)
@@ -69,6 +83,8 @@ def build(ctx, lines):
             attribute = mesh.color_attributes.new(COLOURS, "FLOAT_COLOR", "POINT")
             attribute.data.foreach_set("color", [channel for colour in colours for channel in colour])
             mesh.color_attributes.active_color = attribute
+        if all(revealed):
+            mesh.attributes.new(REVEAL, "FLOAT", "POINT").data.foreach_set("value", values)
         obj = bpy.data.objects.new(line["id"], mesh)
         ctx.scene.collection.objects.link(obj)
         api.place(obj, line, where)
@@ -86,6 +102,12 @@ def point_of(value, where):
             isinstance(part, (int, float)) and not isinstance(part, bool) and math.isfinite(part) for part in value):
         raise api.PlanError("%s: a point is three numbers" % where)
     return mathutils.Vector(value)
+
+
+def finite(value, where):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise api.PlanError("%s: a reveal value is a number" % where)
+    return float(value)
 
 
 def colour_of(value, where):

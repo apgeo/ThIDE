@@ -3,8 +3,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 """Feature "changes": what changes while the clip runs. Things appear and go, fade, take a tint,
-models are stretched and moved, lights are turned up and down, the world changes its colour and
-its strength.
+models are stretched and moved and revealed part by part, lights are turned up and down, the
+world changes its colour and its strength.
 
 A change names its target, by the id or by the role the other modules stamp on what they make,
 and gives each property that changes its keys: at "t" seconds the property has the key's value.
@@ -24,6 +24,14 @@ the scene itself.
     scale          a model's stretch along its own axes, as "scale" of the plan's models has it
     offset         how far a model is moved from where the plan's models put it, in metres
     energy         how strong a light is, as "energy" of the look's lights has it
+    reveal         the threshold a model or a line is shown by, part by part: the parts whose
+                   reveal value lies below it are there, the rest is not. The values are on the
+                   vertices of the mesh, one number each, under the name "revealFront" gives
+                   ("attribute", by default "reveal": a vertex property of a PLY file, _REVEAL in
+                   a GLB file, the "reveal" of a line's strips). "revealFront" also says how the
+                   edge looks: "edge" is how far behind the threshold a part is wholly there, and
+                   "glow" makes what has just appeared shine in a "color", by "strength", over
+                   "width". Edge and width are in the units of the values.
     worldColor     the colour of the world (no target)
     worldStrength  the strength of the world (no target)
 
@@ -42,10 +50,17 @@ own switch; a fade, an opacity and a tint are numbers on the object (custom prop
 that its material reads, so objects that share a material change one by one. Every curve is one
 Blender works out by itself: a saved scene needs no Python to play them.
 
+A reveal is a number on the object too (the threshold, keyed) and two things that read it. The
+material lets nothing through of what lies beyond the threshold, fades the edge in and makes it
+glow. A modifier takes away every face that lies wholly beyond the threshold, so that a ray does
+not have to pass through the hundred hidden walls of a cave to reach the one that is there, and
+so that the draft, which draws no material, shows the reveal too.
+
 Runs after the modules that make what it changes: "look", "textured_materials", "labels",
 "annotations". The draft look (Blender's solid view) draws no material. There a model shows its
 tint in the colours the draft gives it, and shows how much of it is there by that share of its
-faces; of a text, a marker or a photo a fade is a cut, and an opacity or a tint is not shown.
+faces; a reveal is a cut along the faces of the mesh, without its soft edge or its glow; of a
+text, a marker or a photo a fade is a cut, and an opacity or a tint is not shown.
 """
 
 import bpy
@@ -63,10 +78,12 @@ KEYS = [{
     "energy": [{"t": None, "value": None, "easing": None}],
     "worldColor": [{"t": None, "value": None, "easing": None, "mix": None}],
     "worldStrength": [{"t": None, "value": None, "easing": None}],
+    "reveal": [{"t": None, "value": None, "easing": None}],
+    "revealFront": {"attribute": None, "edge": None, "glow": {"color": None, "strength": None, "width": None}},
 }]
 
 # What a target can change, and what the scene itself can.
-OF_A_TARGET = ("visible", "opacity", "tint", "scale", "offset", "energy")
+OF_A_TARGET = ("visible", "opacity", "tint", "scale", "offset", "energy", "reveal")
 OF_THE_SCENE = ("worldColor", "worldStrength")
 
 EASINGS = ("linear", "smooth", "constant")
@@ -78,10 +95,25 @@ FADE = "thide_fade"                    # 0 to 1 while it appears or goes
 OPACITY = "thide_opacity"
 TINT = "thide_tint"                    # the colour
 TINT_STRENGTH = "thide_tint_strength"
+REVEAL = "thide_reveal"                # the threshold
+REVEAL_EDGE = "thide_reveal_edge"
+REVEAL_GLOW = "thide_reveal_glow"      # the colour
+REVEAL_GLOW_STRENGTH = "thide_reveal_glow_strength"
+REVEAL_GLOW_WIDTH = "thide_reveal_glow_width"
+
+# The mesh attribute a revealed thing's values are kept in, whatever its file calls them, and the
+# threshold of a thing that is all there: above every value.
+REVEAL_VALUES = "thide_reveal"
+REVEAL_ATTRIBUTE = "reveal"
+ALL_THERE = 1.0e18
 
 # The nodes a material is given, by name: a material is changed once.
 SEE_THROUGH = "ThideSeeThrough"
 TINTED = "ThideTint"
+REVEALED = "ThideReveal"
+
+# What takes away the faces that lie beyond a reveal's threshold: a modifier, and the nodes it runs.
+REVEAL_CUT = "ThideRevealCut"
 
 # What shows a model's changes in the draft look: a modifier, and the nodes it runs.
 DRAFT_CHANGES = "ThideDraftChanges"
@@ -92,8 +124,9 @@ def build(ctx, changes):
         return
     scene = ctx.scene
     taken = {}                       # (object, property) -> the change that has it
-    see_through, tinted = set(), set()  # the materials that read the numbers
-    faded, coloured = [], []         # the objects whose numbers change
+    see_through, tinted, revealed = set(), set(), set()  # the materials that read the numbers
+    faded, coloured, shown = [], [], []  # the objects whose numbers change
+    soft = False                     # whether a reveal has an edge or a glow
     world = {}                       # the world's tracks, each with where the plan has it
     tracks = 0
     for index, change in enumerate(changes):
@@ -103,6 +136,8 @@ def build(ctx, changes):
             if not change[name]:
                 raise api.PlanError("%s.%s: at least one key is needed" % (where, name))
         tracks += len(named)
+        if change.get("revealFront") is not None and "reveal" not in named:
+            raise api.PlanError('%s.revealFront: the edge of a reveal goes with the keys of the reveal ("reveal")' % where)
         target = change.get("target")
         if target is None:
             for name in named:
@@ -162,6 +197,25 @@ def build(ctx, changes):
                     raise api.PlanError('%s.energy: "%s" is not a light' % (where, obj.name))
                 key_values(ctx, obj.data, "energy", change["energy"], where + ".energy",
                            lambda key, at: amount(key.get("value"), at + ".value"))
+            if "reveal" in named:
+                if not obj.get("thide_model") or obj.type != "MESH":
+                    raise api.PlanError(
+                        '%s.reveal: "%s" is not a model or a line; a text or a marker is shown and hidden as a whole ("visible")'
+                        % (where, obj.name))
+                front = front_of(change.get("revealFront"), where + ".revealFront")
+                keep_values(obj, front["attribute"], where + ".reveal")
+                materials = materials_of(obj, where + ".reveal")
+                revealed.update(materials)
+                see_through.update(materials)
+                shown.append(obj)
+                soft = soft or front["edge"] > 0.0 or front["glow"] is not None
+                glow = front["glow"] or {"color": [1.0, 1.0, 1.0], "strength": 0.0, "width": 0.0}
+                obj[REVEAL_EDGE] = front["edge"]
+                obj[REVEAL_GLOW] = glow["color"]
+                obj[REVEAL_GLOW_STRENGTH] = glow["strength"]
+                obj[REVEAL_GLOW_WIDTH] = glow["width"]
+                key_values(ctx, obj, custom(REVEAL), change["reveal"], where + ".reveal",
+                           lambda key, at: finite(key.get("value"), at + ".value"))
 
     if world:
         change_world(ctx, world)
@@ -169,6 +223,10 @@ def build(ctx, changes):
         make_see_through(material)
     for material in tinted:
         make_tinted(material)
+    for material in revealed:
+        make_revealed(material)
+    for obj in shown:
+        cut_beyond_the_threshold(obj)
     # Every object that wears one of these materials has the numbers it reads, changed or not.
     for obj in scene.objects:
         worn = {slot.material for slot in obj.material_slots if slot.material}
@@ -181,8 +239,17 @@ def build(ctx, changes):
                 obj[TINT] = [1.0, 1.0, 1.0]
             if TINT_STRENGTH not in obj:
                 obj[TINT_STRENGTH] = 0.0
+        if worn & revealed and REVEAL not in obj:
+            # All of it is there, with no edge and no glow.
+            obj[REVEAL] = ALL_THERE
+            obj[REVEAL_EDGE] = 0.0
+            obj[REVEAL_GLOW] = [1.0, 1.0, 1.0]
+            obj[REVEAL_GLOW_STRENGTH] = 0.0
+            obj[REVEAL_GLOW_WIDTH] = 0.0
     if scene.render.engine == "BLENDER_WORKBENCH":
         show_in_draft(faded, coloured)
+        if soft:
+            api.warn("the draft shows a reveal as a cut along the faces of the mesh, without its soft edge or its glow")
     api.report("changes", tracks)
 
 
@@ -231,6 +298,34 @@ def stretch(key, where):
     if min(value) <= 0.0:
         raise api.PlanError("%s.value: a scale is three positive numbers" % where)
     return value
+
+
+def finite(value, where):
+    value = number(value, where)
+    if value in (float("inf"), float("-inf")):
+        raise api.PlanError("%s: a number is needed" % where)
+    return value
+
+
+def front_of(front, where):
+    """The edge of a reveal as the plan gives it, checked, with what it leaves out filled in."""
+    front = front or {}
+    if not isinstance(front, dict):
+        raise api.PlanError("%s: the edge of a reveal is an object" % where)
+    attribute = front.get("attribute", REVEAL_ATTRIBUTE)
+    if not isinstance(attribute, str) or not attribute.strip():
+        raise api.PlanError("%s.attribute: the attribute needs a name" % where)
+    edge = amount(front.get("edge", 0.0), where + ".edge")
+    glow = front.get("glow")
+    if glow is not None:
+        if not isinstance(glow, dict):
+            raise api.PlanError("%s.glow: a glow is an object" % where)
+        width = amount(glow.get("width", 1.0), where + ".glow.width")
+        if width <= 0.0:
+            raise api.PlanError("%s.glow.width: a glow reaches some way behind the threshold" % where)
+        glow = {"color": colour(glow.get("color", [1.0, 0.55, 0.15]), where + ".glow.color"),
+                "strength": amount(glow.get("strength", 3.0), where + ".glow.strength"), "width": width}
+    return {"attribute": attribute, "edge": edge, "glow": glow}
 
 
 def custom(name):
@@ -696,3 +791,122 @@ def make_tinted(material):
     tree.links.new(socket_of(object_number(tree, TINT_STRENGTH).outputs, "Fac"), socket_of(mix.inputs, "Factor_Float"))
     tree.links.new(socket_of(object_number(tree, TINT).outputs, "Color"), socket_of(mix.inputs, "B_Color"))
     tree.links.new(socket_of(mix.outputs, "Result_Color"), own)
+
+
+# ---- a reveal ----
+
+def keep_values(obj, name, where):
+    """Keeps the reveal values of a mesh under the one name the material and the modifier read:
+    a number for every vertex, from the attribute the plan names. glTF spells an attribute of
+    one's own with an underscore and in capitals, so that spelling is looked for too."""
+    mesh = obj.data
+    source = mesh.attributes.get(name) or mesh.attributes.get("_" + name.upper())
+    if source is None:
+        raise api.PlanError(
+            '%s: "%s" has no reveal values: its mesh has no attribute "%s" (a number for every vertex)'
+            % (where, obj.name, name))
+    if source.domain != "POINT" or source.data_type not in ("FLOAT", "INT"):
+        raise api.PlanError(
+            '%s: the attribute "%s" of "%s" is not a number for every vertex' % (where, source.name, obj.name))
+    if source.name == REVEAL_VALUES and source.data_type == "FLOAT":
+        return
+    values = [0.0] * len(mesh.vertices)
+    source.data.foreach_get("value", values)
+    kept = mesh.attributes.get(REVEAL_VALUES)
+    if kept is not None:
+        mesh.attributes.remove(kept)
+    mesh.attributes.new(REVEAL_VALUES, "FLOAT", "POINT").data.foreach_set("value", values)
+
+
+def make_revealed(material):
+    """Makes the material let nothing through of what lies beyond the threshold of the object it
+    is on, fade in over the edge behind it and glow there. How far the threshold is past a place
+    is the object's number less the value the mesh has there."""
+    surface_of(material, "reveal")
+    tree = material.node_tree
+    if REVEALED in tree.nodes:
+        return
+    make_see_through(material)
+    see_through = tree.nodes[SEE_THROUGH]
+    link = tree.links.new
+
+    def math(operation, first, second, clamp=False):
+        node = tree.nodes.new("ShaderNodeMath")
+        node.operation = operation
+        node.use_clamp = clamp
+        for socket, value in zip(node.inputs, (first, second)):
+            if isinstance(value, float):
+                socket.default_value = value
+            else:
+                link(value, socket)
+        return node.outputs[0]
+
+    def of_the_object(name):
+        return socket_of(object_number(tree, name).outputs, "Fac")
+
+    values = tree.nodes.new("ShaderNodeAttribute")
+    values.attribute_type = "GEOMETRY"
+    values.attribute_name = REVEAL_VALUES
+    values.name = REVEALED
+    past = math("SUBTRACT", of_the_object(REVEAL), socket_of(values.outputs, "Fac"))
+
+    # There by the share of the edge the threshold is past it: an edge of nothing is a cut.
+    there = math("DIVIDE", past, math("MAXIMUM", of_the_object(REVEAL_EDGE), 1.0e-9), clamp=True)
+    share = see_through.inputs[0].links[0].from_socket
+    link(math("MULTIPLY", share, there), see_through.inputs[0])
+
+    # The glow: all of it at the threshold, none of it a width behind.
+    glow = math("SUBTRACT", 1.0, math("DIVIDE", past, math("MAXIMUM", of_the_object(REVEAL_GLOW_WIDTH), 1.0e-9)), clamp=True)
+    shine = tree.nodes.new("ShaderNodeEmission")
+    link(socket_of(object_number(tree, REVEAL_GLOW).outputs, "Color"), shine.inputs["Color"])
+    link(of_the_object(REVEAL_GLOW_STRENGTH), shine.inputs["Strength"])
+    lit = tree.nodes.new("ShaderNodeMixShader")
+    link(math("MULTIPLY", glow, math("MINIMUM", of_the_object(REVEAL_GLOW_STRENGTH), 1.0)), lit.inputs[0])
+    link(see_through.inputs[2].links[0].from_socket, lit.inputs[1])
+    link(shine.outputs[0], lit.inputs[2])
+    link(lit.outputs[0], see_through.inputs[2])
+
+
+def cut_beyond_the_threshold(obj):
+    """Takes away, at every frame, the faces of a mesh that lie wholly beyond the threshold: a
+    modifier whose one number follows the object's. A face with one corner this side of the
+    threshold stays, for the material to cut."""
+    tree = bpy.data.node_groups.get(REVEAL_CUT)
+    if tree is None:
+        tree = bpy.data.node_groups.new(REVEAL_CUT, "GeometryNodeTree")
+        interface = tree.interface
+        interface.new_socket(name="Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
+        interface.new_socket(name=REVEAL, in_out="INPUT", socket_type="NodeSocketFloat")
+        interface.new_socket(name="Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+        nodes, link = tree.nodes, tree.links.new
+        given = {socket.name: socket for socket in nodes.new("NodeGroupInput").outputs}
+        result = nodes.new("NodeGroupOutput")
+
+        def enabled(sockets):
+            return next(socket for socket in sockets if socket.enabled)
+
+        values = nodes.new("GeometryNodeInputNamedAttribute")
+        values.data_type = "FLOAT"
+        values.inputs["Name"].default_value = REVEAL_VALUES
+        beyond = nodes.new("FunctionNodeCompare")
+        beyond.data_type = "FLOAT"
+        beyond.operation = "GREATER_EQUAL"
+        link(enabled(values.outputs), beyond.inputs[0])
+        link(given[REVEAL], beyond.inputs[1])
+        # Said of the vertices: a face is beyond the threshold when every corner of it is.
+        corners = nodes.new("GeometryNodeFieldOnDomain")
+        corners.data_type = "BOOLEAN"
+        corners.domain = "POINT"
+        link(beyond.outputs[0], enabled(corners.inputs))
+        remove = nodes.new("GeometryNodeDeleteGeometry")
+        remove.domain = "FACE"
+        link(given["Geometry"], remove.inputs["Geometry"])
+        link(enabled(corners.outputs), remove.inputs["Selection"])
+        link(remove.outputs["Geometry"], result.inputs["Geometry"])
+    threshold = next(item.identifier for item in tree.interface.items_tree
+                     if item.item_type == "SOCKET" and item.in_out == "INPUT" and item.name == REVEAL)
+    modifier = obj.modifiers.new(REVEAL_CUT, "NODES")
+    modifier.node_group = tree
+    modifier[threshold] = ALL_THERE
+    follow(obj, 'modifiers["%s"]["%s"]' % (modifier.name, threshold), None, REVEAL)
+

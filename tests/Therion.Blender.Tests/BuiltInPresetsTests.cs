@@ -12,16 +12,20 @@ public class BuiltInPresetsTests
     private static readonly SourceSpec Source = new() { PlyPath = "job/model.ply", SceneMetaPath = "job/scene-meta.json" };
 
     [Fact]
-    public void Gallery_HasTheFourHeadlinePresets_AllBuiltIn()
+    public void Gallery_HasTheFiveHeadlinePresets_AllBuiltIn()
     {
         var names = BuiltInPresets.All.Select(p => p.Name).ToList();
-        Assert.Equal(4, names.Count);
+        Assert.Equal(5, names.Count);
         Assert.Equal(names, names.Distinct().ToList());
         Assert.All(BuiltInPresets.All, p => Assert.True(p.BuiltIn));
         Assert.Contains("Orbit showcase", names);
         Assert.Contains("Documentation stills", names);
-        Assert.DoesNotContain("Map reveal", names); // reveals labels only, not the cave
-        Assert.Null(BuiltInPresets.ByName("Map reveal"));
+        // Back in the gallery: it reveals the cave now, from its entrances inwards.
+        Assert.Contains("Map reveal", names);
+        var reveal = BuiltInPresets.ByName("Map reveal")!.Spec.Reveal!;
+        Assert.Equal((RevealBy.Distance, true), (reveal.By, reveal.Glow));
+        Assert.True(reveal.End < BuiltInPresets.ByName("Map reveal")!.Spec.Animation.DurationSeconds, "the whole cave is there for a while at the end");
+        Assert.All(BuiltInPresets.All.Where(p => p.Name != "Map reveal"), p => Assert.Null(p.Spec.Reveal));
     }
 
     [Fact]

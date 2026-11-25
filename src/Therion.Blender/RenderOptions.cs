@@ -111,7 +111,7 @@ public static class SceneBuilders
 
     /// <summary>What of <paramref name="spec"/> a generated script does not draw, as field
     /// paths: everything that was added after the script generator was last changed, which only
-    /// the player draws: the later overlays, and the annotations.</summary>
+    /// the player draws: the later overlays, the annotations and the reveal.</summary>
     public static IReadOnlyList<string> NotDrawnByTheGenerator(SceneSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
@@ -128,6 +128,7 @@ public static class SceneBuilders
         if (overlays.FadeFromBlack > 0) lost.Add("labels.overlays.fadeFromBlack");
         if (overlays.FadeToBlack > 0) lost.Add("labels.overlays.fadeToBlack");
         if (spec.Annotations.Count > 0) lost.Add("annotations");
+        if (RevealPlanner.Applies(spec)) lost.Add("reveal");
         return lost;
     }
 }

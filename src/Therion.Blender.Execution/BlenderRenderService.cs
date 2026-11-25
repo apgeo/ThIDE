@@ -348,7 +348,8 @@ public sealed class BlenderRenderService : IBlenderRenderService
         var options = new ConversionOptions
         {
             OutputDirectory = assetDir,
-            Geometry = _geometry,
+            // The reveal values of the spec's reveal travel on the vertices of the mesh.
+            Geometry = RevealPlanner.GeometryFor(spec, _geometry, source.Model.Path),
             Leads = source.Leads,
             IncludeSurface = spec.Surface.Mode != SurfaceMode.Off,
         };

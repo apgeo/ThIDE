@@ -55,7 +55,8 @@ public static class PresetSerializer
         }
         catch (JsonException ex)
         {
-            throw new PresetFormatException($"Malformed preset JSON: {ex.Message}");
+            // The text is JSON (ProbeVersion read it): what is wrong is its shape.
+            throw new PresetFormatException($"Malformed preset JSON: {JsonFault.OfShape(ex)}");
         }
     }
 
@@ -76,7 +77,8 @@ public static class PresetSerializer
         }
         catch (JsonException ex)
         {
-            throw new PresetFormatException($"Malformed preset JSON: {ex.Message}");
+            // Where, and not the parser's own words, which quote what could not be read.
+            throw new PresetFormatException($"Malformed preset JSON: {JsonFault.NotJson(ex)}");
         }
     }
 }

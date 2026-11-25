@@ -48,6 +48,13 @@ public static class SceneSpecSerializer
             foreach (var property in type.Properties)
                 if (property.Name == "annotations")
                     property.ShouldSerialize = (_, value) => value is IReadOnlyList<AnnotationSpec> { Count: > 0 };
+                else if (property.Name == "reveal")
+                    property.ShouldSerialize = (_, value) => value is not null; // later than the annotations
+        }
+        if (type.Type == typeof(RevealSpec))
+        {
+            foreach (var property in type.Properties)
+                if (property.Name is "from" or "datesPath" or "end") property.ShouldSerialize = (_, value) => value is not null;
         }
         if (type.Type == typeof(AnnotationSpec))
         {
@@ -113,7 +120,9 @@ public static class SceneSpecSerializer
         }
         catch (JsonException ex)
         {
-            throw new SceneSpecFormatException($"Malformed render spec JSON: {ex.Message}");
+            // The text is JSON (ProbeVersion read it): what is wrong is its shape, which the
+            // reader names by a key or a kind of value, in a line.
+            throw new SceneSpecFormatException($"Malformed render spec JSON: {JsonFault.OfShape(ex)}");
         }
     }
 
@@ -143,7 +152,9 @@ public static class SceneSpecSerializer
         }
         catch (JsonException ex)
         {
-            throw new SceneSpecFormatException($"Malformed render spec JSON: {ex.Message}");
+            // Where, and not the parser's own words: it quotes what it could not read, whatever
+            // file it was that somebody took for a spec.
+            throw new SceneSpecFormatException($"Malformed render spec JSON: {JsonFault.NotJson(ex)}");
         }
     }
 }

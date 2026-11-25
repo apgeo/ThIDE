@@ -201,9 +201,6 @@ public static class AnnotationsFile
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false) },
     };
 
-    /// <summary>The most of a reader's own message that is passed on.</summary>
-    private const int MaxMessage = 300;
-
     /// <summary>Reads annotations from JSON text.</summary>
     /// <param name="baseDirectory">The folder the photos' paths are relative to; with it every
     /// image path is made a full one. Null leaves the paths as they are.</param>
@@ -221,8 +218,7 @@ public static class AnnotationsFile
         {
             // Where, and not the parser's own words: it quotes what it could not read, however
             // long that is and whatever file it was that somebody took for a list of annotations.
-            throw new SceneSpecFormatException(
-                $"Malformed annotations JSON: the text is not JSON at line {(ex.LineNumber ?? 0) + 1}, byte {(ex.BytePositionInLine ?? 0) + 1}.");
+            throw new SceneSpecFormatException($"Malformed annotations JSON: {JsonFault.NotJson(ex)}");
         }
         using (document)
         {
@@ -242,8 +238,7 @@ public static class AnnotationsFile
             catch (JsonException ex)
             {
                 // What is wrong with the shape names a key or a kind of value, in a line.
-                string message = ex.Message.Split('\n')[0];
-                throw new SceneSpecFormatException($"Malformed annotations JSON: {(message.Length > MaxMessage ? message[..MaxMessage] + "…" : message)}");
+                throw new SceneSpecFormatException($"Malformed annotations JSON: {JsonFault.OfShape(ex)}");
             }
         }
         var annotations = new List<AnnotationSpec>(read?.Count ?? 0);

@@ -20,6 +20,7 @@ public static class BuiltInPresets
         OrbitShowcase(),
         HelixDescent(),
         FullFlythrough(),
+        MapReveal(),
         DocumentationStills(),
     ];
 
@@ -92,13 +93,14 @@ public static class BuiltInPresets
         },
     };
 
-    /// <summary>A near-top-down orbit with component labels fading in. Not in <see cref="All"/>:
-    /// it reveals only labels, not the cave, so it stays out of the gallery until a real reveal of
-    /// the cave exists.</summary>
+    /// <summary>A near-top-down pass during which the cave appears, passage by passage, from
+    /// its entrances inwards, with a glow where it grows; its component labels fade in once it is
+    /// all there. Revealed by distance, which every model has: by date
+    /// (<see cref="RevealBy.Date"/>) the same pass shows the history of the exploration.</summary>
     public static RenderPreset MapReveal() => new()
     {
         Name = "Map reveal",
-        Description = "A near-top-down pass with component labels fading in.",
+        Description = "A near-top-down pass in which the cave appears from its entrances inwards.",
         BuiltIn = true,
         Spec = new SceneSpec
         {
@@ -113,8 +115,10 @@ public static class BuiltInPresets
             Labels = new LabelsSpec
             {
                 Components = new ComponentLabelSpec { Show = true, MinStationCount = 5 },
-                Events = [new VisibilityEvent { Target = VisibilityTarget.ComponentLabels, ShowFrame = 1, FadeSeconds = 3 }],
+                // The labels come when the cave is there: frame 271 is nine seconds in.
+                Events = [new VisibilityEvent { Target = VisibilityTarget.ComponentLabels, ShowFrame = 271, FadeSeconds = 2 }],
             },
+            Reveal = new RevealSpec { By = RevealBy.Distance, Start = 0.5, End = 9.5 },
             Animation = new AnimationSpec { Fps = 30, DurationSeconds = 12 },
             Output = Video1080,
         },

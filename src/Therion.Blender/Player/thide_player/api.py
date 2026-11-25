@@ -204,21 +204,25 @@ def stand(scene, obj, at, colour, role, ident):
 TUBE_SIDES = 6
 
 
-def tube(points, colours, radius, vertices, faces, vertex_colours):
+def tube(points, colours, radius, vertices, faces, vertex_colours, values=None, vertex_values=None):
     """Adds a tube through the points (mathutils vectors) to a mesh being made, as lists of
     vertices and faces, and returns how many straight pieces it has. A ring of vertices stands
     about every point, across the way the tube runs there (at a bend: half-way between the way
     in and the way out), and is carried from point to point without a twist. Points that lie on
     the point before them are left out. colours, when given, has a colour for every point, which
-    every vertex of its ring gets in vertex_colours."""
+    every vertex of its ring gets in vertex_colours; values, when given, a number for every
+    point, which every vertex of its ring gets in vertex_values."""
     import mathutils
 
     kept, kept_colours = [points[0]], [colours[0]] if colours else None
+    kept_values = [values[0]] if values else None
     for index in range(1, len(points)):
         if (points[index] - kept[-1]).length > 1e-9:
             kept.append(points[index])
             if colours:
                 kept_colours.append(colours[index])
+            if values:
+                kept_values.append(values[index])
     if len(kept) < 2:
         return 0
     ways = [(b - a).normalized() for a, b in zip(kept, kept[1:])]
@@ -242,6 +246,8 @@ def tube(points, colours, radius, vertices, faces, vertex_colours):
             vertices.append(point + radius * (math.cos(angle) * across + math.sin(angle) * side))
             if colours:
                 vertex_colours.append(kept_colours[index])
+            if values:
+                vertex_values.append(kept_values[index])
 
     for index in range(len(kept) - 1):
         ring, following = first + index * TUBE_SIDES, first + (index + 1) * TUBE_SIDES

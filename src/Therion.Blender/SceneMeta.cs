@@ -92,6 +92,25 @@ public sealed record SceneMetaLead
     public string? Note { get; init; }
 }
 
+/// <summary>The reveal values the wall mesh carries on its vertices (the vertex property
+/// <c>reveal</c> of the PLY): what they are worked out from, and the range they span.</summary>
+public sealed record SceneMetaReveal
+{
+    /// <summary><c>date</c> (decimal years), <c>order</c> (a count of legs) or <c>distance</c>
+    /// (metres along the passages).</summary>
+    public required string By { get; init; }
+
+    public required double Min { get; init; }
+
+    public required double Max { get; init; }
+
+    /// <summary>For <c>date</c>: the legs without a date, which have the earliest one.</summary>
+    public int? LegsWithoutDate { get; init; }
+
+    /// <summary>For <c>distance</c>: the stations the distances are measured from.</summary>
+    public IReadOnlyList<string>? From { get; init; }
+}
+
 /// <summary>
 /// The full <c>scene-meta.json</c> document (schema v1). Build with
 /// <see cref="Build"/> from a <see cref="GeometryResult"/>; serialize with
@@ -121,6 +140,9 @@ public sealed record SceneMeta
     public required IReadOnlyList<SceneMetaStation> Stations { get; init; }
     public required IReadOnlyList<SceneMetaComponent> Components { get; init; }
     public IReadOnlyList<SceneMetaLead> Leads { get; init; } = [];
+
+    /// <summary>The reveal values of the wall mesh; null when it has none.</summary>
+    public SceneMetaReveal? Reveal { get; init; }
 
     /// <summary>
     /// Builds the metadata document from a geometry result. Only labelable stations are
@@ -193,6 +215,16 @@ public sealed record SceneMeta
             Surveys = surveys,
             Stations = stations,
             Components = components,
+            Reveal = geometry.Reveal is { } reveal && geometry.Walls.HasReveal
+                ? new SceneMetaReveal
+                {
+                    By = Plan.RevealPlanner.Word(reveal.Source),
+                    Min = reveal.Min,
+                    Max = reveal.Max,
+                    LegsWithoutDate = reveal.Source == RevealSource.Date ? reveal.LegsWithoutDate : null,
+                    From = reveal.Source == RevealSource.Distance ? reveal.Starts : null,
+                }
+                : null,
         };
     }
 

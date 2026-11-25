@@ -81,7 +81,7 @@ public static partial class ScenePlanValidator
 
         if (plan.Texts is { } texts)
         {
-            ValidateTexts(texts, Bad);
+            ValidateTexts(plan, texts, Bad);
             NeedsFeature(plan, "texts", ScenePlan.TextsFeature, Bad);
         }
 
@@ -190,6 +190,8 @@ public static partial class ScenePlanValidator
                 bad(path + ".strips", "A line needs at least one strip.");
             if (strips.Any(s => s?.Colors is not null) && strips.Any(s => s?.Colors is null))
                 bad(path + ".strips", "Either every strip gives its points colours or none does.");
+            if (strips.Any(s => s?.Reveal is not null) && strips.Any(s => s?.Reveal is null))
+                bad(path + ".strips", "Either every strip gives its points reveal values or none does.");
             for (int k = 0; k < strips.Count; k++)
             {
                 var strip = strips[k];
@@ -207,6 +209,13 @@ public static partial class ScenePlanValidator
                         bad(at + ".colors", "A strip has a colour for every point or none.");
                     if (colors.Any(color => !IsUnitColor(color)))
                         bad(at + ".colors", "Colour channels must be within 0–1.");
+                }
+                if (strip.Reveal is { } reveal)
+                {
+                    if (reveal.Count != points.Count)
+                        bad(at + ".reveal", "A strip has a reveal value for every point or none.");
+                    if (reveal.Any(value => !double.IsFinite(value)))
+                        bad(at + ".reveal", "The reveal values must be finite.");
                 }
             }
         }
@@ -596,7 +605,9 @@ public static partial class ScenePlanValidator
     }
 
     /// <summary>What a change can name: a model, a line, a text, a marker, an annotation or a light.</summary>
-    private sealed record Thing(string Id, string Role, ThingKind Kind, bool HasMaterial);
+    /// <param name="Revealed">Whether it has reveal values: null where only the player can know
+    /// (a model's mesh is a file).</param>
+    private sealed record Thing(string Id, string Role, ThingKind Kind, bool HasMaterial, bool? Revealed = null);
 
     private static void ValidateChanges(ScenePlan plan, IReadOnlyList<PlanChange> changes, Action<string, string> bad)
     {
@@ -610,7 +621,8 @@ public static partial class ScenePlanValidator
                 HasMaterial: model.Material is not null || draped.Contains(model.Id)
                              || model.Path?.EndsWith(".glb", StringComparison.OrdinalIgnoreCase) == true));
         foreach (var line in (plan.Lines ?? []).Where(l => l is not null))
-            things.Add(new Thing(line.Id, line.Role ?? "line", ThingKind.Model, HasMaterial: line.Material is not null));
+            things.Add(new Thing(line.Id, line.Role ?? "line", ThingKind.Model, HasMaterial: line.Material is not null,
+                Revealed: (line.Strips ?? []).Any(s => s?.Reveal is not null)));
         foreach (var text in plan.Labels?.Texts?.Items ?? [])
             things.Add(new Thing(text.Id, text.Role ?? "label", ThingKind.Label, HasMaterial: true));
         foreach (var marker in plan.Labels?.Markers?.Items ?? [])
@@ -631,7 +643,7 @@ public static partial class ScenePlanValidator
                 bad(path, "A change is missing.");
                 continue;
             }
-            bool ofATarget = change is not { Visible: null, Opacity: null, Tint: null, Scale: null, Offset: null, Energy: null };
+            bool ofATarget = change is not { Visible: null, Opacity: null, Tint: null, Scale: null, Offset: null, Energy: null, Reveal: null };
             if (!ofATarget && change is { WorldColor: null, WorldStrength: null })
                 bad(path, "A change needs the keys of at least one property.");
 
@@ -640,7 +652,7 @@ public static partial class ScenePlanValidator
             if (change.Target is not { } target)
             {
                 if (ofATarget)
-                    bad(path + ".target", "A change of visibility, opacity, tint, scale, offset or energy needs a target.");
+                    bad(path + ".target", "A change of visibility, opacity, tint, scale, offset, energy or reveal needs a target.");
             }
             else
             {
@@ -768,6 +780,41 @@ public static partial class ScenePlanValidator
                     if (!(energy[k].Value >= 0) || !double.IsFinite(energy[k].Value))
                         bad($"{path}.energy[{k}].value", "A light's energy is not negative.");
             }
+            if (change.Reveal is { } reveal)
+            {
+                Once("reveal");
+                OfAModel("reveal", "Only a model or a line is revealed part by part; '{0}' is shown and hidden as a whole ('visible').");
+                if (targets.All(t => t.Kind == ThingKind.Model))
+                {
+                    NeedsMaterial("reveal");
+                    // A line's values are in the plan; the default attribute is what they are kept as.
+                    if (change.RevealFront?.Attribute is null or PlanRevealFront.DefaultAttribute
+                        && targets.FirstOrDefault(t => t.Revealed == false) is { } bare)
+                        bad(path + ".reveal", $"The line '{bare.Id}' has no reveal values; give every point of its strips one ('reveal').");
+                }
+                Times(reveal.Select(k => (k.T, k.Easing)).ToList(), path + ".reveal");
+                for (int k = 0; k < reveal.Count; k++)
+                    if (!double.IsFinite(reveal[k].Value))
+                        bad($"{path}.reveal[{k}].value", "The threshold must be finite.");
+            }
+            if (change.RevealFront is { } front)
+            {
+                if (change.Reveal is null)
+                    bad(path + ".revealFront", "The edge of a reveal goes with the keys of the reveal ('reveal').");
+                if (front.Attribute is not null && string.IsNullOrWhiteSpace(front.Attribute))
+                    bad(path + ".revealFront.attribute", "The attribute needs a name.");
+                if (!(front.Edge >= 0) || !double.IsFinite(front.Edge))
+                    bad(path + ".revealFront.edge", "The edge is a distance in the units of the reveal values, not negative.");
+                if (front.Glow is { } glow)
+                {
+                    if (!IsUnitColor(glow.Color))
+                        bad(path + ".revealFront.glow.color", "Colour channels must be within 0–1.");
+                    if (!(glow.Strength >= 0) || !double.IsFinite(glow.Strength))
+                        bad(path + ".revealFront.glow.strength", "The strength of a glow is not negative.");
+                    if (!(glow.Width > 0) || !double.IsFinite(glow.Width))
+                        bad(path + ".revealFront.glow.width", "The width of a glow is a distance in the units of the reveal values, above 0.");
+                }
+            }
             if (change.WorldColor is { } world)
             {
                 OneOfTheWorld("worldColor", "colour");
@@ -831,7 +878,7 @@ public static partial class ScenePlanValidator
         }
     }
 
-    private static void ValidateTexts(PlanScreenTexts texts, Action<string, string> bad)
+    private static void ValidateTexts(ScenePlan plan, PlanScreenTexts texts, Action<string, string> bad)
     {
         void Seconds(double value, string path, string what)
         {
@@ -909,8 +956,31 @@ public static partial class ScenePlanValidator
                 bad(path + ".end", "An item goes after it appears.");
             if (item.FadeIn is { } fadeIn) Seconds(fadeIn, path + ".fadeIn", "The time an item takes to appear");
             if (item.FadeOut is { } fadeOut) Seconds(fadeOut, path + ".fadeOut", "The time an item takes to go");
+
+            if (item.Counter is { } counter)
+            {
+                if (item.Kind != PlanScreenItemKind.Text)
+                    bad(path + ".counter", "Only a text is a counter.");
+                else if (item.Text is { Length: > 0 } && !item.Text.Contains(CounterPlace, StringComparison.Ordinal))
+                    bad(path + ".text", $"A counter's text says where its number goes: {CounterPlace}.");
+                if (counter.Decimals is < 0 or > 6)
+                    bad(path + ".counter.decimals", "A counter shows from 0 to 6 decimals.");
+                if (counter.Min is { } min && !double.IsFinite(min))
+                    bad(path + ".counter.min", "The least a counter shows must be finite.");
+                if (counter.Max is { } max && !(double.IsFinite(max) && max >= (counter.Min ?? max)))
+                    bad(path + ".counter.max", "The most a counter shows must be finite, and no less than the least.");
+                bool byId = !string.IsNullOrEmpty(counter.Target?.Id), byRole = !string.IsNullOrEmpty(counter.Target?.Role);
+                if (byId == byRole)
+                    bad(path + ".counter.target", "A target is an id or a role, one of the two.");
+                else if (!(plan.Changes ?? []).Any(c => c is { Reveal: not null, Target: not null }
+                                                        && c.Target.Id == counter.Target!.Id && c.Target.Role == counter.Target.Role))
+                    bad(path + ".counter.target", "No change of the plan reveals this target: a counter shows the threshold of a reveal ('changes[].reveal').");
+            }
         }
     }
+
+    /// <summary>Where the number of a counter goes in its text.</summary>
+    public const string CounterPlace = "{}";
 
     private static void ValidateStops(IReadOnlyList<PlanColorStop>? stops, string path, Action<string, string> bad)
     {

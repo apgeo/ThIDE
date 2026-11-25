@@ -41,6 +41,9 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
      studio.
    - **Coborâre elicoidală (Helix descent)** — o spirală din partea de sus a peșterii până jos.
    - **Zbor complet (Full flythrough)** — un zbor în lumina frontalei prin cea mai lungă galerie.
+   - **Dezvăluirea hărții (Map reveal)** — o trecere văzută aproape de sus, în care peștera apare
+     puțin câte puțin, de la intrări spre interior (vezi
+     [Dezvăluirea peșterii, parte cu parte](#dezvăluirea-peșterii-parte-cu-parte)).
    - **Imagini pentru documentare (Documentation stills)** — imagini încadrate de sus / din față /
      din lateral / izometrice.
 
@@ -168,6 +171,58 @@ Playerul face etichetele să apară **treptat**: devin din ce în ce mai opace, 
 opace, mărește etichetele pornind de la nimic.) O previzualizare arată apariția treptată ca pe o
 tăietură: etichetele sunt pur și simplu prezente începând cu `showFrame`.
 
+## Dezvăluirea peșterii, parte cu parte
+
+Peștera nu trebuie să fie toată acolo de la primul cadru. Cu o **dezvăluire** (`reveal`) ea apare
+parte cu parte cât rulează clipul, într-o ordine pe care o dă chiar ridicarea topografică:
+
+| Dezvăluire | Peștera apare… | Are nevoie de |
+|---|---|---|
+| `distance` (după distanță) | de la intrări spre interior, fiecare loc atunci când dezvăluirea a ajuns, de-a lungul galeriilor, atât de departe cât se află locul | nimic: orice model o are. O peșteră fără intrare marcată pornește de la prima stație a primei vize; `from` numește altă stație de pornire |
+| `order` (după ordine) | viză cu viză, în ordinea în care le are ridicarea, fiecare viză crescând dinspre capătul care este deja acolo | nimic |
+| `date` (după dată) | în ordinea **datelor ridicării**: istoria explorării, cu un **contor al anilor** într-un colț al imaginii | datele ridicării |
+
+Presetarea **Map reveal** dezvăluie după distanță. Orice altă presetare sau specificație primește
+o dezvăluire din linia de comandă (`--reveal date`, vezi [mai jos](#din-linia-de-comandă)), prin
+uneltele MCP (`reveal`) sau chiar în specificația de randare:
+
+```json
+"reveal": { "by": "Date", "start": 1, "end": 9, "edge": 0.03, "glow": true, "counter": true }
+```
+
+- `start` și `end` spun când începe dezvăluirea și când este acolo toată peștera, în secunde; fără
+  `end`, ea se termină odată cu clipul. Lăsați peșterii o secundă sau două la sfârșit.
+- `edge` spune cât de moale este marginea, ca parte din toată dezvăluirea: ce apare are nevoie de
+  atât din ea ca să devină opac. `0` înseamnă o tăietură netă.
+- `glow` face să strălucească ce tocmai a apărut (în culoarea `glowColor`, un portocaliu cald
+  dacă nu spuneți altceva), până când dezvăluirea a trecut mai departe.
+- `counter` (pentru `date`) scrie deasupra scării grafice anul la care a ajuns dezvăluirea.
+- `from` (pentru `distance`) este numele stației de la care se măsoară distanțele.
+- `datesPath` (pentru `date`) numește fișierul care are datele.
+
+**De unde vin datele.** Un fișier `.3d` păstrează ziua în care a fost măsurată fiecare viză; un
+fișier `.lox` nu. Pentru un model `.3d` datele sunt pur și simplu acolo. Pentru un model `.lox`,
+care este cel cu pereții adevărați, ThIDE ia datele din fișierul `.3d` al aceleiași peșteri: un
+`.3d` cu același nume aflat lângă `.lox` sau cel pe care îl numiți (`--reveal-dates cave.3d`,
+`datesPath`). Vizele celor două fișiere sunt potrivite după locul stațiilor lor, așa că amândouă
+trebuie să provină din aceleași date topografice.
+
+- O viză fără dată este arătată de la începutul dezvăluirii; randarea spune câte sunt.
+- Un model fără nicio dată este randat întreg, iar randarea spune de ce.
+- O peșteră ridicată în trei expediții apare în trei pași. Cu pereți ridicați (un `.lox`), fiecare
+  bucată de perete apare odată cu viza de care este cel mai aproape.
+
+**Ce trebuie știut.**
+
+- **Doar playerul desenează o dezvăluire.** O scenă construită de generatorul de scripturi arată
+  toată peștera de la început până la sfârșit, iar rezultatul spune acest lucru.
+- O imagine statică și un set de imagini statice arată toată peștera.
+- O previzualizare arată dezvăluirea ca pe o tăietură de-a lungul fețelor modelului, fără marginea
+  moale și fără strălucire, și spune acest lucru.
+- Etichetele și adnotările nu sunt dezvăluite odată cu peștera: dați-le timpii lor
+  (`labels.events`, câmpul `from` al unei adnotări), așa cum face presetarea **Map reveal** pentru
+  etichetele ei.
+
 ## Adnotări: etichete, note cu linie, marcaje și fotografii
 
 Pe lângă etichetele pe care ThIDE le face din model (stațiile, pistele), o scenă poate avea
@@ -245,8 +300,9 @@ ThIDE are două moduri de a construi scena în Blender, iar **Constructor de sce
 - **Generator** — constructorul mai vechi, păstrat așa cum era, pentru comparație și pentru ce nu
   face încă playerul. Scrie câte un script Python pentru fiecare scenă. Desenează titlul, scara
   grafică, săgeata nordului și legenda adâncimii ca obiecte în scenă (unde un perete le poate
-  ascunde) și nu desenează linia de credite, subtitrările, cadrul de final, trecerile sau
-  [adnotările](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii).
+  ascunde) și nu desenează linia de credite, subtitrările, cadrul de final, trecerile,
+  [adnotările](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii) sau o
+  [dezvăluire](#dezvăluirea-peșterii-parte-cu-parte).
 
 O previzualizare este mereu a playerului, orice s-ar alege aici. **Exportă scriptul…** și
 **Deschide în Blender…** folosesc generatorul de scripturi.
@@ -279,7 +335,9 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--draft] [--builder auto|player|generator] \
                     [--keep-frames] [--compose-only] [--frames <dir>] \
                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] \
-                    [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]...
+                    [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]... \
+                    [--reveal date|order|distance [--reveal-from <station>] \
+                     [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]]
 ```
 
 `--export` scrie scriptul și resursele fără a rula Blender; altfel randează. Căile fișierelor
@@ -299,6 +357,13 @@ randării, `2` la o eroare de utilizare sau de specificație.
   [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii). Merge și cu `--bundle`. Un
   script scris cu `--export` este al generatorului de scripturi și le omite, așa cum omite
   subtitrările; comanda spune acest lucru.
+- `--reveal date`, `--reveal order` sau `--reveal distance` arată peștera parte cu parte: vezi
+  [Dezvăluirea peșterii, parte cu parte](#dezvăluirea-peșterii-parte-cu-parte). `--reveal-from
+  main.12` măsoară o dezvăluire după distanță de la acea stație, în locul intrărilor;
+  `--reveal-dates cave.3d` numește fișierul cu datele ridicării pentru un model care nu le are;
+  `--reveal-seconds 1-9.5` spune când începe dezvăluirea și când este acolo toată peștera. Peste o
+  presetare care dezvăluie deja, `--reveal` schimbă după ce se dezvăluie și îi păstrează timpii.
+  Merge și cu `--bundle`; un script scris cu `--export` o omite, iar comanda spune acest lucru.
 - **O randare care a fost oprită continuă.** O randare cu texte își ține cadrele în
   `<out>/<nume>-frames` cât timp rulează. Rulați din nou aceeași comandă după ce a fost oprită (sau
   după ce a fost oprit calculatorul): cadrele care există sunt păstrate și se randează doar cele
@@ -328,7 +393,7 @@ mai nou, fără ThIDE:
 therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
                     --bundle cave-bundle.zip [--draft] [--render [--render-plan full|draft|both]] \
                     [--out <dir>] [--blender <path>] [--readme-language en|ro] \
-                    [--annotations <file.json>]...
+                    [--annotations <file.json>]... [--reveal date|order|distance ...]
 ```
 
 Pachetul conține planul scenei (`scene-plan.json`: mișcarea camerei, aspectul și ieșirea, ca JSON
@@ -384,6 +449,16 @@ scenele făcute de ThIDE:
   și intensitatea (`worldColor`, `worldStrength`). O cheie poate sta după sfârșitul clipului,
   două chei pe același cadru înseamnă o mișcare care se termină cu un salt, iar o culoare poate
   trece de la o cheie la alta așa cum amestecă un ecran culorile (`"mix": "srgb"`).
+- Tot la `changes`, un model sau o linie este arătat parte cu parte (`reveal`): cheile sunt un
+  prag, iar în fiecare clipă sunt acolo părțile a căror **valoare de dezvăluire** este sub el.
+  Valorile sunt câte un număr pentru fiecare vârf al rețelei modelului: proprietatea de vârf
+  `reveal` a unui fișier PLY (ThIDE o scrie când o specificație are o dezvăluire;
+  `scene-meta.json` spune, la `reveal`, ce sunt valorile și ce interval acoperă), atributul
+  `_REVEAL` al unui fișier GLB sau `reveal` din fâșiile unei linii, câte un număr pentru fiecare
+  punct. Ele sunt în unitățile lor (ani, metri, un număr de ordine), la fel și pragul.
+  `revealFront` spune cum arată marginea: `edge` (cât de departe în urma pragului este opacă o
+  parte), `glow` (`color`, `strength`, `width`) și `attribute` (alt nume pentru valori). Un text cu
+  un `counter` arată numărul la care a ajuns pragul, în locul semnului `{}` din el.
 - La `annotations`, etichetele, notele cu linie, marcajele și fotografiile, fiecare cu locul și
   mărimea ei în metri. O adnotare poate ține de un model (`"model"`): merge atunci acolo unde merge
   punctul ei din model, cât timp modelul este întins sau mutat. Când este prezentă se spune
@@ -395,8 +470,8 @@ scenele făcute de ThIDE:
   pentru un zbor care vine de departe până aproape.
 
 O previzualizare arată nuanța unui model, iar cât dintr-un model care se estompează mai este acolo
-se vede după partea din fețele lui pe care le desenează; o fotografie este acolo un mozaic al
-culorilor ei. Schema care descrie fiecare câmp se află
+se vede după partea din fețele lui pe care le desenează; o dezvăluire este o tăietură de-a lungul
+fețelor; o fotografie este acolo un mozaic al culorilor ei. Schema care descrie fiecare câmp se află
 în depozitul ThIDE (`src/Therion.Blender/Plan/scene-plan.schema.json`).
 
 ## Cerințe și sfaturi

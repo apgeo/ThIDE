@@ -42,4 +42,9 @@ public sealed record GeometryOptions
 
     /// <summary>Add per-vertex depth-tint colours to the wall mesh (<see cref="DepthRamp"/>).</summary>
     public bool DepthTint { get; init; } = true;
+
+    /// <summary>Work out reveal values for the cave and give them to the wall mesh
+    /// (<see cref="RevealField"/>): what an animated threshold shows the cave by, part by part.
+    /// Null leaves the mesh without them.</summary>
+    public RevealOptions? Reveal { get; init; }
 }
