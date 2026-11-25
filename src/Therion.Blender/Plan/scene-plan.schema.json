@@ -225,9 +225,11 @@
           "required": ["kind"],
           "additionalProperties": false,
           "properties": {
-            "kind": { "enum": ["color", "sky"] },
+            "kind": { "enum": ["color", "sky", "image"], "description": "One colour all round, a procedural daylight sky, or an image all round that is the background and lights the scene (an HDRI)." },
             "color": { "$ref": "#/$defs/color" },
-            "strength": { "type": "number", "minimum": 0 }
+            "strength": { "type": "number", "minimum": 0, "description": "The factor the colour, the sky or the image is multiplied by. A change without a target can key it (worldStrength)." },
+            "image": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([hH][dD][rR]|[eE][xX][rR])$", "description": "Of the kind 'image': a Radiance .hdr or an OpenEXR .exr file, relative to the plan. An equirectangular picture (longitude by latitude, twice as wide as high), its upper edge overhead and its middle in the east (+X): from left to right it runs from the west by the north, the east and the south back to the west." },
+            "rotation": { "type": "number", "description": "Of the kind 'image': how far the image is turned about the vertical, in degrees, anticlockwise seen from above." }
           }
         }
       }

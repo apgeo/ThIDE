@@ -489,7 +489,7 @@ public class RenderBundleTests : IDisposable
         Assert.Contains("(photos/view.png) cannot travel with the plan", ex.Message);
         // A file the plan does not name is still refused, with the photos among what it could be.
         ex = Assert.Throws<ArgumentException>(() => PlayerWriter.SingleFile(plan, new Dictionary<string, byte[]> { ["photos/other.png"] = TestImages.FlagPng() }));
-        Assert.Contains("No model, material or photo of the plan has the path 'photos/other.png'.", ex.Message);
+        Assert.Contains("No model, material, photo or world of the plan has the path 'photos/other.png'.", ex.Message);
     }
 
     // ---- the README and what the plan leaves out ----
@@ -518,23 +518,61 @@ public class RenderBundleTests : IDisposable
     }
 
     [Fact]
-    public void WhatThePlanLeavesOut_IsReportedToTheCaller_AndInTheReadme()
+    public void ABundleOfASceneUnderAnHdriImage_CarriesTheImage_AndLeavesNothingOut()
     {
+        string sky = TestImages.Write(Path.Combine(_dir, "skies"), "evening sky.hdr", TestImages.RadianceHdr(16, 8, TestImages.Compass));
         var spec = Orbit with
         {
-            Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "sky.hdr" },
+            Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = sky, HdriRotation = 90 },
             Labels = new LabelsSpec { Overlays = new OverlaySpec { Title = "Invented" } },
             Surface = new SurfaceSpec { Mode = SurfaceMode.Solid },
         };
         var content = Content(spec);
 
-        Assert.Equal(["lighting.hdriPath"], content.NotCarried);
+        Assert.Empty(content.NotCarried);
         // The cave of this bundle has no terrain to draw: that is said, not left out in silence.
         Assert.Equal(["The model has no terrain surface; rendering without one."], content.Notices);
+        Assert.Equal(["model.ply", "hdri/evening_sky.hdr"], content.Files.Keys);
+        Assert.Equal(sky, content.Files["hdri/evening_sky.hdr"]);
+        var world = content.Plan.Look.World!;
+        Assert.Equal((PlanWorldKind.Image, "hdri/evening_sky.hdr", 90.0), (world.Kind, world.Image, world.Rotation));
+        Assert.Equal(world, content.Draft!.Look.World);
+
         string readme = RenderBundleWriter.Readme(content);
-        Assert.Contains("NOT IN THIS SCENE", readme);
-        Assert.Contains("the HDRI image lighting", readme);
+        Assert.DoesNotContain("NOT IN THIS SCENE", readme);
+        Assert.Contains("  hdri/evening_sky.hdr   the image round the scene, which lights it (HDRI)\n", readme);
+        Assert.Contains("imaginea din jurul scenei, care o luminează (HDRI)", RenderBundleWriter.Readme(content with { Language = "ro" }));
         Assert.DoesNotContain("terrain", readme);
+
+        // The image is in the zip and in the folder, byte for byte.
+        string zipPath = Path.Combine(_dir, "sky.zip");
+        RenderBundleWriter.WriteZip(content, zipPath);
+        Assert.Equal(File.ReadAllBytes(sky), Read(zipPath)["hdri/evening_sky.hdr"]);
+        string folder = Path.Combine(_dir, "sky-folder");
+        Assert.Contains("hdri/evening_sky.hdr", RenderBundleWriter.WriteFolder(content, folder));
+        Assert.Equal(File.ReadAllBytes(sky), File.ReadAllBytes(Path.Combine(folder, "hdri", "evening_sky.hdr")));
+    }
+
+    [Fact]
+    public void AnHdriImageThatIsNoImage_IsRefusedWhenTheBundleIsWritten_AndASingleFileChecksItToo()
+    {
+        string notes = TestImages.Write(Path.Combine(_dir, "skies"), "notes.exr", "These are notes, not a picture."u8.ToArray());
+        var spec = Orbit with { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = notes } };
+        string zipPath = Path.Combine(_dir, "notes.zip");
+
+        var ex = Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(Content(spec), zipPath));
+        Assert.StartsWith(
+            "The file of the world (hdri/notes.exr) cannot travel with the plan: the file is neither a Radiance HDR nor an OpenEXR image.",
+            ex.Message);
+        Assert.False(File.Exists(zipPath));
+
+        // One script carries the image inside it, after the same check.
+        var plan = Content(spec, draft: false, work: "work-single").Plan;
+        byte[] sky = TestImages.OpenExr(16, 8, TestImages.Compass);
+        string script = PlayerWriter.SingleFile(plan, new Dictionary<string, byte[]> { ["hdri/notes.exr"] = sky });
+        Assert.Contains("\"hdri/notes.exr\": \"" + Convert.ToBase64String(sky) + "\"", script);
+        ex = Assert.Throws<ArgumentException>(() => PlayerWriter.SingleFile(plan, new Dictionary<string, byte[]> { ["hdri/notes.exr"] = TestImages.FlagPng() }));
+        Assert.Contains("(hdri/notes.exr) cannot travel with the plan", ex.Message);
     }
 
     [Fact]

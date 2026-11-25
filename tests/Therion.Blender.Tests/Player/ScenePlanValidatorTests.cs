@@ -207,6 +207,35 @@ public class ScenePlanValidatorTests
     }
 
     [Fact]
+    public void AWorldOfAnImage_NamesAnHdrOrAnExrFileBesideThePlan_AndOnlyItIsTurned()
+    {
+        // Full changes the world's colour, which only a world of one colour has.
+        ScenePlan With(PlanWorld world) => Full with { Look = Full.Look with { World = world }, Changes = null };
+        var image = new PlanWorld { Kind = PlanWorldKind.Image, Image = "hdri/sky.hdr" };
+
+        Assert.Empty(ScenePlanValidator.Validate(With(image)));
+        Assert.Empty(ScenePlanValidator.Validate(With(image with { Image = "sky.EXR", Rotation = -400, Strength = 0 })));
+        AssertBad(With(image with { Image = null }), "look.world.image");
+        AssertBad(With(image with { Image = " " }), "look.world.image");
+        AssertBad(With(image with { Image = "/skies/sky.hdr" }), "look.world.image");
+        AssertBad(With(image with { Image = "../sky.hdr" }), "look.world.image");
+        AssertBad(With(image with { Image = "hdri/sky.png" }), "look.world.image");
+        AssertBad(With(image with { Rotation = double.NaN }), "look.world.rotation");
+        AssertBad(With(image with { Strength = -1 }), "look.world.strength");
+        // A colour and a sky have no image to name or to turn.
+        AssertBad(With(new PlanWorld { Kind = PlanWorldKind.Sky, Image = "hdri/sky.hdr" }), "look.world.image");
+        AssertBad(With(new PlanWorld { Kind = PlanWorldKind.Sky, Rotation = 90 }), "look.world.rotation");
+        AssertBad(With(new PlanWorld { Kind = (PlanWorldKind)9 }), "look.world.kind");
+
+        // Its strength changes with the clip as any world's does; its colour is the image's.
+        var dim = new PlanChange { WorldStrength = [new PlanNumberKey(0, 1), new PlanNumberKey(1, 0.2)] };
+        Assert.Empty(ScenePlanValidator.Validate(With(image) with { Changes = [dim], Features = [.. Full.Features] }));
+        AssertBad(
+            With(image) with { Changes = [new PlanChange { WorldColor = [new PlanColorKey(0, new ColorRgb(0, 0, 1))] }], Features = [.. Full.Features] },
+            "changes[0].worldColor");
+    }
+
+    [Fact]
     public void Labels_HaveUniqueIds_RealPlacesAndSizes_AndTheirModuleIsListed()
     {
         var labels = Full.Labels!;

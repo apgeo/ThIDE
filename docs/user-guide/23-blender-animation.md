@@ -43,8 +43,14 @@ describes one *render job*; nothing runs until you press **Render** or **Preview
      [Revealing the cave part by part](#revealing-the-cave-part-by-part)).
    - **Documentation stills** — framed top / front / side / isometric images.
 
-   A preset fills in the camera, materials, lighting and output all at once. You can then tweak
-   any setting below it.
+   A preset fills in the camera, materials, lighting, output and texts all at once. You can then
+   tweak any setting below it.
+
+   Every built-in preset **writes the cave's name over the picture**: *Orbit showcase*, *Map
+   reveal* and *Documentation stills* at the top throughout, *Helix descent* and *Full
+   flythrough* on a card the movie opens on, for three seconds. The name is the one the model
+   has; over a model without a name nothing is written. Change it, or clear it, in the panel's
+   **Title** field: see [Texts in the panel](#texts-in-the-panel).
 
 3. **Adjust settings** as needed:
    - **Camera** — the motion template.
@@ -66,10 +72,8 @@ describes one *render job*; nothing runs until you press **Render** or **Preview
      *Cave*, *Passage*, *CameraDistance* (about the same size in the picture at any distance, its
      caption with it) and *HiddenInFlythrough* fix one way. *Labels above* chooses the roof a station label is lifted
      above: the surveyed height first, the walls first, the walls only, or none (on the station).
-     **Credits line** is a small line that stays in the bottom right corner of the picture (who
-     surveyed, who drew, a licence), and **End card** a text on a black picture that the movie
-     ends on, for the seconds beside it. More texts are described under
-     [Texts over the picture](#texts-over-the-picture).
+   - **Texts over the picture** — the **Title**, the **Credits line**, the **End card** and the
+     **Captions**, each for its time: see [Texts in the panel](#texts-in-the-panel).
    - **Scene builder (advanced)** — what builds the scene in Blender; leave it on *Auto*. See
      [Two scene builders](#two-scene-builders).
    - **Render folder** — where the video, frames or still are saved; by default *Documents/ThIDE/Renders*
@@ -114,9 +118,43 @@ The letters are Blender's own font (Romanian diacritics included), white with a 
 sized by the picture's height, so a movie reads the same at any resolution. Everything keeps a
 margin of 5 % from the picture's edges.
 
-The panel has fields for the credits line and the end card. The other texts are set in a render
-spec (the JSON a preset holds, under `labels.overlays`), on the command line (`--title`,
-`--credits`, `--end-card`, `--caption`) or by an assistant through the MCP tools.
+### Texts in the panel
+
+Under **Texts over the picture** the panel has the texts you are most likely to write yourself:
+
+- **Title** — the title. The preset decides whether it stays at the top of the picture or is a
+  card the movie opens on; what you type here is the text. Empty, there is none.
+- **Credits line** — a small line that stays in the bottom right corner (who surveyed, who drew,
+  a licence).
+- **End card** — a text on a black picture that the movie ends on, for the seconds beside it.
+- **Captions** — lines at the bottom of the picture, each for its time. **Add caption** adds a
+  row after the last one, three seconds long: type its **text**, and set the seconds it is shown
+  **from** and **to**, counted from the start of the movie. The **✕** at the end of a row removes
+  it. A row without a text is left out; a caption that ends before it starts is listed under
+  **Fix before rendering**.
+
+Under the rows a **strip** shows the captions along the clip, each where its seconds fall, with
+its number. The grey part is the clip itself: a caption that reaches past it would run on after
+the scene has ended, and the strip grows to show how far. One caption is shown at a time, so of
+two that overlap on the strip the later one cuts the earlier short.
+
+**The cave's name in a text.** Write `{cave}` where the cave's name should stand: in the title,
+the credits line, the end card or a caption. It is filled in from the model when the render
+starts: a `.3d` file's title, or the title of the survey at the top of a `.lox` file (the
+`-title` of your outermost `survey`). The built-in presets use it for their titles, which is why
+the Title field shows `{cave}` until you type something else. A text that is nothing but the
+name is left out when the model has none.
+
+**Texts in presets.** A preset keeps the texts with everything else. **Save preset** stores the
+title, the credits line, the end card and the captions as they are in the panel, and choosing the
+preset later brings them back, the captions as rows you can edit. Use `{cave}` in a preset you
+mean to use for more than one cave.
+
+The other texts (the scale bar, the north arrow, the depth legend, a subtitle, the corner line,
+the fades) are set in a render spec (the JSON a preset holds, under `labels.overlays`); the title,
+the credits line, the end card and captions also on the command line (`--title`, `--credits`,
+`--end-card`, `--caption`) or by an assistant through the MCP tools. A preset that has them keeps
+them while you change the texts above.
 
 **An end card over the scene.** In a render spec the end card has two more settings, under
 `labels.overlays.endCard`. `backdrop` says how dark the card is: 1 (the default) is the black card,
@@ -183,7 +221,8 @@ command line (`--reveal date`, see [below](#from-the-command-line)), from the MC
   it to become solid. `0` is a clean cut.
 - `glow` makes what has just appeared shine (in `glowColor`, a warm orange unless you say
   otherwise) until the reveal has moved on.
-- `counter` (for `date`) writes the year the reveal has got to above the scale bar.
+- `counter` (for `date`) writes the year the reveal has got to above the scale bar. **Map
+  reveal** has it on: switch that preset to `date` and it counts the years.
 - `from` (for `distance`) is the name of the station the distances are measured from.
 - `datesPath` (for `date`) names the file that has the dates.
 
@@ -269,23 +308,55 @@ list stands under `annotations`. The panel has no field for them yet.
 - A preview shows a photo as a mosaic of its colours (Blender's solid view draws no image), and a
   fade as a cut.
 
+## Lighting by an image (HDRI)
+
+A scene can be lit by a picture of a whole surrounding: a sky, a studio, a quarry at dusk. Such a
+picture (an *HDRI*) is laid round the scene, is what the camera sees behind the cave, and lights
+the cave with its own colours and from its own bright places. ThIDE ships none; many are free to
+download.
+
+It is a setting of the render spec, under `lighting`, and of the command line:
+
+```json
+"lighting": { "rig": "HdriFile", "hdriPath": "skies/evening.hdr", "strength": 1.5, "hdriRotation": 90 }
+```
+
+```
+therion-cli blender cave.lox --hdri skies/evening.hdr --hdri-rotation 90 --hdri-strength 1.5 --out renders
+```
+
+- **The image** is a Radiance **`.hdr`** or an OpenEXR **`.exr`** file, the usual formats of such
+  pictures: twice as wide as it is high, the whole horizon across and the sky at the top. ThIDE
+  checks the file before Blender starts, by what it holds and not by its name, and refuses one
+  that is neither, or that is larger than 256 MiB, 16,384 pixels a side or 16,384 × 8,192 pixels.
+  An image 4,096 pixels wide lights a scene as well as a larger one; a larger one only makes the
+  background sharper.
+- **`hdriRotation`** turns the image about the vertical, in degrees, anticlockwise seen from
+  above: use it to bring the sun of the picture round to where you want the light to come from.
+  Not turned, the middle of the picture lies in the east.
+- **`strength`** makes it brighter or dimmer: 1 is the image as it is.
+- The file stays where it is. ThIDE copies it for the render, and into a
+  [bundle](#a-render-bundle-to-render-on-another-machine) (its `hdri` folder), so a bundle renders
+  on another machine without it.
+- A preview draws no image: its background is a plain grey, as strong as the image is set.
+- The panel has no field for it yet: save a spec with it as a preset file, or use the command line.
+
 ## Two scene builders
 
 ThIDE has two ways of building the scene in Blender, and **Scene builder (advanced)** chooses
 between them:
 
-- **Auto** (the default) uses the *player* whenever it can show everything the scene asks for, and
-  the *script generator* otherwise. When the script generator was used, the panel says why.
+- **Auto** (the default) uses the *player*, which shows everything a scene can ask for.
 - **Player** — the newer builder. ThIDE writes the scene as data (a *scene plan*) and a fixed
   program in Blender plays it. It writes the texts in the second stage, renders previews, and can
-  go on with a render that was stopped. Asked for by name, it refuses a scene it cannot show
-  completely and says what it cannot show: at present an HDRI image as lighting.
-- **Generator** — the earlier builder, kept as it was for comparison and for what the player does
-  not do yet. It writes one Python script per scene. It draws the title, the scale bar, the north
-  arrow and the depth legend as objects in the scene (where a wall can hide them) and does not
-  draw the credits line, captions, the end card, the fades, the
+  go on with a render that was stopped.
+- **Generator** — the earlier builder, kept as it was for comparison. It is used only when you
+  choose it here. It writes one Python script per scene. It draws the title, the scale bar, the
+  north arrow and the depth legend as objects in the scene (where a wall can hide them) and does
+  not draw a title card, the credits line, captions, the end card, the fades, the
   [annotations](#annotations-labels-callouts-markers-and-photos) or a
-  [reveal](#revealing-the-cave-part-by-part).
+  [reveal](#revealing-the-cave-part-by-part), and it does not turn an
+  [HDRI image](#lighting-by-an-image-hdri). The result says what it left out.
 
 A preview is always the player's, whatever is chosen here. **Export script…** and **Open in
 Blender…** use the script generator.
@@ -303,8 +374,8 @@ Blender…** use the script generator.
     it): one `.py` file that renders anywhere, but a much larger one. It is off unless you tick it.
 - **Open in Blender…** — opens the scene in Blender's *interactive* window so you can inspect or
   tweak it by hand before rendering.
-- **Save preset** — store the current settings as your own preset; they appear in the strip
-  alongside the built-ins and persist between sessions.
+- **Save preset** — store the current settings as your own preset, the texts and captions
+  included; they appear in the strip alongside the built-ins and persist between sessions.
 
 ## From the command line
 
@@ -318,7 +389,8 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] \
                     [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]... \
                     [--reveal date|order|distance [--reveal-from <station>] \
-                     [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]]
+                     [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]] \
+                    [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]]
 ```
 
 `--export` writes the script and assets without running Blender; otherwise it renders. Produced
@@ -326,11 +398,16 @@ file paths are printed to standard output; the exit code is `0` on success, `1` 
 failure, `2` on a usage or spec error.
 
 - `--draft` renders the quick preview instead of the render, as the panel's **Preview** does.
-- `--builder` chooses the scene builder; `auto` is the default. With `player`, a scene the player
-  cannot show completely is a usage error that says what it cannot show.
+- `--builder` chooses the scene builder; `auto` is the default and is the player. `generator`
+  asks for the earlier builder.
 - `--title`, `--credits`, `--end-card` (with `--end-card-seconds`) and `--caption` add texts to the
   preset's or the spec's. A caption is one argument, its times in seconds from the start of the
-  movie: `--caption "2.5-6:Sala Mare"`; give the option once for each caption.
+  movie: `--caption "2.5-6:Sala Mare"`; give the option once for each caption. `{cave}` in any of
+  them stands for the cave's name. The built-in presets write that name as their title:
+  `--title ""` renders without one.
+- `--hdri evening.hdr` lights the scene by an image all round it, which is the background too:
+  see [Lighting by an image (HDRI)](#lighting-by-an-image-hdri). `--hdri-rotation 90` turns it
+  and `--hdri-strength 1.5` makes it brighter. It goes with `--bundle` too.
 - `--annotations notes.json` adds the labels, callouts, markers and photos of a file to the
   preset's or the spec's: see
   [Annotations](#annotations-labels-callouts-markers-and-photos). It goes with `--bundle` too. A
@@ -387,8 +464,8 @@ Windows); the `BLENDER` environment variable names another one, for example
 `BLENDER=/opt/blender-4.5/blender sh render.sh`.
 
 A bundle carries the terrain surface and its image when the scene draws them (`surface.ply`,
-`surface.png`), the annotations with their photos (`photos/`), and the texts over the picture, in
-the plan's `texts`. A scene with texts renders
+`surface.png`), the annotations with their photos (`photos/`), the image the scene is lit by
+(`hdri/`), and the texts over the picture, in the plan's `texts`. A scene with texts renders
 in two stages there too, into the bundle's `frames` folder and then `out`; started again after it
 was stopped, it goes on. `sh render.sh --keep-frames` keeps the frames, and
 `sh render.sh --compose` (or `render.cmd --compose`) writes the movie again from them after a
@@ -407,9 +484,9 @@ text in `scene-plan.json` was changed. Captions are in the bundle as subtitles a
   `both` (the draft first, then the full plan). `draft` and `both` need `--draft`.
 - `--readme-language ro` writes the bundle's `README.txt` in Romanian; without it, it is in English.
 - The same model and settings always give the same zip under the same name, byte for byte.
-- A scene plan cannot yet say everything a render spec can: the HDRI light rig is left out. The
-  command warns about what it leaves out, and the bundle's `README.txt` lists it. The timed showing
-  and hiding of labels is in the plan (its `changes`), so a bundle plays it.
+- A scene plan says everything a render spec can, so a bundle leaves nothing out: the timed
+  showing and hiding of labels is in the plan (its `changes`), and the image of an HDRI light rig
+  is among its files.
 
 **What a scene plan can say.** `scene-plan.json` is plain JSON that any text editor can change and
 any program can write, and it can say more than the scenes ThIDE makes use of:
@@ -418,7 +495,8 @@ any program can write, and it can say more than the scenes ThIDE makes use of:
   or faded (`visible`), is there in part (`opacity`), takes a colour (`tint`); a model is
   stretched (`scale`) and moved (`offset`); a light is turned up and down (`energy` — a sun that
   goes out as the camera goes underground); the world changes its colour and its strength
-  (`worldColor`, `worldStrength`). A key may lie after the end of the clip, two keys on one frame
+  (`worldColor`, `worldStrength`: the strength of an HDRI image too, so a sky can dim as the
+  camera goes in). A key may lie after the end of the clip, two keys on one frame
   are a move that ends in a jump, and a colour can go from key to key as a screen mixes colours
   (`"mix": "srgb"`).
 - Also under `changes`, a model or a line is shown part by part (`reveal`): the keys are a
@@ -440,6 +518,8 @@ any program can write, and it can say more than the scenes ThIDE makes use of:
   colours stay with the rock while a model is stretched or moved.
 - A camera pose can have a clip range of its own (`clipStart`, `clipEnd`), for a flight from far
   away to close by.
+- Under `look.world`, the surrounding: one colour, a daylight sky, or an image (`"kind":
+  "image"`, with its `image` file, its `strength` and its `rotation` in degrees).
 
 A draft shows a model's tint, and how much of a fading model is there by the share of its faces
 it draws; a reveal is a cut along the faces; a photo is a mosaic of its colours there. The schema that describes every field is in the ThIDE repository
@@ -466,6 +546,8 @@ it draws; a reveal is a cut along the faces; a photo is a mosaic of its colours 
 | The source dropdown is empty | Compile the project first (**Compile → Compile**), or tick **Use an external file**. |
 | The render failed | Open the **job log** from the notification or the panel — it has Blender's full output. |
 | EEVEE render fails on a server | Switch the engine to **Cycles**. |
-| *"The player cannot make this scene…"* | The scene asks for something the player does not show yet (the message names it). Set **Scene builder** to *Auto* or *Generator*. |
+| *"…the player lights a scene with a Radiance .hdr or an OpenEXR .exr image…"*, *"…cannot travel with the plan…"* | The image of the HDRI lighting is another kind of picture, is damaged or is too large (the message says which). Use a `.hdr` or `.exr` file; or set **Scene builder** to *Generator*, which loads whatever picture Blender reads. |
+| Every render has the cave's name across the top | The built-in presets write it. Clear the **Title** field (or `--title ""`). |
+| The title is a short code, not the cave's name | It is the name the model has: give the outermost `survey` of your project a `-title`, or type the title you want. |
 | The preview has no terrain | A see-through terrain is left out of previews; the render draws it. |
 | A title or the north arrow is hidden by the walls | The script generator built the scene (it draws them in the scene). Set **Scene builder** to *Auto* or *Player*. |

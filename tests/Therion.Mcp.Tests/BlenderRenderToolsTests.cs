@@ -383,24 +383,29 @@ public sealed class BlenderRenderToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task A_builder_that_does_not_exist_or_cannot_build_the_scene_is_refused_before_a_job_starts()
+    public async Task A_builder_that_does_not_exist_is_refused_before_a_job_starts_and_the_player_builds_a_scene_under_an_HDRI_image()
     {
         _blender.Saved.Add(new RenderPreset
         {
             Name = "Under a sky", Spec = new SceneSpec { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "sky.hdr" } },
         });
-        var (render, _) = await ToolsAsync();
+        var (render, status) = await ToolsAsync();
 
         var unknown = await render.StartRender(builder: "blender");
-        var refused = await render.StartRender(preset: "Under a sky", builder: "player");
 
         Assert.Equal(ToolErrorCodes.InvalidArgument, unknown.Error!.Code);
         Assert.Contains("auto, player, generator", unknown.Error.Message);
-        Assert.Equal(ToolErrorCodes.InvalidArgument, refused.Error!.Code);
-        Assert.Contains("does not carry lighting.hdriPath", refused.Error.Message);
         Assert.Empty(_blender.Requests);
-        // The same preset is rendered when the builder is left to be chosen, or as a draft.
-        Assert.True((await render.StartRender(preset: "Under a sky", model: "out/cave.3d", draft: true, builder: "player")).Ok);
+        // The player carries the image of an HDRI light rig: it refuses no preset, asked for by
+        // name, left to be chosen, or for a draft.
+        var played = await render.StartRender(preset: "Under a sky", model: "out/cave.3d", builder: "player");
+        Assert.True(played.Ok, played.Error?.Message);
+        await FinishedAsync(status, played.Data!.JobId);
+        Assert.Equal(SceneBuilder.Player, _blender.Renderer.LastOptions!.Builder);
+        var draft = await render.StartRender(preset: "Under a sky", model: "out/cave.3d", draft: true, builder: "player");
+        Assert.True(draft.Ok, draft.Error?.Message);
+        await FinishedAsync(status, draft.Data!.JobId);
+        Assert.True(_blender.Renderer.LastOptions!.Draft);
     }
 
     [Fact]
@@ -419,6 +424,33 @@ public sealed class BlenderRenderToolsTests : IDisposable
         Assert.Equal(
             [new CaptionSpec { Text = "Sala Mare", Start = 1, End = 2.5 }, new CaptionSpec { Text = "Sifonul: capăt", Start = 3, End = 4.5 }],
             overlays.Captions);
+    }
+
+    [Fact]
+    public async Task The_presets_title_is_kept_when_none_is_given_and_an_empty_one_takes_it_away()
+    {
+        var (render, status) = await ToolsAsync();
+
+        // The built-in presets write the cave's name, by its placeholder.
+        var started = await render.StartRender(model: "out/cave.3d");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        Assert.Equal(TextPlaceholders.Cave, _blender.Renderer.LastSpec!.Labels.Overlays.Title);
+
+        started = await render.StartRender(model: "out/cave.3d", title: "", credits: "echipa {cave}");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        var overlays = _blender.Renderer.LastSpec!.Labels.Overlays;
+        Assert.Null(overlays.Title);
+        // The placeholder may stand in any of the texts; the render fills it in.
+        Assert.Equal("echipa {cave}", overlays.Credits);
+
+        // A card the preset opens on stays a card under another title.
+        started = await render.StartRender(model: "out/cave.3d", preset: "Helix descent", title: "Avenul Inventat");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        overlays = _blender.Renderer.LastSpec!.Labels.Overlays;
+        Assert.Equal(("Avenul Inventat", BuiltInPresets.TitleCardSeconds), (overlays.Title, overlays.TitleSeconds));
     }
 
     [Fact]

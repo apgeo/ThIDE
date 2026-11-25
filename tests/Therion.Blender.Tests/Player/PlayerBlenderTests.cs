@@ -210,7 +210,8 @@ public class PlayerBlenderTests
     [BlenderFact]
     public async Task TheScene_IsTheOneTheGeneratedScriptBuilds()
     {
-        // The presets as they are, labels included.
+        // The presets as they are, labels included. (Not the cave's name they write over the
+        // picture: see AssertPlayedAsGenerated.)
         var flythrough = PlanFixtures.Preset("Full flythrough") with { Animation = new AnimationSpec { Fps = 10, DurationSeconds = 4 } };
         var cases = new (string Name, SceneSpec Spec)[]
         {
@@ -284,8 +285,12 @@ public class PlayerBlenderTests
     /// <summary>Builds the scene of <paramref name="spec"/> both ways, by the generated script
     /// and by the player from the plan, and holds one against the other: the same objects, and
     /// at seven frames the same camera and the same view of every label.</summary>
+    /// <remarks>Without what the spec writes over the picture: a generated script puts a title
+    /// into the scene as an object, the player writes it over the finished frames in a stage of
+    /// its own, so there the two are not the same scene, and are not meant to be.</remarks>
     private static async Task<SceneReport> AssertPlayedAsGenerated(string name, SceneSpec spec)
     {
+        spec = spec with { Labels = spec.Labels with { Overlays = new OverlaySpec() } };
         var options = new ProbeOptions { Samples = 7 };
         var generated = await SceneProbeRunner.RunAsync("player-same-generated-" + name, Medium.Value, spec, options);
         var (_, job) = PlayerRunner.WriteJob("same-" + name, Medium.Value, spec);

@@ -39,7 +39,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         nameof(DurationSeconds), nameof(OutputKind), nameof(Container), nameof(Width), nameof(Height),
         nameof(BaseName), nameof(SelfContained), nameof(EmbedMesh), nameof(ShowStationLabels), nameof(ShowLeadMarkers),
         nameof(LeadMarkerSizing), nameof(LabelRoof), nameof(SurfaceMode), nameof(SurfaceOpacity),
-        nameof(Credits), nameof(EndCardText), nameof(EndCardSeconds),
+        nameof(Title), nameof(Credits), nameof(EndCardText), nameof(EndCardSeconds),
     };
 
     private SceneSpec _spec;
@@ -132,6 +132,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     /// <summary>True when a terrain is drawn: only then does its opacity matter.</summary>
     public bool HasSurface => SurfaceMode != SurfaceMode.Off;
 
+    /// <summary>The title; empty is none. <see cref="TextPlaceholders.Cave"/> in it, as in the
+    /// other texts, stands for the cave's name, which is filled in from the model.</summary>
+    [ObservableProperty] private string _title = "";
+
     /// <summary>The credits line; empty is none.</summary>
     [ObservableProperty] private string _credits = "";
 
@@ -140,6 +144,77 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     /// <summary>How long the end card stays, in seconds.</summary>
     [ObservableProperty] private double _endCardSeconds = new EndCardSpec().Seconds;
+
+    // ---- captions ----
+
+    /// <summary>How long a caption that is added lasts, in seconds.</summary>
+    public const double NewCaptionSeconds = 3.0;
+
+    /// <summary>The captions, as rows of the panel: each a text and the seconds it is shown
+    /// from and to. A row without a text is not yet a caption and is left out of the spec.</summary>
+    public ObservableCollection<CaptionRowViewModel> Captions { get; } = [];
+
+    /// <summary>True when there are rows: the strip that shows them over the clip is drawn.</summary>
+    public bool HasCaptions => Captions.Count > 0;
+
+    /// <summary>The seconds the strip of the captions stands for: the clip, or as far as the
+    /// last caption reaches when that is further (the validator does not cut a caption off at
+    /// the end of the clip; the strip shows how far past it one runs).</summary>
+    public double CaptionStripSeconds
+    {
+        get
+        {
+            double clip = double.IsFinite(DurationSeconds) && DurationSeconds > 0 ? DurationSeconds : 0;
+            double last = Captions.Count == 0 ? 0 : Captions.Max(c => double.IsFinite(c.End) ? c.End : 0);
+            return Math.Max(Math.Max(clip, last), 1e-3);
+        }
+    }
+
+    /// <summary>Where the clip ends on the strip, as a share of it: 1, unless a caption runs
+    /// past the end of the clip.</summary>
+    public double ClipEndOnStrip => Math.Clamp((double.IsFinite(DurationSeconds) ? DurationSeconds : 0) / CaptionStripSeconds, 0, 1);
+
+    /// <summary>Adds a caption after the last one, <see cref="NewCaptionSeconds"/> long and not
+    /// past the end of the clip when it starts inside it. Its text is for the user to type.</summary>
+    [RelayCommand]
+    private void AddCaption()
+    {
+        double start = Captions.Count == 0 ? 0 : Math.Round(Captions.Max(c => double.IsFinite(c.End) ? c.End : 0), 2);
+        double end = start + NewCaptionSeconds;
+        if (start < DurationSeconds) end = Math.Min(end, DurationSeconds);
+        Captions.Add(NewCaptionRow("", start, Math.Round(end, 2)));
+        CaptionsChanged();
+    }
+
+    [RelayCommand]
+    private void RemoveCaption(CaptionRowViewModel? row)
+    {
+        if (row is null || !Captions.Remove(row)) return;
+        CaptionsChanged();
+    }
+
+    private CaptionRowViewModel NewCaptionRow(string text, double start, double end)
+        => new(text, start, end, () => { if (!_suspend) CaptionsChanged(); });
+
+    /// <summary>The rows changed (one was added, removed or edited): the spec takes them, and
+    /// the rows take their numbers and their places on the strip.</summary>
+    private void CaptionsChanged()
+    {
+        ApplyKnobsToSpec();
+        RefreshCaptionStrip();
+    }
+
+    /// <summary>Numbers the rows and places each on the strip, by the seconds it is shown from
+    /// and to. A row that is not shown (no text, or no time) is marked so.</summary>
+    private void RefreshCaptionStrip()
+    {
+        double seconds = CaptionStripSeconds;
+        for (int i = 0; i < Captions.Count; i++)
+            Captions[i].Place(i + 1, seconds);
+        OnPropertyChanged(nameof(HasCaptions));
+        OnPropertyChanged(nameof(CaptionStripSeconds));
+        OnPropertyChanged(nameof(ClipEndOnStrip));
+    }
 
     // ---- how the render is made (not part of the scene, so not of a preset) ----
 
@@ -199,7 +274,12 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     {
         base.OnPropertyChanged(e);
         if (_suspend || e.PropertyName is null) return;
-        if (KnobNames.Contains(e.PropertyName)) ApplyKnobsToSpec();
+        if (KnobNames.Contains(e.PropertyName))
+        {
+            ApplyKnobsToSpec();
+            // The strip of the captions is as long as the clip.
+            if (e.PropertyName == nameof(DurationSeconds)) RefreshCaptionStrip();
+        }
         else if (e.PropertyName is nameof(UseExternalFile) or nameof(ExternalFilePath) or nameof(SelectedArtifact) or nameof(IsBusy))
             Revalidate();
     }
@@ -234,7 +314,11 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
                 Roof = LabelRoof,
                 Overlays = _spec.Labels.Overlays with
                 {
+                    Title = string.IsNullOrWhiteSpace(Title) ? null : Title.Trim(),
                     Credits = string.IsNullOrWhiteSpace(Credits) ? null : Credits.Trim(),
+                    // A row without a text is not a caption yet.
+                    Captions = Captions.Where(c => !string.IsNullOrWhiteSpace(c.Text))
+                        .Select(c => new CaptionSpec { Text = c.Text.Trim(), Start = c.Start, End = c.End }).ToList(),
                     // What a preset's end card has beside its text and its time stays.
                     EndCard = string.IsNullOrWhiteSpace(EndCardText)
                         ? null
@@ -268,7 +352,12 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         LabelRoof = spec.Labels.Roof;
         SurfaceMode = spec.Surface.Mode;
         SurfaceOpacity = spec.Surface.Opacity;
+        Title = spec.Labels.Overlays.Title ?? "";
         Credits = spec.Labels.Overlays.Credits ?? "";
+        Captions.Clear();
+        foreach (var caption in spec.Labels.Overlays.Captions)
+            Captions.Add(NewCaptionRow(caption.Text, caption.Start, caption.End));
+        RefreshCaptionStrip();
         EndCardText = spec.Labels.Overlays.EndCard?.Text ?? "";
         EndCardSeconds = spec.Labels.Overlays.EndCard?.Seconds ?? new EndCardSpec().Seconds;
     }
@@ -660,6 +749,64 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     }
 
     private bool CanOpenInBlender => CanStart && _gui is not null;
+}
+
+/// <summary>
+/// One caption as a row of the panel: its text, the seconds it is shown from and to, and where
+/// it lies on the strip that shows the captions over the clip.
+/// </summary>
+public sealed partial class CaptionRowViewModel : ObservableObject
+{
+    private readonly Action _changed;
+
+    public CaptionRowViewModel(string text, double start, double end, Action changed)
+    {
+        _text = text;
+        _start = start;
+        _end = end;
+        _changed = changed;
+    }
+
+    /// <summary>What the caption says; empty, the row is not a caption yet.</summary>
+    [ObservableProperty] private string _text;
+
+    /// <summary>When it appears, in seconds from the start of the movie.</summary>
+    [ObservableProperty] private double _start;
+
+    /// <summary>When it goes, in seconds from the start of the movie.</summary>
+    [ObservableProperty] private double _end;
+
+    /// <summary>Its place among the rows, from 1: what the strip and the automation ids call it.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TextId), nameof(StartId), nameof(EndId), nameof(RemoveId))]
+    private int _number;
+
+    /// <summary>Where it starts and ends on the strip, as shares of the strip's length.</summary>
+    [ObservableProperty] private double _stripStart;
+    [ObservableProperty] private double _stripEnd;
+
+    /// <summary>True when the movie shows it: it has a text, and ends after it starts.</summary>
+    [ObservableProperty] private bool _isShown;
+
+    public string TextId => $"Blender.Caption.{Number}.Text";
+    public string StartId => $"Blender.Caption.{Number}.Start";
+    public string EndId => $"Blender.Caption.{Number}.End";
+    public string RemoveId => $"Blender.Caption.{Number}.Remove";
+
+    partial void OnTextChanged(string value) => _changed();
+    partial void OnStartChanged(double value) => _changed();
+    partial void OnEndChanged(double value) => _changed();
+
+    /// <summary>Gives the row its number and its place on a strip of
+    /// <paramref name="stripSeconds"/> seconds.</summary>
+    internal void Place(int number, double stripSeconds)
+    {
+        Number = number;
+        bool timed = double.IsFinite(Start) && double.IsFinite(End) && Start >= 0 && End > Start;
+        IsShown = timed && !string.IsNullOrWhiteSpace(Text);
+        StripStart = timed ? Math.Clamp(Start / stripSeconds, 0, 1) : 0;
+        StripEnd = timed ? Math.Clamp(End / stripSeconds, 0, 1) : 0;
+    }
 }
 
 /// <summary>A preset in the gallery strip (built-in or user).</summary>

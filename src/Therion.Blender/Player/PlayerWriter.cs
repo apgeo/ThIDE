@@ -26,10 +26,12 @@ public static class PlayerWriter
     /// <c>thide_player/</c>, which replaces one that is already there.
     /// </summary>
     /// <param name="files">Files to copy in first, as plan path → the file to copy: the meshes,
-    /// the images of the materials and the photos, unless they are in the folder already.</param>
+    /// the images of the materials, the photos and the world's image, unless they are in the
+    /// folder already.</param>
     /// <exception cref="ArgumentException">The plan is invalid, a path of
-    /// <paramref name="files"/> does not lie in the folder, or a photo's file is not an image a
-    /// plan carries (<see cref="PlanImage"/>).</exception>
+    /// <paramref name="files"/> does not lie in the folder, a photo's file is not an image a
+    /// plan carries (<see cref="PlanImage"/>), or the world's is not one
+    /// (<see cref="PlanEnvironmentImage"/>).</exception>
     /// <exception cref="FileNotFoundException">A file the plan names is not in the folder, or a
     /// file to copy is not there.</exception>
     public static PlayerJob WriteJob(ScenePlan plan, string folder, IReadOnlyDictionary<string, string>? files = null)
@@ -55,6 +57,7 @@ public static class PlayerWriter
             if (!File.Exists(path))
                 throw new FileNotFoundException($"The file of {what} is not in the job folder: {path}", path);
             if (photos.Contains(planPath)) CheckPhoto(planPath, what, () => File.OpenRead(path));
+            if (planPath == plan.Look.World?.Image) CheckEnvironment(planPath, what, () => File.OpenRead(path));
         }
 
         string package = Path.Combine(folder, PlayerFiles.PackageName);
@@ -86,11 +89,14 @@ public static class PlayerWriter
         var named = FilesOf(plan).Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
         foreach (string path in files.Keys)
             if (!named.Contains(path))
-                throw new ArgumentException($"No model, material or photo of the plan has the path '{path}'.", nameof(files));
+                throw new ArgumentException($"No model, material, photo or world of the plan has the path '{path}'.", nameof(files));
         var photos = PhotosOf(plan);
         foreach (var (path, what) in FilesOf(plan))
-            if (photos.Contains(path) && files.TryGetValue(path, out byte[]? content))
-                CheckPhoto(path, what, () => new MemoryStream(content, writable: false));
+        {
+            if (!files.TryGetValue(path, out byte[]? content)) continue;
+            if (photos.Contains(path)) CheckPhoto(path, what, () => new MemoryStream(content, writable: false));
+            if (path == plan.Look.World?.Image) CheckEnvironment(path, what, () => new MemoryStream(content, writable: false));
+        }
 
         var text = new StringBuilder();
         text.Append("# A scene plan and the ThIDE player that renders it, in one file.\n");
@@ -127,7 +133,7 @@ public static class PlayerWriter
     }
 
     /// <summary>The files a plan names, each with what it is the file of: every model's mesh,
-    /// every material's image and every photo's.</summary>
+    /// every material's image, every photo's and the world's.</summary>
     public static IReadOnlyList<(string Path, string What)> FilesOf(ScenePlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -138,6 +144,8 @@ public static class PlayerWriter
         foreach (var annotation in plan.Annotations ?? [])
             if (annotation?.Image is { } image && !files.Any(f => f.Path == image))
                 files.Add((image, $"photo '{annotation.Id}'"));
+        if (plan.Look?.World?.Image is { } world && !files.Any(f => f.Path == world))
+            files.Add((world, "the world"));
         return files;
     }
 
@@ -154,6 +162,21 @@ public static class PlayerWriter
         {
             using var stream = open();
             PlanImage.Check(stream);
+        }
+        catch (PlanImageException ex)
+        {
+            throw new ArgumentException($"The file of {what} ({planPath}) cannot travel with the plan: {ex.Message}.", nameof(planPath));
+        }
+    }
+
+    /// <summary>Checks that the file of the world's image is one a plan carries.</summary>
+    /// <exception cref="ArgumentException">It is not; the message names the plan path.</exception>
+    internal static void CheckEnvironment(string planPath, string what, Func<Stream> open)
+    {
+        try
+        {
+            using var stream = open();
+            PlanEnvironmentImage.Check(stream);
         }
         catch (PlanImageException ex)
         {

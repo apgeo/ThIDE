@@ -93,7 +93,9 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                    + "scene, otherwise the script generator; render_status says which and why), player, or "
                    + "generator. A draft is always the player's.")]
         string? builder = null,
-        [Description("A title written at the top of the picture. Omit to keep the preset's.")]
+        [Description("A title written over the picture; {cave} in it stands for the cave's name, taken from the "
+                   + "model. Omit to keep the preset's (the built-in presets write the cave's name); an empty "
+                   + "text writes no title.")]
         string? title = null,
         [Description("A small line that stays in a corner of the picture: who surveyed, a licence.")]
         string? credits = null,
@@ -335,7 +337,8 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         if (texts is not null)
         {
             var overlays = spec.Labels.Overlays;
-            if (!string.IsNullOrWhiteSpace(texts.Title)) overlays = overlays with { Title = texts.Title.Trim() };
+            // A title that is given and empty takes the preset's away.
+            if (texts.Title is not null) overlays = overlays with { Title = string.IsNullOrWhiteSpace(texts.Title) ? null : texts.Title.Trim() };
             if (!string.IsNullOrWhiteSpace(texts.Credits)) overlays = overlays with { Credits = texts.Credits.Trim() };
             if (!string.IsNullOrWhiteSpace(texts.EndCard))
                 overlays = overlays with { EndCard = (overlays.EndCard ?? new EndCardSpec()) with { Text = texts.EndCard.Trim() } };

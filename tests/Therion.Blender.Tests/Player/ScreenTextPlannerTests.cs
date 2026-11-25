@@ -42,7 +42,10 @@ public class ScreenTextPlannerTests
         Assert.Null(plan.Texts);
         Assert.False(plan.HasTexts);
         Assert.DoesNotContain(ScenePlan.TextsFeature, plan.Features);
-        Assert.All(Therion.Blender.Presets.BuiltInPresets.All, preset => Assert.Null(PlanFixtures.PlanOf(preset.Spec).Texts));
+        // The built-in presets write the cave's name; without that, nothing.
+        Assert.All(
+            Therion.Blender.Presets.BuiltInPresets.All,
+            preset => Assert.Null(PlanFixtures.PlanOf(preset.Spec with { Labels = preset.Spec.Labels with { Overlays = new OverlaySpec() } }).Texts));
     }
 
     [Fact]

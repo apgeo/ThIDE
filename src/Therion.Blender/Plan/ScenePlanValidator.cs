@@ -346,8 +346,26 @@ public static partial class ScenePlanValidator
         {
             if (!(world.Strength >= 0) || !double.IsFinite(world.Strength))
                 bad("look.world.strength", "The world's strength is not negative.");
+            if (!Enum.IsDefined(world.Kind))
+                bad("look.world.kind", "A world is a colour, a sky or an image.");
             if (world.Kind == PlanWorldKind.Color && !(world.Color is { } color && IsUnitColor(color)))
                 bad("look.world.color", "A plain world needs a colour with channels within 0–1.");
+            if (world.Kind == PlanWorldKind.Image)
+            {
+                if (string.IsNullOrWhiteSpace(world.Image))
+                    bad("look.world.image", "A world of an image needs its image file.");
+                else if (!IsPathBesideThePlan(world.Image))
+                    bad("look.world.image", "An image file is named relative to the plan and lies beside it.");
+                else if (!PlanEnvironmentImage.HasExtension(world.Image))
+                    bad("look.world.image", "The world's image is a .hdr or an .exr file.");
+            }
+            else
+            {
+                if (world.Image is not null) bad("look.world.image", "Only a world of the kind 'image' has an image.");
+                if (world.Rotation is not null) bad("look.world.rotation", "Only a world of the kind 'image' is turned.");
+            }
+            if (world.Rotation is { } turn && !double.IsFinite(turn))
+                bad("look.world.rotation", "The turn of the world's image is a number of degrees.");
         }
     }
 

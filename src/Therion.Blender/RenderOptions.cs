@@ -4,8 +4,8 @@
 //
 // There are two builders. The player builds a scene from a scene plan; it draws the texts over
 // the picture in a second stage, renders drafts and can go on with a render that was stopped. The
-// script generator writes a Python script for the one scene; it is kept as it was, for what the
-// player does not carry yet and for comparison.
+// script generator writes a Python script for the one scene; it is kept as it was, for
+// comparison, and for whatever a later spec may ask for before the player carries it.
 
 using Therion.Blender.Plan;
 
@@ -15,7 +15,7 @@ namespace Therion.Blender;
 public enum SceneBuilder
 {
     /// <summary>The player when it carries everything the spec asks for, otherwise the script
-    /// generator.</summary>
+    /// generator. The player carries every spec there is, so this is the player.</summary>
     Auto,
     /// <summary>The player; a spec it cannot carry is refused, with what it cannot carry.</summary>
     Player,
@@ -72,11 +72,21 @@ public static class SceneBuilders
     /// <see cref="SceneBuilder.Player"/> refuses a spec the player cannot carry; and keeping the
     /// frames or composing from them needs the player.
     /// </summary>
+    /// <remarks>The player carries every spec (<see cref="ScenePlanBuilder.NotCarried"/> is
+    /// empty), so <see cref="SceneBuilder.Auto"/> is the player and the player refuses nothing;
+    /// the script generator builds a scene only when it is asked for.</remarks>
     public static SceneBuilderChoice Choose(SceneSpec spec, RenderOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
+        return Choose(spec, options, ScenePlanBuilder.NotCarried(spec));
+    }
+
+    /// <summary><see cref="Choose(SceneSpec, RenderOptions?)"/> for a spec of which the player
+    /// does not carry <paramref name="lost"/>: the rule itself, whatever the player carries
+    /// today.</summary>
+    internal static SceneBuilderChoice Choose(SceneSpec spec, RenderOptions? options, IReadOnlyList<string> lost)
+    {
         options ??= new RenderOptions();
-        var lost = ScenePlanBuilder.NotCarried(spec);
         if (options.Draft)
             return new SceneBuilderChoice(SceneBuilder.Player, [], lost);
 
@@ -111,7 +121,8 @@ public static class SceneBuilders
 
     /// <summary>What of <paramref name="spec"/> a generated script does not draw, as field
     /// paths: everything that was added after the script generator was last changed, which only
-    /// the player draws: the later overlays, the annotations and the reveal.</summary>
+    /// the player draws: the later overlays, the annotations, the reveal and the turn of an HDRI
+    /// image.</summary>
     public static IReadOnlyList<string> NotDrawnByTheGenerator(SceneSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
@@ -129,6 +140,7 @@ public static class SceneBuilders
         if (overlays.FadeToBlack > 0) lost.Add("labels.overlays.fadeToBlack");
         if (spec.Annotations.Count > 0) lost.Add("annotations");
         if (RevealPlanner.Applies(spec)) lost.Add("reveal");
+        if (spec.Lighting is { Rig: LightingRig.HdriFile, HdriRotation: not 0.0 }) lost.Add("lighting.hdriRotation");
         return lost;
     }
 }

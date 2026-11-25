@@ -107,7 +107,13 @@ public class BlenderRevealVerbTests : IDisposable
         Assert.True(change.Reveal[1].Value > 50, "the threshold ends past the far end of the cave");
         Assert.NotNull(change.RevealFront!.Glow);
         Assert.Contains("changes", plan.Features);
-        Assert.Null(plan.Texts);
+        // A reveal by distance has no years to count: the only text is the cave's name, which
+        // the preset writes, and an empty title takes that away too.
+        Assert.Equal(["title"], plan.Texts!.Items.Select(i => i.Role));
+        string untitled = Path.Combine(_dir, "untitled.zip");
+        (code, _, stderr) = await Run("blender", _lox, "--bundle", untitled, "--reveal", "distance", "--title", "");
+        Assert.True(code == 0, stderr);
+        Assert.Null(Bundled(untitled).Plan.Texts);
 
         // Measured from a station of the model, the values start there.
         string from = Path.Combine(_dir, "from.zip");
@@ -130,7 +136,9 @@ public class BlenderRevealVerbTests : IDisposable
         var change = Assert.Single(plan.Changes!);
         Assert.Equal(1987 + 182 / 365.0, change.Reveal![0].Value, 5);
         Assert.InRange(change.Reveal[1].Value, 2003, 2004.5);
-        var counter = Assert.Single(plan.Texts!.Items);
+        // The cave's name, which the preset writes, and the counter of the years.
+        Assert.Equal(["title", "reveal-counter"], plan.Texts!.Items.Select(i => i.Role));
+        var counter = plan.Texts.Items[1];
         Assert.Equal(("{}", 1987.0, 2003.0), (counter.Text, counter.Counter!.Min, counter.Counter.Max));
         Assert.Equal(["models", "camera_track", "look", "labels", "changes", "texts", "output"], plan.Features);
 

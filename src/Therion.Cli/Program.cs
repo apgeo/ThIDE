@@ -64,7 +64,7 @@ static void PrintHelp()
     Console.WriteLine("                     [--draft] [--builder auto|player|generator] [--keep-frames] [--compose-only] [--frames <dir>]");
     Console.WriteLine("                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] [--caption \"<start>-<end>:<text>\"]…");
     Console.WriteLine("                     [--annotations <file.json>]… [--reveal date|order|distance [--reveal-from <station>] [--reveal-dates <file.3d>]");
-    Console.WriteLine("                     [--reveal-seconds <start>-<end>]]");
+    Console.WriteLine("                     [--reveal-seconds <start>-<end>]] [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]]");
     Console.WriteLine("                                         Render (or --export) a Blender presentation of a 3D model, headless. --draft renders a quick");
     Console.WriteLine("                                         preview instead. A render with texts over the picture takes two stages: its frames, then the");
     Console.WriteLine("                                         movie; run again after it was stopped, it goes on. --compose-only writes the movie again from");
@@ -75,6 +75,9 @@ static void PrintHelp()
     Console.WriteLine("                                         counter of the years; the dates are those of a .3d: the model itself, one of the same name");
     Console.WriteLine("                                         beside a .lox, or --reveal-dates), by the survey's order, or by the distance from its");
     Console.WriteLine("                                         entrances (or from --reveal-from). It goes with --bundle too; only the player draws it.");
+    Console.WriteLine("                                         --hdri lights the scene by an image all round it (a Radiance .hdr or an OpenEXR .exr file), which");
+    Console.WriteLine("                                         is the background too; --hdri-rotation turns it about the vertical (anticlockwise seen from");
+    Console.WriteLine("                                         above) and --hdri-strength makes it brighter or dimmer. A bundle carries the image.");
     Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] --bundle <file.zip|folder> [--draft]");
     Console.WriteLine("                     [--render [--render-plan full|draft|both]] [--out <dir>] [--blender <path>] [--readme-language en|ro]");
     Console.WriteLine("                                         Write a render bundle (scene plan, mesh, player, run scripts) to render with any Blender 4.2+;");

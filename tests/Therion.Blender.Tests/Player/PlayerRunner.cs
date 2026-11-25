@@ -44,7 +44,11 @@ internal static class PlayerRunner
     {
         var plan = PlanFor(assets, spec);
         if (change is not null) plan = change(plan);
-        var job = PlayerWriter.WriteJob(plan, NewCase(caseName), FilesOf(assets, plan));
+        var files = FilesOf(assets, plan);
+        // What the spec has somewhere else (the image of an HDRI light rig) comes from there.
+        foreach (var (planPath, source) in ScenePlanBuilder.Files(spec))
+            if (files.ContainsKey(planPath) && !File.Exists(files[planPath])) files[planPath] = source;
+        var job = PlayerWriter.WriteJob(plan, NewCase(caseName), files);
         return (plan, job);
     }
 

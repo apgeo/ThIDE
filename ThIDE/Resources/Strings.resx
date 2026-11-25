@@ -2145,7 +2145,7 @@ This cannot be undone.</value></data>
   <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Render folder</value></data>
   <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Where the video, frames or still are saved. Leave empty to keep them in the temporary job folder.</value></data>
   <data name="Blender_UI_Builder" xml:space="preserve"><value>Scene builder (advanced)</value></data>
-  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>What makes the scene in Blender. Auto: the player when it can show everything the scene asks for, otherwise the script generator. Player: writes the texts over the finished frames, so nothing hides them. Generator: the earlier builder, kept for comparison; it draws the title in the scene and no credits, end card or captions. A preview is always the player's.</value></data>
+  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>What makes the scene in Blender. Auto: the player, which shows everything a scene asks for. Player: the same, asked for by name; it writes the texts over the finished frames, so nothing hides them. Generator: the earlier builder, kept for comparison; it draws the title in the scene and no credits, end card or captions, and does not turn an HDRI image. A preview is always the player's.</value></data>
   <data name="Blender_UI_Preview" xml:space="preserve"><value>Preview</value></data>
   <data name="Blender_UI_Preview_Tip" xml:space="preserve"><value>A quick draft of the render: half the size, without lights and shadows, a fraction of a second per frame. For checking the camera move, the framing and the texts before the long render. It is saved beside the render, with -draft added to its name.</value></data>
   <data name="Blender_UI_Credits" xml:space="preserve"><value>Credits line</value></data>
@@ -2153,6 +2153,21 @@ This cannot be undone.</value></data>
   <data name="Blender_UI_EndCard" xml:space="preserve"><value>End card</value></data>
   <data name="Blender_UI_EndCard_Tip" xml:space="preserve"><value>A text on a black picture that the movie ends on, after its last frame. Empty for none.</value></data>
   <data name="Blender_UI_EndCardSeconds" xml:space="preserve"><value>End card (seconds)</value></data>
+  <data name="Blender_UI_Texts" xml:space="preserve"><value>Texts over the picture</value></data>
+  <data name="Blender_UI_Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Blender_UI_Title_Tip" xml:space="preserve"><value>A title over the picture; empty for none. {cave} stands for the cave's name, taken from the model: here, and in the credits line, the end card and the captions. The preset says whether the title stays at the top of the picture or is a card the movie opens on.</value></data>
+  <data name="Blender_UI_Captions" xml:space="preserve"><value>Captions</value></data>
+  <data name="Blender_UI_Captions_Tip" xml:space="preserve"><value>Lines of text at the bottom of the picture, each for its time. One is shown at a time: a caption that starts while another is showing replaces it. They are also written as subtitles (.srt and .vtt) beside the movie. A row without a text is left out.</value></data>
+  <data name="Blender_UI_AddCaption" xml:space="preserve"><value>Add caption</value></data>
+  <data name="Blender_UI_AddCaption_Tip" xml:space="preserve"><value>Adds a caption after the last one, three seconds long.</value></data>
+  <data name="Blender_UI_RemoveCaption" xml:space="preserve"><value>Remove this caption</value></data>
+  <data name="Blender_UI_CaptionText" xml:space="preserve"><value>Text</value></data>
+  <data name="Blender_UI_CaptionStart" xml:space="preserve"><value>From second</value></data>
+  <data name="Blender_UI_CaptionEnd" xml:space="preserve"><value>To second</value></data>
+  <data name="Blender_UI_CaptionStart_Tip" xml:space="preserve"><value>When the caption appears, in seconds from the start of the movie.</value></data>
+  <data name="Blender_UI_CaptionEnd_Tip" xml:space="preserve"><value>When the caption goes, in seconds from the start of the movie.</value></data>
+  <data name="Blender_UI_CaptionStrip" xml:space="preserve"><value>Captions along the clip</value></data>
+  <data name="Blender_UI_CaptionStrip_Tip" xml:space="preserve"><value>The captions along the clip, each where its seconds fall. The gray part is the clip; a caption that reaches past it runs on after the scene has ended.</value></data>
   <data name="Blender_Phase_Composing" xml:space="preserve"><value>Composing the movie</value></data>
   <data name="Blender_Status_PreviewDone" xml:space="preserve"><value>Preview complete.</value></data>
   <data name="Blender_Job_Preview" xml:space="preserve"><value>{0} (preview)</value></data>

@@ -36,7 +36,8 @@ public enum LightingRig
     SunSky,
     /// <summary>Key/fill/rim sun lights — a size-independent studio setup.</summary>
     ThreePoint,
-    /// <summary>An HDRI environment loaded from a user file (no bundled HDRIs).</summary>
+    /// <summary>An HDRI environment loaded from a user file (no bundled HDRIs): the image is
+    /// the background and lights the scene.</summary>
     HdriFile,
 }
 
@@ -66,6 +67,13 @@ public sealed record LightingSpec
     /// <summary>Multiplier applied to the rig's light energies / world strength.</summary>
     public double Strength { get; init; } = 1.0;
 
-    /// <summary>HDRI file path; required for <see cref="LightingRig.HdriFile"/>.</summary>
+    /// <summary>HDRI file path; required for <see cref="LightingRig.HdriFile"/>. A Radiance
+    /// <c>.hdr</c> or an OpenEXR <c>.exr</c> image, laid round the scene by longitude and
+    /// latitude.</summary>
     public string? HdriPath { get; init; }
+
+    /// <summary>For <see cref="LightingRig.HdriFile"/>: how far the image is turned about the
+    /// vertical, in degrees, anticlockwise seen from above: what stood in the east stands in
+    /// the north at 90. Drawn by the player only.</summary>
+    public double HdriRotation { get; init; }
 }

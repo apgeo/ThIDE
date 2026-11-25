@@ -231,9 +231,11 @@ the workspace, the output kind (`video`, `frames`, `still`), width, height, leng
 and file name. `draft: true` renders a quick preview (seconds, in Blender's solid view) to look at before
 the long render. `title`, `credits`, `endCard` (with `endCardSeconds`) and `captions` (each
 `"<start>-<end>:<text>"`, times in seconds) are written over the picture, and captions also as `.srt` and
-`.vtt` beside the movie. `builder` (`auto`, `player`, `generator`) chooses what builds the scene;
-`render_status` says which did (`builder`), why the script generator was used (`notCarried`) and what the
-render does not show (`leftOut`). Without a model it renders the project's own: the last build output, or — when that is
+`.vtt` beside the movie. `{cave}` in any of them stands for the cave's name, which the built-in presets
+write as their title; an empty `title` renders without one. `builder` (`auto`, `player`, `generator`)
+chooses what builds the scene: `auto` is the player, which shows everything a scene asks for, and the
+script generator is used only when it is asked for. `render_status` says which did (`builder`) and what
+the render does not show (`leftOut`). Without a model it renders the project's own: the last build output, or — when that is
 missing or older than the sources — a fresh export of the model alone by Therion, on a copy of the
 thconfig without its `system` lines. Outputs go to a folder in the workspace, or to a temporary folder
 that `render_status` names; paths outside the workspace and the project's config folder are refused.

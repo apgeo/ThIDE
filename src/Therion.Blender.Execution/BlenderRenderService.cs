@@ -150,8 +150,9 @@ public sealed class BlenderRenderService : IBlenderRenderService
         if (options.Draft) plan = ScenePlanBuilder.Draft(plan);
         // What a generated script would print about the scene, a plan cannot: say it here.
         var notices = ScenePlanBuilder.Notices(placed, conversion.Meta, CameraFraming.FromGeometry(conversion.Geometry));
-        // The photos of the annotations go beside the plan, from wherever the spec has them.
-        var playerJob = PlayerWriter.WriteJob(plan, jobDir, ScenePlanBuilder.AnnotationFiles(placed));
+        // The photos of the annotations and the image of an HDRI light rig go beside the plan,
+        // from wherever the spec has them.
+        var playerJob = PlayerWriter.WriteJob(plan, jobDir, ScenePlanBuilder.Files(placed));
         var output = PlanOutputs.SpecOf(plan, outputDir);
 
         bool twoStages = plan.HasTexts || options.KeepFrames || options.ComposeOnly;
@@ -208,7 +209,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
 
         var outputs = result.OutputPaths;
         if (result.Succeeded && plan.Output.Kind != PlanOutputKind.Still)
-            outputs = outputs.AddRange(WriteSubtitles(spec, outputDir, plan.Output.BaseName));
+            outputs = outputs.AddRange(WriteSubtitles(placed, outputDir, plan.Output.BaseName));
         return new RenderResult
         {
             Succeeded = result.Succeeded,
@@ -340,8 +341,9 @@ public sealed class BlenderRenderService : IBlenderRenderService
     }
 
     /// <summary>Converts the model into <paramref name="assetDir"/> (with its terrain when the
-    /// spec draws one) and returns the spec with its source pointed at what was written and its
-    /// output at <paramref name="outputDirectory"/>.</summary>
+    /// spec draws one) and returns the spec with its source pointed at what was written, its
+    /// output at <paramref name="outputDirectory"/>, and the placeholders of its texts filled in
+    /// from the model (<see cref="TextPlaceholders"/>), for whichever builder draws them.</summary>
     private async Task<(ConversionResult Conversion, SceneSpec Spec)> ConvertAsync(
         SceneSpec spec, RenderSource source, string assetDir, string outputDirectory, CancellationToken ct)
     {
@@ -355,7 +357,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
         };
         var conversion = await Task.Run(
             () => CaveConversionPipeline.ConvertResolvedFull(source.Model, options), ct).ConfigureAwait(false);
-        return (conversion, spec with
+        return (conversion, TextPlaceholders.Resolve(spec, conversion.Meta) with
         {
             Source = spec.Source with
             {
@@ -412,8 +414,9 @@ public sealed class BlenderRenderService : IBlenderRenderService
         ["model.ply", "scene-meta.json", "render.py", "surface.ply", "surface.png", "surface.jpg", ScenePlanSerializer.FileName];
 
     // The player's package, the frames of a render in two stages whose frames nobody asked for,
-    // and the copies of the annotations' photos.
-    private static readonly string[] ScratchFolderNames = [PlayerFiles.PackageName, PlanOutputs.FramesFolderName, AnnotationPlanner.PhotosFolder];
+    // and the copies of the annotations' photos and of the image of an HDRI light rig.
+    private static readonly string[] ScratchFolderNames =
+        [PlayerFiles.PackageName, PlanOutputs.FramesFolderName, AnnotationPlanner.PhotosFolder, ScenePlanBuilder.EnvironmentFolder];
 
     // What a job folder may hold and still be deleted by PruneJobFolders: scratch and the runner's logs.
     private static readonly HashSet<string> DisposableFileNames = new([.. ScratchFileNames, "job.log", FramesLogName], StringComparer.Ordinal);

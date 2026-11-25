@@ -96,6 +96,9 @@ public enum PlanWorldKind
     Color,
     /// <summary>A procedural daylight sky.</summary>
     Sky,
+    /// <summary>An image all round, which is the background and lights the scene: an HDRI
+    /// (<see cref="PlanWorld.Image"/>).</summary>
+    Image,
 }
 
 /// <summary>What the render writes.</summary>
@@ -386,7 +389,21 @@ public sealed record PlanWorld
 
     public ColorRgb? Color { get; init; }
 
+    /// <summary>How brightly the world shines: the factor its colour, its sky or its image is
+    /// multiplied by. A change of the scene can key it (<see cref="PlanChange.WorldStrength"/>).</summary>
     public double Strength { get; init; } = 1.0;
+
+    /// <summary>For <see cref="PlanWorldKind.Image"/>: the image, a Radiance <c>.hdr</c> or an
+    /// OpenEXR <c>.exr</c> file, relative to the plan. It is laid round the scene by longitude
+    /// and latitude (an equirectangular picture, twice as wide as it is high), its upper edge
+    /// overhead and its middle in the east (+X): from its left edge to its right it runs from
+    /// the west by the north, the east and the south back to the west, as someone standing in
+    /// the scene and turning to the right sees it.</summary>
+    public string? Image { get; init; }
+
+    /// <summary>For <see cref="PlanWorldKind.Image"/>: how far the image is turned about the
+    /// vertical, in degrees, anticlockwise seen from above; null is no turn.</summary>
+    public double? Rotation { get; init; }
 }
 
 /// <summary>How the picture is made: engine and quality, picture size, materials, lights and

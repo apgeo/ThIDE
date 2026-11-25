@@ -1,5 +1,212 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-25 — texts in presets: the cave's name by a placeholder, and built-in presets that write it
+
+Nothing here changes the plan or the player (still version 1 and 1.7): a plan holds the texts
+filled in. What changes is what a spec may say and what the built-in presets do say.
+
+### Breaking changes
+- **The built-in presets write the cave's name over the picture.** Each has
+  `labels.overlays.title = "{cave}"`; "Helix descent" and "Full flythrough" also
+  `titleSeconds = 3` (`BuiltInPresets.TitleCardSeconds`), which makes the title a card the clip
+  opens on. So, over a model that has a name:
+  - their plans have `texts` and list the `texts` module, and **a render of one takes two
+    stages** (the frames as PNG, then the output from them) where it took one: more disk while
+    it runs, and `job-frames.log` beside `job.log`;
+  - their spec hashes are other hashes (`SceneSpecSerializer.ComputeHash`). A preset **without
+    its texts** (`Labels.Overlays = new OverlaySpec()`) has the hash it had: verified against
+    the release before, and held by a test with the five hashes written out;
+  - the script generator draws the title in the scene, and for the two presets with a card it
+    reports `labels.overlays.titleSeconds` among what it leaves out.
+  Migration: for a preset as it was, clear the title (`spec with { Labels = spec.Labels with {
+  Overlays = new OverlaySpec() } }`; `--title ""` on the command line; `title: ""` to
+  `start_render`; the panel's Title field). The command line's default spec is "Orbit showcase"
+  and has the title too.
+- **`ScenePlanBuilder.FromSpec` fills in the placeholders** of the overlays' texts from its
+  `meta` (below). A text that holds `{cave}` literally and was meant to is not possible any more;
+  nothing wrote one before.
+- **`start_render`'s `title`**: an empty text now takes the preset's title away (it used to mean
+  "not given"). Omitted, the preset's is kept, as before.
+- `RenderBundleWriter.FromModel` writes a bundle's subtitles from the captions with their
+  placeholders filled in.
+
+### Additive API: `TextPlaceholders`
+- **`{cave}`** (`TextPlaceholders.Cave`) in a text of `OverlaySpec` stands for the cave's name:
+  in `Title`, `Subtitle`, `Credits`, `Corner`, the end card's `Text` and `Subtitle`, and the
+  texts of `Captions` and `CornerCaptions`. It is the only placeholder
+  (`TextPlaceholders.Known`); other braces stay as they are written, and filling in is one pass
+  (what a name holds is not looked at again).
+- **The name** (`TextPlaceholders.CaveName(meta)`) is the model's own title, which a `.3d` file
+  has (`SceneMeta.Source.Title`); else the title of the root of its survey tree, which a `.lox`
+  file has; else, when that root has no title and one survey under it, that survey's title (what
+  Therion writes for a project whose outermost `survey` has a `-title`). **A title that is only
+  a file's name is no name**: one that ends in `.3d` or `.lox`, or equals the name of the file
+  the model was read from, with or without its extension. Therion gives a `.3d` it exports the
+  file's name for a title, and Survex gives one without `*title` the name of its `.svx`.
+- **A text that held a placeholder and is blank once it is filled in is left out**: a title, a
+  line or an end card is then none, a caption is dropped. So a preset whose title is `{cave}`
+  writes nothing over a model without a name, and its render takes one stage, as before.
+- `TextPlaceholders.Resolve(spec, meta)`, `Resolve(overlays, values)` (for whoever has names of
+  their own: the values are by name, without braces), `Fill(text, values)`, `ValuesOf(meta)`,
+  `HasAny(text)`. `Resolve` returns the same object when no text holds a placeholder.
+- **Where it is filled in**: `ScenePlanBuilder.FromSpec` (so every plan, bundle and draft), and
+  the render service once the model is converted, for whichever builder draws the texts (the
+  script generator's title in the scene too) and for the `.srt`/`.vtt` subtitles.
+  `ScreenTextPlanner.Plan(overlays, plan)`, which has no model, fills in nothing: call `Resolve`
+  first.
+- A spec without placeholders is untouched, and **`SceneSpec` has no new field for any of this**:
+  the texts are the `labels.overlays` a spec, and so a preset file, has had. Preset files are as
+  they were, read and written; a file from before the texts existed reads as the preset it was,
+  with its spec's hash.
+
+### The presets
+- `BuiltInPresets`: "Orbit showcase", "Map reveal" and "Documentation stills" have the name at
+  the top of the picture throughout; "Helix descent" and "Full flythrough" open on it. Nothing
+  else is written: no words of any one language.
+- "Map reveal" says `Reveal.Counter = true` itself (it was the default already): revealed by
+  date (`--reveal date`, or `by` in the spec), it counts the years in the picture. A test holds
+  that, on a cave surveyed in three years.
+- A user's preset keeps whatever texts its spec has (`PresetStore`): the panel now has a Title
+  field and rows for captions beside the credits line and the end card, and "Save preset" stores
+  them with the rest.
+
+### The panel (ThIDE)
+- "Texts over the picture": Title, Credits line, End card, and **Captions**: rows of a text and
+  the seconds it is shown from and to, added after the last one and removed one by one, with a
+  strip that shows them along the clip. A row without a text is left out of the spec. The rows
+  are the spec's `labels.overlays.captions`, so they are kept the way every setting of the panel
+  is: in the scene it edits, and in a preset saved from it.
+
+### Verified
+- Without Blender: filling in (known and unknown braces, one pass), the name from a `.3d` title
+  and from a survey tree, file names refused as names, every text of the overlays, texts left
+  out when blank, each built-in preset's texts and their plans with and without a name, the
+  counter of "Map reveal" by date, the five hashes of the presets without their texts and the
+  hash of the default spec as the release before computed them, a preset file written before
+  the texts existed, the render service filling the name in for both builders and for the
+  subtitles; the panel's view model (title, adding, editing and removing rows, the strip,
+  presets saved and chosen, what goes to a render).
+- In Blender 4.2.23, 4.5.16 and 5.0.1: the whole suite, in which the presets as shipped are
+  bundled, rendered in two stages and compared with the generated scripts' scenes.
+- The panel, driven as a user drives it (the UI tests, with a stand-in for Blender): a title
+  and captions typed into it are in the plan of both stages with the cave's name filled in, and
+  beside the movie as subtitles.
+
+## 2026-11-25 — HDRI in the player: a scene lit by an image all round it
+
+The plan stays **version 1** and everything here is additive to it. The player calls itself
+**1.7**: a player 1.6 refuses a plan with a world of an image by the key it does not know
+("look.world.image is not known to player 1.6; a newer player may be needed"), so it never
+renders such a scene under a plain colour. The script generator is as it was.
+
+### Breaking changes
+- **`ScenePlanBuilder.NotCarried` is empty for every spec.** The HDRI light rig
+  (`lighting.hdriPath`) was the last thing a plan did not say; it says it now. So
+  `SceneBuilder.Auto` is always the player, `SceneBuilder.Player` refuses no spec, a draft leaves
+  nothing out, and `RenderResult.NotCarried`, `RenderBundleContent.NotCarried` (as
+  `RenderBundleWriter.FromModel` fills it) and the README's "NOT IN THIS SCENE" are empty for
+  specs that used to name `lighting.hdriPath`. **The script generator builds a scene only when it
+  is asked for** (`SceneBuilder.Generator`, `--builder generator`, the panel's "Scene builder");
+  it stays selectable, and loads the image from where the spec has it, as before. Migration: code
+  that sent a spec with an HDRI rig to learn "Generator" from the result asks for the generator;
+  code that showed `NotCarried` shows nothing. The rule itself is unchanged and kept
+  (`SceneBuilders.Choose`), for whatever a later spec asks for before the player has it.
+- **`ScenePlanBuilder.Lighting` gives the HDRI rig a world of the image**, not the dim plain
+  world (0.05 grey at 0.5) it stood in with, and **`FromSpec` throws an `ArgumentException` for
+  an HDRI rig whose image is not a `.hdr` or an `.exr` file by its name** ("lighting.hdriPath:
+  the player lights a scene with a Radiance .hdr or an OpenEXR .exr image; 'panorama.jpg' is
+  neither by its name."). The spec itself stays valid (`SceneSpecValidator`): a generated script
+  loads whatever Blender reads. Migration: for another kind of picture, ask for the generator.
+- **A plan of a spec with an HDRI rig names a file** (`hdri/<the image's file name>`), which
+  whoever writes the plan somewhere must put beside it: `ScenePlanBuilder.Files(spec)` says which
+  file that is (and the photos; `AnnotationFiles` alone no longer names every file of a spec).
+  `PlayerWriter.WriteJob` and the bundle writer throw `FileNotFoundException` when it is not
+  there, as for a photo.
+- `PlayerWriter.SingleFile`'s message for a path the plan does not name reads "No model,
+  material, photo or world of the plan has the path …".
+
+### Additive API: a world of an image in a plan
+
+```json
+"look": {
+  "lights": [],
+  "world": { "kind": "image", "strength": 1.5, "image": "hdri/evening_sky.hdr", "rotation": 90 }
+}
+```
+
+- **`kind: "image"`** (`PlanWorldKind.Image`) beside `color` and `sky`: the image is the
+  background and lights the scene. `image` (`PlanWorld.Image`) is a Radiance **`.hdr`** or an
+  OpenEXR **`.exr`** file, relative to the plan and inside its folder. It is an equirectangular
+  picture (longitude by latitude, twice as wide as it is high) with its upper edge overhead and
+  **its middle in the east (+X)**: from its left edge to its right it runs from the west by the
+  north, the east and the south back to the west, as someone standing in the scene and turning to
+  the right sees it. That is how Blender lays such a picture, with no turn of this library's own.
+- **`rotation`** (`PlanWorld.Rotation`, degrees, optional) turns the image about the vertical,
+  **anticlockwise seen from above**: at 90, what stood in the east stands in the north.
+- **`strength`** is the world's, as for a colour and a sky: the factor the image is multiplied
+  by. **A change of the scene keys it as it keys any world's** (`changes`: `worldStrength`, an
+  entry without a target), so an image can dim, brighten, or light nothing for a while.
+  `worldColor` still needs a world of the kind `color` (the validator and the player say so).
+- **The file is checked before it travels** (`PlanEnvironmentImage.Check`, of a path or a
+  stream): by what it holds, not by its name. A Radiance file is known by its first line and its
+  size line (`-Y 512 +X 1024`), an OpenEXR file by its signature and its `dataWindow`; deep
+  OpenEXR data is refused. Caps: **256 MiB**, **16384 pixels a side**, **16384 × 8192 pixels in
+  all** (Blender holds sixteen bytes for each). Only the head is read (at most 1 MiB of it).
+  A file that fails throws `PlanImageException`, and `PlayerWriter.WriteJob`, `SingleFile` and
+  the bundle writer turn that into an `ArgumentException` that names the plan path ("The file of
+  the world (hdri/notes.hdr) cannot travel with the plan: the file is neither a Radiance HDR nor
+  an OpenEXR image.").
+- **The player checks again** (the first bytes) before Blender reads the file, for a folder that
+  came from elsewhere: `look.world.image: "hdri/x.hdr" is neither a Radiance HDR nor an OpenEXR
+  image`.
+- **It travels four ways.** In a job folder and in a bundle the file lies at its plan path
+  (`PlayerWriter.FilesOf` lists it as the file of "the world"; the bundle's README calls it "the
+  image round the scene, which lights it (HDRI)"). In a single-file script it is one of `FILES`
+  (base64). In a saved `.blend` it is packed into the file by `blend_file`, as the photos are:
+  the file renders with nothing beside it.
+- **The draft** (Blender's solid view) draws no image: its background is a grey as strong as the
+  world (0.5 × strength, at most white).
+- **The scene digest** that guards the frames of a render in two stages covers the image, as
+  every input file: another image is another scene.
+- In the module `look`, `KEYS` has `world.image` and `world.rotation`; no new module. The world
+  is an Environment Texture node through a Mapping node into the Background node whose Strength
+  `changes` keys.
+
+### Additive API: the spec
+
+- **`LightingSpec.HdriRotation`** (degrees, anticlockwise seen from above; default 0), written
+  to JSON only when it is not 0, **so a spec without it is the JSON, and has the hash, it had**.
+  The player draws it; a generated script does not, and says so
+  (`SceneBuilders.NotDrawnByTheGenerator` can name `lighting.hdriRotation`).
+- `LightingSpec.Strength` is the world's strength for the HDRI rig (1 is the image as it is),
+  as it was in the generated scripts.
+- `ScenePlanBuilder.Files(spec)`, `ScenePlanBuilder.EnvironmentFolder` (`hdri`). The plan path
+  is the image's own file name with every character but letters, digits, `.`, `-` and `_` made
+  a `_`.
+- The render service copies the image into the job folder and removes the copy with the rest
+  of the scratch; `RenderBundleWriter.FromModel` puts it among the bundle's files.
+
+### Command line
+- `therion-cli blender … --hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength
+  <n>]`, with a render and with `--bundle`: over a preset or a spec, it makes the image the light
+  rig. A file that is not there, or is no such image, is a usage error (exit code 2).
+- MCP: `start_render` has no parameter for it; a saved preset or a spec with the rig is rendered
+  by the player.
+
+### Verified
+- Without Blender: the head checks on images made byte by byte (both formats, cut short,
+  damaged, too large, an endless head), plan records, validator, schema and player keys, the
+  routing (Auto, Player, Generator, drafts, frames) with and without the rig, job folder, bundle
+  and single file.
+- In Blender 4.2.23, 4.5.16 and 5.0.1, on an invented cave under invented skies: the image is
+  the background and turns the way the plan says (four quarters of four colours, looked at from
+  one side, turned by 0, 90, −90 and 180 degrees); the cave is lit from the side the image's
+  bright half stands on (more than twice the light on the walls that face it) and by the
+  world's strength; `worldStrength` keys take the scene from dark to lit over three frames; an
+  OpenEXR image; the draft's grey; a single-file script with nothing beside it; a `.blend`
+  copied alone to another folder and rendered there; a bundle unzipped elsewhere and run with
+  `render.sh`; the render service with the builder left to choose.
+
 ## 2026-11-25 — reveal: a cave that appears part by part, by one animated number
 
 The plan stays **version 1** and everything here is additive to it. The player calls itself

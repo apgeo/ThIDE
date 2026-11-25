@@ -360,7 +360,57 @@ public static class BlenderVerb
             }
             spec = preset.Spec;
         }
-        return TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec) && TryAddReveal(args, stderr, ref spec);
+        return TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec) && TryAddReveal(args, stderr, ref spec)
+            && TryAddHdri(args, stderr, ref spec);
+    }
+
+    /// <summary>
+    /// The image the scene is lit by, given on the command line over the preset's or the spec's
+    /// lighting: <c>--hdri &lt;image.hdr|.exr&gt;</c> makes the image the background and the
+    /// light, <c>--hdri-rotation &lt;degrees&gt;</c> turns it about the vertical and
+    /// <c>--hdri-strength &lt;n&gt;</c> says how brightly it shines.
+    /// </summary>
+    private static bool TryAddHdri(IReadOnlyList<string> args, TextWriter stderr, ref SceneSpec spec)
+    {
+        string? image = Option(args, "--hdri"), rotation = Option(args, "--hdri-rotation"), strength = Option(args, "--hdri-strength");
+        if (image is null && rotation is null && strength is null) return true;
+
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        var lighting = spec.Lighting;
+        if (image is not null)
+        {
+            if (!File.Exists(image))
+            {
+                stderr.WriteLine($"error: file not found: {image}");
+                return false;
+            }
+            lighting = lighting with { Rig = LightingRig.HdriFile, HdriPath = Path.GetFullPath(image) };
+        }
+        else if (lighting.Rig != LightingRig.HdriFile)
+        {
+            stderr.WriteLine("error: --hdri-rotation and --hdri-strength go with an image the scene is lit by (--hdri <image.hdr|.exr>).");
+            return false;
+        }
+        if (rotation is not null)
+        {
+            if (!double.TryParse(rotation, System.Globalization.NumberStyles.Float, culture, out double degrees) || !double.IsFinite(degrees))
+            {
+                stderr.WriteLine($"error: --hdri-rotation takes a number of degrees (\"90\", \"-45\"), not '{rotation}'.");
+                return false;
+            }
+            lighting = lighting with { HdriRotation = degrees };
+        }
+        if (strength is not null)
+        {
+            if (!double.TryParse(strength, System.Globalization.NumberStyles.Float, culture, out double factor) || !double.IsFinite(factor))
+            {
+                stderr.WriteLine($"error: --hdri-strength takes a number (\"1\" is the image as it is, \"2\" twice as bright), not '{strength}'.");
+                return false;
+            }
+            lighting = lighting with { Strength = factor };
+        }
+        spec = spec with { Lighting = lighting };
+        return true;
     }
 
     /// <summary>

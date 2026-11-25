@@ -51,6 +51,12 @@ public static class SceneSpecSerializer
                 else if (property.Name == "reveal")
                     property.ShouldSerialize = (_, value) => value is not null; // later than the annotations
         }
+        if (type.Type == typeof(LightingSpec))
+        {
+            // The turn of an HDRI image came with the player's HDRI world.
+            foreach (var property in type.Properties)
+                if (property.Name == "hdriRotation") property.ShouldSerialize = (_, value) => value is not 0.0;
+        }
         if (type.Type == typeof(RevealSpec))
         {
             foreach (var property in type.Properties)

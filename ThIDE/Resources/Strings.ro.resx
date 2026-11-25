@@ -2145,7 +2145,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Folder randare</value></data>
   <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Unde se salvează videoclipul, cadrele sau imaginea. Lăsați gol pentru a le păstra în folderul temporar al lucrării.</value></data>
   <data name="Blender_UI_Builder" xml:space="preserve"><value>Constructor de scenă (avansat)</value></data>
-  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>Ce construiește scena în Blender. Auto: playerul, când poate arăta tot ce cere scena, altfel generatorul de scripturi. Player: scrie textele peste cadrele terminate, așa că nimic nu le ascunde. Generator: constructorul mai vechi, păstrat pentru comparație; desenează titlul în scenă și nu desenează creditele, cadrul de final sau subtitrările. O previzualizare este mereu a playerului.</value></data>
+  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>Ce construiește scena în Blender. Auto: playerul, care arată tot ce cere o scenă. Player: același, cerut pe nume; scrie textele peste cadrele terminate, așa că nimic nu le ascunde. Generator: constructorul mai vechi, păstrat pentru comparație; desenează titlul în scenă, nu desenează creditele, cadrul de final sau subtitrările și nu rotește o imagine HDRI. O previzualizare este mereu a playerului.</value></data>
   <data name="Blender_UI_Preview" xml:space="preserve"><value>Previzualizare</value></data>
   <data name="Blender_UI_Preview_Tip" xml:space="preserve"><value>O schiță rapidă a randării: jumătate din mărime, fără lumini și umbre, o fracțiune de secundă pe cadru. Pentru a verifica mișcarea camerei, încadrarea și textele înainte de randarea lungă. Se salvează lângă randare, cu -draft adăugat la nume.</value></data>
   <data name="Blender_UI_Credits" xml:space="preserve"><value>Linie de credite</value></data>
@@ -2153,6 +2153,21 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_UI_EndCard" xml:space="preserve"><value>Cadru de final</value></data>
   <data name="Blender_UI_EndCard_Tip" xml:space="preserve"><value>Un text pe o imagine neagră cu care se încheie filmul, după ultimul cadru. Gol pentru niciunul.</value></data>
   <data name="Blender_UI_EndCardSeconds" xml:space="preserve"><value>Cadru de final (secunde)</value></data>
+  <data name="Blender_UI_Texts" xml:space="preserve"><value>Texte peste imagine</value></data>
+  <data name="Blender_UI_Title" xml:space="preserve"><value>Titlu</value></data>
+  <data name="Blender_UI_Title_Tip" xml:space="preserve"><value>Un titlu peste imagine; gol pentru niciunul. {cave} ține locul numelui peșterii, luat din model: aici, dar și în linia de credite, în cadrul de final și în subtitrări. Presetarea stabilește dacă titlul rămâne în partea de sus a imaginii sau este un cadru cu care începe filmul.</value></data>
+  <data name="Blender_UI_Captions" xml:space="preserve"><value>Subtitrări</value></data>
+  <data name="Blender_UI_Captions_Tip" xml:space="preserve"><value>Linii de text în partea de jos a imaginii, fiecare în timpul ei. Se arată câte una: o subtitrare care începe cât alta încă se vede o înlocuiește. Sunt scrise și ca fișiere de subtitrare (.srt și .vtt) lângă film. Un rând fără text este lăsat deoparte.</value></data>
+  <data name="Blender_UI_AddCaption" xml:space="preserve"><value>Adaugă subtitrare</value></data>
+  <data name="Blender_UI_AddCaption_Tip" xml:space="preserve"><value>Adaugă o subtitrare după ultima, lungă de trei secunde.</value></data>
+  <data name="Blender_UI_RemoveCaption" xml:space="preserve"><value>Șterge această subtitrare</value></data>
+  <data name="Blender_UI_CaptionText" xml:space="preserve"><value>Text</value></data>
+  <data name="Blender_UI_CaptionStart" xml:space="preserve"><value>De la secunda</value></data>
+  <data name="Blender_UI_CaptionEnd" xml:space="preserve"><value>Până la secunda</value></data>
+  <data name="Blender_UI_CaptionStart_Tip" xml:space="preserve"><value>Când apare subtitrarea, în secunde de la începutul filmului.</value></data>
+  <data name="Blender_UI_CaptionEnd_Tip" xml:space="preserve"><value>Când dispare subtitrarea, în secunde de la începutul filmului.</value></data>
+  <data name="Blender_UI_CaptionStrip" xml:space="preserve"><value>Subtitrările de-a lungul clipului</value></data>
+  <data name="Blender_UI_CaptionStrip_Tip" xml:space="preserve"><value>Subtitrările de-a lungul clipului, fiecare acolo unde cad secundele ei. Partea gri este clipul; o subtitrare care trece de ea continuă după ce scena s-a încheiat.</value></data>
   <data name="Blender_Phase_Composing" xml:space="preserve"><value>Se compune filmul</value></data>
   <data name="Blender_Status_PreviewDone" xml:space="preserve"><value>Previzualizare completă.</value></data>
   <data name="Blender_Job_Preview" xml:space="preserve"><value>{0} (previzualizare)</value></data>
