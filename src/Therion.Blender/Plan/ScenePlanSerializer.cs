@@ -1,6 +1,7 @@
 // scene-plan.json reading and writing. camelCase keys, enums as camelCase words, vectors and
-// colours as [x, y, z] and [r, g, b]. A camera pose, a colour stop, a text, a marker, a key of a
-// change, a thing written over the picture and a turn of its arrow take one line each, so a track
+// colours as [x, y, z] and [r, g, b]. A camera pose, a colour stop, a strip of a line, a text, a
+// marker, a key of a change, a thing written over the picture and a turn of its arrow take one
+// line each, so a track
 // of a thousand poses is a thousand lines a person can still read and compare. Lines end
 // in LF on every platform, and numbers are written the same under every culture, so the same plan
 // is the same bytes everywhere.
@@ -44,6 +45,7 @@ public static class ScenePlanSerializer
             new QuaternionConverter(),
             new CameraKeyConverter(),
             new ColorStopConverter(),
+            new LineStripConverter(),
             new TextConverter(),
             new MarkerConverter(),
             new PointConverter(),
@@ -175,6 +177,7 @@ public static class ScenePlanSerializer
     private const string TrackIndent = "\n      ";
     private const string StopsIndent = "\n          ";
     private const string LabelIndent = "\n        ";
+    private const string StripIndent = "\n        ";
     private const string ScreenIndent = "\n      ";
     private const string TurnIndent = "\n        ";
     private const string ChangeKeyIndent = "\n        ";
@@ -261,6 +264,8 @@ public static class ScenePlanSerializer
         public required CaveVector3 Target { get; init; }
         public double? Lens { get; init; }
         public PlanQuaternion? Orientation { get; init; }
+        public double? ClipStart { get; init; }
+        public double? ClipEnd { get; init; }
     }
 
     private sealed class CameraKeyConverter : JsonConverter<PlanCameraKey>
@@ -268,15 +273,20 @@ public static class ScenePlanSerializer
         public override PlanCameraKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
         {
             var key = JsonSerializer.Deserialize<KeyJson>(ref reader, options) ?? throw new JsonException("Expected a camera pose.");
-            return new PlanCameraKey(key.T, key.Eye, key.Target, key.Lens) { Orientation = key.Orientation };
+            return new PlanCameraKey(key.T, key.Eye, key.Target, key.Lens)
+            {
+                Orientation = key.Orientation, ClipStart = key.ClipStart, ClipEnd = key.ClipEnd,
+            };
         }
 
         public override void Write(Utf8JsonWriter writer, PlanCameraKey value, JsonSerializerOptions options)
         {
             string lens = value.Lens is { } l ? $", \"lens\": {Num(l)}" : "";
             string orientation = value.Orientation is { } q ? $", \"orientation\": {Text(q)}" : "";
+            string clip = (value.ClipStart is { } near ? $", \"clipStart\": {Num(near)}" : "")
+                          + (value.ClipEnd is { } far ? $", \"clipEnd\": {Num(far)}" : "");
             writer.WriteRawValue(
-                $"{TrackIndent}{{ \"t\": {Num(value.T)}, \"eye\": {Text(value.Eye)}, \"target\": {Text(value.Target)}{lens}{orientation} }}");
+                $"{TrackIndent}{{ \"t\": {Num(value.T)}, \"eye\": {Text(value.Eye)}, \"target\": {Text(value.Target)}{lens}{orientation}{clip} }}");
         }
     }
 
@@ -296,6 +306,29 @@ public static class ScenePlanSerializer
 
         public override void Write(Utf8JsonWriter writer, PlanColorStop value, JsonSerializerOptions options)
             => writer.WriteRawValue($"{StopsIndent}{{ \"at\": {Num(value.At)}, \"color\": {Text(value.Color)} }}");
+    }
+
+    private sealed record StripJson
+    {
+        public required List<CaveVector3> Points { get; init; }
+        public List<ColorRgb>? Colors { get; init; }
+    }
+
+    private sealed class LineStripConverter : JsonConverter<PlanLineStrip>
+    {
+        public override PlanLineStrip Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var strip = JsonSerializer.Deserialize<StripJson>(ref reader, options) ?? throw new JsonException("Expected a strip of a line.");
+            return new PlanLineStrip(strip.Points, strip.Colors);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanLineStrip value, JsonSerializerOptions options)
+        {
+            var line = new StringBuilder(StripIndent);
+            line.Append("{ \"points\": [").AppendJoin(", ", (value.Points ?? []).Select(Text)).Append(']');
+            if (value.Colors is { } colors) line.Append(", \"colors\": [").AppendJoin(", ", colors.Select(Text)).Append(']');
+            writer.WriteRawValue(line.Append(" }").ToString());
+        }
     }
 
     private sealed record TextJson
@@ -467,6 +500,11 @@ public static class ScenePlanSerializer
     private static string Easing(PlanEasing easing, JsonSerializerOptions options)
         => easing == PlanEasing.Linear ? "" : $", \"easing\": {Quoted(Word(easing), options)}";
 
+    /// <summary>The way a colour is mixed on its way to a key, written only when it is not as
+    /// light mixes.</summary>
+    private static string Mix(PlanColorMix mix, JsonSerializerOptions options)
+        => mix == PlanColorMix.Linear ? "" : $", \"mix\": {Quoted(Word(mix), options)}";
+
     private sealed record TargetJson
     {
         public string? Id { get; init; }
@@ -495,6 +533,7 @@ public static class ScenePlanSerializer
         public required double T { get; init; }
         public required bool Value { get; init; }
         public double Fade { get; init; }
+        public PlanEasing Easing { get; init; } = PlanEasing.Linear;
     }
 
     private sealed class VisibleKeyConverter : JsonConverter<PlanVisibleKey>
@@ -502,13 +541,14 @@ public static class ScenePlanSerializer
         public override PlanVisibleKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
         {
             var key = JsonSerializer.Deserialize<VisibleKeyJson>(ref reader, options) ?? throw new JsonException("Expected a key of a change.");
-            return new PlanVisibleKey(key.T, key.Value, key.Fade);
+            return new PlanVisibleKey(key.T, key.Value, key.Fade, key.Easing);
         }
 
         public override void Write(Utf8JsonWriter writer, PlanVisibleKey value, JsonSerializerOptions options)
         {
             string fade = value.Fade != 0 ? $", \"fade\": {Num(value.Fade)}" : "";
-            writer.WriteRawValue($"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"value\": {(value.Value ? "true" : "false")}{fade} }}");
+            writer.WriteRawValue(
+                $"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"value\": {(value.Value ? "true" : "false")}{fade}{Easing(value.Easing, options)} }}");
         }
     }
 
@@ -538,6 +578,7 @@ public static class ScenePlanSerializer
         public required ColorRgb Color { get; init; }
         public required double Strength { get; init; }
         public PlanEasing Easing { get; init; } = PlanEasing.Linear;
+        public PlanColorMix Mix { get; init; } = PlanColorMix.Linear;
     }
 
     private sealed class TintKeyConverter : JsonConverter<PlanTintKey>
@@ -545,12 +586,12 @@ public static class ScenePlanSerializer
         public override PlanTintKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
         {
             var key = JsonSerializer.Deserialize<TintKeyJson>(ref reader, options) ?? throw new JsonException("Expected a key of a change.");
-            return new PlanTintKey(key.T, key.Color, key.Strength, key.Easing);
+            return new PlanTintKey(key.T, key.Color, key.Strength, key.Easing) { Mix = key.Mix };
         }
 
         public override void Write(Utf8JsonWriter writer, PlanTintKey value, JsonSerializerOptions options)
             => writer.WriteRawValue(
-                $"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"color\": {Text(value.Color)}, \"strength\": {Num(value.Strength)}{Easing(value.Easing, options)} }}");
+                $"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"color\": {Text(value.Color)}, \"strength\": {Num(value.Strength)}{Easing(value.Easing, options)}{Mix(value.Mix, options)} }}");
     }
 
     private sealed record VectorKeyJson
@@ -578,6 +619,7 @@ public static class ScenePlanSerializer
         public required double T { get; init; }
         public required ColorRgb Value { get; init; }
         public PlanEasing Easing { get; init; } = PlanEasing.Linear;
+        public PlanColorMix Mix { get; init; } = PlanColorMix.Linear;
     }
 
     private sealed class ColorKeyConverter : JsonConverter<PlanColorKey>
@@ -585,11 +627,11 @@ public static class ScenePlanSerializer
         public override PlanColorKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
         {
             var key = JsonSerializer.Deserialize<ColorKeyJson>(ref reader, options) ?? throw new JsonException("Expected a key of a change.");
-            return new PlanColorKey(key.T, key.Value, key.Easing);
+            return new PlanColorKey(key.T, key.Value, key.Easing) { Mix = key.Mix };
         }
 
         public override void Write(Utf8JsonWriter writer, PlanColorKey value, JsonSerializerOptions options)
             => writer.WriteRawValue(
-                $"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"value\": {Text(value.Value)}{Easing(value.Easing, options)} }}");
+                $"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"value\": {Text(value.Value)}{Easing(value.Easing, options)}{Mix(value.Mix, options)} }}");
     }
 }

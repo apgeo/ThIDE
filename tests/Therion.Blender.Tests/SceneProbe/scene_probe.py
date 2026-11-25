@@ -258,7 +258,22 @@ def thing_at(obj, depsgraph):
         "hidden": bool(evaluated.hide_render),
         "hiddenInViewport": bool(evaluated.hide_viewport),
         "scale": [round(float(s), 6) for s in evaluated.matrix_world.to_scale()],
+        "location": vec(evaluated.matrix_world.translation),
     }
+    if obj.type == "LIGHT":
+        info["energy"] = round(float(evaluated.data.energy), 6)
+    if obj.type == "MESH" and any(modifier.type == "NODES" for modifier in obj.modifiers):
+        # What the draft look shows of a model its modifier changes: how many of its faces are
+        # there, and the colour the solid view has for them.
+        mesh = evaluated.data
+        info["faces"] = len(mesh.polygons)
+        info["facesBuilt"] = len(obj.data.polygons)
+        shown = mesh.color_attributes.active_color or mesh.color_attributes.get(obj.data.color_attributes.active_color.name)
+        if shown is not None and len(shown.data):
+            values = [0.0] * (len(shown.data) * 4)
+            shown.data.foreach_get("color", values)
+            count = float(len(shown.data))
+            info["shownColour"] = [round(sum(values[channel::4]) / count, 6) for channel in range(3)]
     for key, name in CHANGE_NUMBERS:
         value = evaluated.get(name)
         if value is not None:
@@ -600,7 +615,7 @@ def main():
             for i in bpy.data.images if i.source == "FILE"
         ]
         report["materials"] = [describe_material(m) for m in sorted(bpy.data.materials, key=lambda m: m.name)]
-        things = [o for o in objects if o.type in GEOMETRY_TYPES]
+        things = [o for o in objects if o.type in GEOMETRY_TYPES or o.type == "LIGHT"]
         report["frames"] = [sample_frame(scene, f, model, sampled_vertices, annotations, things) for f in frames]
         if args.sheet:
             report["sheet"] = write_contact_sheet(

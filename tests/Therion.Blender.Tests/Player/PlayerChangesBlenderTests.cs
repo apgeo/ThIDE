@@ -1,7 +1,7 @@
 // The plan's changes in a real Blender, on invented caves: every property has the value the plan
 // gives it at every frame, a marker goes on pulsing and keeps the size its distance gives it while
 // it fades, a fade, a tint and the world's colour show in the picture, a draft deals with them,
-// and what cannot be changed is refused by name. Opt-in like the other Blender tests
+// and what cannot be changed is refused by name. More tracks are in PlayerChangesTracksBlenderTests. Opt-in like the other Blender tests
 // (THIDE_BLENDER_SMOKE=1; THIDE_BLENDER_PATH picks the Blender).
 
 using Therion.Blender.Plan;
@@ -11,7 +11,7 @@ using Therion.Cave3D;
 
 namespace Therion.Blender.Tests.Player;
 
-public class PlayerChangesBlenderTests
+public partial class PlayerChangesBlenderTests
 {
     private static readonly Lazy<ProbeAssets> Small = new(() =>
         SceneProbeRunner.Prepare("changes-small", InventedCave.Build(InventedCaveSize.Small)));
@@ -366,7 +366,7 @@ public class PlayerChangesBlenderTests
         string log = await File.ReadAllTextAsync(Path.Combine(job.Folder, "run.log"));
 
         Assert.Equal("BLENDER_WORKBENCH", report.Scene.Engine);
-        Assert.Single(PlayerRunner.Reported(log, "warning"), w => w == "the draft shows a fade as a cut, and no change of opacity or tint");
+        Assert.Single(PlayerRunner.Reported(log, "warning"), w => w == "the draft shows a fade of a text or a marker as a cut, and no change of its opacity or tint");
         var stations = report.WithRole(ProbeRoles.StationLabel);
         Assert.NotEmpty(stations);
         Assert.All(stations, o => Assert.Equal(

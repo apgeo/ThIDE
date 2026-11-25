@@ -23,7 +23,8 @@ KEYS = {
     "transparent": None, "width": None, "height": None,
     "materials": [{
         "id": None, "kind": None, "color": None, "roughness": None,
-        "stops": [{"at": None, "color": None}], "low": None, "high": None, "scale": None, "bump": None,
+        "stops": [{"at": None, "color": None}], "low": None, "high": None, "space": None, "scale": None,
+        "bump": None,
     }],
     "lights": [{"id": None, "kind": None, "energy": None, "direction": None, "size": None}],
     "world": {"kind": None, "color": None, "strength": None},
@@ -167,9 +168,10 @@ def show_in_draft(obj, spec):
     mesh = obj.data
     if spec.get("kind") == "heightRamp":
         low, span = spec["low"], spec["high"] - spec["low"]
+        own = ramp_space(spec) == "model"
         colours = []
         for vertex in mesh.vertices:
-            height = (obj.matrix_world @ vertex.co).z
+            height = vertex.co.z if own else (obj.matrix_world @ vertex.co).z
             colours.extend(rgba(ramp_colour(spec["stops"], (height - low) / span if span > 0.0 else 0.0)))
     else:
         colours = rgba(spec["color"]) * len(mesh.vertices)
@@ -189,6 +191,14 @@ def ramp_colour(stops, at):
             share = (at - low["at"]) / span if span > 0.0 else 1.0
             return [a + (b - a) * share for a, b in zip(low["color"], high["color"])]
     return stops[-1]["color"]
+
+
+def ramp_space(spec):
+    """Where a ramp over height measures its heights: in the scene, or in the model itself."""
+    space = spec.get("space", "scene")
+    if space not in ("scene", "model"):
+        raise api.PlanError('look.materials: unknown space "%s" for "%s"' % (space, spec["id"]))
+    return space
 
 
 def rgba(colour):
@@ -213,10 +223,15 @@ def make_material(spec, plain):
         attribute = tree.nodes.new("ShaderNodeVertexColor")
         tree.links.new(attribute.outputs["Color"], colour)
     elif kind == "heightRamp":
-        # Height (world Z) between "low" and "high" picks the colour.
-        geometry = tree.nodes.new("ShaderNodeNewGeometry")
+        # Height between "low" and "high" picks the colour: the height in the scene (world Z),
+        # or the model's own, which stays with the rock when the model is stretched or moved.
         separate = tree.nodes.new("ShaderNodeSeparateXYZ")
-        tree.links.new(geometry.outputs["Position"], separate.inputs["Vector"])
+        if ramp_space(spec) == "model":
+            coordinates = tree.nodes.new("ShaderNodeTexCoord")
+            tree.links.new(coordinates.outputs["Object"], separate.inputs["Vector"])
+        else:
+            geometry = tree.nodes.new("ShaderNodeNewGeometry")
+            tree.links.new(geometry.outputs["Position"], separate.inputs["Vector"])
         span = tree.nodes.new("ShaderNodeMapRange")
         span.inputs["From Min"].default_value = spec["low"]
         span.inputs["From Max"].default_value = spec["high"]

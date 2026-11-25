@@ -177,6 +177,24 @@ public static class ScenePlanBuilder
         };
     }
 
+    /// <summary>
+    /// Lists, at its place in the running order, every module of the player that a section of
+    /// <paramref name="plan"/> needs and its features do not name yet: for a plan put together
+    /// section by section. Nothing is taken off the list.
+    /// </summary>
+    public static ScenePlan WithNeededFeatures(ScenePlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var features = plan.Features;
+        if (plan.Lines is not null) features = WithFeature(features, ScenePlan.LinesFeature);
+        if (plan.TexturedMaterials is not null) features = WithFeature(features, ScenePlan.TexturedMaterialsFeature);
+        if (plan.Labels is not null) features = WithFeature(features, ScenePlan.LabelsFeature);
+        if (plan.Changes is { Count: > 0 }) features = WithFeature(features, ScenePlan.ChangesFeature);
+        if (plan.Texts is not null) features = WithFeature(features, ScenePlan.TextsFeature);
+        if (plan.Blend is not null) features = WithFeature(features, ScenePlan.BlendFileFeature);
+        return ReferenceEquals(features, plan.Features) ? plan : plan with { Features = features };
+    }
+
     /// <summary>The samples of a draft: enough to smooth the edges.</summary>
     public const int DraftSamples = 8;
 

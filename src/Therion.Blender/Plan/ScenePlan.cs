@@ -9,11 +9,12 @@
 // from the start of the clip. Camera poses are data; no camera mathematics runs in Python.
 //
 // The sections: frame and timeline (what every part shares), models, camera, look, output, the
-// optional texturedMaterials (an image draped over a model: a terrain), labels (texts and markers
-// in the scene), changes (what appears, goes, fades, takes a tint or is stretched while the clip
-// runs), texts (what is written over the picture, in two dimensions) and blend (the built scene
-// saved as a Blender file), and features — the player modules the plan needs, in the order they
-// run. Any other section belongs to a module outside this library and travels in Sections;
+// optional lines (lines through given points, drawn as thin tubes), texturedMaterials (an image
+// draped over a model: a terrain), labels (texts and markers in the scene), changes (what appears,
+// goes, fades, takes a tint, is stretched or moved, and how the lights and the world change while
+// the clip runs), texts (what is written over the picture, in two dimensions) and blend (the
+// built scene saved as a Blender file), and features — the player modules the plan needs, in the
+// order they run. Any other section belongs to a module outside this library and travels in Sections;
 // "annotations" is a reserved name for a later version.
 //
 // A plan with texts is rendered in two stages. The first renders the scene as numbered PNG
@@ -113,6 +114,17 @@ public enum PlanContainer
     Webm,
 }
 
+/// <summary>Where a ramp over height measures its heights.</summary>
+public enum PlanRampSpace
+{
+    /// <summary>In the plan's frame: a colour is a height in the scene, and a model that is
+    /// stretched or moved passes through the colours.</summary>
+    Scene,
+    /// <summary>In the model itself, as its file has it, before the model is stretched, turned
+    /// and moved: a colour stays with the rock it is on.</summary>
+    Model,
+}
+
 /// <summary>The coordinate frame every position of the plan is in.</summary>
 public sealed record PlanFrame
 {
@@ -188,6 +200,14 @@ public readonly record struct PlanCameraKey(double T, CaveVector3 Eye, CaveVecto
     /// track has one or none has.
     /// </summary>
     public PlanQuaternion? Orientation { get; init; }
+
+    /// <summary>The nearest the camera draws at this pose; null is the camera's
+    /// <see cref="PlanCamera.ClipStart"/>. Between poses it moves as the camera does.</summary>
+    public double? ClipStart { get; init; }
+
+    /// <summary>The farthest the camera draws at this pose; null is the camera's
+    /// <see cref="PlanCamera.ClipEnd"/>.</summary>
+    public double? ClipEnd { get; init; }
 }
 
 /// <summary>
@@ -331,6 +351,10 @@ public sealed record PlanMaterial
     /// <summary>The height at which a height ramp ends.</summary>
     public double? High { get; init; }
 
+    /// <summary>Where a height ramp measures <see cref="Low"/> and <see cref="High"/>; null is
+    /// <see cref="PlanRampSpace.Scene"/>.</summary>
+    public PlanRampSpace? Space { get; init; }
+
     /// <summary>The scale of a noise ramp's noise: larger is finer.</summary>
     public double? Scale { get; init; }
 
@@ -391,6 +415,47 @@ public sealed record PlanLook
 
     /// <summary>Null leaves the scene without a world: a black background that lights nothing.</summary>
     public PlanWorld? World { get; init; }
+}
+
+/// <summary>One run of a line through its points, in order. Two points are one straight piece.</summary>
+/// <param name="Points">Where the strip runs, in the line's own coordinates: the plan's frame,
+/// unless the line is placed elsewhere.</param>
+/// <param name="Colors">A colour for every point, which the line takes on there and blends on
+/// the way to the next; null for a line in the colour of its material. Either every strip of a
+/// line has them or none has. A material of the kind <see cref="PlanMaterialKind.VertexColor"/>
+/// shows them.</param>
+public sealed record PlanLineStrip(IReadOnlyList<CaveVector3> Points, IReadOnlyList<ColorRgb>? Colors = null);
+
+/// <summary>
+/// A line drawn through given points, as a thin tube: the legs of a survey, a route, an outline.
+/// The player builds its mesh; in everything else it is a model, placed as one, wearing a material
+/// of the look, and changed by what changes a model.
+/// </summary>
+public sealed record PlanLine
+{
+    /// <summary>The line's name in the scene; unique among the plan's models and lines.</summary>
+    public string Id { get; init; } = "";
+
+    /// <summary>What the line is, for whoever looks for it in the scene. Null is "line".</summary>
+    public string? Role { get; init; }
+
+    /// <summary>How thick the line is, in metres.</summary>
+    public double Width { get; init; } = 0.5;
+
+    /// <summary>The id of one of <see cref="PlanLook.Materials"/>; it gives the line its colour.</summary>
+    public string? Material { get; init; }
+
+    /// <summary>As for a model: where the line's own origin lies in the frame.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public CaveVector3 Translation { get; init; }
+
+    /// <summary>As for a model.</summary>
+    public PlanRotation? Rotation { get; init; }
+
+    /// <summary>As for a model.</summary>
+    public CaveVector3? Scale { get; init; }
+
+    public IReadOnlyList<PlanLineStrip> Strips { get; init; } = [];
 }
 
 /// <summary>
@@ -634,9 +699,21 @@ public enum PlanEasing
     Constant,
 }
 
+/// <summary>How a changing colour is mixed on its way to a key from the key before it.</summary>
+public enum PlanColorMix
+{
+    /// <summary>As light mixes: straight in the plan's linear RGB. Half-way from red to green
+    /// is the bright yellow of two lamps.</summary>
+    Linear,
+    /// <summary>As a screen mixes two colours: straight in sRGB, which is what a browser or a
+    /// picture editor shows half-way. The player keys such a move frame by frame.</summary>
+    Srgb,
+}
+
 /// <summary>What a change is of: the one thing with <see cref="Id"/>, or every thing with
-/// <see cref="Role"/>. A model, a text and a marker each have an id, and a role (stated, or
-/// "model", "label", "marker"). Exactly one of the two is set.</summary>
+/// <see cref="Role"/>. A model, a line, a text, a marker and a light each have an id, and a role
+/// (stated, or "model", "line", "label", "marker"; a light's is "light"). Exactly one of the two
+/// is set.</summary>
 public sealed record PlanChangeTarget
 {
     public string? Id { get; init; }
@@ -647,28 +724,39 @@ public sealed record PlanChangeTarget
 /// <summary>From <see cref="T"/> seconds on the target is shown (<see cref="Value"/> true) or
 /// hidden. With a <see cref="Fade"/> the change starts at <see cref="T"/> and takes that many
 /// seconds: the target appears little by little, or goes little by little and is hidden when it
-/// has gone.</summary>
-public readonly record struct PlanVisibleKey(double T, bool Value, double Fade = 0);
+/// has gone; evenly, or eased in and out (<see cref="PlanEasing.Smooth"/>).</summary>
+public readonly record struct PlanVisibleKey(double T, bool Value, double Fade = 0, PlanEasing Easing = PlanEasing.Linear);
 
 /// <summary>At <see cref="T"/> seconds the number is <see cref="Value"/>.</summary>
 public readonly record struct PlanNumberKey(double T, double Value, PlanEasing Easing = PlanEasing.Linear);
 
 /// <summary>At <see cref="T"/> seconds <see cref="Color"/> lies over the target's own colours by
 /// <see cref="Strength"/>: 0 is none of it, 1 nothing else.</summary>
-public readonly record struct PlanTintKey(double T, ColorRgb Color, double Strength, PlanEasing Easing = PlanEasing.Linear);
+public readonly record struct PlanTintKey(double T, ColorRgb Color, double Strength, PlanEasing Easing = PlanEasing.Linear)
+{
+    /// <summary>How the colour is mixed on the way from the key before.</summary>
+    public PlanColorMix Mix { get; init; }
+}
 
 /// <summary>At <see cref="T"/> seconds the three numbers are <see cref="Value"/>.</summary>
 public readonly record struct PlanVectorKey(double T, CaveVector3 Value, PlanEasing Easing = PlanEasing.Linear);
 
 /// <summary>At <see cref="T"/> seconds the colour is <see cref="Value"/>.</summary>
-public readonly record struct PlanColorKey(double T, ColorRgb Value, PlanEasing Easing = PlanEasing.Linear);
+public readonly record struct PlanColorKey(double T, ColorRgb Value, PlanEasing Easing = PlanEasing.Linear)
+{
+    /// <summary>How the colour is mixed on the way from the key before.</summary>
+    public PlanColorMix Mix { get; init; }
+}
 
 /// <summary>
 /// What changes of one target while the clip runs: each property that changes has its keys, in
 /// rising order of time. Between two keys the value moves as the later key's easing says; before
 /// its first key a property has that key's value, and after its last one it keeps it, so one key
-/// is a value for the whole clip. A change without a target is of the scene itself
-/// (<see cref="WorldColor"/>).
+/// is a value for the whole clip. A key may lie after the clip's last frame: the clip then ends
+/// on the way to it. Two keys of a property may fall on one frame (not of <see cref="Visible"/>):
+/// the first is where the value was going, the second, whose easing is
+/// <see cref="PlanEasing.Constant"/>, the value it has from that frame on. A change without a
+/// target is of the scene itself (<see cref="WorldColor"/>, <see cref="WorldStrength"/>).
 /// </summary>
 public sealed record PlanChange
 {
@@ -677,7 +765,8 @@ public sealed record PlanChange
 
     /// <summary>When the target is shown and hidden; each key says the opposite of the one
     /// before it. Before the first key the target is the other way round: a first key that shows
-    /// it at 2 seconds keeps it hidden until then.</summary>
+    /// it at 2 seconds keeps it hidden until then. A light is shown and hidden too, at once: it
+    /// has nothing to fade (see <see cref="Energy"/>).</summary>
     public IReadOnlyList<PlanVisibleKey>? Visible { get; init; }
 
     /// <summary>How much of the target is there, from 0 (nothing) to 1, over what its material
@@ -692,9 +781,21 @@ public sealed record PlanChange
     /// Only a model has one: the size of a text or a marker is that of its own section.</summary>
     public IReadOnlyList<PlanVectorKey>? Scale { get; init; }
 
+    /// <summary>How far a model is moved from where <see cref="PlanModel.Translation"/> puts it,
+    /// in metres along the frame's axes. Only a model has one.</summary>
+    public IReadOnlyList<PlanVectorKey>? Offset { get; init; }
+
+    /// <summary>How strong a light is, as <see cref="PlanLight.Energy"/> has it; 0 puts it out.
+    /// Only a light of the look has one.</summary>
+    public IReadOnlyList<PlanNumberKey>? Energy { get; init; }
+
     /// <summary>The colour of the world (<see cref="PlanWorld.Color"/>), for a change without a
     /// target. The look's world must be of the kind <see cref="PlanWorldKind.Color"/>.</summary>
     public IReadOnlyList<PlanColorKey>? WorldColor { get; init; }
+
+    /// <summary>The strength of the world (<see cref="PlanWorld.Strength"/>), for a change
+    /// without a target; 0 is a world that lights nothing. The look must have a world.</summary>
+    public IReadOnlyList<PlanNumberKey>? WorldStrength { get; init; }
 }
 
 public sealed record PlanOutput
@@ -729,6 +830,9 @@ public sealed record ScenePlan
     public const string Metres = "metres";
     public const string ZUp = "Z";
 
+    /// <summary>The module that builds the lines (<see cref="Lines"/>).</summary>
+    public const string LinesFeature = "lines";
+
     /// <summary>The module that makes the texts and markers (<see cref="Labels"/>).</summary>
     public const string LabelsFeature = "labels";
 
@@ -752,10 +856,11 @@ public sealed record ScenePlan
     public static readonly IReadOnlyList<string> BasicFeatures = ["models", "camera_track", "look", "output"];
 
     /// <summary>Every module of the player in this library, in the order a plan runs them.
-    /// Labels turn to the camera; what changes is made by the modules before; the scene is saved
-    /// when all have built it and before the output renders it.</summary>
+    /// The look gives models and lines their materials; labels turn to the camera; what changes
+    /// is made by the modules before; the scene is saved when all have built it and before the
+    /// output renders it.</summary>
     public static readonly IReadOnlyList<string> PlayerFeatures =
-        ["models", "camera_track", "look", TexturedMaterialsFeature, LabelsFeature, ChangesFeature, TextsFeature, BlendFileFeature, "output"];
+        ["models", LinesFeature, "camera_track", "look", TexturedMaterialsFeature, LabelsFeature, ChangesFeature, TextsFeature, BlendFileFeature, "output"];
 
     public int Version { get; init; } = BlenderModule.ScenePlanSchemaVersion;
 
@@ -776,6 +881,10 @@ public sealed record ScenePlan
     public PlanTimeline Timeline { get; init; } = new();
 
     public IReadOnlyList<PlanModel> Models { get; init; } = [];
+
+    /// <summary>Lines through given points, drawn as thin tubes; played by the module
+    /// <see cref="LinesFeature"/>, before the look gives them their materials.</summary>
+    public IReadOnlyList<PlanLine>? Lines { get; init; }
 
     public PlanCamera Camera { get; init; } = new();
 

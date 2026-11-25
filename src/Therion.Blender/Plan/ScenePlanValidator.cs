@@ -48,6 +48,11 @@ public static partial class ScenePlanValidator
             Bad("timeline.frameCount", "A clip has at least one frame.");
 
         ValidateModels(plan, Bad);
+        if (plan.Lines is { } lines)
+        {
+            ValidateLines(plan, lines, Bad);
+            NeedsFeature(plan, "lines", ScenePlan.LinesFeature, Bad);
+        }
         ValidateCamera(plan, Bad);
         ValidateLook(plan.Look, plan.Output, Bad);
         if (plan.TexturedMaterials is { } textured)
@@ -135,6 +140,72 @@ public static partial class ScenePlanValidator
         }
     }
 
+    private static void ValidateLines(ScenePlan plan, IReadOnlyList<PlanLine> lines, Action<string, string> bad)
+    {
+        var materials = plan.Look.Materials.Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
+        var ids = plan.Models.Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
+        // The look gives the lines their materials: it runs after they are built.
+        int built = plan.Features.ToList().IndexOf(ScenePlan.LinesFeature), look = plan.Features.ToList().IndexOf("look");
+        if (lines.Count > 0 && built >= 0 && look >= 0 && look < built)
+            bad("features", $"'{ScenePlan.LinesFeature}' is listed after 'look', which gives the lines their materials; list it before.");
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            string path = $"lines[{i}]";
+            if (line is null)
+            {
+                bad(path, "A line is missing.");
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(line.Id))
+                bad(path + ".id", "A line needs an id.");
+            else if (!ids.Add(line.Id))
+                bad(path + ".id", $"The id '{line.Id}' is used twice among the plan's models and lines.");
+            if (line.Role is not null && !RoleName().IsMatch(line.Role))
+                bad(path + ".role", "A role is lower-case letters and digits, in words joined by '-'.");
+            if (!(line.Width > 0) || !double.IsFinite(line.Width))
+                bad(path + ".width", "The width of a line must be positive.");
+            if (line.Material is not null && !materials.Contains(line.Material))
+                bad(path + ".material", $"look.materials has no material '{line.Material}'.");
+            if (!IsFinite(line.Translation))
+                bad(path + ".translation", "The translation must be finite.");
+            if (line.Rotation is { } rotation)
+            {
+                if (!IsFinite(rotation.Axis) || rotation.Axis.Length < 1e-9)
+                    bad(path + ".rotation.axis", "A rotation needs the direction of its axis.");
+                if (!double.IsFinite(rotation.Degrees))
+                    bad(path + ".rotation.degrees", "The angle must be finite.");
+            }
+            if (line.Scale is { } scale && !(IsFinite(scale) && scale.X > 0 && scale.Y > 0 && scale.Z > 0))
+                bad(path + ".scale", "The scale must be positive along every axis.");
+
+            var strips = line.Strips ?? [];
+            if (strips.Count == 0)
+                bad(path + ".strips", "A line needs at least one strip.");
+            if (strips.Any(s => s?.Colors is not null) && strips.Any(s => s?.Colors is null))
+                bad(path + ".strips", "Either every strip gives its points colours or none does.");
+            for (int k = 0; k < strips.Count; k++)
+            {
+                var strip = strips[k];
+                string at = $"{path}.strips[{k}]";
+                if (strip?.Points is not { Count: >= 2 } points)
+                {
+                    bad(at + ".points", "A strip runs through at least two points.");
+                    continue;
+                }
+                if (points.Any(point => !IsFinite(point)))
+                    bad(at + ".points", "The points must be finite.");
+                if (strip.Colors is { } colors)
+                {
+                    if (colors.Count != points.Count)
+                        bad(at + ".colors", "A strip has a colour for every point or none.");
+                    if (colors.Any(color => !IsUnitColor(color)))
+                        bad(at + ".colors", "Colour channels must be within 0–1.");
+                }
+            }
+        }
+    }
+
     private static void ValidateCamera(ScenePlan plan, Action<string, string> bad)
     {
         var camera = plan.Camera;
@@ -170,6 +241,13 @@ public static partial class ScenePlanValidator
                 bad(path + ".target", "The camera cannot look at the point it stands on.");
             if (key.Lens is { } lens && !IsFocalLength(lens))
                 bad(path + ".lens", $"Focal length must be within {SceneSpecValidator.MinFocalLength}–{SceneSpecValidator.MaxFocalLength} mm.");
+            // A pose draws within its own clip range where it has one, and the camera's otherwise.
+            if (key.ClipStart is { } near && (!(near > 0) || !double.IsFinite(near)))
+                bad(path + ".clipStart", "The near clip distance must be positive.");
+            else if (key.ClipEnd is { } far && (!(far > (key.ClipStart ?? camera.ClipStart)) || !double.IsFinite(far)))
+                bad(path + ".clipEnd", "The far clip distance must be beyond the near one.");
+            else if (key.ClipStart is { } start && key.ClipEnd is null && !(start < camera.ClipEnd))
+                bad(path + ".clipStart", "The near clip distance must be before the far one.");
             if (key.Orientation is { } q)
             {
                 if (!(double.IsFinite(q.W) && double.IsFinite(q.X) && double.IsFinite(q.Y) && double.IsFinite(q.Z)))
@@ -225,6 +303,8 @@ public static partial class ScenePlanValidator
             if (material.Kind == PlanMaterialKind.HeightRamp
                 && !(material.Low is { } low && material.High is { } high && double.IsFinite(low) && double.IsFinite(high) && low < high))
                 bad(path + ".low", "A height ramp runs from 'low' up to a greater 'high'.");
+            if (material.Space is { } space && (material.Kind != PlanMaterialKind.HeightRamp || !Enum.IsDefined(space)))
+                bad(path + ".space", "Only a height ramp has a space, 'scene' or 'model'.");
             if (material.Scale is { } scale && !(scale > 0 && scale <= SceneSpecValidator.MaxProceduralScale))
                 bad(path + ".scale", $"Noise scale must be within (0, {SceneSpecValidator.MaxProceduralScale}].");
             if (material.Bump is { } bump && !(bump >= 0 && bump <= SceneSpecValidator.MaxBumpStrength))
@@ -367,8 +447,17 @@ public static partial class ScenePlanValidator
         }
     }
 
-    /// <summary>What a change can name: a model, a text or a marker.</summary>
-    private sealed record Thing(string Id, string Role, bool IsModel, bool HasMaterial);
+    private enum ThingKind
+    {
+        /// <summary>A model or a line.</summary>
+        Model,
+        /// <summary>A text or a marker.</summary>
+        Label,
+        Light,
+    }
+
+    /// <summary>What a change can name: a model, a line, a text, a marker or a light.</summary>
+    private sealed record Thing(string Id, string Role, ThingKind Kind, bool HasMaterial);
 
     private static void ValidateChanges(ScenePlan plan, IReadOnlyList<PlanChange> changes, Action<string, string> bad)
     {
@@ -377,17 +466,21 @@ public static partial class ScenePlanValidator
         var draped = (plan.TexturedMaterials ?? []).Where(m => m is not null).SelectMany(m => m.Models).ToHashSet(StringComparer.Ordinal);
         var things = new List<Thing>();
         foreach (var model in plan.Models)
-            things.Add(new Thing(model.Id, model.Role ?? "model", IsModel: true,
+            things.Add(new Thing(model.Id, model.Role ?? "model", ThingKind.Model,
                 // A GLB may bring a material of its own; a PLY has none.
                 HasMaterial: model.Material is not null || draped.Contains(model.Id)
                              || model.Path?.EndsWith(".glb", StringComparison.OrdinalIgnoreCase) == true));
+        foreach (var line in (plan.Lines ?? []).Where(l => l is not null))
+            things.Add(new Thing(line.Id, line.Role ?? "line", ThingKind.Model, HasMaterial: line.Material is not null));
         foreach (var text in plan.Labels?.Texts?.Items ?? [])
-            things.Add(new Thing(text.Id, text.Role ?? "label", IsModel: false, HasMaterial: true));
+            things.Add(new Thing(text.Id, text.Role ?? "label", ThingKind.Label, HasMaterial: true));
         foreach (var marker in plan.Labels?.Markers?.Items ?? [])
-            things.Add(new Thing(marker.Id, marker.Role ?? "marker", IsModel: false, HasMaterial: true));
+            things.Add(new Thing(marker.Id, marker.Role ?? "marker", ThingKind.Label, HasMaterial: true));
+        foreach (var light in plan.Look.Lights)
+            things.Add(new Thing(light.Id, "light", ThingKind.Light, HasMaterial: false));
         bool knowsTheScene = plan.Features.All(f => ScenePlan.PlayerFeatures.Contains(f, StringComparer.Ordinal));
 
-        var taken = new Dictionary<(string Id, bool IsModel, string Property), int>();
+        var taken = new Dictionary<(string Id, ThingKind Kind, string Property), int>();
         for (int i = 0; i < changes.Count; i++)
         {
             var change = changes[i];
@@ -397,15 +490,16 @@ public static partial class ScenePlanValidator
                 bad(path, "A change is missing.");
                 continue;
             }
-            if (change is { Visible: null, Opacity: null, Tint: null, Scale: null, WorldColor: null })
+            bool ofATarget = change is not { Visible: null, Opacity: null, Tint: null, Scale: null, Offset: null, Energy: null };
+            if (!ofATarget && change is { WorldColor: null, WorldStrength: null })
                 bad(path, "A change needs the keys of at least one property.");
 
             // ---- the target ----
             IReadOnlyList<Thing> targets = [];
             if (change.Target is not { } target)
             {
-                if (change.Visible is not null || change.Opacity is not null || change.Tint is not null || change.Scale is not null)
-                    bad(path + ".target", "A change of visibility, opacity, tint or scale needs a target.");
+                if (ofATarget)
+                    bad(path + ".target", "A change of visibility, opacity, tint, scale, offset or energy needs a target.");
             }
             else
             {
@@ -419,47 +513,73 @@ public static partial class ScenePlanValidator
                     targets = things.Where(t => byId ? t.Id == target.Id : t.Role == target.Role).ToList();
                     if (targets.Count == 0 && knowsTheScene)
                         bad(path + (byId ? ".target.id" : ".target.role"),
-                            byId ? $"The plan has no model, text or marker with the id '{target.Id}'."
-                                 : $"The plan has no model, text or marker with the role '{target.Role}'.");
+                            byId ? $"The plan has no model, line, text, marker or light with the id '{target.Id}'."
+                                 : $"The plan has no model, line, text, marker or light with the role '{target.Role}'.");
                 }
                 if (change.WorldColor is not null)
                     bad(path + ".worldColor", "The world's colour is a change without a target.");
+                if (change.WorldStrength is not null)
+                    bad(path + ".worldStrength", "The world's strength is a change without a target.");
             }
 
             void Once(string property)
             {
                 foreach (var thing in targets)
-                    if (!taken.TryAdd((thing.Id, thing.IsModel, property), i))
+                    if (!taken.TryAdd((thing.Id, thing.Kind, property), i))
                     {
-                        bad($"{path}.{property}", $"changes[{taken[(thing.Id, thing.IsModel, property)]}] changes this of '{thing.Id}' already.");
+                        bad($"{path}.{property}", $"changes[{taken[(thing.Id, thing.Kind, property)]}] changes this of '{thing.Id}' already.");
                         return;
                     }
             }
+            // A light has no material: it is shown and hidden, and its energy changes.
+            bool NotOfALight(string property)
+            {
+                if (targets.FirstOrDefault(t => t.Kind == ThingKind.Light) is not { } light) return true;
+                bad($"{path}.{property}", $"'{light.Id}' is a light; of a light only 'visible' and 'energy' change.");
+                return false;
+            }
             void NeedsMaterial(string property)
             {
-                if (targets.FirstOrDefault(t => !t.HasMaterial) is { } bare)
+                if (NotOfALight(property) && targets.FirstOrDefault(t => !t.HasMaterial) is { } bare)
                     bad($"{path}.{property}", $"The model '{bare.Id}' has no material to change; give it one.");
+            }
+            void OfAModel(string property, string otherwise)
+            {
+                if (NotOfALight(property) && targets.FirstOrDefault(t => t.Kind != ThingKind.Model) is { } label)
+                    bad($"{path}.{property}", string.Format(System.Globalization.CultureInfo.InvariantCulture, otherwise, label.Id));
+            }
+            void OneOfTheWorld(string property, string what)
+            {
+                if (change.Target is null && !taken.TryAdd(("", ThingKind.Model, property), i))
+                    bad($"{path}.{property}", $"changes[{taken[("", ThingKind.Model, property)]}] changes the world's {what} already.");
             }
 
             // ---- the keys ----
             if (change.Visible is { } visible)
             {
                 Once("visible");
-                Times(visible.Select(k => k.T).ToList(), path + ".visible");
+                Times(visible.Select(k => (k.T, PlanEasing.Constant)).ToList(), path + ".visible", oneToAFrame: true);
                 for (int k = 0; k < visible.Count; k++)
                 {
                     if (k > 0 && visible[k].Value == visible[k - 1].Value)
                         bad($"{path}.visible[{k}].value", "A key says the opposite of the key before it.");
                     if (!(visible[k].Fade >= 0) || !double.IsFinite(visible[k].Fade))
                         bad($"{path}.visible[{k}].fade", "A fade is in seconds, not negative.");
+                    if (visible[k].Easing is not (PlanEasing.Linear or PlanEasing.Smooth))
+                        bad($"{path}.visible[{k}].easing", "A fade is 'linear' or 'smooth'; without a fade the change is a cut.");
                 }
-                if (visible.Any(k => k.Fade > 0)) NeedsMaterial("visible");
+                if (visible.Any(k => k.Fade > 0))
+                {
+                    if (targets.FirstOrDefault(t => t.Kind == ThingKind.Light) is { } light)
+                        bad($"{path}.visible", $"'{light.Id}' is a light and has nothing to fade; key its 'energy'.");
+                    else NeedsMaterial("visible");
+                }
             }
             if (change.Opacity is { } opacity)
             {
                 Once("opacity");
                 NeedsMaterial("opacity");
-                Times(opacity.Select(k => k.T).ToList(), path + ".opacity");
+                Times(opacity.Select(k => (k.T, k.Easing)).ToList(), path + ".opacity");
                 for (int k = 0; k < opacity.Count; k++)
                     if (!(opacity[k].Value >= 0 && opacity[k].Value <= 1))
                         bad($"{path}.opacity[{k}].value", "Opacity must be within 0–1.");
@@ -468,61 +588,103 @@ public static partial class ScenePlanValidator
             {
                 Once("tint");
                 NeedsMaterial("tint");
-                Times(tint.Select(k => k.T).ToList(), path + ".tint");
+                Times(tint.Select(k => (k.T, k.Easing)).ToList(), path + ".tint");
                 for (int k = 0; k < tint.Count; k++)
                 {
                     if (!IsUnitColor(tint[k].Color))
                         bad($"{path}.tint[{k}].color", "Colour channels must be within 0–1.");
                     if (!(tint[k].Strength >= 0 && tint[k].Strength <= 1))
                         bad($"{path}.tint[{k}].strength", "The strength of a tint must be within 0–1.");
+                    if (!Enum.IsDefined(tint[k].Mix))
+                        bad($"{path}.tint[{k}].mix", "A colour is mixed as 'linear' or as 'srgb'.");
                 }
             }
             if (change.Scale is { } scale)
             {
                 Once("scale");
-                if (targets.FirstOrDefault(t => !t.IsModel) is { } label)
-                    bad(path + ".scale", $"Only a model is scaled; the size of '{label.Id}' is that of its own section.");
-                Times(scale.Select(k => k.T).ToList(), path + ".scale");
+                OfAModel("scale", "Only a model is scaled; the size of '{0}' is that of its own section.");
+                Times(scale.Select(k => (k.T, k.Easing)).ToList(), path + ".scale");
                 for (int k = 0; k < scale.Count; k++)
                     if (!(IsFinite(scale[k].Value) && scale[k].Value.X > 0 && scale[k].Value.Y > 0 && scale[k].Value.Z > 0))
                         bad($"{path}.scale[{k}].value", "The scale must be positive along every axis.");
             }
+            if (change.Offset is { } offset)
+            {
+                Once("offset");
+                OfAModel("offset", "Only a model is moved; where '{0}' stands is said in its own section.");
+                Times(offset.Select(k => (k.T, k.Easing)).ToList(), path + ".offset");
+                for (int k = 0; k < offset.Count; k++)
+                    if (!IsFinite(offset[k].Value))
+                        bad($"{path}.offset[{k}].value", "The offset must be finite.");
+            }
+            if (change.Energy is { } energy)
+            {
+                Once("energy");
+                if (targets.FirstOrDefault(t => t.Kind != ThingKind.Light) is { } unlit)
+                    bad(path + ".energy", $"Only a light of the look has an energy; '{unlit.Id}' is not one.");
+                Times(energy.Select(k => (k.T, k.Easing)).ToList(), path + ".energy");
+                for (int k = 0; k < energy.Count; k++)
+                    if (!(energy[k].Value >= 0) || !double.IsFinite(energy[k].Value))
+                        bad($"{path}.energy[{k}].value", "A light's energy is not negative.");
+            }
             if (change.WorldColor is { } world)
             {
-                if (change.Target is null && !taken.TryAdd(("", false, "worldColor"), i))
-                    bad(path + ".worldColor", $"changes[{taken[("", false, "worldColor")]}] changes the world's colour already.");
+                OneOfTheWorld("worldColor", "colour");
                 if (plan.Look.World is not { Kind: PlanWorldKind.Color })
                     bad(path + ".worldColor", "The world's colour changes only when look.world is of the kind 'color'.");
-                Times(world.Select(k => k.T).ToList(), path + ".worldColor");
+                Times(world.Select(k => (k.T, k.Easing)).ToList(), path + ".worldColor");
                 for (int k = 0; k < world.Count; k++)
+                {
                     if (!IsUnitColor(world[k].Value))
                         bad($"{path}.worldColor[{k}].value", "Colour channels must be within 0–1.");
+                    if (!Enum.IsDefined(world[k].Mix))
+                        bad($"{path}.worldColor[{k}].mix", "A colour is mixed as 'linear' or as 'srgb'.");
+                }
+            }
+            if (change.WorldStrength is { } strength)
+            {
+                OneOfTheWorld("worldStrength", "strength");
+                if (plan.Look.World is null)
+                    bad(path + ".worldStrength", "The world's strength changes only when the look has a world.");
+                Times(strength.Select(k => (k.T, k.Easing)).ToList(), path + ".worldStrength");
+                for (int k = 0; k < strength.Count; k++)
+                    if (!(strength[k].Value >= 0) || !double.IsFinite(strength[k].Value))
+                        bad($"{path}.worldStrength[{k}].value", "The world's strength is not negative.");
             }
         }
 
-        // The keys of one property: at least one, in rising order, each on a frame of its own
-        // (two on one frame would leave only the later), none after the clip.
-        void Times(IReadOnlyList<double> times, string path)
+        // The keys of one property: at least one, in rising order of time. A key may lie after
+        // the clip: the clip then ends on the way to it. Two may fall on one frame, a move's end
+        // and the jump that follows it; of a property that is only switched, one.
+        void Times(IReadOnlyList<(double T, PlanEasing Easing)> keys, string path, bool oneToAFrame = false)
         {
-            if (times.Count == 0)
+            if (keys.Count == 0)
             {
                 bad(path, "At least one key is needed.");
                 return;
             }
-            int last = 0;
-            for (int k = 0; k < times.Count; k++)
+            int last = 0, onLast = 0;
+            for (int k = 0; k < keys.Count; k++)
             {
-                double t = times[k];
+                double t = keys[k].T;
                 if (!(t >= 0) || !double.IsFinite(t))
                 {
                     bad($"{path}[{k}].t", "A time is in seconds from the start, not negative.");
                     continue;
                 }
+                if (!Enum.IsDefined(keys[k].Easing))
+                    bad($"{path}[{k}].easing", "An easing is 'linear', 'smooth' or 'constant'.");
                 int frame = FrameAt(t, plan.Timeline.Fps);
-                if (frame <= last)
+                if (frame < last)
+                    bad($"{path}[{k}].t", "Keys are in rising order of time.");
+                else if (frame > last)
+                    onLast = 1;
+                else if (oneToAFrame)
                     bad($"{path}[{k}].t", $"Keys are in rising order of time, each on a frame of its own ({plan.Timeline.Fps} fps).");
-                else if (frame > plan.Timeline.FrameCount)
-                    bad($"{path}[{k}].t", $"The key lies after the last frame ({plan.Timeline.FrameCount} frames at {plan.Timeline.Fps} fps).");
+                else if (++onLast > 2)
+                    bad($"{path}[{k}].t", $"No more than two keys fall on one frame ({plan.Timeline.Fps} fps).");
+                else if (keys[k].Easing != PlanEasing.Constant)
+                    bad($"{path}[{k}].easing", "The second key on a frame is a jump: its easing is 'constant'.");
                 last = Math.Max(last, frame);
             }
         }

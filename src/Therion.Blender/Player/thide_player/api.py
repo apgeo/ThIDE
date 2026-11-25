@@ -33,6 +33,7 @@ import atexit
 import base64
 import hashlib
 import json
+import math
 import os
 import shutil
 import tempfile
@@ -76,6 +77,22 @@ def stamp(obj, role, ident):
     """Marks an object the player made, so that other modules, tests and people can find it."""
     obj["thide_role"] = role
     obj["thide_id"] = ident
+
+
+def place(obj, item, where):
+    """Places an object as the plan places a model: stretched along its own axes by "scale",
+    turned about its own origin by "rotation" and moved by "translation", in that order."""
+    import mathutils  # Blender's own: this file is also read where there is no Blender
+
+    obj.location = item.get("translation", (0.0, 0.0, 0.0))
+    obj.scale = item.get("scale", (1.0, 1.0, 1.0))
+    rotation = item.get("rotation")
+    if rotation:
+        axis = mathutils.Vector(rotation["axis"])
+        if axis.length == 0.0:
+            raise PlanError("%s.rotation.axis: an axis needs a direction" % where)
+        turn = mathutils.Quaternion(axis.normalized(), math.radians(rotation["degrees"]))
+        obj.rotation_euler = turn.to_euler(obj.rotation_mode)
 
 
 def with_role(scene, role):

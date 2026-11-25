@@ -10,7 +10,7 @@
     "generator": { "type": "string", "description": "What wrote the plan." },
     "name": { "type": "string" },
     "features": {
-      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, textured_materials, labels, changes, texts, blend_file, output.",
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, lines, camera_track, look, textured_materials, labels, changes, texts, blend_file, output.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -76,6 +76,53 @@
         }
       }
     },
+    "lines": {
+      "description": "Played by the module 'lines', before 'look': lines drawn through given points as thin tubes, which the player builds: the legs of a survey, a route, an outline. In everything else a line is a model: it is placed as one, it wears the material of look.materials it names, and 'changes' change it as they change a model. Ids are unique among models and lines.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "width", "strips"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "The line's name in the scene; unique among models and lines." },
+          "role": { "$ref": "#/$defs/role", "description": "What the line is, for whoever looks for it in the scene. Default 'line'." },
+          "width": { "type": "number", "exclusiveMinimum": 0, "description": "How thick the line is, in metres." },
+          "material": { "type": "string", "description": "The id of one of look.materials: the line's colour (flat), a ramp over height, or the colours of its points (vertexColor)." },
+          "translation": { "$ref": "#/$defs/vector", "description": "As for a model: where the line's own origin lies in the frame. Default [0, 0, 0]: the points are in the plan's frame." },
+          "rotation": {
+            "description": "As for a model.",
+            "type": "object",
+            "required": ["axis", "degrees"],
+            "additionalProperties": false,
+            "properties": {
+              "axis": { "$ref": "#/$defs/vector" },
+              "degrees": { "type": "number" }
+            }
+          },
+          "scale": {
+            "description": "As for a model.",
+            "type": "array",
+            "items": { "type": "number", "exclusiveMinimum": 0 },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "strips": {
+            "description": "The runs of the line. Either every strip gives its points colours or none does.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["points"],
+              "additionalProperties": false,
+              "properties": {
+                "points": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/vector" }, "description": "Where the strip runs, in order; two points are one straight piece." },
+                "colors": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/color" }, "description": "A colour for every point; the line blends from one to the next. Shown by a material of the kind vertexColor." }
+              }
+            }
+          }
+        }
+      }
+    },
     "camera": {
       "description": "Played by the module 'camera_track'.",
       "type": "object",
@@ -101,6 +148,8 @@
               "eye": { "$ref": "#/$defs/vector" },
               "target": { "$ref": "#/$defs/vector" },
               "lens": { "type": "number", "minimum": 1, "maximum": 1200 },
+              "clipStart": { "type": "number", "exclusiveMinimum": 0, "description": "The nearest the camera draws at this pose. Default: the camera's clipStart. Between poses it moves as the camera does, so a flight from far away to close by keeps its depth exact at both ends." },
+              "clipEnd": { "type": "number", "exclusiveMinimum": 0, "description": "The farthest the camera draws at this pose. Default: the camera's clipEnd." },
               "orientation": { "$ref": "#/$defs/quaternion", "description": "How the camera is turned, as a unit quaternion [w, x, y, z] in the plan's frame; the camera looks along its own -Z with its own +Y at the top of the picture, so [1, 0, 0, 0] looks straight down with north up. With it the camera keeps this turn, roll included, and the target is only where it focuses; without it the camera looks at the target with a level horizon. Blender interpolates the turn as the track's interpolation says." }
             }
           }
@@ -148,6 +197,7 @@
               },
               "low": { "type": "number", "description": "The height (Z) where a heightRamp starts." },
               "high": { "type": "number", "description": "The height where a heightRamp ends." },
+              "space": { "enum": ["scene", "model"], "description": "Where a heightRamp measures 'low' and 'high'. scene (the default): in the plan's frame, so a model that is stretched or moved passes through the colours. model: in the model's own coordinates, as its file has them, before its scale, rotation and translation, so a colour stays with the rock it is on." },
               "scale": { "type": "number", "exclusiveMinimum": 0, "description": "Of a noiseRamp's noise; larger is finer." },
               "bump": { "type": "number", "minimum": 0, "description": "How strongly a noiseRamp's noise bumps the surface." }
             }
@@ -277,14 +327,14 @@
       }
     },
     "changes": {
-      "description": "Played by the module 'changes', after the modules that make what it changes ('look', 'textured_materials', 'labels'): what changes while the clip runs. Each entry names a target and gives every property that changes its keys, in rising order of time, each on a frame of its own within the clip: at 't' seconds the property has the key's value. Between two keys it moves as the later key's 'easing' says; before its first key a property has that key's value and after its last one it keeps it, so a single key is a value for the whole clip. An entry without a target is of the scene itself (worldColor). Two entries do not change the same property of the same thing. Not carried: a change of a material's image.",
+      "description": "Played by the module 'changes', after the modules that make what it changes ('look', 'textured_materials', 'labels'): what changes while the clip runs. Each entry names a target and gives every property that changes its keys, in rising order of time: at 't' seconds the property has the key's value. Between two keys it moves as the later key's 'easing' says; before its first key a property has that key's value and after its last one it keeps it, so a single key is a value for the whole clip. A key may lie after the clip's last frame: the clip then ends on the way to it. Two keys of a property may fall on one frame (not of 'visible'): the first is where the value was going, the second, whose easing is 'constant', the value it has from that frame on. An entry without a target is of the scene itself (worldColor, worldStrength). Two entries do not change the same property of the same thing. Not carried: a change of a material's image.",
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
           "target": {
-            "description": "The one thing with this id (a model, a text or a marker of the plan), or every thing with this role (stated in its section, or 'model', 'label', 'marker'). One of the two.",
+            "description": "The one thing with this id (a model, a line, a text, a marker or a light of the plan), or every thing with this role (stated in its section, or 'model', 'line', 'label', 'marker'; every light has the role 'light'). One of the two.",
             "type": "object",
             "additionalProperties": false,
             "minProperties": 1,
@@ -295,7 +345,7 @@
             }
           },
           "visible": {
-            "description": "When the target is shown and hidden; each key says the opposite of the one before it. Before the first key the target is the other way round: a first key that shows it at 2 seconds keeps it hidden until then.",
+            "description": "When the target is shown and hidden; each key says the opposite of the one before it, and each falls on a frame of its own. Before the first key the target is the other way round: a first key that shows it at 2 seconds keeps it hidden until then. A light is shown and hidden too, but has nothing to fade: see 'energy'.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -305,7 +355,8 @@
               "properties": {
                 "t": { "type": "number", "minimum": 0 },
                 "value": { "type": "boolean", "description": "true: shown from 't' on; false: hidden." },
-                "fade": { "type": "number", "minimum": 0, "description": "Seconds the change takes, starting at 't': the target appears little by little, or goes little by little and is hidden when it has gone. Evenly. Default 0: at once." }
+                "fade": { "type": "number", "minimum": 0, "description": "Seconds the change takes, starting at 't': the target appears little by little, or goes little by little and is hidden when it has gone. Default 0: at once." },
+                "easing": { "enum": ["linear", "smooth"], "description": "How a fade runs: evenly (linear, the default) or eased in and out (smooth)." }
               }
             }
           },
@@ -336,12 +387,13 @@
                 "t": { "type": "number", "minimum": 0 },
                 "color": { "$ref": "#/$defs/color" },
                 "strength": { "type": "number", "minimum": 0, "maximum": 1, "description": "0: none of the colour; 1: nothing but it." },
-                "easing": { "$ref": "#/$defs/easing" }
+                "easing": { "$ref": "#/$defs/easing" },
+                "mix": { "$ref": "#/$defs/mix" }
               }
             }
           },
           "scale": {
-            "description": "Of a model only: its stretch along its own X, Y and Z axes, as the model's 'scale' has it; [1, 1, 2] doubles the heights.",
+            "description": "Of a model or a line only: its stretch along its own X, Y and Z axes, as the model's 'scale' has it; [1, 1, 2] doubles the heights.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -351,6 +403,51 @@
               "properties": {
                 "t": { "type": "number", "minimum": 0 },
                 "value": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "minItems": 3, "maxItems": 3 },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "offset": {
+            "description": "Of a model or a line only: how far it is moved from where its 'translation' puts it, in metres along the frame's axes. [0, 0, 0] is where the plan's models have it.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number", "minimum": 0 },
+                "value": { "$ref": "#/$defs/vector" },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "energy": {
+            "description": "Of a light of look.lights only: how strong it is, as the light's 'energy' has it. 0 puts it out: a sun that goes out as the camera goes underground.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number", "minimum": 0 },
+                "value": { "type": "number", "minimum": 0 },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "worldStrength": {
+            "description": "Of an entry without a target: the strength of look.world, which the look must have. 0 is a world that lights nothing.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number", "minimum": 0 },
+                "value": { "type": "number", "minimum": 0 },
                 "easing": { "$ref": "#/$defs/easing" }
               }
             }
@@ -366,7 +463,8 @@
               "properties": {
                 "t": { "type": "number", "minimum": 0 },
                 "value": { "$ref": "#/$defs/color" },
-                "easing": { "$ref": "#/$defs/easing" }
+                "easing": { "$ref": "#/$defs/easing" },
+                "mix": { "$ref": "#/$defs/mix" }
               }
             }
           }
@@ -476,6 +574,7 @@
       "maxItems": 3
     },
     "easing": { "enum": ["linear", "smooth", "constant"], "description": "How the value gets to this key from the key before it: evenly (linear, the default), eased in and out (smooth: 3x² − 2x³ of the way at the share x of the time), or not at all, so that it jumps at this key's time (constant)." },
+    "mix": { "enum": ["linear", "srgb"], "description": "How a colour is mixed on its way to this key from the key before it: as light mixes, straight in the plan's linear RGB (linear, the default), or as a screen mixes two colours, straight in sRGB (srgb), which is what a browser or a picture editor shows half-way. The player keys an srgb move frame by frame." },
     "moduleName": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
     "role": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$", "description": "What a label or a text is, for whoever looks for it: lower-case words joined by '-'. The player stamps a label's role on its object (thide_role)." },
     "relativePath": { "type": "string", "minLength": 1, "pattern": "^(?![/\\\\])(?!.*:)(?!(.*[/\\\\])?\\.\\.([/\\\\]|$))" }

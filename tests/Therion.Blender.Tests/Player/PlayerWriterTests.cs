@@ -45,6 +45,7 @@ public class PlayerWriterTests : IDisposable
                 "thide_player/modules/camera_track.py",
                 "thide_player/modules/changes.py",
                 "thide_player/modules/labels.py",
+                "thide_player/modules/lines.py",
                 "thide_player/modules/look.py",
                 "thide_player/modules/models.py",
                 "thide_player/modules/output.py",
