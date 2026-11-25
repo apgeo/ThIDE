@@ -64,10 +64,32 @@ public sealed class ThideApp : IAsyncDisposable
             ? dir
             : Path.GetFullPath(Path.Combine(FixturesDir, "..", "ui-artifacts"));
 
-    /// <summary>Copies a fixture project (tests/ui-fixtures/&lt;name&gt;) to a temp dir and returns the dir.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentBag<string> Scratch = [];
+
+    static ThideApp()
+    {
+        // What the tests put into the temp folder goes when the test run ends. (Each app's own
+        // profile and temp folder go when the app is disposed.)
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            foreach (var dir in Scratch) DeleteQuietly(dir);
+        };
+    }
+
+    /// <summary>Has <paramref name="dir"/>, a folder a test made in the temp folder, deleted when
+    /// the test run ends, and returns it. A run leaves nothing behind that way.</summary>
+    public static string RemoveAtExit(string dir)
+    {
+        Scratch.Add(dir);
+        return dir;
+    }
+
+    /// <summary>Copies a fixture project (tests/ui-fixtures/&lt;name&gt;) to a temp dir and returns the dir.
+    /// The copy is deleted when the test run ends.</summary>
     public static string CopyFixture(string name)
     {
-        var dst = Path.Combine(Path.GetTempPath(), "thide-ui-" + Guid.NewGuid().ToString("N")[..8], name);
+        var root = RemoveAtExit(Path.Combine(Path.GetTempPath(), "thide-ui-" + Guid.NewGuid().ToString("N")[..8]));
+        var dst = Path.Combine(root, name);
         foreach (var f in Directory.EnumerateFiles(Path.Combine(FixturesDir, name), "*", SearchOption.AllDirectories))
         {
             var target = Path.Combine(dst, Path.GetRelativePath(Path.Combine(FixturesDir, name), f));
