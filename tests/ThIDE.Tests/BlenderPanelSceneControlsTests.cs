@@ -123,6 +123,30 @@ public class BlenderPanelSceneControlsTests : IDisposable
     // ---- the light ----
 
     [Fact]
+    public void TheLampsReach_IsTheSpecs_GoesWithTheHeadLamp_AndComesBackFromAPreset()
+    {
+        var vm = Vm(store: true);
+        Assert.False(vm.LampReach);
+        Assert.False(vm.IsHeadlamp);
+
+        vm.LightRig = LightingRig.Headlamp;
+        vm.LampReach = true;
+        Assert.True(vm.IsHeadlamp);
+        Assert.Equal((LightingRig.Headlamp, true), (vm.CurrentSpec.Lighting.Rig, vm.CurrentSpec.Lighting.LampReach));
+        Assert.Empty(vm.Blockers);
+
+        // A preset saved from the panel has it and brings it back; one that has not takes it away.
+        vm.NewPresetName = "From far away";
+        vm.SavePresetCommand.Execute(null);
+        vm.SelectedPreset = vm.Presets.First(p => p.BuiltIn);
+        Assert.False(vm.LampReach);
+        vm.SelectedPreset = vm.Presets.Single(p => p.Name == "From far away");
+        Assert.Equal((LightingRig.Headlamp, true), (vm.LightRig, vm.LampReach));
+        Assert.NotEmpty(Tr.Get("Blender_UI_LampReach"));
+        Assert.NotEqual("Blender_UI_LampReach_Tip", Tr.Get("Blender_UI_LampReach_Tip"));
+    }
+
+    [Fact]
     public void TheLight_ReachesTheSpec_AndAnImageIsUsableOnlyWithItsRig()
     {
         var vm = Vm();

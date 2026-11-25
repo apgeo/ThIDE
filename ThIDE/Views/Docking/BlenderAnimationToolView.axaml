@@ -85,6 +85,7 @@
                 <TextBox AutomationProperties.AutomationId="Blender.HdriPath" AutomationProperties.Name="{l:Loc Blender_UI_HdriPath}" Text="{Binding Blender.HdriPath}" IsEnabled="{Binding Blender.IsHdri}" ToolTip.Tip="{l:Loc Blender_UI_HdriPath_Tip}" /></DockPanel>
             <DockPanel IsEnabled="{Binding Blender.IsHdri}"><TextBlock Text="{l:Loc Blender_UI_HdriRotation}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
                 <TextBox AutomationProperties.AutomationId="Blender.HdriRotation" AutomationProperties.Name="{l:Loc Blender_UI_HdriRotation}" Text="{Binding Blender.HdriRotation}" ToolTip.Tip="{l:Loc Blender_UI_HdriRotation_Tip}" /></DockPanel>
+            <CheckBox AutomationProperties.AutomationId="Blender.LampReach" Content="{l:Loc Blender_UI_LampReach}" IsChecked="{Binding Blender.LampReach}" IsEnabled="{Binding Blender.IsHeadlamp}" ToolTip.Tip="{l:Loc Blender_UI_LampReach_Tip}" />
 
             <TextBlock Text="{l:Loc Blender_UI_Engine}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Engine}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />

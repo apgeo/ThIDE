@@ -7,6 +7,10 @@
 Runs after "models" and "camera_track": it gives the models the materials they ask for, and a
 headlamp rides the camera.
 
+A material that is "unlit" shows its colours as a screen shows them, whatever the light: a
+survey line then reads in a cave no lamp reaches as it does under the sun. It emits to the camera
+only, so it lights nothing round it.
+
 The engine "workbench" is the draft look: Blender's solid view, many times faster than a real
 render. It knows no lights and no node materials, so every model is given the colours of its
 material as a colour attribute, which that engine does show.
@@ -31,7 +35,7 @@ KEYS = {
     "materials": [{
         "id": None, "kind": None, "color": None, "roughness": None,
         "stops": [{"at": None, "color": None}], "low": None, "high": None, "space": None, "scale": None,
-        "bump": None,
+        "bump": None, "unlit": None, "strength": None,
     }],
     "lights": [{"id": None, "kind": None, "energy": None, "direction": None, "size": None}],
     "world": {"kind": None, "color": None, "strength": None, "image": None, "rotation": None},
@@ -261,7 +265,32 @@ def make_material(spec, plain):
         tree.links.new(bump.outputs["Normal"], shader.inputs["Normal"])
     else:
         raise api.PlanError('look.materials: unknown kind "%s" for "%s"' % (kind, spec["id"]))
+    if spec.get("unlit"):
+        make_unlit(tree, shader, api.amount(spec.get("strength", 1.0), 'look.materials: "strength" of "%s"' % spec["id"]))
+    elif "strength" in spec:
+        raise api.PlanError('look.materials: only an unlit material has a "strength" ("%s")' % spec["id"])
     return material
+
+
+def make_unlit(tree, shader, strength):
+    """Puts a shader that emits in the place of the one that is lit, with the colours that one
+    had: the material then shows them as a screen does, whatever the light. It emits to the
+    camera only, so a line that glows in a dark cave does not light the walls round it."""
+    emission = tree.nodes.new("ShaderNodeEmission")
+    colour = shader.inputs["Base Color"]
+    if colour.is_linked:
+        tree.links.new(colour.links[0].from_socket, emission.inputs["Color"])
+    else:
+        emission.inputs["Color"].default_value = colour.default_value
+    seen = tree.nodes.new("ShaderNodeLightPath")
+    by = tree.nodes.new("ShaderNodeMath")
+    by.operation = "MULTIPLY"
+    by.inputs[1].default_value = strength
+    tree.links.new(seen.outputs["Is Camera Ray"], by.inputs[0])
+    tree.links.new(by.outputs[0], emission.inputs["Strength"])
+    surface = shader.outputs[0].links[0].to_socket
+    tree.links.new(emission.outputs["Emission"], surface)
+    tree.nodes.remove(shader)
 
 
 def make_ramp(tree, stops):

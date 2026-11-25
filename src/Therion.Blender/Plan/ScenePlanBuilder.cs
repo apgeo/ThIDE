@@ -18,6 +18,8 @@
 // the mesh, with a counter of the years for a reveal by date (RevealPlanner). The HDRI light rig
 // becomes a world of an image, which travels with the plan as the photos do (Files). The texts of
 // the overlays may name the cave by a placeholder, which is filled in here (TextPlaceholders).
+// A head lamp that is to reach as far as the camera looks has its energy keyed by the distance
+// from each pose to its target (LampReach).
 // A plan carries everything a spec says: NotCarried is empty for every spec, and stays for
 // whoever asks. Notices says what a render of the plan cannot say for itself.
 //
@@ -108,7 +110,7 @@ public static class ScenePlanBuilder
         if (annotations.Annotations.Count > 0) features = WithFeature(features, ScenePlan.AnnotationsFeature);
         if (changes is not null) features = WithFeature(features, ScenePlan.ChangesFeature);
         if (texts is not null) features = WithFeature(features, ScenePlan.TextsFeature);
-        return new ScenePlan
+        var plan = new ScenePlan
         {
             Name = string.IsNullOrWhiteSpace(spec.Name) ? null : spec.Name,
             Features = features,
@@ -152,6 +154,8 @@ public static class ScenePlanBuilder
                 BaseName = spec.Output.BaseName,
             },
         };
+        // A head lamp that reaches as far as the camera looks: its energy, keyed by the poses.
+        return spec.Lighting is { Rig: LightingRig.Headlamp, LampReach: true } ? Plan.LampReach.Apply(plan) : plan;
     }
 
     /// <summary>

@@ -79,6 +79,12 @@ public static class ScenePlanSerializer
             foreach (var property in type.Properties)
                 if (property.Name == "edge") property.ShouldSerialize = (_, value) => value is not 0.0;
         }
+        else if (type.Type == typeof(PlanMaterial))
+        {
+            // A material is lit unless it says otherwise.
+            foreach (var property in type.Properties)
+                if (property.Name == "unlit") property.ShouldSerialize = (_, value) => value is true;
+        }
         else if (type.Type == typeof(PlanTexturedMaterial))
         {
             // A model casts shadows unless its material says otherwise.

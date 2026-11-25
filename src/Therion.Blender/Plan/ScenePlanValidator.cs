@@ -324,6 +324,11 @@ public static partial class ScenePlanValidator
                 bad(path + ".scale", $"Noise scale must be within (0, {SceneSpecValidator.MaxProceduralScale}].");
             if (material.Bump is { } bump && !(bump >= 0 && bump <= SceneSpecValidator.MaxBumpStrength))
                 bad(path + ".bump", $"Bump strength must be within 0–{SceneSpecValidator.MaxBumpStrength}.");
+            if (material.Strength is { } shown)
+            {
+                if (!material.Unlit) bad(path + ".strength", "Only an unlit material has a strength; a lit one is as bright as its light.");
+                else if (!(shown >= 0) || !double.IsFinite(shown)) bad(path + ".strength", "The strength of an unlit material is not negative.");
+            }
         }
 
         for (int i = 0; i < look.Lights.Count; i++)

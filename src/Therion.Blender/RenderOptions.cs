@@ -121,8 +121,8 @@ public static class SceneBuilders
 
     /// <summary>What of <paramref name="spec"/> a generated script does not draw, as field
     /// paths: everything that was added after the script generator was last changed, which only
-    /// the player draws: the later overlays, the annotations, the reveal and the turn of an HDRI
-    /// image.</summary>
+    /// the player draws: the later overlays, the annotations, the reveal, the turn of an HDRI
+    /// image and the reach of the head lamp.</summary>
     public static IReadOnlyList<string> NotDrawnByTheGenerator(SceneSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
@@ -141,6 +141,7 @@ public static class SceneBuilders
         if (spec.Annotations.Count > 0) lost.Add("annotations");
         if (RevealPlanner.Applies(spec)) lost.Add("reveal");
         if (spec.Lighting is { Rig: LightingRig.HdriFile, HdriRotation: not 0.0 }) lost.Add("lighting.hdriRotation");
+        if (spec.Lighting is { Rig: LightingRig.Headlamp, LampReach: true }) lost.Add("lighting.lampReach");
         return lost;
     }
 }

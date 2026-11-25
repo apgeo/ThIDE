@@ -421,7 +421,7 @@ public class ScenePlanChangesTests
         Assert.True(order.IndexOf(ScenePlan.TexturedMaterialsFeature) < order.IndexOf(ScenePlan.ChangesFeature));
         Assert.True(order.IndexOf(ScenePlan.LabelsFeature) < order.IndexOf(ScenePlan.ChangesFeature));
         Assert.True(order.IndexOf(ScenePlan.ChangesFeature) < order.IndexOf(ScenePlan.BlendFileFeature));
-        Assert.Equal("1.8", PlayerFiles.Version);
+        Assert.Equal("1.9", PlayerFiles.Version);
         Assert.Equal(1, PlayerFiles.PlanVersion);
     }
 }

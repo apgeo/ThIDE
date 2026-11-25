@@ -56,6 +56,7 @@ public static class SceneSpecSerializer
             // The turn of an HDRI image came with the player's HDRI world.
             foreach (var property in type.Properties)
                 if (property.Name == "hdriRotation") property.ShouldSerialize = (_, value) => value is not 0.0;
+                else if (property.Name == "lampReach") property.ShouldSerialize = (_, value) => value is true; // later still
         }
         if (type.Type == typeof(RevealSpec))
         {

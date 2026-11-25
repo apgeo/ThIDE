@@ -2186,6 +2186,8 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_UI_BrowseHdri" xml:space="preserve"><value>Alegeți imaginea HDRI</value></data>
   <data name="Blender_UI_HdriRotation" xml:space="preserve"><value>Rotire HDRI (grade)</value></data>
   <data name="Blender_UI_HdriRotation_Tip" xml:space="preserve"><value>Cu cât este rotită imaginea în jurul verticalei, în sens invers acelor de ceasornic văzut de sus: aduce soarele din imagine acolo de unde trebuie să vină lumina. Doar playerul o rotește.</value></data>
+  <data name="Blender_UI_LampReach" xml:space="preserve"><value>Lampa bate până unde privește camera</value></data>
+  <data name="Blender_UI_LampReach_Tip" xml:space="preserve"><value>Pentru lumina Headlamp. Lampa de pe cameră luminează un perete aflat la câțiva metri; o peșteră privită de mai departe rămâne întunecată. Cu opțiunea activă, lampa este întărită după distanța de la cameră până la ceea ce privește, astfel încât peștera este luminată de departe la fel ca de aproape. Este desenată doar de player.</value></data>
   <data name="Blender_UI_Reveal" xml:space="preserve"><value>Dezvăluire</value></data>
   <data name="Blender_UI_RevealBy" xml:space="preserve"><value>Dezvăluie peștera după</value></data>
   <data name="Blender_UI_RevealBy_Tip" xml:space="preserve"><value>Arată peștera parte cu parte cât rulează clipul. Off: toată, de la primul cadru. Distance: de la intrări spre interior. Order: viză cu viză, în ordinea ridicării topografice. Date: în ordinea datelor ridicării, cu un contor al anilor. O imagine statică arată toată peștera, iar o dezvăluire este desenată doar de player.</value></data>

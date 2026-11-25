@@ -200,7 +200,9 @@
               "high": { "type": "number", "description": "The height where a heightRamp ends." },
               "space": { "enum": ["scene", "model"], "description": "Where a heightRamp measures 'low' and 'high'. scene (the default): in the plan's frame, so a model that is stretched or moved passes through the colours. model: in the model's own coordinates, as its file has them, before its scale, rotation and translation, so a colour stays with the rock it is on." },
               "scale": { "type": "number", "exclusiveMinimum": 0, "description": "Of a noiseRamp's noise; larger is finer." },
-              "bump": { "type": "number", "minimum": 0, "description": "How strongly a noiseRamp's noise bumps the surface." }
+              "bump": { "type": "number", "minimum": 0, "description": "How strongly a noiseRamp's noise bumps the surface." },
+              "unlit": { "type": "boolean", "description": "True for a material that no light changes: it shows the colours of its kind as a screen shows them, in a cave no lamp reaches as under the sun, and lights nothing itself. For what has to read at any distance: survey lines, a route. Roughness has no part in it. Default false." },
+              "strength": { "type": "number", "minimum": 0, "description": "How brightly an unlit material shows its colours: 1 (the default) as they are." }
             }
           }
         },

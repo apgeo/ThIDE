@@ -42,6 +42,19 @@ public class ScenePlanSerializerTests
     }
 
     [Fact]
+    public void AMaterial_SaysThatItIsUnlit_OnlyWhenItIs()
+    {
+        string json = ScenePlanSerializer.Write(PlanFixtures.Full());
+
+        Assert.Contains("\"id\": \"baked\",\n        \"kind\": \"vertexColor\",", json);
+        Assert.Contains("\"unlit\": true,\n        \"strength\": 1.5\n", json);
+        Assert.Equal(1, json.Split("\"unlit\"").Length - 1);
+        var read = ScenePlanSerializer.Read(json);
+        Assert.Equal((true, 1.5), (read.Look.Materials[3].Unlit, read.Look.Materials[3].Strength));
+        Assert.Equal((false, null), (read.Look.Materials[0].Unlit, read.Look.Materials[0].Strength));
+    }
+
+    [Fact]
     public void AThingWrittenOverThePicture_TakesOneLine_AndSoDoesEachTurnOfAnArrow()
     {
         string json = ScenePlanSerializer.Write(PlanFixtures.Full());

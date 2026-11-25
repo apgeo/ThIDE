@@ -1,6 +1,6 @@
 // `therion-cli blender`: the leads a render marks come from the model's own continuation flags or
-// from a leads file. On an invented cave, through the bundle a command writes: its plan says what
-// a render would show.
+// from a leads file, and --lamp-reach makes the head lamp reach. On an invented cave, through the
+// bundle a command writes: its plan says what a render would show.
 
 using Therion.Blender.Plan;
 using Therion.Blender.Tests.SceneProbe;
@@ -96,5 +96,24 @@ public class BlenderLeadsVerbTests : IDisposable
         Assert.True(code == 0, stderr);
         Assert.Contains("shows no lead markers", stderr);
         Assert.Null(plan!.Labels?.Markers);
+    }
+
+    [Fact]
+    public async Task LampReach_LightsTheSceneByTheLampOnTheCamera_TurnedUpWithTheDistance()
+    {
+        var (code, stderr, plan) = await Bundle("reach", "--preset", "Orbit showcase", "--lamp-reach");
+
+        Assert.True(code == 0, stderr);
+        var lamp = Assert.Single(plan!.Look.Lights);
+        Assert.Equal(PlanLightKind.Headlamp, lamp.Kind);
+        Assert.Null(plan.Look.World);
+        var energy = plan.Changes!.Single(c => c.Target?.Id == lamp.Id).Energy!;
+        Assert.All(energy, key => Assert.True(key.Value > 100 * 80, $"{key.Value} W"));
+
+        string sky = Path.Combine(_dir, "sky.hdr");
+        File.WriteAllText(sky, "#?RADIANCE\n");
+        (code, stderr, _) = await Bundle("reach-hdri", "--preset", "Orbit showcase", "--lamp-reach", "--hdri", sky);
+        Assert.Equal(2, code);
+        Assert.Contains("--lamp-reach", stderr);
     }
 }

@@ -365,6 +365,17 @@ public sealed record PlanMaterial
 
     /// <summary>How strongly a noise ramp's noise bumps the surface.</summary>
     public double? Bump { get; init; }
+
+    /// <summary>True for a material that no light changes: it shows its colours as a screen
+    /// shows them, in a cave no lamp reaches as under the sun, and lights nothing itself. For
+    /// what has to read at any distance and in any light: survey lines, a route, an outline.
+    /// Its colours are those of its <see cref="Kind"/>, and what changes of a material changes
+    /// of it (a tint, an opacity, a reveal). <see cref="Roughness"/> has no part in it.</summary>
+    public bool Unlit { get; init; }
+
+    /// <summary>How brightly an <see cref="Unlit"/> material shows its colours: null and 1 show
+    /// them as they are, 2 twice as bright.</summary>
+    public double? Strength { get; init; }
 }
 
 public sealed record PlanLight

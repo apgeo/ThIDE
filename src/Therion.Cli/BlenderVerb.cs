@@ -363,8 +363,20 @@ public static class BlenderVerb
             }
             spec = preset.Spec;
         }
-        return TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec) && TryAddReveal(args, stderr, ref spec)
-            && TryAddHdri(args, stderr, ref spec);
+        if (!(TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec) && TryAddReveal(args, stderr, ref spec)
+              && TryAddHdri(args, stderr, ref spec)))
+            return false;
+        // --lamp-reach lights the scene by the lamp on the camera, turned up with the distance it looks over.
+        if (Flag(args, "--lamp-reach"))
+        {
+            if (Option(args, "--hdri") is not null)
+            {
+                stderr.WriteLine("error: --lamp-reach lights the scene by the lamp on the camera; it does not go with --hdri.");
+                return false;
+            }
+            spec = spec with { Lighting = spec.Lighting with { Rig = LightingRig.Headlamp, LampReach = true } };
+        }
+        return true;
     }
 
     /// <summary>

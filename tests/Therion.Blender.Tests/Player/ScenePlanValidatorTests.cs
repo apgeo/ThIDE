@@ -191,6 +191,18 @@ public class ScenePlanValidatorTests
     }
 
     [Fact]
+    public void OnlyAnUnlitMaterial_HasAStrength_AndItIsNotNegative()
+    {
+        ScenePlan With(PlanMaterial material) => Full with { Look = Full.Look with { Materials = [.. Full.Look.Materials, material] } };
+
+        Assert.Empty(ScenePlanValidator.Validate(With(new PlanMaterial { Id = "m", Unlit = true })));
+        Assert.Empty(ScenePlanValidator.Validate(With(new PlanMaterial { Id = "m", Unlit = true, Strength = 0 })));
+        AssertBad(With(new PlanMaterial { Id = "m", Strength = 2 }), "look.materials[4].strength");
+        AssertBad(With(new PlanMaterial { Id = "m", Unlit = true, Strength = -1 }), "look.materials[4].strength");
+        AssertBad(With(new PlanMaterial { Id = "m", Unlit = true, Strength = double.PositiveInfinity }), "look.materials[4].strength");
+    }
+
+    [Fact]
     public void Lights_AndTheWorld_AreComplete()
     {
         ScenePlan With(PlanLight light) => Full with { Look = Full.Look with { Lights = [.. Full.Look.Lights, light] } };

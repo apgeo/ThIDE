@@ -49,7 +49,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         nameof(Title), nameof(Credits), nameof(EndCardText), nameof(EndCardSeconds),
         nameof(Subtitle), nameof(ShowScaleBar), nameof(ShowNorthArrow), nameof(ShowDepthLegend),
         nameof(FadeFromBlack), nameof(FadeToBlack),
-        nameof(LightRig), nameof(LightStrength), nameof(HdriPath), nameof(HdriRotation),
+        nameof(LightRig), nameof(LightStrength), nameof(HdriPath), nameof(HdriRotation), nameof(LampReach),
         nameof(RevealMode), nameof(RevealFrom), nameof(RevealDatesPath), nameof(RevealStart),
         nameof(RevealToClipEnd), nameof(RevealEnd), nameof(RevealEdge), nameof(RevealGlow),
     };
@@ -181,6 +181,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     /// of <see cref="HdriPath"/>, which is also what is seen behind the cave.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsHdri))]
+    [NotifyPropertyChangedFor(nameof(IsHeadlamp))]
     private LightingRig _lightRig;
 
     /// <summary>How brightly the rig shines: 1 is the rig, or the image, as it is.</summary>
@@ -194,6 +195,13 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     /// <summary>True when the scene is lit by an image: only then do its file and its turn matter.</summary>
     public bool IsHdri => LightRig == LightingRig.HdriFile;
+
+    /// <summary>The head lamp is turned up with the distance the camera looks over, so that a
+    /// cave seen from far away is lit as one seen from near.</summary>
+    [ObservableProperty] private bool _lampReach;
+
+    /// <summary>True when the lamp on the camera lights the scene: only then does its reach matter.</summary>
+    public bool IsHeadlamp => LightRig == LightingRig.Headlamp;
 
     // ---- reveal ----
 
@@ -581,6 +589,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
                 Strength = LightStrength,
                 HdriPath = string.IsNullOrWhiteSpace(HdriPath) ? null : HdriPath.Trim(),
                 HdriRotation = HdriRotation,
+                LampReach = LampReach,
             },
             Reveal = RevealFromKnobs(),
             Annotations = _annotations,
@@ -658,6 +667,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         LightStrength = spec.Lighting.Strength;
         HdriPath = spec.Lighting.HdriPath ?? "";
         HdriRotation = spec.Lighting.HdriRotation;
+        LampReach = spec.Lighting.LampReach;
 
         var reveal = spec.Reveal;
         _revealKept = reveal ?? new RevealSpec();
