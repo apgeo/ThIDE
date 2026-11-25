@@ -61,6 +61,30 @@ public class BlenderBundleVerbTests : IDisposable
     }
 
     [Fact]
+    public async Task Bundle_WritesItsReadmeInRomanian_WhenAsked()
+    {
+        static string Readme(string zip)
+        {
+            using var archive = ZipFile.OpenRead(zip);
+            using var reader = new StreamReader(archive.GetEntry(Path.GetFileNameWithoutExtension(zip) + "/README.txt")!.Open());
+            return reader.ReadToEnd();
+        }
+        string english = Path.Combine(_dir, "en", "cave.zip"), romanian = Path.Combine(_dir, "ro", "cave.zip");
+
+        Assert.Equal(0, (await Run("blender", _lox, "--preset", "Orbit showcase", "--bundle", english)).Code);
+        var (code, _, stderr) = await Run("blender", _lox, "--preset", "Orbit showcase", "--bundle", romanian, "--readme-language", "ro");
+
+        Assert.True(code == 0, stderr);
+        Assert.Contains("HOW TO RENDER", Readme(english));
+        Assert.Contains("CUM SE RANDEAZĂ", Readme(romanian));
+        Assert.DoesNotContain("HOW TO RENDER", Readme(romanian));
+
+        (code, _, stderr) = await Run("blender", _lox, "--preset", "Orbit showcase", "--bundle", romanian, "--readme-language", "fr");
+        Assert.Equal(2, code);
+        Assert.Contains("--readme-language takes one of: en, ro.", stderr);
+    }
+
+    [Fact]
     public async Task Bundle_WithDraft_HasTheDraftPlan_AndIsTheSameEveryTime()
     {
         string first = Path.Combine(_dir, "a", "cave.zip"), second = Path.Combine(_dir, "b", "cave.zip");

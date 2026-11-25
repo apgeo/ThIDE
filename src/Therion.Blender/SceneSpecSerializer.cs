@@ -45,7 +45,11 @@ public static class SceneSpecSerializer
         if (type.Type == typeof(EndCardSpec))
         {
             foreach (var property in type.Properties)
+            {
                 if (property.Name == "subtitle") property.ShouldSerialize = (_, value) => value is not null;
+                else if (property.Name == "backdrop") property.ShouldSerialize = (_, value) => value is not 1.0;
+                else if (property.Name == "overScene") property.ShouldSerialize = (_, value) => value is true;
+            }
         }
         if (type.Type != typeof(OverlaySpec)) return;
         foreach (var property in type.Properties)

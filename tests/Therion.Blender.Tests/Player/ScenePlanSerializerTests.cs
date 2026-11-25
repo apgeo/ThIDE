@@ -127,7 +127,8 @@ public class ScenePlanSerializerTests
         Assert.Contains("\"scale\": [1, 1, 2]", json);
         Assert.Contains("\"interpolation\": \"bezier\"", json);
         Assert.Contains("      { \"t\": 0, \"eye\": [10, -20, 5.5], \"target\": [0, 0, 0], \"orientation\": [1, 0, 0, 0] },\n", json);
-        Assert.Contains("      { \"t\": 1, \"eye\": [20, -10, 6], \"target\": [0, 0, 1], \"lens\": 50, \"orientation\": [0.5, 0.5, -0.5, 0.5] },\n", json);
+        Assert.Contains("      { \"t\": 1, \"eye\": [20, -10, 6], \"target\": [0, 0, 1], \"lens\": 50, \"orientation\": [0.5, 0.5, -0.5, 0.5], \"clipStart\": 0.5, \"clipEnd\": 800 },\n", json);
+        Assert.Contains("\"low\": -40,\n        \"high\": 12.5,\n        \"space\": \"model\"", json);
         Assert.Contains("\"engine\": \"eevee\"", json);
         Assert.Contains("\"device\": \"optix\"", json);
         Assert.Contains("\"kind\": \"heightRamp\"", json);

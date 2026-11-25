@@ -104,7 +104,7 @@ the narrowest passage of a flythrough.
 | Credits line | bottom right | small, stays throughout |
 | Corner line | top left | stays throughout; timed corner texts appear under it |
 | Captions | bottom, centre | each for its time, on a dark backing, one at a time: a caption that starts while another is showing replaces it |
-| End card | the whole picture | a text on black, for its seconds *after* the last frame of the scene: the movie is that much longer |
+| End card | the whole picture | a text on black, for its seconds *after* the last frame of the scene: the movie is that much longer. It can let that frame show through, or come over the end of the scene instead (below) |
 | Fades | the whole picture | the movie can come out of black at its start and go to black at its end |
 
 The letters are Blender's own font (Romanian diacritics included), white with a dark outline, and
@@ -114,6 +114,16 @@ margin of 5 % from the picture's edges.
 The panel has fields for the credits line and the end card. The other texts are set in a render
 spec (the JSON a preset holds, under `labels.overlays`), on the command line (`--title`,
 `--credits`, `--end-card`, `--caption`) or by an assistant through the MCP tools.
+
+**An end card over the scene.** In a render spec the end card has two more settings, under
+`labels.overlays.endCard`. `backdrop` says how dark the card is: 1 (the default) is the black card,
+0 leaves the last frame as it is and puts the text on a dark box of its own, and a number between
+them dims the frame. `"overScene": true` brings the card over the last seconds of the scene, which
+goes on under it, instead of holding the last frame: the movie is then no longer for it.
+
+```json
+"endCard": { "text": "Thank you", "seconds": 4, "backdrop": 0.5, "overScene": true }
+```
 
 **Captions are also written as subtitles**: `<name>.srt` and `<name>.vtt` beside the movie, for a
 video player or a web page that can show them, turn them off or translate them.
@@ -230,7 +240,7 @@ end in `.zip`), for rendering on any computer with Blender 4.2 or newer and with
 ```
 therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
                     --bundle cave-bundle.zip [--draft] [--render [--render-plan full|draft|both]] \
-                    [--out <dir>] [--blender <path>]
+                    [--out <dir>] [--blender <path>] [--readme-language en|ro]
 ```
 
 The bundle holds the scene plan (`scene-plan.json`: the camera move, the look and the output, as
@@ -263,10 +273,31 @@ text in `scene-plan.json` was changed. Captions are in the bundle as subtitles a
   bundle made with `--draft` is usually made for a quick look at the camera move before the long
   render. The full render stays one option away: `--render-plan` chooses `full`, `draft` or
   `both` (the draft first, then the full plan). `draft` and `both` need `--draft`.
+- `--readme-language ro` writes the bundle's `README.txt` in Romanian; without it, it is in English.
 - The same model and settings always give the same zip under the same name, byte for byte.
 - A scene plan cannot yet say everything a render spec can: the HDRI light rig is left out. The
   command warns about what it leaves out, and the bundle's `README.txt` lists it. The timed showing
   and hiding of labels is in the plan (its `changes`), so a bundle plays it.
+
+**What a scene plan can say.** `scene-plan.json` is plain JSON that any text editor can change and
+any program can write, and it can say more than the scenes ThIDE makes use of:
+
+- Under `changes`, what happens while the clip runs, as keys in seconds: a thing is shown, hidden
+  or faded (`visible`), is there in part (`opacity`), takes a colour (`tint`); a model is
+  stretched (`scale`) and moved (`offset`); a light is turned up and down (`energy` — a sun that
+  goes out as the camera goes underground); the world changes its colour and its strength
+  (`worldColor`, `worldStrength`). A key may lie after the end of the clip, two keys on one frame
+  are a move that ends in a jump, and a colour can go from key to key as a screen mixes colours
+  (`"mix": "srgb"`).
+- Under `lines`, lines through given points, drawn as thin tubes: the legs of a survey, a route.
+- A ramp of colours over height can be measured in the model itself (`"space": "model"`), so the
+  colours stay with the rock while a model is stretched or moved.
+- A camera pose can have a clip range of its own (`clipStart`, `clipEnd`), for a flight from far
+  away to close by.
+
+A draft shows a model's tint, and how much of a fading model is there by the share of its faces
+it draws. The schema that describes every field is in the ThIDE repository
+(`src/Therion.Blender/Plan/scene-plan.schema.json`).
 
 ## Requirements & tips
 

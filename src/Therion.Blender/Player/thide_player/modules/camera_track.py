@@ -11,6 +11,10 @@ A pose turns the camera one of two ways, the same for every pose of a track. Wit
 orientation the camera looks at the pose's target and keeps the horizon level. With one (a unit
 quaternion w, x, y, z) the camera is turned so, roll included, which also holds where looking at a
 target cannot: straight down or straight up. The target is then only where the camera focuses.
+
+A pose may have a focal length and a clip range of its own; a pose without one has the camera's.
+The range a camera draws within moves from pose to pose as the camera does: a flight that comes
+in from far away to stand a metre from a wall keeps its depth exact at both ends.
 """
 
 import math
@@ -23,7 +27,9 @@ from thide_player import api
 SECTION = "camera"
 KEYS = {
     "sensorWidth": None, "lens": None, "clipStart": None, "clipEnd": None, "fStop": None,
-    "interpolation": None, "track": [{"t": None, "eye": None, "target": None, "lens": None, "orientation": None}],
+    "interpolation": None,
+    "track": [{"t": None, "eye": None, "target": None, "lens": None, "orientation": None,
+               "clipStart": None, "clipEnd": None}],
 }
 
 INTERPOLATIONS = {"linear": "LINEAR", "bezier": "BEZIER", "constant": "CONSTANT"}
@@ -73,6 +79,7 @@ def build(ctx, camera):
 
     moves = len(keys) > 1
     zooms = any("lens" in key for key in keys)
+    clips = any("clipStart" in key or "clipEnd" in key for key in keys)
     for index, key in enumerate(keys):
         frame = ctx.frame_at(key["t"])
         cam.location = key["eye"]
@@ -81,6 +88,13 @@ def build(ctx, camera):
             cam.rotation_quaternion = turns[index]
         if zooms:
             data.lens = key.get("lens", camera["lens"])
+        if clips:
+            near, far = key.get("clipStart", camera["clipStart"]), key.get("clipEnd", camera["clipEnd"])
+            if not 0.0 < near < far:
+                raise api.PlanError(
+                    "camera.track[%d]: a pose draws from a positive clipStart to a greater clipEnd" % index)
+            data.clip_start = near
+            data.clip_end = far
         if moves:
             cam.keyframe_insert(data_path="location", frame=frame)
             target.keyframe_insert(data_path="location", frame=frame)
@@ -88,6 +102,9 @@ def build(ctx, camera):
                 cam.keyframe_insert(data_path="rotation_quaternion", frame=frame)
             if zooms:
                 data.keyframe_insert(data_path="lens", frame=frame)
+            if clips:
+                data.keyframe_insert(data_path="clip_start", frame=frame)
+                data.keyframe_insert(data_path="clip_end", frame=frame)
     for block in (cam, target, data):
         api.set_interpolation(block, INTERPOLATIONS[interpolation])
 

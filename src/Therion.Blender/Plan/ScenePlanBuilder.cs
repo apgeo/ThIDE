@@ -177,6 +177,35 @@ public static class ScenePlanBuilder
         };
     }
 
+    /// <summary>
+    /// Puts what is written over the picture into <paramref name="plan"/>
+    /// (<see cref="ScreenTextPlanner.Plan(OverlaySpec, ScenePlan)"/> lays it out) and lists the
+    /// module that draws it. Null takes the plan's texts away.
+    /// </summary>
+    public static ScenePlan WithTexts(ScenePlan plan, PlanScreenTexts? texts)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return WithNeededFeatures(plan with { Texts = texts });
+    }
+
+    /// <summary>
+    /// Lists, at its place in the running order, every module of the player that a section of
+    /// <paramref name="plan"/> needs and its features do not name yet: for a plan put together
+    /// section by section. Nothing is taken off the list.
+    /// </summary>
+    public static ScenePlan WithNeededFeatures(ScenePlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var features = plan.Features;
+        if (plan.Lines is not null) features = WithFeature(features, ScenePlan.LinesFeature);
+        if (plan.TexturedMaterials is not null) features = WithFeature(features, ScenePlan.TexturedMaterialsFeature);
+        if (plan.Labels is not null) features = WithFeature(features, ScenePlan.LabelsFeature);
+        if (plan.Changes is { Count: > 0 }) features = WithFeature(features, ScenePlan.ChangesFeature);
+        if (plan.Texts is not null) features = WithFeature(features, ScenePlan.TextsFeature);
+        if (plan.Blend is not null) features = WithFeature(features, ScenePlan.BlendFileFeature);
+        return ReferenceEquals(features, plan.Features) ? plan : plan with { Features = features };
+    }
+
     /// <summary>The samples of a draft: enough to smooth the edges.</summary>
     public const int DraftSamples = 8;
 
@@ -545,15 +574,26 @@ public static class ScenePlanBuilder
             Transparent = spec.Engine.TransparentBackground,
             Width = spec.Output.Width,
             Height = spec.Output.Height,
-            Materials = [Rock(spec.Materials, bounds)],
+            Materials = [Material(spec.Materials, bounds)],
             Lights = lights,
             World = world,
         };
     }
 
-    private static PlanMaterial Rock(MaterialsSpec m, BoundingBox bounds)
+    /// <summary>
+    /// The material <see cref="FromSpec"/> gives a cave for <paramref name="m"/>: one colour, the
+    /// mesh's own colours, rock made of noise, or the depth tint as a ramp over the heights of
+    /// <paramref name="bounds"/>. For whoever writes a plan of their own and wants the look this
+    /// library gives a cave.
+    /// </summary>
+    /// <param name="bounds">The model's bounds in the plan's frame, for the depth tint; an empty
+    /// box gives a ramp one metre high.</param>
+    /// <param name="id">The material's id in the plan.</param>
+    public static PlanMaterial Material(MaterialsSpec m, BoundingBox bounds, string id = RockMaterialId)
     {
-        var material = new PlanMaterial { Id = RockMaterialId, Color = Rounded(m.BaseColor), Roughness = m.Roughness };
+        ArgumentNullException.ThrowIfNull(m);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var material = new PlanMaterial { Id = id, Color = Rounded(m.BaseColor), Roughness = m.Roughness };
         switch (m.Rock)
         {
             case RockMaterial.Flat:
@@ -597,9 +637,15 @@ public static class ScenePlanBuilder
         }
     }
 
-    /// <summary>The light rigs of the script generator (ScriptGenerator.EmitLighting), as data.</summary>
-    private static (IReadOnlyList<PlanLight>, PlanWorld?) Lighting(LightingSpec l)
+    /// <summary>
+    /// The lights and the world <see cref="FromSpec"/> gives a scene for <paramref name="l"/>:
+    /// the rigs of the script generator, as data. The lamp that rides the camera is "Headlamp",
+    /// the sun under a sky "Sun", the three suns "Key", "Fill" and "Rim". The rig of an image
+    /// file gives no lights and a dim plain world, which is what a plan can say of it.
+    /// </summary>
+    public static (IReadOnlyList<PlanLight> Lights, PlanWorld? World) Lighting(LightingSpec l)
     {
+        ArgumentNullException.ThrowIfNull(l);
         double s = l.Strength;
         switch (l.Rig)
         {

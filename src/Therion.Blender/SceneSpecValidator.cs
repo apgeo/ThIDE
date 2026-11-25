@@ -161,6 +161,8 @@ public static class SceneSpecValidator
                 bad("labels.overlays.endCard.text", "An end card needs its text.");
             if (!(card.Seconds > 0 && card.Seconds <= MaxEndCardSeconds))
                 bad("labels.overlays.endCard.seconds", $"An end card stays for more than 0 and at most {MaxEndCardSeconds} seconds.");
+            if (!(card.Backdrop >= 0 && card.Backdrop <= 1))
+                bad("labels.overlays.endCard.backdrop", "An end card's backdrop must be within 0–1.");
         }
         if (overlays.TitleSeconds is { } titleSeconds && !(titleSeconds > 0 && titleSeconds <= MaxDurationSeconds))
             bad("labels.overlays.titleSeconds", "A title card stays for more than 0 seconds.");

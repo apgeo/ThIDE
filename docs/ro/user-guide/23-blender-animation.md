@@ -112,7 +112,7 @@ nu le poate ascunde: un titlu rămâne lizibil și în cea mai îngustă galerie
 | Linie de credite | dreapta jos | mică, rămâne tot timpul |
 | Linie de colț | stânga sus | rămâne tot timpul; textele de colț temporizate apar sub ea |
 | Subtitrări | jos, la mijloc | fiecare în timpul ei, pe un fundal întunecat, câte una: o subtitrare care începe cât alta încă se vede o înlocuiește |
-| Cadru de final | toată imaginea | un text pe negru, timp de secundele lui *după* ultimul cadru al scenei: filmul este cu atât mai lung |
+| Cadru de final | toată imaginea | un text pe negru, timp de secundele lui *după* ultimul cadru al scenei: filmul este cu atât mai lung. Poate lăsa acel cadru să se vadă sau poate veni peste sfârșitul scenei (mai jos) |
 | Treceri | toată imaginea | filmul poate ieși din negru la început și intra în negru la sfârșit |
 
 Literele sunt cele ale fontului propriu al Blender (cu diacriticele românești ș, ț, ă, î, â), albe
@@ -123,6 +123,17 @@ Panoul are câmpuri pentru linia de credite și pentru cadrul de final. Celelalt
 într-o specificație de randare (JSON-ul pe care îl ține o presetare, la `labels.overlays`), în
 linia de comandă (`--title`, `--credits`, `--end-card`, `--caption`) sau de către un asistent, prin
 uneltele MCP.
+
+**Un cadru de final peste scenă.** Într-o specificație de randare, cadrul de final mai are două
+setări, la `labels.overlays.endCard`. `backdrop` spune cât de întunecat este cadrul: 1 (implicit)
+este cadrul negru, 0 lasă ultimul cadru al scenei așa cum este și pune textul pe un fundal
+întunecat al lui, iar un număr între ele întunecă doar cadrul. `"overScene": true` aduce cadrul de
+final peste ultimele secunde ale scenei, care continuă sub el, în loc să țină pe loc ultimul
+cadru: filmul nu mai este atunci mai lung din cauza lui.
+
+```json
+"endCard": { "text": "Mulțumim", "seconds": 4, "backdrop": 0.5, "overScene": true }
+```
 
 **Subtitrările sunt scrise și ca fișiere de subtitrare**: `<nume>.srt` și `<nume>.vtt` lângă film,
 pentru un player video sau o pagină web care le poate afișa, ascunde sau traduce.
@@ -248,7 +259,7 @@ mai nou, fără ThIDE:
 ```
 therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
                     --bundle cave-bundle.zip [--draft] [--render [--render-plan full|draft|both]] \
-                    [--out <dir>] [--blender <path>]
+                    [--out <dir>] [--blender <path>] [--readme-language en|ro]
 ```
 
 Pachetul conține planul scenei (`scene-plan.json`: mișcarea camerei, aspectul și ieșirea, ca JSON
@@ -283,12 +294,35 @@ din `scene-plan.json` a fost schimbat. Subtitrările sunt deja în pachet ca fi�
   camerei, înainte de randarea lungă. Randarea completă rămâne la o opțiune distanță:
   `--render-plan` alege `full` (planul complet), `draft` (previzualizarea) sau `both` (întâi
   previzualizarea, apoi planul complet). `draft` și `both` cer `--draft`.
+- `--readme-language ro` scrie fișierul `README.txt` al pachetului în română; fără această
+  opțiune, el este în engleză.
 - Același model cu aceleași setări dă întotdeauna, sub același nume, aceeași arhivă, octet cu
   octet.
 - Un plan de scenă nu poate exprima încă tot ce poate o specificație de randare: iluminarea HDRI
   este omisă. Comanda avertizează pentru ce omite, iar fișierul `README.txt` al pachetului
   enumeră ce a fost omis. Afișarea și ascunderea temporizată a etichetelor se află în plan (la
   `changes`), așa că un pachet le redă.
+
+**Ce poate spune un plan de scenă.** `scene-plan.json` este JSON simplu, pe care orice editor de
+text îl poate modifica și orice program îl poate scrie, și poate spune mai mult decât folosesc
+scenele făcute de ThIDE:
+
+- La `changes`, ce se întâmplă cât rulează clipul, sub formă de chei în secunde: un lucru este
+  arătat, ascuns sau estompat (`visible`), este acolo doar în parte (`opacity`), capătă o culoare
+  (`tint`); un model este întins (`scale`) și mutat (`offset`); o lumină este întărită sau slăbită
+  (`energy` — un soare care se stinge când camera intră în subteran); lumea își schimbă culoarea
+  și intensitatea (`worldColor`, `worldStrength`). O cheie poate sta după sfârșitul clipului,
+  două chei pe același cadru înseamnă o mișcare care se termină cu un salt, iar o culoare poate
+  trece de la o cheie la alta așa cum amestecă un ecran culorile (`"mix": "srgb"`).
+- La `lines`, linii prin puncte date, desenate ca tuburi subțiri: vizele unei ridicări, un traseu.
+- O rampă de culori pe înălțime poate fi măsurată în modelul însuși (`"space": "model"`), așa că
+  culorile rămân pe rocă atunci când un model este întins sau mutat.
+- O poziție a camerei poate avea propriul interval de vizibilitate (`clipStart`, `clipEnd`),
+  pentru un zbor care vine de departe până aproape.
+
+O previzualizare arată nuanța unui model, iar cât dintr-un model care se estompează mai este acolo
+se vede după partea din fețele lui pe care le desenează. Schema care descrie fiecare câmp se află
+în depozitul ThIDE (`src/Therion.Blender/Plan/scene-plan.schema.json`).
 
 ## Cerințe și sfaturi
 

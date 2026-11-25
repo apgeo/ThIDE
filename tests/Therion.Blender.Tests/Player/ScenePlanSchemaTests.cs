@@ -79,7 +79,7 @@ public class ScenePlanSchemaTests
     [InlineData("\"path\": \"project/scene.blend\"", "\"path\": \"/tmp/scene.blend\"", "$.blend.path: '/tmp/scene.blend' does not match")]
     [InlineData("\"path\": \"project/scene.blend\"", "\"path\": \"project/scene.txt\"", "$.blend.path: 'project/scene.txt' does not match")]
     [InlineData("\"path\": \"project/scene.blend\"", "\"file\": \"project/scene.blend\"", "$.blend: 'path' is missing")]
-    [InlineData("\"camera_track\"", "\"Camera-Track\"", "$.features[1]: 'Camera-Track' does not match")]
+    [InlineData("\"camera_track\"", "\"Camera-Track\"", "$.features[2]: 'Camera-Track' does not match")]
     public void WhatTheFormatForbids_DoesNotConform(string original, string changed, string expected)
     {
         Assert.Contains(original, FullPlan);

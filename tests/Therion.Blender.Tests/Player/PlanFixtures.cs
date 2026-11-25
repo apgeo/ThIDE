@@ -59,6 +59,21 @@ internal static class PlanFixtures
             },
             new PlanModel { Id = "Terrain", Role = "terrain", Path = "surface.ply" },
         ],
+        Lines =
+        [
+            new PlanLine
+            {
+                Id = "Legs", Role = "survey-lines", Width = 0.6, Material = "baked", Translation = new CaveVector3(5, 0, -2),
+                Rotation = new PlanRotation { Axis = new CaveVector3(0, 0, 1), Degrees = -15 }, Scale = new CaveVector3(1, 1, 2),
+                Strips =
+                [
+                    new PlanLineStrip(
+                        [new CaveVector3(0, 0, 0), new CaveVector3(10, 0, -3), new CaveVector3(10, 8, -3.5)],
+                        [new ColorRgb(1, 0, 0), new ColorRgb(0, 1, 0), new ColorRgb(0, 0, 1)]),
+                    new PlanLineStrip([new CaveVector3(10, 0, -3), new CaveVector3(14, -2, -9)], [new ColorRgb(0, 1, 0), new ColorRgb(1, 1, 0)]),
+                ],
+            },
+        ],
         Camera = new PlanCamera
         {
             SensorWidth = 36, Lens = 28, ClipStart = 0.05, ClipEnd = 5000, FStop = 2.8,
@@ -66,7 +81,10 @@ internal static class PlanFixtures
             Track =
             [
                 new PlanCameraKey(0, new CaveVector3(10, -20, 5.5), new CaveVector3(0, 0, 0)) { Orientation = PlanQuaternion.Identity },
-                new PlanCameraKey(1, new CaveVector3(20, -10, 6), new CaveVector3(0, 0, 1), 50) { Orientation = new PlanQuaternion(0.5, 0.5, -0.5, 0.5) },
+                new PlanCameraKey(1, new CaveVector3(20, -10, 6), new CaveVector3(0, 0, 1), 50)
+                {
+                    Orientation = new PlanQuaternion(0.5, 0.5, -0.5, 0.5), ClipStart = 0.5, ClipEnd = 800,
+                },
                 new PlanCameraKey(2, new CaveVector3(30, 0, 7), new CaveVector3(0, 1e-7, 2)) { Orientation = new PlanQuaternion(0, 0.6, 0, -0.8) },
             ],
         },
@@ -76,7 +94,7 @@ internal static class PlanFixtures
             Transparent = true, Width = 640, Height = 360,
             Materials =
             [
-                new PlanMaterial { Id = "rock", Kind = PlanMaterialKind.HeightRamp, Low = -40, High = 12.5,
+                new PlanMaterial { Id = "rock", Kind = PlanMaterialKind.HeightRamp, Low = -40, High = 12.5, Space = PlanRampSpace.Model,
                     Stops = [new PlanColorStop(0, new ColorRgb(0, 0, 1)), new PlanColorStop(1, new ColorRgb(1, 0.5, 0))] },
                 new PlanMaterial { Id = "noise", Kind = PlanMaterialKind.NoiseRamp, Scale = 8, Bump = 0.15,
                     Stops = [new PlanColorStop(0, new ColorRgb(0.3, 0.3, 0.3)), new PlanColorStop(1, new ColorRgb(0.7, 0.6, 0.5))] },
@@ -142,6 +160,34 @@ internal static class PlanFixtures
             new PlanChange
             {
                 WorldColor = [new PlanColorKey(0, new ColorRgb(0.05, 0.05, 0.05)), new PlanColorKey(1.2, new ColorRgb(0.2, 0.4, 0.8))],
+            },
+            // The sun goes out, the lamp is lit; the survey lines move aside and changes its colour as a
+            // screen mixes colours, by a move that ends in a jump; a key lies after the clip's end.
+            new PlanChange
+            {
+                Target = new PlanChangeTarget { Id = "Key" },
+                Energy = [new PlanNumberKey(0.4, 4), new PlanNumberKey(1.2, 0, PlanEasing.Smooth)],
+            },
+            new PlanChange
+            {
+                Target = new PlanChangeTarget { Id = "Headlamp" },
+                Visible = [new PlanVisibleKey(1.2, true)],
+            },
+            new PlanChange
+            {
+                Target = new PlanChangeTarget { Id = "Legs" },
+                Visible = [new PlanVisibleKey(0, true, 0.8, PlanEasing.Smooth)],
+                Tint =
+                [
+                    new PlanTintKey(0, new ColorRgb(1, 0, 0), 1),
+                    new PlanTintKey(1, new ColorRgb(0, 1, 0), 1) { Mix = PlanColorMix.Srgb },
+                    new PlanTintKey(1, new ColorRgb(0, 0, 1), 1, PlanEasing.Constant),
+                ],
+                Offset = [new PlanVectorKey(0, new CaveVector3(0, 0, 0)), new PlanVectorKey(3.5, new CaveVector3(0, 25, -4), PlanEasing.Smooth)],
+            },
+            new PlanChange
+            {
+                WorldStrength = [new PlanNumberKey(0, 0.5), new PlanNumberKey(1.2, 0.05)],
             },
         ],
         Texts = new PlanScreenTexts

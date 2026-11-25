@@ -139,6 +139,19 @@ internal sealed record ProbeThing
     /// <summary>Its size along its own axes, in the scene.</summary>
     public double[] Scale { get; init; } = [];
 
+    /// <summary>Where its own origin is in the scene.</summary>
+    public double[] Location { get; init; } = [];
+
+    /// <summary>How strong it is, for a light.</summary>
+    public double? Energy { get; init; }
+
+    /// <summary>For a model that a modifier changes in the draft look: how many of its faces
+    /// are there at this frame, how many it was built with, and the mean of the colours the
+    /// solid view shows for it.</summary>
+    public int? Faces { get; init; }
+    public int? FacesBuilt { get; init; }
+    public double[]? ShownColour { get; init; }
+
     /// <summary>The numbers its material reads; null when the object has none.</summary>
     public double? Fade { get; init; }
     public double? Opacity { get; init; }
