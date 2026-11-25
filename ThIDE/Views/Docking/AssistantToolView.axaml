@@ -87,7 +87,7 @@
                                 AutomationProperties.AutomationId="Assistant.Stop"
                                 IsVisible="{Binding IsBusy}" Padding="12,4" />
                     </StackPanel>
-                    <TextBox Text="{Binding Input, Mode=TwoWay}" Watermark="{l:Loc Assistant_InputWatermark}"
+                    <TextBox Text="{Binding Input, Mode=TwoWay}" PlaceholderText="{l:Loc Assistant_InputWatermark}"
                              AutomationProperties.AutomationId="Assistant.Input" AutomationProperties.Name="{l:Loc Assistant_InputWatermark}"
                              AcceptsReturn="False" VerticalAlignment="Center"
                              IsEnabled="{Binding !IsBusy}" KeyDown="OnInputKeyDown" />

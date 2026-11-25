@@ -139,6 +139,10 @@ public sealed record EndCardSpec
     /// <summary>True brings the card over the last <see cref="Seconds"/> of the scene, which
     /// goes on under it: the movie is no longer for it. False holds the last frame for the card.</summary>
     public bool OverScene { get; init; }
+
+    /// <summary>How long the card takes to appear, in seconds; 0 is at once. Null is half a
+    /// second, or half the card's time when that is less.</summary>
+    public double? Fade { get; init; }
 }
 
 /// <summary>A line of text shown at the bottom of the picture from <see cref="Start"/> to
@@ -187,6 +191,11 @@ public sealed record OverlaySpec
     /// frame for this many seconds, then fades out. Null keeps the title at the top of the
     /// picture throughout.</summary>
     public double? TitleSeconds { get; init; }
+
+    /// <summary>How long the title takes to appear, in seconds, and, when it is a card
+    /// (<see cref="TitleSeconds"/>), to go. Null: a title is there from the first frame, and a
+    /// card takes <see cref="Plan.ScreenTextPlanner.TitleFadeSeconds"/> to go.</summary>
+    public double? TitleFade { get; init; }
 
     /// <summary>A line that stays in the top left corner of the picture throughout, beside the
     /// credits line: a place, a date. Null or blank is none.</summary>

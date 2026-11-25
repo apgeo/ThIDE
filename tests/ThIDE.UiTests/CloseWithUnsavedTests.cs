@@ -6,7 +6,7 @@ public class CloseWithUnsavedTests
     [UiFact]
     public async Task Exit_with_unsaved_edits_asks_before_closing()
     {
-        var dir = Directory.CreateTempSubdirectory("thide-ui-close-").FullName;
+        var dir = ThideApp.RemoveAtExit(Directory.CreateTempSubdirectory("thide-ui-close-").FullName);
         var path = Path.Combine(dir, "a.th");
         File.WriteAllText(path, "survey a\nendsurvey\n");
 

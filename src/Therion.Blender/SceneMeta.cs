@@ -141,6 +141,12 @@ public sealed record SceneMeta
     public required IReadOnlyList<SceneMetaComponent> Components { get; init; }
     public IReadOnlyList<SceneMetaLead> Leads { get; init; } = [];
 
+    /// <summary>The length of the model's centreline, in metres: the sum of its legs, with the
+    /// legs the model flags as surface, splay or duplicate left out. It is what the model
+    /// holds, which is not always the cave's surveyed length as a report states it. Null in a
+    /// document written before this was kept.</summary>
+    public double? CenterlineLength { get; init; }
+
     /// <summary>The reveal values of the wall mesh; null when it has none.</summary>
     public SceneMetaReveal? Reveal { get; init; }
 
@@ -213,6 +219,9 @@ public sealed record SceneMeta
             WallVertexCount = geometry.Walls.Vertices.Count,
             WallTriangleCount = geometry.Walls.Triangles.Count,
             Surveys = surveys,
+            CenterlineLength = Math.Round(model.Shots
+                .Where(shot => (shot.Flags & (CaveShotFlags.Surface | CaveShotFlags.Splay | CaveShotFlags.Duplicate)) == 0)
+                .Sum(shot => (shot.ToPosition - shot.FromPosition).Length), 3),
             Stations = stations,
             Components = components,
             Reveal = geometry.Reveal is { } reveal && geometry.Walls.HasReveal

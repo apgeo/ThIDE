@@ -137,6 +137,11 @@ Literele sunt cele ale fontului propriu al Blender (cu diacriticele românești 
 cu un contur întunecat, și au mărimea dată de înălțimea imaginii, așa că un film se citește la fel
 la orice rezoluție. Totul păstrează o margine de 5 % față de marginile imaginii.
 
+Într-o imagine **mai înaltă decât lată** (9:16, ca pe telefon), titlul, subtitlul și săgeata nordului
+sunt mai mici, după forma imaginii, iar rândurile titlului se termină înainte să înceapă săgeata: un
+titlu de câteva cuvinte rămâne pe un singur rând și nu atinge săgeata. O imagine de 3:2 sau mai
+lată este așezată așa cum este descris mai sus.
+
 ### Textele din panou
 
 La **Texte peste imagine**, panoul are textele din tabelul de mai sus:
@@ -171,6 +176,15 @@ când pornește randarea: titlul unui fișier `.3d` sau titlul ridicării din v�
 folosesc pentru titlurile lor, de aceea câmpul Titlu arată `{cave}` până scrieți altceva. Un text
 care nu este altceva decât numele este lăsat deoparte când modelul nu are nume.
 
+**Două numere ale modelului.** `{length}` ține locul lungimii axei topografice a modelului, iar
+`{depth}` al întinderii lui pe verticală, fiecare în metri întregi, cu unitatea („1234 m”, „87 m”).
+Sunt ceea ce conține modelul însuși: `{length}` este suma vizelor lui, fără cele pe care le are
+semnalate ca fiind de suprafață, radiante (splay) sau duplicate, iar `{depth}` este înălțimea de la
+stația cea mai de jos la cea mai de sus. Acestea nu sunt întotdeauna dezvoltarea și denivelarea
+dintr-un raport (un model poate conține doar o parte a peșterii sau vize de suprafață nesemnalate);
+scrieți numerele de mână acolo unde trebuie să fie cele oficiale. Un text care nu este altceva decât
+un număr pe care modelul nu îl dă este lăsat deoparte.
+
 **Texte în presetări.** O presetare păstrează textele împreună cu toate celelalte. **Salvează**
 stochează titlul și subtitlul lui, linia de credite, cadrul de final, scara grafică, săgeata
 nordului, legenda adâncimii, trecerile și subtitrările așa cum sunt în panou, iar alegerea
@@ -191,6 +205,17 @@ cadru: filmul nu mai este atunci mai lung din cauza lui.
 
 ```json
 "endCard": { "text": "Mulțumim", "seconds": 4, "backdrop": 0.5, "overScene": true }
+```
+
+**Cât durează apariția și dispariția.** Într-o specificație de randare, `"fade"` la cadrul de
+final spune în câte secunde apare (0 înseamnă dintr-odată; fără el, o jumătate de secundă), iar
+`"titleFade"` lângă titlu spune cât durează apariția titlului și, când este un cadru de titlu,
+dispariția lui (fără el, titlul este prezent de la primul cadru, iar un cadru de titlu dispare în
+0,8 s):
+
+```json
+"title": "{cave}", "titleSeconds": 3, "titleFade": 1.5,
+"endCard": { "text": "Mulțumim", "seconds": 4, "fade": 2 }
 ```
 
 **Subtitrările sunt scrise și ca fișiere de subtitrare**: `<nume>.srt` și `<nume>.vtt` lângă film,
@@ -345,6 +370,10 @@ O fotografie care stă cu fața spre cameră rămâne paralelă cu imaginea și 
 vede mereu ca dreptunghiul care este. Își arată imaginea așa cum ar arăta-o un ecran, oricare ar fi
 lumina din peșteră, și nu luminează nimic. Un text și un marcaj strălucesc, ca etichetele.
 
+**Transparență.** Acolo unde un PNG este transparent (o imagine decupată de pe fundalul ei),
+fotografia lipsește și se vede peștera din spatele ei; mozaicul unei previzualizări arată tot
+dreptunghiul.
+
 **Fotografii.** O fotografie este un PNG sau un JPEG de cel mult 32 MiB, 16 384 de pixeli pe o
 latură și 64 de milioane de pixeli; orice altceva este respins înainte ca Blender să pornească. O
 imagine lată de 2 000 de pixeli este mai mult decât arată un film: fișierele mai mici dau pachete
@@ -413,6 +442,39 @@ therion-cli blender cave.lox --hdri ceruri/seara.hdr --hdri-rotation 90 --hdri-s
   că un pachet se randează pe alt calculator fără el.
 - O previzualizare nu desenează nicio imagine: fundalul ei este un gri simplu, la fel de puternic
   cum este setată imaginea.
+
+## O peșteră privită de departe: bătaia lămpii
+
+Lumina *Headlamp* este o lampă care stă pe cameră, iar lumina ei scade cu pătratul distanței:
+luminează bine un perete aflat la trei metri, pe unul aflat la 25 m cam a douăsprezecea parte, iar
+pe unul aflat la 140 m deloc. Un zbor prin galerii este mereu aproape de un perete. O cameră care
+stă departe de peșteră (o orbită, o imagine statică a întregii peșteri, un zbor care urmărește de la
+30–140 m) o vede întunecată.
+
+**Lampa bate până unde privește camera** întărește lampa cu pătratul distanței de la cameră până
+la ceea ce privește, dincolo de 3 m, astfel încât peștera este luminată de departe la fel ca de
+aproape. Mai aproape de 3 m lampa își păstrează tăria, iar **Intensitatea luminii** o scalează în
+continuare.
+
+- **În panou**, la **Lumină**: bifați **Lampa bate până unde privește camera** (se poate bifa cât
+  timp lumina este *Headlamp*).
+- **Într-o specificație de randare**: `"lighting": { "rig": "Headlamp", "lampReach": true }`.
+- **În linia de comandă**: `--lamp-reach`, care alege și lampa de pe cameră ca lumină.
+
+Este desenată doar de player; un script scris de generatorul de scripturi o lasă deoparte și spune
+acest lucru. În cifrele unei randări de test: o peșteră inventată, într-o imagine statică de la
+148 m, are luminozitatea 0,1 din 255 cu lampa așa cum este și 154 cu bătaia activă.
+
+Cine scrie planuri de scenă cu biblioteca are încă două unelte pentru aceasta (vedeți `CHANGES.md`
+al bibliotecii): `LampReach`, care pune chei pe energia lămpii după distanțe proprii, și un
+material **neluminat** (`"unlit": true`), care își arată culorile așa cum le arată un ecran,
+oricare ar fi lumina, pentru vize topografice și trasee care trebuie să se citească de la orice
+distanță.
+
+**Lumina *SunSky* este aceeași în orice Blender.** Blender 5 are un model de cer mai nou pe lângă
+cel din Blender 4, mai albastru și mai luminos; playerul cere în ambele cerul din Blender 4, așa că
+o scenă arată la fel în Blender 4.2, 4.5 și 5.0. (Până la playerul 1.8 al ThIDE, o scenă sub soare
+și cer arăta foarte diferit în Blender 5.)
 
 ## Doi constructori de scenă
 
@@ -488,7 +550,8 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]... \
                     [--reveal date|order|distance [--reveal-from <station>] \
                      [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]] \
-                    [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]]
+                    [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]] \
+                    [--leads <file.json>]... [--lamp-reach]
 ```
 
 `--export` scrie scriptul și resursele fără a rula Blender; altfel randează. Căile fișierelor
@@ -508,6 +571,17 @@ randării, `2` la o eroare de utilizare sau de specificație.
   fundalul: vedeți [Iluminarea cu o imagine (HDRI)](#iluminarea-cu-o-imagine-hdri).
   `--hdri-rotation 90` o rotește, iar `--hdri-strength 1.5` o face mai luminoasă. Merge și cu
   `--bundle`.
+- `--lamp-reach` luminează scena cu lampa de pe cameră și o întărește după distanța la care
+  privește camera: vedeți
+  [O peșteră privită de departe](#o-peșteră-privită-de-departe-bătaia-lămpii). Nu merge împreună
+  cu `--hdri`.
+- **Marcaje pentru continuări.** O presetare sau o specificație care marchează continuările (*Full
+  flythrough* o face) marchează stațiile pe care modelul însuși le are semnalate drept continuări,
+  lucru pe care îl conține un fișier `.lox` (în Therion: `station <nume> "<comentariu>"
+  continuation`); un fișier `.3d` nu are asemenea semnalări. `--leads continuari.json` numește în
+  schimb stațiile de marcat (o dată pentru fiecare fișier): o listă JSON ale cărei elemente sunt
+  numele unei stații sau `{ "station": "main.12", "note": "curent de aer" }`. O stație pe care
+  modelul nu o are este lăsată deoparte. Merge și cu `--bundle`.
 - `--annotations note.json` adaugă etichetele, notele cu linie, marcajele și fotografiile dintr-un
   fișier la cele ale presetării sau ale specificației: vezi
   [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii). Merge și cu `--bundle`. Un

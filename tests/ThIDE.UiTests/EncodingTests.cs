@@ -8,7 +8,7 @@ public class EncodingTests
     [UiFact]
     public async Task A_latin1_file_is_saved_back_in_latin1()
     {
-        var dir = Directory.CreateTempSubdirectory("thide-ui-enc-").FullName;
+        var dir = ThideApp.RemoveAtExit(Directory.CreateTempSubdirectory("thide-ui-enc-").FullName);
         var path = Path.Combine(dir, "legacy.th");
         File.WriteAllBytes(path, Encoding.Latin1.GetBytes("encoding iso8859-1\nsurvey grotte -title \"Grotte de la Fée\"\nendsurvey\n"));
 

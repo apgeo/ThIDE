@@ -147,6 +147,11 @@ def glowing(name, colour, strength):
     return material
 
 
+# The node of a material that lets through what its image leaves clear: a mix of nothing and the
+# material's own shader, which is its third input.
+CUT_OUT = "ThideCutOut"
+
+
 def text_facing(camera, name, body, size, material):
     """A new text, centred on its own origin, that turns to face the camera. It is not in the
     scene yet (see stand)."""

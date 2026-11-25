@@ -497,7 +497,7 @@ public class BlenderPanelTests
         if (!OnPath("therion")) return;
         var dir = DemoCave();
         var before = Directory.GetFileSystemEntries(dir).Order(StringComparer.Ordinal).ToArray();
-        var renders = Path.Combine(Path.GetTempPath(), "thide-ui-reexport-" + Guid.NewGuid().ToString("N"));
+        var renders = ThideApp.RemoveAtExit(Path.Combine(Path.GetTempPath(), "thide-ui-reexport-" + Guid.NewGuid().ToString("N")));
         var scripts = Path.Combine(renders, "stub-scripts");
         var environment = new Dictionary<string, string>
         {

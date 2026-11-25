@@ -200,7 +200,10 @@
               "high": { "type": "number", "description": "The height where a heightRamp ends." },
               "space": { "enum": ["scene", "model"], "description": "Where a heightRamp measures 'low' and 'high'. scene (the default): in the plan's frame, so a model that is stretched or moved passes through the colours. model: in the model's own coordinates, as its file has them, before its scale, rotation and translation, so a colour stays with the rock it is on." },
               "scale": { "type": "number", "exclusiveMinimum": 0, "description": "Of a noiseRamp's noise; larger is finer." },
-              "bump": { "type": "number", "minimum": 0, "description": "How strongly a noiseRamp's noise bumps the surface." }
+              "bump": { "type": "number", "minimum": 0, "description": "How strongly a noiseRamp's noise bumps the surface." },
+              "banded": { "type": "boolean", "description": "True for a ramp in bands: the colour of a stop holds from the stop up to the next one, and changes there at once, where a ramp otherwise blends from stop to stop. Default false." },
+              "unlit": { "type": "boolean", "description": "True for a material that no light changes: it shows the colours of its kind as a screen shows them, in a cave no lamp reaches as under the sun, and lights nothing itself. For what has to read at any distance: survey lines, a route. Roughness has no part in it. Default false." },
+              "strength": { "type": "number", "minimum": 0, "description": "How brightly an unlit material shows its colours: 1 (the default) as they are." }
             }
           }
         },
@@ -228,6 +231,7 @@
             "kind": { "enum": ["color", "sky", "image"], "description": "One colour all round, a procedural daylight sky, or an image all round that is the background and lights the scene (an HDRI)." },
             "color": { "$ref": "#/$defs/color" },
             "strength": { "type": "number", "minimum": 0, "description": "The factor the colour, the sky or the image is multiplied by. A change without a target can key it (worldStrength)." },
+            "backdrop": { "type": "number", "minimum": 0, "description": "How bright the camera sees the world, set apart from 'strength', which is then only how strongly the world lights the scene: a sky that is seen and lights little, or one that lights and is not seen (0). Without it the camera sees the world as strong as it lights. A change without a target can key it (worldBackdrop)." },
             "image": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([hH][dD][rR]|[eE][xX][rR])$", "description": "Of the kind 'image': a Radiance .hdr or an OpenEXR .exr file, relative to the plan. An equirectangular picture (longitude by latitude, twice as wide as high), its upper edge overhead and its middle in the east (+X): from left to right it runs from the west by the north, the east and the south back to the west." },
             "rotation": { "type": "number", "description": "Of the kind 'image': how far the image is turned about the vertical, in degrees, anticlockwise seen from above." }
           }
@@ -330,7 +334,7 @@
       }
     },
     "changes": {
-      "description": "Played by the module 'changes', after the modules that make what it changes ('look', 'textured_materials', 'labels', 'annotations'): what changes while the clip runs. Each entry names a target and gives every property that changes its keys, in rising order of time: at 't' seconds the property has the key's value. Between two keys it moves as the later key's 'easing' says; before its first key a property has that key's value and after its last one it keeps it, so a single key is a value for the whole clip. A key may lie after the clip's last frame: the clip then ends on the way to it. Two keys of a property may fall on one frame (not of 'visible'): the first is where the value was going, the second, whose easing is 'constant', the value it has from that frame on. An entry without a target is of the scene itself (worldColor, worldStrength). Two entries do not change the same property of the same thing. 'reveal' is the one property that shows a target part by part: see there. Not carried: a change of a material's image.",
+      "description": "Played by the module 'changes', after the modules that make what it changes ('look', 'textured_materials', 'labels', 'annotations'): what changes while the clip runs. Each entry names a target and gives every property that changes its keys, in rising order of time: at 't' seconds the property has the key's value. Between two keys it moves as the later key's 'easing' says; before its first key a property has that key's value and after its last one it keeps it, so a single key is a value for the whole clip. A key may lie after the clip's last frame: the clip then ends on the way to it; and before its first ('t' below 0): the clip then begins on the way from it, part of the way through a move or a fade. Up to three keys of a property may fall on one frame (not of 'visible'): the first is where the value was going, the second, whose easing is 'constant', the value it has on that frame and from it on, and a third ('constant' too) the value the move to the next key starts from, which no frame shows. An entry without a target is of the scene itself (worldColor, worldStrength, worldBackdrop, worldRotation). Two entries do not change the same property of the same thing. 'reveal' is the one property that shows a target part by part: see there. Not carried: a change of a material's image.",
       "type": "array",
       "items": {
         "type": "object",
@@ -356,7 +360,7 @@
               "required": ["t", "value"],
               "additionalProperties": false,
               "properties": {
-                "t": { "type": "number", "minimum": 0 },
+                "t": { "type": "number" },
                 "value": { "type": "boolean", "description": "true: shown from 't' on; false: hidden." },
                 "fade": { "type": "number", "minimum": 0, "description": "Seconds the change takes, starting at 't': the target appears little by little, or goes little by little and is hidden when it has gone. Default 0: at once." },
                 "easing": { "enum": ["linear", "smooth"], "description": "How a fade runs: evenly (linear, the default) or eased in and out (smooth)." }
@@ -372,7 +376,7 @@
               "required": ["t", "value"],
               "additionalProperties": false,
               "properties": {
-                "t": { "type": "number", "minimum": 0 },
+                "t": { "type": "number" },
                 "value": { "type": "number", "minimum": 0, "maximum": 1, "description": "0: nothing of it; 1: as its material has it." },
                 "easing": { "$ref": "#/$defs/easing" }
               }
@@ -387,7 +391,7 @@
               "required": ["t", "color", "strength"],
               "additionalProperties": false,
               "properties": {
-                "t": { "type": "number", "minimum": 0 },
+                "t": { "type": "number" },
                 "color": { "$ref": "#/$defs/color" },
                 "strength": { "type": "number", "minimum": 0, "maximum": 1, "description": "0: none of the colour; 1: nothing but it." },
                 "easing": { "$ref": "#/$defs/easing" },
@@ -404,7 +408,7 @@
               "required": ["t", "value"],
               "additionalProperties": false,
               "properties": {
-                "t": { "type": "number", "minimum": 0 },
+                "t": { "type": "number" },
                 "value": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "minItems": 3, "maxItems": 3 },
                 "easing": { "$ref": "#/$defs/easing" }
               }
@@ -419,7 +423,7 @@
               "required": ["t", "value"],
               "additionalProperties": false,
               "properties": {
-                "t": { "type": "number", "minimum": 0 },
+                "t": { "type": "number" },
                 "value": { "$ref": "#/$defs/vector" },
                 "easing": { "$ref": "#/$defs/easing" }
               }
@@ -434,14 +438,14 @@
               "required": ["t", "value"],
               "additionalProperties": false,
               "properties": {
-                "t": { "type": "number", "minimum": 0 },
+                "t": { "type": "number" },
                 "value": { "type": "number", "minimum": 0 },
                 "easing": { "$ref": "#/$defs/easing" }
               }
             }
           },
-          "worldStrength": {
-            "description": "Of an entry without a target: the strength of look.world, which the look must have. 0 is a world that lights nothing.",
+          "worldBackdrop": {
+            "description": "Of an entry without a target: how bright the camera sees look.world, set apart from how strongly it lights the scene (worldStrength, look.world.strength). 0 is a world that is not seen and lights as it did.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -449,7 +453,37 @@
               "required": ["t", "value"],
               "additionalProperties": false,
               "properties": {
-                "t": { "type": "number", "minimum": 0 },
+                "t": { "type": "number" },
+                "value": { "type": "number", "minimum": 0 },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "worldRotation": {
+            "description": "Of an entry without a target: how far the image of look.world is turned about the vertical, in degrees, anticlockwise seen from above, as look.world.rotation has it. For a world of the kind 'image'.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number" },
+                "value": { "type": "number" },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "worldStrength": {
+            "description": "Of an entry without a target: the strength of look.world, which the look must have. 0 is a world that lights nothing. With a backdrop set apart (look.world.backdrop, worldBackdrop) it is how strongly the world lights the scene, and the backdrop does not follow it.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number" },
                 "value": { "type": "number", "minimum": 0 },
                 "easing": { "$ref": "#/$defs/easing" }
               }
@@ -464,7 +498,7 @@
               "required": ["t", "value"],
               "additionalProperties": false,
               "properties": {
-                "t": { "type": "number", "minimum": 0 },
+                "t": { "type": "number" },
                 "value": { "$ref": "#/$defs/color" },
                 "easing": { "$ref": "#/$defs/easing" },
                 "mix": { "$ref": "#/$defs/mix" }
@@ -480,7 +514,7 @@
               "required": ["t", "value"],
               "additionalProperties": false,
               "properties": {
-                "t": { "type": "number", "minimum": 0 },
+                "t": { "type": "number" },
                 "value": { "type": "number", "description": "The threshold at 't', in the units of the reveal values." },
                 "easing": { "$ref": "#/$defs/easing" }
               }
@@ -587,7 +621,8 @@
             "properties": {
               "id": { "type": "string", "minLength": 1, "description": "The item's name in the video editor; unique among the items." },
               "role": { "$ref": "#/$defs/role", "description": "What the item is: title, caption, credits ... An item with the role 'caption' is what a subtitle file would say." },
-              "kind": { "enum": ["text", "box", "arrow"], "description": "text: lines of text. box: a rectangle of one colour. arrow: an arrow that turns about its middle, with an optional letter at its tip." },
+              "kind": { "enum": ["text", "box", "arrow", "image"], "description": "text: lines of text. box: a rectangle of one colour. arrow: an arrow that turns about its middle, with an optional letter at its tip. image: a picture from a file, laid over the frames: a photo in a corner, or over the whole picture." },
+              "image": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([pP][nN][gG]|[jJ][pP][eE]?[gG])$", "description": "Of an image: its file, a PNG or a JPEG, relative to the plan. Where a PNG is clear the picture shows through. 'width' is its width as a share of the picture's width and 'height', when given, its height as a share of the picture's height (without it the image keeps its shape); 'at' is the point of it that alignX and alignY name." },
               "at": { "$ref": "#/$defs/point", "description": "The point of a text that alignX and alignY name; the middle of a box or an arrow." },
               "text": { "type": "string", "description": "What a text says; the letter at the tip of an arrow." },
               "size": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "The height of a text's letters, or the length of an arrow, as a share of the picture's height." },

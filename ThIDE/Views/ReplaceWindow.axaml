@@ -11,8 +11,8 @@
         Title="{l:Loc Replace_Title}">
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top" Spacing="6">
-            <TextBox AutomationProperties.AutomationId="Replace.Query" AutomationProperties.Name="{l:Loc Replace_FindWm}" x:Name="QueryBox" Watermark="{l:Loc Replace_FindWm}" Text="{Binding Query, Mode=TwoWay}" />
-            <TextBox AutomationProperties.AutomationId="Replace.Replacement" AutomationProperties.Name="{l:Loc Replace_WithWm}" Watermark="{l:Loc Replace_WithWm}" Text="{Binding Replacement, Mode=TwoWay}" />
+            <TextBox AutomationProperties.AutomationId="Replace.Query" AutomationProperties.Name="{l:Loc Replace_FindWm}" x:Name="QueryBox" PlaceholderText="{l:Loc Replace_FindWm}" Text="{Binding Query, Mode=TwoWay}" />
+            <TextBox AutomationProperties.AutomationId="Replace.Replacement" AutomationProperties.Name="{l:Loc Replace_WithWm}" PlaceholderText="{l:Loc Replace_WithWm}" Text="{Binding Replacement, Mode=TwoWay}" />
 
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <CheckBox AutomationProperties.AutomationId="Replace.MatchCase" Content="{l:Loc Search_MatchCase}"  IsChecked="{Binding MatchCase, Mode=TwoWay}" />

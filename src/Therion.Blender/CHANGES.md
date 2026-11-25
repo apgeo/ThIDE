@@ -1,5 +1,208 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-25 (later) — keys before the clip and three on a frame, a backdrop apart from the light, bands, photos over the picture
+
+The plan stays **version 1**, and this is the same player **1.9** as the entry below: the two
+were made in one step. Everything here is a new key or a rule that became wider, so every plan of
+yesterday plays as it did. A plan that uses one of the new keys needs a player 1.9 (a player 1.8
+refuses the key by name; a key before the clip or a third key on a frame it refuses with "keys
+are in rising order of time" or "no more than two keys").
+
+### Breaking changes
+- None in this library's API. `ScenePlanValidator` no longer refuses a change key with a negative
+  time, and takes three keys on a frame where it took two: a producer that relied on those
+  refusals to catch its own mistakes checks them itself.
+- `SceneMeta` (`scene-meta.json`, still version 1) has one more field, `centerlineLength`; a
+  document without it reads as before.
+
+### Changes: keys before the first frame
+- **A key's `t` may be negative** (`changes[].*[].t`, also of `visible`): the clip then begins on
+  the way from that key, part of the way through a move, a smooth move or a fade. A smooth move
+  from −1 s to 1 s is half done on the first frame, and is the same curve it would be from 0.
+  A `visible` key at −0.5 s with a fade of 1 s has the target half there on the first frame.
+  Before, such keys were refused, and a producer had to work out the first frame's value and
+  could not say "part of a smooth move" at all.
+
+### Changes: a third key on a frame
+- **Up to three keys of a property may fall on one frame.** The first is where the value was
+  going, the second (`constant`) is what the frame shows and has from then on, and a third
+  (`constant`) is **the value the move to the next key starts from, which no frame shows**: the
+  frame after is one frame along a move that began at the third key's value. For a track that
+  restarts a curve at a cut: `[…, {t: 2, value: 20}, {t: 2, value: 50, easing: "constant"},
+  {t: 2, value: 100, easing: "constant"}, {t: 3, value: 200}]` shows 50 on the frame at 2 s and
+  110 a tenth of a second later (at 10 fps). The curve is still one Blender works out by itself.
+
+### The world: a backdrop apart from the light
+- **`PlanWorld.Backdrop`** (`look.world.backdrop`) is how bright the camera sees the world, set
+  apart from `strength`, which is then only how strongly the world lights the scene. Without it
+  nothing changes: one strength for both.
+- **`PlanChange.WorldBackdrop`** (`changes[].worldBackdrop`, no target) keys it; `worldStrength`
+  then keys the light alone. A sky that stays behind a cave while its light goes out underground
+  is `worldStrength` to 0 with `worldBackdrop` left at 1; a world that lights and is not seen is
+  `backdrop: 0`. Either sets the world apart; a world that is set apart no longer shows its
+  backdrop following `worldStrength`.
+- **`PlanChange.WorldRotation`** (`changes[].worldRotation`, no target) keys how far the world's
+  image is turned, in degrees, as `look.world.rotation` has it: an HDRI that turns while the
+  clip runs. For a world of the kind `image`.
+
+### Materials: a ramp in bands
+- **`PlanMaterial.Banded`** (`look.materials[].banded`, written only when true): the colour of a
+  stop holds from the stop up to the next one and changes there at once. It replaces two stops
+  a ten-thousandth apart at every edge: bands by depth are one stop each, `{ at: <where the
+  band begins>, color }`, in rising order. In a draft a band ends along the faces of the mesh.
+
+### Texts: an image over the picture, and fade lengths
+- **`PlanScreenItemKind.Image`** (`texts.items[].kind: "image"`, with `image`): a PNG or a JPEG
+  laid over the frames in the second stage, as a text is: `width` is its width as a share of the
+  picture's width, `height` (optional) its height as a share of the picture's height, `at` the
+  point that `alignX`/`alignY` name, and it has `start`, `end`, `fadeIn`, `fadeOut`, `opacity`
+  and `slot` as every item has. Where a PNG is clear the picture shows through. Its file
+  travels with the plan (`PlayerWriter.FilesOf`, a bundle, a single file) and is checked as a
+  photo is. It changes no frame of the first stage: `--stage compose` is enough after one changes.
+- **`ScreenTextPlanner.PhotoInset(id, image, imageInfo, pictureWidth, pictureHeight,
+  wholePicture, start, end, fade)`** lays a photo out as such an item: in the lower right corner
+  (at most 0.3 of the width and 0.35 of the height, above the credits line) or over the whole
+  picture inside the margin, keeping its shape. **Not built:** a `SceneSpec` annotation that asks
+  for an inset, and with it the panel, the command line and the MCP tools; a producer of plans
+  adds the item itself.
+- **`EndCardSpec.Fade`** (`endCard.fade`) and **`OverlaySpec.TitleFade`** (`titleFade`), both in
+  seconds and written only when set: how long the end card takes to appear, and how long the
+  title takes to appear and (a title card) to go. `SceneBuilders.NotDrawnByTheGenerator` names
+  `labels.overlays.titleFade`.
+
+### Photos: transparency
+- A photo annotation whose PNG has an alpha channel is **not there where the image is clear**
+  (a mix with nothing, by the image's alpha). A tint, a fade and an opacity work on it as on any
+  photo. A JPEG, and a PNG without alpha, have the material they had. The draft's mosaic is whole.
+
+### Placeholders
+- **`{length}`** and **`{depth}`** (`TextPlaceholders.Length`, `.Depth`) beside `{cave}`: the
+  length of the model's centreline (`SceneMeta.CenterlineLength`: the sum of its legs, without
+  those flagged surface, splay or duplicate) and its vertical range (lowest to highest station),
+  in whole metres with the unit. They are the model's own numbers, said as such in the guide;
+  a model that gives none leaves the text out.
+
+### Not built
+- A line whose width stays the same on the screen. It needs the tubes rebuilt at every frame
+  from the camera's place (geometry nodes), in three Blender versions, for the render, the
+  draft, a reveal and a saved scene alike; the cost was out of proportion to this step.
+
+### Verified
+- Without Blender: the validator's and the serializer's rules for every new key, the schema and
+  the player's known keys in step, the photo inset's layout, the fades from the spec to the
+  texts, the placeholders against an invented cave's own legs and heights.
+- In Blender 4.2.23, 4.5.16 and 5.0.1: the value of a light's energy, a model's place, its fade
+  and its opacity at each of twenty frames, for a clip that begins half-way through a smooth
+  move and inside a fade and for a frame with three keys; a world that lights and is not seen,
+  then is seen and lights nothing, by the pixels of the corner and of the cave; a world's image
+  turned by a key against the same image turned by `rotation` (the same picture); a ramp in
+  bands against a blended one (a fifth of the in-between pixels, the edges' own); a photo with a
+  clear half, tinted; an image in the corner and over the whole picture, by its columns and rows.
+
+## 2026-11-25 — a cave seen from far away: unlit materials, a lamp that reaches, and four findings
+
+The plan stays **version 1**. The player calls itself **1.9**: a material of the look may be
+**unlit**, and the sun and sky rig is the same sky in every Blender. A plan with an unlit material
+needs a player 1.9 (an earlier one refuses the key by name); every plan of yesterday plays as it
+did, but for the sky in Blender 5 (below). A render that was stopped under a player 1.8 starts its
+frames again; writing the output again from kept frames (`--stage compose`) is not affected.
+
+### Breaking changes
+- None in this library's API.
+- **Behaviour: the sun and sky rig in Blender 5.** `look.world.kind: "sky"` picked Blender 5's
+  newer sky model (`MULTIPLE_SCATTERING`) and left the sky's height at Blender 5's default of
+  100 m, so one plan gave two different pictures: Blender 5.0.1 showed the sky above a cave as
+  (79, 90, 104) of 255 where Blender 4.2.23 showed (166, 147, 118). The player now asks for the
+  model both have (`NISHITA` in Blender 4, `SINGLE_SCATTERING` in Blender 5; measured equal to
+  0.1 % in linear light) at height 0. Blender 5.0.1 now gives (162, 143, 114), and 4.2 and 4.5
+  are unchanged. Migration: none; a render of the *SunSky* rig in Blender 5 looks as it does in
+  Blender 4. **The script generator is not changed** (it is frozen): its scripts still pick the
+  newer model in Blender 5, so the two builders differ there under the sun and sky.
+- **Behaviour: the bounds a plan goes by include the walls.** `CameraFraming.FromGeometry` now
+  also gives `MeshBounds`, the box round the wall mesh, and `ScenePlanBuilder.FromSpec` uses it
+  (`DrawnBounds`) for the one pose of the static camera and for the heights of the depth tint,
+  as a generated script uses the mesh it imported. Before, both went by the stations alone: the
+  static camera stood 0.6 % nearer than the generated script's and the depth colours stopped
+  changing over the top and bottom 1.5–1.8 m of the walls. Migration: none; a plan of the same
+  spec differs in that pose and in the ramp's `low`/`high`. The animated templates still go by
+  `LocalBounds`, as the generated scripts do. A `CameraFraming` made by hand without `MeshBounds`
+  behaves as before.
+- **Behaviour: texts in a picture higher than wide.** `ScreenTextPlanner` makes the title, its
+  subtitle and the north arrow smaller by the picture's shape (by `width / height`, not below a
+  half) when the picture is higher than wide, and keeps the title's widest line (`wrap`) inside
+  the room the north arrow leaves. In 9:16 "Invented Cave" took two lines and the arrow touched
+  it; it now takes one, clear of the arrow. A picture of 3:2 or wider is laid out as before
+  (between 1:1 and 3:2 only the title's `wrap` is a little narrower beside an arrow).
+
+### Additive API: an unlit material
+- **`PlanMaterial.Unlit`** (`look.materials[].unlit`, written only when true) makes a material
+  that no light changes: it shows the colours of its kind (flat, the mesh's own, a ramp) as a
+  screen shows them, in a cave no lamp reaches as under the sun. It emits to the camera only, so
+  a line that reads in the dark does not light the walls round it. **`PlanMaterial.Strength`**
+  (`strength`, only with `unlit`) is how brightly: 1 is the colours as they are.
+- A model or a line wears it as it wears any material, and what changes of a material changes
+  of it: a tint, an opacity, a fade, a reveal. The draft shows it in its colours, as it shows
+  every material. Roughness has no part in it.
+- For survey lines, a route, an outline: give the line's material `Unlit = true`. Markers and
+  labels (`labels`, `annotations`) glow already and need nothing.
+- Measured on a line 3 m thick, of 255: lit, under three suns 168; lit, by the 80 W head lamp
+  from 25 m 14 and from 140 m 0; unlit 201.5 in all four.
+
+### Additive API: a lamp that reaches (`LampReach`)
+- **`LampReach.Apply(plan, reference = 3, lightId = null, distances = null)`** keys the energy of
+  the plan's head lamp by the distance the camera looks over: `energy × (distance / reference)²`
+  beyond the reference distance, and the lamp's own energy nearer. It is a change of the lamp's
+  `energy` (`changes[].energy`), so the player needs nothing new for it, and a plan says what it
+  does. A camera that stands still gives the lamp one energy and no keys.
+- The distance is from each pose's `eye` to its `target`, at every frame, straight from pose to
+  pose. **A producer whose targets are only where the camera focuses passes its own distances**
+  (`distances`: seconds and metres, in rising order of time), e.g. to the nearest cave.
+- `LampReach.Keys(distances, energy, reference, tolerance)` gives the keys alone (keys that a
+  straight line between their neighbours stands in for, within 2 %, are left out),
+  `LampReach.Distances(camera, timeline)` the distances of a plan's camera, and
+  `LampReach.Energy(energy, distance, reference)` one value. `DefaultDistance` is 3 m: a wall
+  that far from the 80 W lamp is lit to about the middle of what a picture shows.
+- `Apply` throws `ArgumentException` when a change keys that lamp's energy already.
+- **The spec:** `LightingSpec.LampReach` (`lighting.lampReach`, written only when true), for the
+  `Headlamp` rig. `ScenePlanBuilder.FromSpec` applies it; `SceneBuilders.NotDrawnByTheGenerator`
+  names it (`lighting.lampReach`), and the script generator leaves it out.
+- Measured, of 255: the same line by the lamp without the reach 14 at 25 m and 0.1 at 140 m; with
+  it 176 and 179. An invented cave in one still from 148 m: 0.1 without, 154 with.
+- An exposure keyed over time was the alternative, and is not built: it would also brighten what
+  is unlit, the sky and what the sun lights.
+
+### Additive API: leads without a project (`ModelLeads`)
+- `ModelLeads.FromModel(CaveModel)` gives the stations a model flags as continuations (a `.lox`
+  file's flag) as `SourceLead`s, each named with its surveys before it so that
+  `LeadsEnricher` finds it; `ModelLeads.Read(json)` / `ReadFile(path)` read a leads file (a JSON
+  array of station names, or of `{ "station", "kind", "note" }`), and throw `FormatException`
+  with the entry's place and nothing of the file's contents.
+
+### Command line
+- **`therion-cli blender` passes leads.** It passed none, so the lead markers of a preset never
+  showed from the command line. It now marks the stations the model flags as continuations, or
+  those of `--leads <file.json>` (once for each file), for a render and for `--bundle`.
+- **`--lamp-reach`** lights the scene by the head lamp with `LampReach` on.
+
+### The panel (ThIDE)
+- **Light** has "The lamp reaches as far as the camera looks", for the *Headlamp* rig. It is the
+  spec's `lighting.lampReach`, so "Save preset" keeps it.
+
+### Verified
+- Without Blender: the lamp's energy by distance, its keys within their tolerance, the distances
+  of a camera, `Apply` and its refusals, the spec's field to the plan and to JSON; an unlit
+  material through the serializer, the validator, the schema and the player's known keys; the
+  bounds of the drawn mesh in the static pose and the depth ramp; the title and the arrow in
+  9:16, 3:4 and 1:1; leads from a model's flags and from a file, and their errors; the command
+  line's leads in a bundle's plan.
+- In Blender 4.2.23, 4.5.16 and 5.0.1, by the numbers of the picture: the unlit line and the lit
+  one under three suns and by the lamp from 25 m and 140 m (Cycles), in EEVEE and in a draft; an
+  unlit line beside a wall in the dark, which stays black; a tint over an unlit line; the lamp
+  with and without its reach from both distances and on a whole cave; the sky and its light on a
+  cave within 4 of 255 of one set of numbers in all three versions; the static camera of a plan
+  and of a generated script in one place (to a hundred-thousandth of their distance); a title
+  on one line and clear of the north arrow in a 360 × 640 picture.
+
 ## 2026-11-25 — an export is the scene a render shows; the panel's light, reveal, annotations and texts
 
 The plan stays **version 1**. The player calls itself **1.8**: started in Blender's window with

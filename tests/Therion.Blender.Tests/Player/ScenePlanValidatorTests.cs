@@ -191,6 +191,82 @@ public class ScenePlanValidatorTests
     }
 
     [Fact]
+    public void OnlyARamp_IsInBands_AndItSaysSoOnlyWhenItIs()
+    {
+        ScenePlan With(PlanMaterial material) => Full with { Look = Full.Look with { Materials = [.. Full.Look.Materials, material] } };
+        PlanColorStop[] stops = [new(0, new ColorRgb(0, 0, 1)), new(0.5, new ColorRgb(0, 1, 0)), new(1, new ColorRgb(1, 0, 0))];
+
+        var banded = With(new PlanMaterial { Id = "bands", Kind = PlanMaterialKind.HeightRamp, Stops = stops, Low = -10, High = 10, Banded = true });
+        Assert.Empty(ScenePlanValidator.Validate(banded));
+        AssertBad(With(new PlanMaterial { Id = "m", Banded = true }), "look.materials[4].banded");
+        string json = ScenePlanSerializer.Write(banded);
+        Assert.Equal(1, json.Split("\"banded\": true").Length - 1);
+        Assert.True(ScenePlanSerializer.Read(json).Look.Materials[4].Banded);
+        Assert.False(ScenePlanSerializer.Read(json).Look.Materials[0].Banded);
+    }
+
+    [Fact]
+    public void AnImageOverThePicture_NeedsItsFileBesideThePlan_AndAWidth()
+    {
+        ScenePlan With(PlanScreenItem item) => Full with { Texts = Full.Texts! with { Items = [.. Full.Texts.Items, item] } };
+        var photo = new PlanScreenItem
+        {
+            Id = "inset", Role = "photo", Kind = PlanScreenItemKind.Image, Image = "photos/hall.jpg", At = new PlanPoint(0.95, 0.11), Width = 0.3,
+            AlignX = PlanAlignX.Right, AlignY = PlanAlignY.Bottom, Start = 0.4, End = 1.6, FadeIn = 0.2, FadeOut = 0.2,
+        };
+
+        Assert.Empty(ScenePlanValidator.Validate(With(photo)));
+        AssertBad(With(photo with { Image = null }), "texts.items[4].image");
+        AssertBad(With(photo with { Image = "../hall.jpg" }), "texts.items[4].image");
+        AssertBad(With(photo with { Image = "photos/hall.tif" }), "texts.items[4].image");
+        AssertBad(With(photo with { Width = null }), "texts.items[4].width");
+        AssertBad(With(photo with { Height = 1.5 }), "texts.items[4].height");
+        AssertBad(With(photo with { Kind = PlanScreenItemKind.Box, Height = 0.2 }), "texts.items[4].image");
+
+        // It is one line of the plan, it is read back, and its file travels with the plan.
+        string json = ScenePlanSerializer.Write(With(photo));
+        Assert.Contains("{ \"id\": \"inset\", \"role\": \"photo\", \"kind\": \"image\", \"at\": [0.95, 0.11], \"image\": \"photos/hall.jpg\", \"width\": 0.3, \"alignX\": \"right\", \"alignY\": \"bottom\", \"start\": 0.4, \"end\": 1.6, \"fadeIn\": 0.2, \"fadeOut\": 0.2 }", json);
+        Assert.Equal(photo, ScenePlanSerializer.Read(json).Texts!.Items[4]);
+        Assert.Contains(("photos/inset.png", "image 'inset'"), Therion.Blender.Player.PlayerWriter.FilesOf(With(photo with { Image = "photos/inset.png" })));
+    }
+
+    [Fact]
+    public void APhotoInset_KeepsItsShape_InTheCornerOrOverTheWholePicture()
+    {
+        var wide = new PlanImageInfo(PlanImageFormat.Png, 1600, 900, 1);
+        var tall = new PlanImageInfo(PlanImageFormat.Png, 600, 1200, 1);
+
+        // In a 16:9 picture a 16:9 photo is as wide as its corner lets it be; a tall one as high.
+        var corner = ScreenTextPlanner.PhotoInset("p", "photos/p.png", wide, 1920, 1080, start: 2, end: 5);
+        Assert.Equal((PlanScreenItemKind.Image, "photo", "photos/p.png", 0.3), (corner.Kind, corner.Role, corner.Image, corner.Width));
+        Assert.Equal((new PlanPoint(0.95, 0.11), PlanAlignX.Right, PlanAlignY.Bottom), (corner.At, corner.AlignX, corner.AlignY));
+        Assert.Equal((2.0, 5.0, 0.3, 0.3), (corner.Start, corner.End, corner.FadeIn, corner.FadeOut));
+        Assert.Null(corner.Height);
+        var beside = ScreenTextPlanner.PhotoInset("p", "photos/p.png", tall, 1920, 1080);
+        Assert.Equal(0.35 * 0.5 * 1080 / 1920, beside.Width!.Value, 6);
+        Assert.Equal((null, null, null), (beside.Start, beside.End, beside.FadeOut));
+
+        // Over the whole picture it fits inside the margin, by its width or by its height.
+        var whole = ScreenTextPlanner.PhotoInset("p", "photos/p.png", wide, 1920, 1080, wholePicture: true, fade: 0);
+        Assert.Equal((new PlanPoint(0.5, 0.5), 0.9, null), (whole.At, whole.Width, whole.FadeIn));
+        var upright = ScreenTextPlanner.PhotoInset("p", "photos/p.png", tall, 1920, 1080, wholePicture: true);
+        Assert.Equal(0.9 * 0.5 * 1080 / 1920, upright.Width!.Value, 6);
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Texts = Full.Texts! with { Items = [.. Full.Texts.Items, corner, whole with { Id = "q" }] } }));
+    }
+
+    [Fact]
+    public void OnlyAnUnlitMaterial_HasAStrength_AndItIsNotNegative()
+    {
+        ScenePlan With(PlanMaterial material) => Full with { Look = Full.Look with { Materials = [.. Full.Look.Materials, material] } };
+
+        Assert.Empty(ScenePlanValidator.Validate(With(new PlanMaterial { Id = "m", Unlit = true })));
+        Assert.Empty(ScenePlanValidator.Validate(With(new PlanMaterial { Id = "m", Unlit = true, Strength = 0 })));
+        AssertBad(With(new PlanMaterial { Id = "m", Strength = 2 }), "look.materials[4].strength");
+        AssertBad(With(new PlanMaterial { Id = "m", Unlit = true, Strength = -1 }), "look.materials[4].strength");
+        AssertBad(With(new PlanMaterial { Id = "m", Unlit = true, Strength = double.PositiveInfinity }), "look.materials[4].strength");
+    }
+
+    [Fact]
     public void Lights_AndTheWorld_AreComplete()
     {
         ScenePlan With(PlanLight light) => Full with { Look = Full.Look with { Lights = [.. Full.Look.Lights, light] } };

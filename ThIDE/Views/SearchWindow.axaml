@@ -12,7 +12,7 @@
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top" Spacing="6">
             <!-- Editable query with a persistent MRU dropdown of past 50 searches (#10). -->
-            <AutoCompleteBox x:Name="QueryBox" Watermark="{l:Loc Search_Wm}"
+            <AutoCompleteBox x:Name="QueryBox" PlaceholderText="{l:Loc Search_Wm}"
                              AutomationProperties.AutomationId="Search.Query" AutomationProperties.Name="{l:Loc Search_Wm}"
                              Text="{Binding Query, Mode=TwoWay}"
                              ItemsSource="{Binding RecentQueries}"

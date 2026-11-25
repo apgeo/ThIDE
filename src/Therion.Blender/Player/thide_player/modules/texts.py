@@ -10,7 +10,9 @@ rendered: nothing in the scene can hide a text, and changing one costs the secon
 
 Where each item is, how large it is and when it shows comes from the plan, as shares of the
 picture and seconds; nothing is laid out here. An item is a text, a box of one colour, or an arrow
-that turns about its middle with a letter at its tip. Later items lie over earlier ones. The
+that turns about its middle with a letter at its tip, or an image from a file (a photo in a
+corner, or over the whole picture; where a PNG is clear the picture shows through). Later items
+lie over earlier ones. The
 letters are Blender's own font, white unless the plan says otherwise, with a dark outline and
 shadow so that they read over any picture.
 
@@ -32,7 +34,7 @@ SECTION = "texts"
 KEYS = {
     "hold": None, "fromBlack": None, "toBlack": None,
     "items": [{
-        "id": None, "role": None, "kind": None, "at": None, "text": None, "size": None, "width": None,
+        "id": None, "role": None, "kind": None, "at": None, "text": None, "image": None, "size": None, "width": None,
         "height": None, "alignX": None, "alignY": None, "color": None, "opacity": None, "backing": None,
         "wrap": None, "start": None, "end": None, "fadeIn": None, "fadeOut": None, "slot": None,
         "turn": [{"t": None, "degrees": None}],
@@ -42,7 +44,7 @@ KEYS = {
 # A text changes no frame of the first stage: only the second stage runs again.
 IN_FRAMES = False
 
-KINDS = ("text", "box", "arrow")
+KINDS = ("text", "box", "arrow", "image")
 ALIGN_X = {"left": "LEFT", "center": "CENTER", "right": "RIGHT"}
 ALIGN_Y = {"top": "TOP", "center": "CENTER", "bottom": "BOTTOM"}
 
@@ -70,6 +72,8 @@ def build(ctx, texts):
     for index, item in enumerate((texts or {}).get("items", [])):
         if item.get("counter") is not None:
             counted(ctx, item, "texts.items[%d]" % index)
+        if item.get("kind") == "image":
+            image_file(ctx, item, "texts.items[%d]" % index)
 
 
 def check(texts):
@@ -84,7 +88,7 @@ def check(texts):
             raise api.PlanError('%s.kind: unknown kind "%s"' % (where, kind))
         if item.get("alignX", "center") not in ALIGN_X or item.get("alignY", "center") not in ALIGN_Y:
             raise api.PlanError("%s: unknown alignment" % where)
-        needed = {"text": ("text", "size"), "box": ("width", "height"), "arrow": ("size",)}[kind]
+        needed = {"text": ("text", "size"), "box": ("width", "height"), "arrow": ("size",), "image": ("image", "width")}[kind]
         for key in ("at",) + needed:
             if item.get(key) is None:
                 raise api.PlanError("%s.%s: a %s needs it" % (where, key, kind))
@@ -282,7 +286,45 @@ def place_arrow(ctx, item, channel, first, last):
     return 2
 
 
-PLACE = {"text": place_text, "box": place_box, "arrow": place_arrow}
+def image_file(ctx, item, where):
+    """The file of an image item, which is there and is a PNG or a JPEG by its name. It changes
+    no frame of the first stage, so it is not noted among the files the frames come from."""
+    name = item.get("image")
+    if not isinstance(name, str) or not name.lower().endswith((".png", ".jpg", ".jpeg")):
+        raise api.PlanError('%s.image: "%s" is neither a .png nor a .jpg file' % (where, name))
+    noted = list(ctx.inputs)
+    try:
+        return ctx.input_file(name, where + ".image")
+    finally:
+        ctx.inputs[:] = noted
+
+
+def place_image(ctx, item, channel, first, last):
+    """An image is a strip as large as its file, scaled to the width the plan gives it (a share
+    of the picture's width) and, with a "height", to that share of the picture's height; without
+    one it keeps its shape. "at" is the point of it that alignX and alignY name."""
+    scene = ctx.scene
+    width, height = scene.render.resolution_x, scene.render.resolution_y
+    strip = api.image_strip(scene, item["id"], image_file(ctx, item, "texts.items"), channel, first)
+    strip.frame_final_duration = last - first + 1
+    strip.blend_type = "ALPHA_OVER"
+    element = strip.elements[0]
+    if element.orig_width < 1 or element.orig_height < 1:
+        raise api.PlanError('texts: "%s" cannot be read as an image' % item["image"])
+    wide = item["width"] * width
+    high = item["height"] * height if item.get("height") is not None else wide * element.orig_height / element.orig_width
+    strip.transform.scale_x = wide / element.orig_width
+    strip.transform.scale_y = high / element.orig_height
+    at = item["at"]
+    across = {"left": 0.5, "center": 0.0, "right": -0.5}[item.get("alignX", "center")]
+    up = {"bottom": 0.5, "center": 0.0, "top": -0.5}[item.get("alignY", "center")]
+    strip.transform.offset_x = (at[0] - 0.5) * width + across * wide
+    strip.transform.offset_y = (at[1] - 0.5) * height + up * high
+    fade(ctx, strip, item, first, last)
+    return 1
+
+
+PLACE = {"text": place_text, "box": place_box, "arrow": place_arrow, "image": place_image}
 
 
 def round_the_arc(turns):

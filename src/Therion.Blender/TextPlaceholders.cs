@@ -1,6 +1,7 @@
 // Placeholders in the texts written over the picture. A preset is made before anyone knows which
 // cave it will show, so its texts cannot name the cave; "{cave}" stands for the name and is
-// filled in when a spec is lowered for a model. A text that is nothing but placeholders the model
+// filled in when a spec is lowered for a model. "{length}" and "{depth}" stand for two numbers the
+// model itself gives: the length of its centreline and its vertical range. A text that is nothing but placeholders the model
 // has no value for is left out: a preset whose title is "{cave}" writes no title over a model
 // without a name.
 //
@@ -18,13 +19,36 @@ public static class TextPlaceholders
     /// <summary>Stands for the cave's name (<see cref="CaveName"/>).</summary>
     public const string Cave = "{cave}";
 
+    /// <summary>Stands for the length of the model's centreline, in whole metres with the
+    /// unit ("1234 m"): the sum of its legs, surface legs, splays and duplicates left out
+    /// (<see cref="SceneMeta.CenterlineLength"/>). It is the model's own number, not a surveyed
+    /// length taken from a report.</summary>
+    public const string Length = "{length}";
+
+    /// <summary>Stands for the model's vertical range, in whole metres with the unit ("87 m"):
+    /// from its lowest station to its highest (<see cref="SceneMeta.WorldBounds"/>). For a cave
+    /// with one entrance at its top that is its depth; the model does not say more.</summary>
+    public const string Depth = "{depth}";
+
     /// <summary>The placeholders a text may hold, as they are written.</summary>
-    public static readonly IReadOnlyList<string> Known = [Cave];
+    public static readonly IReadOnlyList<string> Known = [Cave, Length, Depth];
 
     /// <summary>The values <paramref name="meta"/> gives the placeholders, by their names
-    /// without the braces. A model without a name gives <see cref="Cave"/> nothing.</summary>
+    /// without the braces. A model without a name gives <see cref="Cave"/> nothing, and one
+    /// without legs or without height gives <see cref="Length"/> or <see cref="Depth"/> nothing.</summary>
     public static IReadOnlyDictionary<string, string> ValuesOf(SceneMeta? meta)
-        => new Dictionary<string, string>(StringComparer.Ordinal) { ["cave"] = CaveName(meta) };
+        => new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["cave"] = CaveName(meta),
+            ["length"] = Metres(meta?.CenterlineLength),
+            ["depth"] = Metres(meta is null ? null : meta.WorldBounds.Max.Z - meta.WorldBounds.Min.Z),
+        };
+
+    /// <summary>A length in whole metres with its unit, or nothing for none.</summary>
+    private static string Metres(double? metres)
+        => metres is { } m && double.IsFinite(m) && m >= 0.5
+            ? Math.Round(m).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " m"
+            : "";
 
     /// <summary>
     /// The cave's name as the model has it, or nothing: the title of the model itself, which a

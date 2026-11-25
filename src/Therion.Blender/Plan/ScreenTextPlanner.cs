@@ -11,6 +11,12 @@
 //   north arrow                    top right         depth legend           right edge, middle
 //   scale bar                      bottom left       captions               bottom centre
 //   credits                        bottom right      title card, end card   the middle
+//
+// Sizes are shares of the picture's height, so in a picture that is higher than wide (a phone's)
+// a letter takes more of the width than in a wide one. There the title, its subtitle and the
+// north arrow are made smaller by the picture's shape, and the title's lines are kept as short as
+// the room beside the arrow, so that a title of a few words stays on one line and clear of the
+// arrow. A picture as wide as 3:2 or wider is laid out as it always was.
 
 using System.Globalization;
 using Therion.Blender.Emit;
@@ -110,7 +116,8 @@ public static class ScreenTextPlanner
 
         if (overlays.DepthLegend) AddDepthLegend(items, aspect);
         if (overlays.ScaleBar) AddScaleBars(items, camera, frames, fps);
-        if (overlays.NorthArrow) AddNorthArrow(items, headings(frames), fps, aspect);
+        double narrow = Narrow(aspect);
+        if (overlays.NorthArrow) AddNorthArrow(items, headings(frames), fps, aspect, narrow);
 
         if (!string.IsNullOrWhiteSpace(overlays.Corner))
             items.Add(Text("corner", CornerRole, overlays.Corner, Margin, 1 - Margin, CornerSize) with
@@ -131,7 +138,7 @@ public static class ScreenTextPlanner
                 AlignX = PlanAlignX.Right, AlignY = PlanAlignY.Bottom, Wrap = 0.6,
             });
 
-        if (!string.IsNullOrWhiteSpace(overlays.Title)) AddTitle(items, overlays);
+        if (!string.IsNullOrWhiteSpace(overlays.Title)) AddTitle(items, overlays, aspect, narrow);
 
         number = 0;
         foreach (var caption in Subtitles.OneAtATime(overlays.Captions))
@@ -160,29 +167,100 @@ public static class ScreenTextPlanner
         return texts.Items.Count == 0 && texts.Hold == 0 && texts.FromBlack == 0 && texts.ToBlack == 0 ? null : texts;
     }
 
+    // ---- a photo over the picture ----
+
+    /// <summary>The role of the items made by <see cref="PhotoInset"/>.</summary>
+    public const string PhotoRole = "photo";
+
+    /// <summary>
+    /// A photo laid over the picture in the second stage, as an item of a plan's texts: in the
+    /// lower right corner (above the credits line), or over the whole picture inside the margin.
+    /// It keeps its shape and is as large as its room lets it be: three tenths of the picture's
+    /// width and a good third of its height in the corner. Nothing in the scene hides it, and
+    /// where a PNG is clear the picture shows through.
+    /// </summary>
+    /// <param name="image">The image file's plan path: a PNG or a JPEG beside the plan.</param>
+    /// <param name="imageInfo">The image's size in pixels (<see cref="PlanImage.Check(string)"/>).</param>
+    /// <param name="start">When it appears, in seconds; null is from the start.</param>
+    /// <param name="end">When it is gone; null is never.</param>
+    /// <param name="fade">How long it takes to appear and to go, in seconds.</param>
+    public static PlanScreenItem PhotoInset(
+        string id, string image, PlanImageInfo imageInfo, int pictureWidth, int pictureHeight, bool wholePicture = false,
+        double? start = null, double? end = null, double fade = 0.3)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(image);
+        ArgumentNullException.ThrowIfNull(imageInfo);
+        if (imageInfo.Width < 1 || imageInfo.Height < 1 || pictureWidth < 1 || pictureHeight < 1)
+            throw new ArgumentException("An image and a picture have a width and a height.", nameof(imageInfo));
+        // The widest it can be for its room, and the widest its shape lets it be for the room's height.
+        double shape = imageInfo.Width / (double)imageInfo.Height * pictureHeight / pictureWidth;
+        double room = wholePicture ? 1 - 2 * Margin : InsetWidth, high = wholePicture ? 1 - 2 * Margin : InsetHeight;
+        double? fades = fade > 0 ? Rounded(fade) : null;
+        return new PlanScreenItem
+        {
+            Id = id, Role = PhotoRole, Kind = PlanScreenItemKind.Image, Image = image,
+            At = wholePicture ? new PlanPoint(0.5, 0.5) : new PlanPoint(Rounded(1 - Margin), Rounded(Margin + InsetLift)),
+            AlignX = wholePicture ? PlanAlignX.Center : PlanAlignX.Right,
+            AlignY = wholePicture ? PlanAlignY.Center : PlanAlignY.Bottom,
+            Width = Rounded(Math.Min(room, high * shape)),
+            Start = start is > 0 ? Rounded(start.Value) : null, End = end is { } stop ? Rounded(stop) : null,
+            FadeIn = fades, FadeOut = end is null ? null : fades,
+        };
+    }
+
+    private const double InsetWidth = 0.3, InsetHeight = 0.35, InsetLift = 0.06;
+
     // ---- title, end card ----
 
-    private static void AddTitle(List<PlanScreenItem> items, OverlaySpec overlays)
+    /// <summary>How much smaller the title and the north arrow are in a picture that is higher
+    /// than wide: by its shape, and never below half.</summary>
+    private static double Narrow(double aspect) => Math.Clamp(aspect, 0.5, 1.0);
+
+    /// <summary>The share of the picture's width the north arrow takes with its letter, from the
+    /// right margin inwards.</summary>
+    private static double ArrowWidth(double aspect, double narrow)
+        => Math.Min(0.8, 2 * (ArrowSize / 2 + ArrowLetterRoom) * narrow / aspect);
+
+    /// <summary>The widest line of a title at the top of the picture: what it always was
+    /// (<see cref="TitleWrap"/>), or, beside a north arrow that would reach into it, the room the
+    /// arrow leaves on either side of the middle.</summary>
+    private static double TitleWrapBeside(bool arrow, double aspect, double narrow)
+    {
+        if (!arrow) return TitleWrap;
+        double free = 2 * (0.5 - Margin - ArrowWidth(aspect, narrow) - TitleGap);
+        return Rounded(Math.Clamp(free, MinTitleWrap, TitleWrap));
+    }
+
+    private const double TitleWrap = 0.6, MinTitleWrap = 0.3, TitleGap = 0.02;
+
+    private static void AddTitle(List<PlanScreenItem> items, OverlaySpec overlays, double aspect, double narrow)
     {
         string title = overlays.Title!.ReplaceLineEndings(" ");
         string? subtitle = string.IsNullOrWhiteSpace(overlays.Subtitle) ? null : overlays.Subtitle.ReplaceLineEndings(" ");
         if (overlays.TitleSeconds is { } seconds)
         {
             // A card: in the middle of the picture for its time, then it fades.
-            PlanScreenItem Card(PlanScreenItem item) => item with { End = Rounded(seconds + TitleFadeSeconds), FadeOut = TitleFadeSeconds };
-            items.Add(Card(Text("title", TitleRole, title, 0.5, subtitle is null ? 0.5 : 0.53, CardTitleSize) with
+            double goes = Rounded(overlays.TitleFade ?? TitleFadeSeconds);
+            PlanScreenItem Card(PlanScreenItem item) => item with
+            {
+                End = Rounded(seconds + goes), FadeOut = goes > 0 ? goes : null, FadeIn = overlays.TitleFade is > 0 ? goes : null,
+            };
+            items.Add(Card(Text("title", TitleRole, title, 0.5, subtitle is null ? 0.5 : 0.53, CardTitleSize * narrow) with
             {
                 AlignY = subtitle is null ? PlanAlignY.Center : PlanAlignY.Bottom, Wrap = 0.8,
             }));
             if (subtitle is not null)
-                items.Add(Card(Text("subtitle", SubtitleRole, subtitle, 0.5, 0.49, CardSubtitleSize) with { AlignY = PlanAlignY.Top, Wrap = 0.8 }));
+                items.Add(Card(Text("subtitle", SubtitleRole, subtitle, 0.5, 0.49, CardSubtitleSize * narrow) with { AlignY = PlanAlignY.Top, Wrap = 0.8 }));
             return;
         }
-        items.Add(Text("title", TitleRole, title, 0.5, 1 - Margin, TitleSize) with { AlignY = PlanAlignY.Top, Wrap = 0.6 });
+        double wrap = TitleWrapBeside(overlays.NorthArrow, aspect, narrow);
+        double? appears = overlays.TitleFade is > 0 ? Rounded(overlays.TitleFade.Value) : null;
+        items.Add(Text("title", TitleRole, title, 0.5, 1 - Margin, TitleSize * narrow) with { AlignY = PlanAlignY.Top, Wrap = wrap, FadeIn = appears });
         if (subtitle is not null)
-            items.Add(Text("subtitle", SubtitleRole, subtitle, 0.5, 1 - Margin - TitleSize * 1.35, SubtitleSize) with
+            items.Add(Text("subtitle", SubtitleRole, subtitle, 0.5, 1 - Margin - TitleSize * narrow * 1.35, SubtitleSize * narrow) with
             {
-                AlignY = PlanAlignY.Top, Wrap = 0.6,
+                AlignY = PlanAlignY.Top, Wrap = wrap, FadeIn = appears,
             });
     }
 
@@ -192,7 +270,7 @@ public static class ScreenTextPlanner
     private static void AddEndCard(List<PlanScreenItem> items, EndCardSpec card, double duration)
     {
         double start = Rounded(card.OverScene ? Math.Max(0, duration - card.Seconds) : duration);
-        double fade = Rounded(Math.Min(CardFade, card.Seconds / 2));
+        double fade = Rounded(card.Fade is { } own ? Math.Min(own, card.Seconds) : Math.Min(CardFade, card.Seconds / 2));
         double? from = start > 0 ? start : null;
         string? subtitle = string.IsNullOrWhiteSpace(card.Subtitle) ? null : card.Subtitle;
         bool bare = !(card.Backdrop > 0);
@@ -323,14 +401,14 @@ public static class ScreenTextPlanner
 
     // ---- north arrow ----
 
-    private static void AddNorthArrow(List<PlanScreenItem> items, IReadOnlyList<double> headings, int fps, double aspect)
+    private static void AddNorthArrow(List<PlanScreenItem> items, IReadOnlyList<double> headings, int fps, double aspect, double narrow)
     {
-        double room = ArrowSize / 2 + ArrowLetterRoom;
+        double room = (ArrowSize / 2 + ArrowLetterRoom) * narrow;
         items.Add(new PlanScreenItem
         {
             Id = "north-arrow", Role = NorthArrowRole, Kind = PlanScreenItemKind.Arrow,
             At = new PlanPoint(Rounded(1 - Margin - Math.Min(0.4, room / aspect)), Rounded(1 - Margin - room)),
-            Size = ArrowSize, Text = "N", Turn = Turns(headings, fps),
+            Size = Rounded(ArrowSize * narrow), Text = "N", Turn = Turns(headings, fps),
         });
     }
 
@@ -613,7 +691,7 @@ public static class ScreenTextPlanner
 
     private static PlanScreenItem Text(string id, string role, string text, double x, double y, double size) => new()
     {
-        Id = id, Role = role, Kind = PlanScreenItemKind.Text, At = new PlanPoint(Rounded(x), Rounded(y)), Text = text, Size = size,
+        Id = id, Role = role, Kind = PlanScreenItemKind.Text, At = new PlanPoint(Rounded(x), Rounded(y)), Text = text, Size = Rounded(size),
     };
 
     /// <summary>The item for the time of a caption, appearing and going quickly.</summary>

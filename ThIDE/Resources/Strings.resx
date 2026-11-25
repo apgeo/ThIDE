@@ -2186,6 +2186,8 @@ This cannot be undone.</value></data>
   <data name="Blender_UI_BrowseHdri" xml:space="preserve"><value>Choose the HDRI image</value></data>
   <data name="Blender_UI_HdriRotation" xml:space="preserve"><value>HDRI rotation (degrees)</value></data>
   <data name="Blender_UI_HdriRotation_Tip" xml:space="preserve"><value>How far the image is turned about the vertical, counterclockwise seen from above: it brings the sun of the picture round to where the light should come from. Only the player turns it.</value></data>
+  <data name="Blender_UI_LampReach" xml:space="preserve"><value>The lamp reaches as far as the camera looks</value></data>
+  <data name="Blender_UI_LampReach_Tip" xml:space="preserve"><value>For the Headlamp rig. The lamp on the camera lights a wall a few metres away; a cave seen from farther off stays dark. With this on, the lamp is turned up by the distance from the camera to what it looks at, so the cave is lit from far as it is from near. Only the player draws it.</value></data>
   <data name="Blender_UI_Reveal" xml:space="preserve"><value>Reveal</value></data>
   <data name="Blender_UI_RevealBy" xml:space="preserve"><value>Reveal the cave by</value></data>
   <data name="Blender_UI_RevealBy_Tip" xml:space="preserve"><value>Shows the cave part by part while the clip runs. Off: all of it from the first frame. Distance: from the entrances inwards. Order: leg by leg, in the survey's own order. Date: in the order of the survey dates, with a counter of the years. A still shows the whole cave, and only the player draws a reveal.</value></data>

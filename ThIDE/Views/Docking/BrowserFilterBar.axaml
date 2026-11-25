@@ -19,7 +19,7 @@
                   Cursor="Hand" ToolTip.Tip="{l:Loc OB_ClearFilter}" />
         </StackPanel>
       </Border>
-      <TextBox AutomationProperties.AutomationId="BrowserFilter.Text" AutomationProperties.Name="{l:Loc OB_FilterWatermark}" Text="{Binding Text, Mode=TwoWay}" Watermark="{l:Loc OB_FilterWatermark}" VerticalAlignment="Center" />
+      <TextBox AutomationProperties.AutomationId="BrowserFilter.Text" AutomationProperties.Name="{l:Loc OB_FilterWatermark}" Text="{Binding Text, Mode=TwoWay}" PlaceholderText="{l:Loc OB_FilterWatermark}" VerticalAlignment="Center" />
     </DockPanel>
   </Border>
 </UserControl>

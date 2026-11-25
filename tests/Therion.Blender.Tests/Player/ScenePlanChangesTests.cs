@@ -205,8 +205,14 @@ public class ScenePlanChangesTests
         Assert.Empty(Paths(Opacity(0, 0.04, 2)));
         Assert.Equal(["changes[0].opacity"], Paths(Opacity()));
         Assert.Equal(["changes[0].opacity[1].t"], Paths(Opacity(1, 0.5)));
-        Assert.Equal(["changes[0].opacity[0].t"], Paths(Opacity(-1)));
         Assert.Equal(["changes[0].opacity[0].t"], Paths(Opacity(double.NaN)));
+        Assert.Equal(["changes[0].opacity[0].t"], Paths(Opacity(double.NegativeInfinity)));
+        // A key may lie before the clip: the clip then begins on the way from it, or after it.
+        Assert.Empty(Paths(Opacity(-1)));
+        Assert.Empty(Paths(Opacity(-2, 3)));
+        Assert.Empty(Paths(Opacity(-2, -1, 0.5)));
+        Assert.Equal(["changes[0].opacity[1].t"], Paths(Opacity(-1, -2)));
+        Assert.Empty(Paths(With(Of("CaveModel") with { Visible = [new PlanVisibleKey(-0.5, true, 2)] })));
         // 51 frames at 25 fps end at 2 seconds: a change that ends after the clip is two keys,
         // and the clip ends on the way.
         Assert.Empty(Paths(Opacity(0, 2.04)));
@@ -216,7 +222,39 @@ public class ScenePlanChangesTests
     }
 
     [Fact]
-    public void TwoKeys_MayFallOnOneFrame_AMoveThatEndsInAJump_AndNoMore()
+    public void TheWorld_HasABackdropSetApartFromItsLight_AndAnImageThatTurns()
+    {
+        var sky = Full with { Look = Full.Look with { World = new PlanWorld { Kind = PlanWorldKind.Sky, Strength = 0.5, Backdrop = 1 } }, Changes = null };
+        Assert.Empty(Paths(sky));
+        Assert.Equal(["look.world.backdrop"], Paths(sky with { Look = sky.Look with { World = sky.Look.World! with { Backdrop = -1 } } }));
+
+        ScenePlan Changed(ScenePlan plan, params PlanChange[] changes) => plan with { Changes = changes };
+        var keys = new[] { new PlanNumberKey(0, 1), new PlanNumberKey(1, 0, PlanEasing.Smooth) };
+        Assert.Empty(Paths(Changed(sky, new PlanChange { WorldBackdrop = keys, WorldStrength = keys })));
+        Assert.Equal(["changes[0].worldBackdrop[1].value"], Paths(Changed(sky, new PlanChange { WorldBackdrop = [keys[0], new PlanNumberKey(1, -1)] })));
+        Assert.Equal(["changes[1].worldBackdrop"], Paths(Changed(sky, new PlanChange { WorldBackdrop = keys }, new PlanChange { WorldBackdrop = keys })));
+        Assert.Equal(["changes[0].worldBackdrop"], Paths(Changed(sky, Of("CaveModel") with { WorldBackdrop = keys })));
+        Assert.Equal(["changes[0].worldBackdrop"], Paths(Changed(sky with { Look = sky.Look with { World = null } }, new PlanChange { WorldBackdrop = keys })));
+
+        // Only an image turns.
+        var turns = new[] { new PlanNumberKey(0, 0), new PlanNumberKey(2, 360) };
+        Assert.Equal(["changes[0].worldRotation"], Paths(Changed(sky, new PlanChange { WorldRotation = turns })));
+        var image = sky with { Look = sky.Look with { World = new PlanWorld { Kind = PlanWorldKind.Image, Image = "hdri/sky.hdr" } } };
+        Assert.Empty(Paths(Changed(image, new PlanChange { WorldRotation = turns })));
+        Assert.Equal(["changes[0].worldRotation[0].value"], Paths(Changed(image, new PlanChange { WorldRotation = [new PlanNumberKey(0, double.NaN)] })));
+        Assert.Equal(["changes[0].worldRotation"], Paths(Changed(image, Of("CaveModel") with { WorldRotation = turns })));
+
+        // Written and read as the other tracks of the scene are.
+        var written = ScenePlanSerializer.Read(ScenePlanSerializer.Write(Changed(image with { Look = image.Look with { World = image.Look.World! with { Backdrop = 0.25 } } },
+            new PlanChange { WorldRotation = turns, WorldBackdrop = keys })));
+        Assert.Equal(0.25, written.Look.World!.Backdrop);
+        Assert.Equal(turns, written.Changes![0].WorldRotation);
+        Assert.Equal(keys, written.Changes[0].WorldBackdrop);
+        Assert.DoesNotContain("backdrop", ScenePlanSerializer.Write(Full));
+    }
+
+    [Fact]
+    public void UpToThreeKeys_MayFallOnOneFrame_AMoveThatEndsInAJump_AndWhereTheNextStartsFrom()
     {
         ScenePlan Opacity(params PlanNumberKey[] keys) => With(Of("CaveModel") with { Opacity = keys });
         PlanNumberKey Jump(double t) => new(t, 1, PlanEasing.Constant);
@@ -228,7 +266,11 @@ public class ScenePlanChangesTests
         // The second key of a frame is the jump: it says so.
         Assert.Equal(["changes[0].opacity[2].easing"], Paths(Opacity(new(0, 0), new(1, 0.5), new(1, 1))));
         Assert.Equal(["changes[0].opacity[2].easing"], Paths(Opacity(new(0, 0), new(1, 0.5), new(1, 1, PlanEasing.Smooth))));
-        Assert.Equal(["changes[0].opacity[3].t"], Paths(Opacity(new(0, 0), new(1, 0.5), Jump(1), Jump(1))));
+        // A third key on the frame is where the way on starts from; a fourth is one too many.
+        Assert.Empty(Paths(Opacity(new(0, 0), new(1, 0.5), Jump(1), new(1, 0.2, PlanEasing.Constant), new(2, 0, PlanEasing.Smooth))));
+        Assert.Empty(Paths(Opacity(new(0, 1), Jump(0), new(0, 0.2, PlanEasing.Constant), new(2, 0))));
+        Assert.Equal(["changes[0].opacity[3].easing"], Paths(Opacity(new(0, 0), new(1, 0.5), Jump(1), new(1, 0.2), new(2, 0))));
+        Assert.Equal(["changes[0].opacity[4].t"], Paths(Opacity(new(0, 0), new(1, 0.5), Jump(1), Jump(1), Jump(1))));
 
         // What is only switched has one key to a frame.
         Assert.Equal(
@@ -421,7 +463,7 @@ public class ScenePlanChangesTests
         Assert.True(order.IndexOf(ScenePlan.TexturedMaterialsFeature) < order.IndexOf(ScenePlan.ChangesFeature));
         Assert.True(order.IndexOf(ScenePlan.LabelsFeature) < order.IndexOf(ScenePlan.ChangesFeature));
         Assert.True(order.IndexOf(ScenePlan.ChangesFeature) < order.IndexOf(ScenePlan.BlendFileFeature));
-        Assert.Equal("1.8", PlayerFiles.Version);
+        Assert.Equal("1.9", PlayerFiles.Version);
         Assert.Equal(1, PlayerFiles.PlanVersion);
     }
 }

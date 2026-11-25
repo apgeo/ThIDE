@@ -6,7 +6,7 @@ public class NewProjectTests
     [UiFact]
     public async Task Single_cave_project_is_created_and_its_thconfig_opened()
     {
-        var target = Path.Combine(Path.GetTempPath(), "thide-ui-proj-" + Guid.NewGuid().ToString("N")[..8], "pit");
+        var target = Path.Combine(ThideApp.RemoveAtExit(Path.Combine(Path.GetTempPath(), "thide-ui-proj-" + Guid.NewGuid().ToString("N")[..8])), "pit");
         await using var app = await ThideApp.StartAsync();
         await app.WaitAsync("#Welcome.View;state:showing");
 

@@ -93,17 +93,17 @@
                                    Foreground="Gray" TextWrapping="Wrap" FontSize="11" />
 
                         <CheckBox AutomationProperties.AutomationId="Structural.UseNameKeyword" Content="{l:Loc Struct_FromNameKeyword}" IsChecked="{Binding Structural.UseNameKeyword}" />
-                        <TextBox Text="{Binding Structural.NameKeywords}" Watermark="geo" Margin="22,0,0,0"
+                        <TextBox Text="{Binding Structural.NameKeywords}" PlaceholderText="geo" Margin="22,0,0,0"
                                  AutomationProperties.AutomationId="Structural.NameKeywords" AutomationProperties.Name="{l:Loc Struct_FromNameKeyword}"
                                  IsEnabled="{Binding Structural.UseNameKeyword}" />
 
                         <CheckBox AutomationProperties.AutomationId="Structural.MatchComment" Content="{l:Loc Struct_CommentMarker}" IsChecked="{Binding Structural.MatchComment}" />
-                        <TextBox Text="{Binding Structural.CommentMarkers}" Watermark="plane, geo" Margin="22,0,0,0"
+                        <TextBox Text="{Binding Structural.CommentMarkers}" PlaceholderText="plane, geo" Margin="22,0,0,0"
                                  AutomationProperties.AutomationId="Structural.CommentMarkers" AutomationProperties.Name="{l:Loc Struct_CommentMarker}"
                                  IsEnabled="{Binding Structural.MatchComment}" />
 
                         <CheckBox AutomationProperties.AutomationId="Structural.MatchStationFlag" Content="{l:Loc Struct_StationFlag}" IsChecked="{Binding Structural.MatchStationFlag}" />
-                        <TextBox Text="{Binding Structural.StationFlags}" Watermark="e.g. geo" Margin="22,0,0,0"
+                        <TextBox Text="{Binding Structural.StationFlags}" PlaceholderText="e.g. geo" Margin="22,0,0,0"
                                  AutomationProperties.AutomationId="Structural.StationFlags" AutomationProperties.Name="{l:Loc Struct_StationFlag}"
                                  IsEnabled="{Binding Structural.MatchStationFlag}" />
 
@@ -152,7 +152,7 @@
                                        IsVisible="{Binding Structural.DeclinationIsManual}" />
                             <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Structural.DeclinationDegrees}"
                                      AutomationProperties.AutomationId="Structural.DeclinationDegrees" AutomationProperties.Name="{l:Loc Struct_ValueEast}"
-                                     IsVisible="{Binding Structural.DeclinationIsManual}" Watermark="0.0" />
+                                     IsVisible="{Binding Structural.DeclinationIsManual}" PlaceholderText="0.0" />
                         </Grid>
                         <TextBlock Text="{l:Loc Struct_DeclinationHelp}"
                                    Foreground="Gray" TextWrapping="Wrap" FontSize="11" />
@@ -331,7 +331,7 @@
                                         <AutoCompleteBox Text="{Binding Type, Mode=TwoWay}"
                                                          ItemsSource="{Binding TypeSuggestions}"
                                                          FilterMode="Contains" MinimumPrefixLength="0"
-                                                         Watermark="{l:Loc Struct_TypeWatermark}"
+                                                         PlaceholderText="{l:Loc Struct_TypeWatermark}"
                                                          Padding="2" Margin="1" VerticalAlignment="Center" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>

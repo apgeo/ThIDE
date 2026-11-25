@@ -287,14 +287,15 @@ public partial class PlayerChangesBlenderTests
             "changes[0].energy[0].value: a number that is not negative is needed",
             await RefusedAsWritten(text => text.Replace(key, "{ \"t\": 0, \"value\": -1 }")));
 
-        // Two keys on a frame are a move's end and a jump; three are one too many.
+        // Keys on one frame are a move's end, a jump and where the way on starts; four are one too many.
         Assert.Equal(
-            "changes[0].energy[1].easing: the second key on a frame is a jump; its easing is \"constant\"",
+            "changes[0].energy[1].easing: a later key on a frame is a jump; its easing is \"constant\"",
             await RefusedAsWritten(text => text.Replace(key, key + ",\n        { \"t\": 0.04, \"value\": 2 }")));
         Assert.Equal(
-            "changes[0].energy[2].t: no more than two keys fall on one frame",
+            "changes[0].energy[3].t: no more than three keys fall on one frame",
             await RefusedAsWritten(text => text.Replace(key,
-                key + ",\n        { \"t\": 0, \"value\": 2, \"easing\": \"constant\" },\n        { \"t\": 0, \"value\": 3, \"easing\": \"constant\" }")));
+                key + ",\n        { \"t\": 0, \"value\": 2, \"easing\": \"constant\" },\n        { \"t\": 0, \"value\": 3, \"easing\": \"constant\" }"
+                    + ",\n        { \"t\": 0, \"value\": 4, \"easing\": \"constant\" }")));
         Assert.Equal(
             "changes[0].energy[1].t: keys are in rising order of time",
             await RefusedAsWritten(text => text.Replace(key, "{ \"t\": 0.5, \"value\": 1 },\n        { \"t\": 0.2, \"value\": 2 }")));

@@ -79,6 +79,12 @@ public static class ScenePlanSerializer
             foreach (var property in type.Properties)
                 if (property.Name == "edge") property.ShouldSerialize = (_, value) => value is not 0.0;
         }
+        else if (type.Type == typeof(PlanMaterial))
+        {
+            // A material is lit unless it says otherwise.
+            foreach (var property in type.Properties)
+                if (property.Name is "unlit" or "banded") property.ShouldSerialize = (_, value) => value is true;
+        }
         else if (type.Type == typeof(PlanTexturedMaterial))
         {
             // A model casts shadows unless its material says otherwise.
@@ -426,6 +432,7 @@ public static class ScenePlanSerializer
         public required PlanScreenItemKind Kind { get; init; }
         public required PlanPoint At { get; init; }
         public string? Text { get; init; }
+        public string? Image { get; init; }
         public double? Size { get; init; }
         public double? Width { get; init; }
         public double? Height { get; init; }
@@ -460,7 +467,7 @@ public static class ScenePlanSerializer
                        ?? throw new JsonException("Expected a thing written over the picture.");
             return new PlanScreenItem
             {
-                Id = item.Id, Role = item.Role, Kind = item.Kind, At = item.At, Text = item.Text, Size = item.Size,
+                Id = item.Id, Role = item.Role, Kind = item.Kind, At = item.At, Text = item.Text, Image = item.Image, Size = item.Size,
                 Width = item.Width, Height = item.Height, AlignX = item.AlignX, AlignY = item.AlignY, Color = item.Color,
                 Opacity = item.Opacity, Backing = item.Backing, Wrap = item.Wrap, Start = item.Start, End = item.End,
                 FadeIn = item.FadeIn, FadeOut = item.FadeOut, Slot = item.Slot,
@@ -479,6 +486,7 @@ public static class ScenePlanSerializer
             line.Append(", \"kind\": ").Append(Quoted(Word(value.Kind), options));
             line.Append(", \"at\": [").Append(Num(value.At.X)).Append(", ").Append(Num(value.At.Y)).Append(']');
             if (value.Text is { } text) line.Append(", \"text\": ").Append(Quoted(text, options));
+            if (value.Image is { } image) line.Append(", \"image\": ").Append(Quoted(image, options));
             Number("size", value.Size);
             Number("width", value.Width);
             Number("height", value.Height);

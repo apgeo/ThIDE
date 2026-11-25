@@ -99,7 +99,8 @@ internal static class PlanFixtures
                 new PlanMaterial { Id = "noise", Kind = PlanMaterialKind.NoiseRamp, Scale = 8, Bump = 0.15,
                     Stops = [new PlanColorStop(0, new ColorRgb(0.3, 0.3, 0.3)), new PlanColorStop(1, new ColorRgb(0.7, 0.6, 0.5))] },
                 new PlanMaterial { Id = "plain", Kind = PlanMaterialKind.Flat, Color = new ColorRgb(0.2, 0.4, 0.6), Roughness = 0.5 },
-                new PlanMaterial { Id = "baked", Kind = PlanMaterialKind.VertexColor },
+                // The survey lines read in any light: they show their colours as a screen does.
+                new PlanMaterial { Id = "baked", Kind = PlanMaterialKind.VertexColor, Unlit = true, Strength = 1.5 },
             ],
             Lights =
             [

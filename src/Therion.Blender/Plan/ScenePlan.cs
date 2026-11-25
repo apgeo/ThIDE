@@ -365,6 +365,21 @@ public sealed record PlanMaterial
 
     /// <summary>How strongly a noise ramp's noise bumps the surface.</summary>
     public double? Bump { get; init; }
+
+    /// <summary>True for a ramp in bands: the colour of a stop holds from the stop up to the
+    /// next one and changes there at once, where a ramp otherwise blends from stop to stop.</summary>
+    public bool Banded { get; init; }
+
+    /// <summary>True for a material that no light changes: it shows its colours as a screen
+    /// shows them, in a cave no lamp reaches as under the sun, and lights nothing itself. For
+    /// what has to read at any distance and in any light: survey lines, a route, an outline.
+    /// Its colours are those of its <see cref="Kind"/>, and what changes of a material changes
+    /// of it (a tint, an opacity, a reveal). <see cref="Roughness"/> has no part in it.</summary>
+    public bool Unlit { get; init; }
+
+    /// <summary>How brightly an <see cref="Unlit"/> material shows its colours: null and 1 show
+    /// them as they are, 2 twice as bright.</summary>
+    public double? Strength { get; init; }
 }
 
 public sealed record PlanLight
@@ -392,6 +407,12 @@ public sealed record PlanWorld
     /// <summary>How brightly the world shines: the factor its colour, its sky or its image is
     /// multiplied by. A change of the scene can key it (<see cref="PlanChange.WorldStrength"/>).</summary>
     public double Strength { get; init; } = 1.0;
+
+    /// <summary>How bright the camera sees the world, set apart from <see cref="Strength"/>,
+    /// which is then only how strongly the world lights the scene: a sky that is seen and lights
+    /// little, or one that lights and is not seen (0). Null: the camera sees the world as strong
+    /// as it lights. A change without a target can key it (<see cref="PlanChange.WorldBackdrop"/>).</summary>
+    public double? Backdrop { get; init; }
 
     /// <summary>For <see cref="PlanWorldKind.Image"/>: the image, a Radiance <c>.hdr</c> or an
     /// OpenEXR <c>.exr</c> file, relative to the plan. It is laid round the scene by longitude
@@ -729,6 +750,9 @@ public enum PlanScreenItemKind
     /// <summary>An arrow that turns about its middle, with an optional letter at its tip: a
     /// north arrow.</summary>
     Arrow,
+    /// <summary>A picture from an image file, laid over the frames: a photo in a corner, or
+    /// over the whole picture.</summary>
+    Image,
 }
 
 public enum PlanAlignX
@@ -774,6 +798,13 @@ public sealed record PlanScreenItem
 
     /// <summary>What a text says, or the letter at the tip of an arrow.</summary>
     public string? Text { get; init; }
+
+    /// <summary>The file of an image: a PNG or a JPEG, relative to the plan. Its
+    /// <see cref="Width"/> is a share of the picture's width; with a <see cref="Height"/> (a
+    /// share of the picture's height) it is stretched to both, without one it keeps its shape.
+    /// <see cref="At"/> is the point of it that <see cref="AlignX"/> and <see cref="AlignY"/>
+    /// name. Where a PNG is clear the picture shows through.</summary>
+    public string? Image { get; init; }
 
     /// <summary>The height of a text's letters, or the length of an arrow, as a share of the
     /// picture's height.</summary>
@@ -935,10 +966,13 @@ public readonly record struct PlanColorKey(double T, ColorRgb Value, PlanEasing 
 /// rising order of time. Between two keys the value moves as the later key's easing says; before
 /// its first key a property has that key's value, and after its last one it keeps it, so one key
 /// is a value for the whole clip. A key may lie after the clip's last frame: the clip then ends
-/// on the way to it. Two keys of a property may fall on one frame (not of <see cref="Visible"/>):
-/// the first is where the value was going, the second, whose easing is
-/// <see cref="PlanEasing.Constant"/>, the value it has from that frame on. A change without a
-/// target is of the scene itself (<see cref="WorldColor"/>, <see cref="WorldStrength"/>).
+/// on the way to it; and before its first (a time below 0): the clip then begins on the way from
+/// it, part of the way through a move or a fade. Up to three keys of a property may fall on one
+/// frame (not of <see cref="Visible"/>): the first is where the value was going, the second,
+/// whose easing is <see cref="PlanEasing.Constant"/>, the value it has on that frame and from it
+/// on, and a third (constant too) the value the move to the next key starts from, which no frame
+/// shows. A change without a target is of the scene itself (<see cref="WorldColor"/>,
+/// <see cref="WorldStrength"/>, <see cref="WorldBackdrop"/>, <see cref="WorldRotation"/>).
 /// </summary>
 public sealed record PlanChange
 {
@@ -978,6 +1012,15 @@ public sealed record PlanChange
     /// <summary>The strength of the world (<see cref="PlanWorld.Strength"/>), for a change
     /// without a target; 0 is a world that lights nothing. The look must have a world.</summary>
     public IReadOnlyList<PlanNumberKey>? WorldStrength { get; init; }
+
+    /// <summary>How bright the camera sees the world, set apart from how strongly it lights the
+    /// scene (<see cref="WorldStrength"/>): of a change without a target.</summary>
+    public IReadOnlyList<PlanNumberKey>? WorldBackdrop { get; init; }
+
+    /// <summary>How far the world's image is turned about the vertical, in degrees, as
+    /// <see cref="PlanWorld.Rotation"/> has it: of a change without a target, for a world of the
+    /// kind <see cref="PlanWorldKind.Image"/>.</summary>
+    public IReadOnlyList<PlanNumberKey>? WorldRotation { get; init; }
 
     /// <summary>The threshold a model or a line is shown by, part by part: at every moment the
     /// parts whose reveal value lies below the threshold are there and the rest is not. The

@@ -89,7 +89,7 @@ public static class PlayerWriter
         var named = FilesOf(plan).Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
         foreach (string path in files.Keys)
             if (!named.Contains(path))
-                throw new ArgumentException($"No model, material, photo or world of the plan has the path '{path}'.", nameof(files));
+                throw new ArgumentException($"No model, material, photo, image or world of the plan has the path '{path}'.", nameof(files));
         var photos = PhotosOf(plan);
         foreach (var (path, what) in FilesOf(plan))
         {
@@ -146,13 +146,18 @@ public static class PlayerWriter
                 files.Add((image, $"photo '{annotation.Id}'"));
         if (plan.Look?.World?.Image is { } world && !files.Any(f => f.Path == world))
             files.Add((world, "the world"));
+        foreach (var item in plan.Texts?.Items ?? [])
+            if (item?.Image is { } image && !files.Any(f => f.Path == image))
+                files.Add((image, $"image '{item.Id}'"));
         return files;
     }
 
     /// <summary>The plan paths of the images that are photos: the files that are checked
     /// before they travel with a plan.</summary>
     internal static HashSet<string> PhotosOf(ScenePlan plan)
-        => (plan.Annotations ?? []).Where(a => a?.Image is not null).Select(a => a.Image!).ToHashSet(StringComparer.Ordinal);
+        => (plan.Annotations ?? []).Where(a => a?.Image is not null).Select(a => a.Image!)
+            .Concat((plan.Texts?.Items ?? []).Where(i => i?.Image is not null).Select(i => i.Image!))
+            .ToHashSet(StringComparer.Ordinal);
 
     /// <summary>Checks that a photo's file is an image a plan carries.</summary>
     /// <exception cref="ArgumentException">It is not; the message names the plan path.</exception>

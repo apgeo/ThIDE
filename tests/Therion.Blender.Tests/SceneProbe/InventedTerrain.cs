@@ -107,13 +107,18 @@ internal static class Png
 {
     private static readonly byte[] Signature = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
 
-    public static byte[] EncodeRgb(int width, int height, byte[] rgb)
+    public static byte[] EncodeRgb(int width, int height, byte[] rgb) => Encode(width, height, rgb, channels: 3);
+
+    /// <summary>An 8-bit PNG with transparency, from RGBA rows, top row first.</summary>
+    public static byte[] EncodeRgba(int width, int height, byte[] rgba) => Encode(width, height, rgba, channels: 4);
+
+    private static byte[] Encode(int width, int height, byte[] rgb, int channels)
     {
         using var raw = new MemoryStream();
         for (int row = 0; row < height; row++)
         {
             raw.WriteByte(0); // filter: none
-            raw.Write(rgb, row * width * 3, width * 3);
+            raw.Write(rgb, row * width * channels, width * channels);
         }
         using var packed = new MemoryStream();
         using (var z = new ZLibStream(packed, CompressionLevel.Optimal, leaveOpen: true))
@@ -125,7 +130,7 @@ internal static class Png
         BinaryPrimitives.WriteInt32BigEndian(header, width);
         BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(4), height);
         header[8] = 8; // bit depth
-        header[9] = 2; // colour type: RGB
+        header[9] = (byte)(channels == 4 ? 6 : 2); // colour type: RGB, or RGB with alpha
         Chunk(png, "IHDR", header);
         Chunk(png, "IDAT", packed.ToArray());
         Chunk(png, "IEND", []);

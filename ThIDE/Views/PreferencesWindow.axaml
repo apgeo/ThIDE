@@ -23,7 +23,7 @@
                 Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
             <DockPanel Margin="8">
-                <TextBox DockPanel.Dock="Top" Watermark="{l:Loc Pref_SearchWm}" Margin="0,0,0,8"
+                <TextBox DockPanel.Dock="Top" PlaceholderText="{l:Loc Pref_SearchWm}" Margin="0,0,0,8"
                          AutomationProperties.AutomationId="Preferences.Search" AutomationProperties.Name="{l:Loc Pref_SearchWm}"
                          Text="{Binding SearchQuery, Mode=TwoWay}" />
                 <ListBox ItemsSource="{Binding Sections}"
@@ -437,11 +437,11 @@
                     <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0"
                           IsEnabled="{Binding EnableScriptHooks}">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Pref_OnOpen}" VerticalAlignment="Center" />
-                        <TextBox AutomationProperties.AutomationId="Preferences.HookOnOpen" AutomationProperties.Name="{l:Loc Pref_OnOpen}"   Grid.Row="0" Grid.Column="1" Text="{Binding HookOnOpen}" Watermark="{l:Loc Pref_CommandWm}" Margin="0,0,0,4" />
+                        <TextBox AutomationProperties.AutomationId="Preferences.HookOnOpen" AutomationProperties.Name="{l:Loc Pref_OnOpen}"   Grid.Row="0" Grid.Column="1" Text="{Binding HookOnOpen}" PlaceholderText="{l:Loc Pref_CommandWm}" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Pref_OnSave}" VerticalAlignment="Center" />
-                        <TextBox AutomationProperties.AutomationId="Preferences.HookOnSave" AutomationProperties.Name="{l:Loc Pref_OnSave}"   Grid.Row="1" Grid.Column="1" Text="{Binding HookOnSave}" Watermark="{l:Loc Pref_CommandWm}" Margin="0,0,0,4" />
+                        <TextBox AutomationProperties.AutomationId="Preferences.HookOnSave" AutomationProperties.Name="{l:Loc Pref_OnSave}"   Grid.Row="1" Grid.Column="1" Text="{Binding HookOnSave}" PlaceholderText="{l:Loc Pref_CommandWm}" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Pref_OnBuild}" VerticalAlignment="Center" />
-                        <TextBox AutomationProperties.AutomationId="Preferences.HookOnBuild" AutomationProperties.Name="{l:Loc Pref_OnBuild}"   Grid.Row="2" Grid.Column="1" Text="{Binding HookOnBuild}" Watermark="{l:Loc Pref_CommandWm}" />
+                        <TextBox AutomationProperties.AutomationId="Preferences.HookOnBuild" AutomationProperties.Name="{l:Loc Pref_OnBuild}"   Grid.Row="2" Grid.Column="1" Text="{Binding HookOnBuild}" PlaceholderText="{l:Loc Pref_CommandWm}" />
                     </Grid>
 
                     <TextBlock Text="{l:Loc Pref_HookList}" FontWeight="SemiBold" Margin="0,6,0,0" />
@@ -452,7 +452,7 @@
                                 <Grid ColumnDefinitions="150,*,90,Auto,Auto,Auto" Margin="0,0,0,4">
                                     <ComboBox Grid.Column="0" ItemsSource="{Binding $parent[ItemsControl].DataContext.HookEvents}"
                                               SelectedItem="{Binding Event, Mode=TwoWay}" HorizontalAlignment="Stretch" />
-                                    <TextBox Grid.Column="1" Text="{Binding Command, Mode=TwoWay}" Margin="4,0" Watermark="{l:Loc Pref_CommandWm}" />
+                                    <TextBox Grid.Column="1" Text="{Binding Command, Mode=TwoWay}" Margin="4,0" PlaceholderText="{l:Loc Pref_CommandWm}" />
                                     <NumericUpDown Grid.Column="2" Value="{Binding TimeoutSeconds, Mode=TwoWay}" Minimum="1" Maximum="3600"
                                                    ToolTip.Tip="{l:Loc Pref_HookTimeout}" FormatString="0" />
                                     <CheckBox Grid.Column="3" Content="{l:Loc Pref_HookDetached}" IsChecked="{Binding Detached, Mode=TwoWay}" Margin="6,0,0,0" />
@@ -514,12 +514,12 @@
                                    VerticalAlignment="Center" Margin="0,0,8,4" />
                         <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding AssistantEndpoint}"
                                    AutomationProperties.AutomationId="Preferences.AssistantEndpoint" AutomationProperties.Name="{l:Loc Pref_AssistantEndpoint}"
-                                   Watermark="http://127.0.0.1:1234/v1" Margin="0,0,0,4" />
+                                   PlaceholderText="http://127.0.0.1:1234/v1" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Pref_AssistantModel}"
                                    VerticalAlignment="Center" Margin="0,0,8,4" />
                         <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding AssistantModel}"
                                    AutomationProperties.AutomationId="Preferences.AssistantModel" AutomationProperties.Name="{l:Loc Pref_AssistantModel}"
-                                   Watermark="qwen3-coder-30b-a3b-instruct" Margin="0,0,0,4" />
+                                   PlaceholderText="qwen3-coder-30b-a3b-instruct" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Pref_AssistantMaxTurns}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                         <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding AssistantMaxTurns}"
@@ -661,7 +661,7 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBox Classes="gestureCapture" Text="{Binding GestureDisplay, Mode=OneWay}" IsReadOnly="True"
-                                                 Watermark="{l:Loc Pref_PressKeysWm}" Margin="2" VerticalAlignment="Top"
+                                                 PlaceholderText="{l:Loc Pref_PressKeysWm}" Margin="2" VerticalAlignment="Top"
                                                  AutomationProperties.Name="{Binding DisplayName}"
                                                  ToolTip.Tip="{l:Loc Pref_GestureTip}" />
                                     </DataTemplate>

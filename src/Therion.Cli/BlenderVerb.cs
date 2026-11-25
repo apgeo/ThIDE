@@ -5,7 +5,8 @@
 // (--keep-frames) and be written again from them after a text changed (--compose-only); a
 // render in two stages that is stopped goes on when the same command is run again. Labels,
 // callouts, markers and photos come from a JSON file (--annotations), and the cave can appear
-// part by part (--reveal). Kept in its
+// part by part (--reveal). The leads a preset marks are the stations the model flags as
+// continuations, or those of a JSON file (--leads). Kept in its
 // own class (not a Program.cs local function) so it is unit-testable with in-memory writers and no
 // real Blender.
 
@@ -52,6 +53,7 @@ public static class BlenderVerb
         }
 
         if (!TryBuildSpec(args, stderr, out var spec)) return 2;
+        if (!TryReadLeads(args, source, spec, stderr, out var leads)) return 2;
 
         string? bundle = Option(args, "--bundle");
         bool draft = Flag(args, "--draft"), render = Flag(args, "--render");
@@ -96,13 +98,13 @@ public static class BlenderVerb
                 stderr.WriteLine($"error: --readme-language takes one of: {string.Join(", ", RenderBundleWriter.ReadmeLanguages)}.");
                 return 2;
             }
-            return await BundleAsync(model, spec, bundle, draft, language, plans, Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
+            return await BundleAsync(model, spec, leads, bundle, draft, language, plans, Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
                 .ConfigureAwait(false);
         }
 
         var renderSource = new RenderSource(
             new ResolvedModelSource { Path = Path.GetFullPath(source), Format = format, Kind = ModelSourceKind.ExternalFile },
-            []);
+            leads);
 
         var locator = new BlenderLocator(new ProcessBlenderProbe());
         var runner = new BlenderRunner(new RealBlenderProcessLauncher());
@@ -221,7 +223,8 @@ public static class BlenderVerb
     /// folder first, and what they write is moved to <paramref name="outDir"/>, or beside the
     /// zip.</summary>
     private static async Task<int> BundleAsync(
-        ResolvedModelSource model, SceneSpec spec, string bundle, bool draft, string language, RenderPlans plans, string? outDir,
+        ResolvedModelSource model, SceneSpec spec, IReadOnlyList<SourceLead> leads, string bundle, bool draft, string language,
+        RenderPlans plans, string? outDir,
         string? blenderOverride, TextWriter stdout, TextWriter stderr)
     {
         bool zip = bundle.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
@@ -230,7 +233,7 @@ public static class BlenderVerb
         try
         {
             stderr.WriteLine($"[{RenderPhase.ConvertingGeometry}] Converting model");
-            content = RenderBundleWriter.FromModel(model, spec, work, draft) with { Language = language };
+            content = RenderBundleWriter.FromModel(model, spec, work, draft, leads: leads) with { Language = language };
             if (zip) RenderBundleWriter.WriteZip(content, bundle);
             else RenderBundleWriter.WriteFolder(content, bundle);
         }
@@ -360,8 +363,59 @@ public static class BlenderVerb
             }
             spec = preset.Spec;
         }
-        return TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec) && TryAddReveal(args, stderr, ref spec)
-            && TryAddHdri(args, stderr, ref spec);
+        if (!(TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec) && TryAddReveal(args, stderr, ref spec)
+              && TryAddHdri(args, stderr, ref spec)))
+            return false;
+        // --lamp-reach lights the scene by the lamp on the camera, turned up with the distance it looks over.
+        if (Flag(args, "--lamp-reach"))
+        {
+            if (Option(args, "--hdri") is not null)
+            {
+                stderr.WriteLine("error: --lamp-reach lights the scene by the lamp on the camera; it does not go with --hdri.");
+                return false;
+            }
+            spec = spec with { Lighting = spec.Lighting with { Rig = LightingRig.Headlamp, LampReach = true } };
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The leads a render marks. With <c>--leads &lt;file.json&gt;</c> (once for each file) they
+    /// are the stations the files list; without it, the stations the model itself flags as
+    /// continuations, which a <c>.lox</c> file carries. The model is read for them only when the
+    /// spec shows lead markers.
+    /// </summary>
+    private static bool TryReadLeads(IReadOnlyList<string> args, string source, SceneSpec spec, TextWriter stderr, out IReadOnlyList<SourceLead> leads)
+    {
+        leads = [];
+        var files = Options(args, "--leads").ToList();
+        if (files.Count > 0)
+        {
+            var listed = new List<SourceLead>();
+            foreach (string file in files)
+            {
+                if (!File.Exists(file))
+                {
+                    stderr.WriteLine($"error: leads file not found: {file}");
+                    return false;
+                }
+                try { listed.AddRange(ModelLeads.ReadFile(file)); }
+                catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
+                {
+                    stderr.WriteLine($"error: bad leads file '{file}': {ex.Message}");
+                    return false;
+                }
+            }
+            leads = listed;
+            if (!spec.Labels.Leads.Show)
+                stderr.WriteLine("warning: --leads lists leads, but the preset or spec shows no lead markers (labels.leads.show).");
+            return true;
+        }
+        if (!spec.Labels.Leads.Show) return true;
+        // A model that cannot be read is reported by the conversion, with its own message.
+        try { leads = ModelLeads.FromModel(CaveModelReader.ReadFile(source)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CaveFileFormatException) { }
+        return true;
     }
 
     /// <summary>

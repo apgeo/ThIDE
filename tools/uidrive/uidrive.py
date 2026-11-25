@@ -38,6 +38,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 import warnings
 from dataclasses import dataclass
@@ -49,6 +50,20 @@ DEFAULT_AUTOMATION_PORT = 47800
 # Sub-folders of a session's profile: the app sees them as its XDG base directories and as $HOME.
 PROFILE_DIRS = ("config", "data", "cache", "state", "home")
 RUNTIME_ROOT = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / "thide-uidrive"
+# The variables that name the temp folder: TMPDIR on Linux and macOS, TEMP and TMP elsewhere.
+TEMP_VARIABLES = ("TMPDIR", "TEMP", "TMP")
+
+
+def make_app_temp() -> str:
+    """A new, empty temp folder for one run of the app: what the app's own temp folder is.
+
+    The app keeps render jobs, tool probes and viewer models under fixed names in its temp folder
+    (<temp>/ThIDE/...), where a ThIDE the developer has open keeps its own; with the system's temp
+    folder a driven app would read and prune those. The folder is short and has no symbolic link
+    in it: .NET puts Unix sockets in the temp folder, whose paths are at most about a hundred
+    bytes, and a path with a link in it has two spellings. So it goes straight under /tmp,
+    whatever TMPDIR this process runs with."""
+    return tempfile.mkdtemp(prefix="thui-", dir=os.path.realpath("/tmp"))
 
 # Roles that are pure layout in Avalonia's tree; compact output folds them away.
 _LAYOUT_ROLES = {"panel", "filler", "unknown", "redundant object", "section"}
@@ -460,6 +475,10 @@ class Session:
         dll = dll or default_app_dll()
         make_profile(Path(self.state["profile"]))  # a session started before the state/home folders existed
         env = self.env
+        self._remove_app_temp()  # of a run that was not closed through this session
+        app_temp = make_app_temp()
+        for name in TEMP_VARIABLES:
+            env[name] = app_temp
         env.update(extra_env or {})
         if automation:
             env["THIDE_UI_AUTOMATION"] = "1"
@@ -476,7 +495,8 @@ class Session:
         p = subprocess.Popen(["dotnet", str(dll), *(args or [])], cwd=str(cwd or Path.cwd()), env=env,
                              stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         self.state.update(app_pid=p.pid, app_args=args or [], app_cwd=str(cwd or Path.cwd()),
-                          app_dll=str(dll), automation=automation, automation_port=automation_port)
+                          app_dll=str(dll), automation=automation, automation_port=automation_port,
+                          app_temp=app_temp)
         self._save()
         self._bind_env()
         end = time.time() + timeout
@@ -489,15 +509,26 @@ class Session:
             time.sleep(0.5)
         raise UiError(f"ThIDE window did not appear within {timeout:.0f}s")
 
+    def _remove_app_temp(self) -> None:
+        """Removes the temp folder of the app's last run. Only a folder this module made is
+        removed: one named thui-* straight under /tmp."""
+        app_temp = self.state.get("app_temp")
+        self.state["app_temp"] = None
+        if app_temp and os.path.dirname(app_temp) == os.path.realpath("/tmp") \
+                and os.path.basename(app_temp).startswith("thui-"):
+            shutil.rmtree(app_temp, ignore_errors=True)
+
     def close_app(self) -> None:
         _kill(self.state.get("app_pid"))
         self.state["app_pid"] = None
+        self._remove_app_temp()
         self._save()
 
     def stop(self) -> None:
         for key in ("app_pid", "wm_pid", "dbus_pid", "xvfb_pid"):
             _kill(self.state.get(key))
             self.state[key] = None
+        self._remove_app_temp()
         if self.state:
             self._save()
 

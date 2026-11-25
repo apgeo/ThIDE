@@ -15,6 +15,8 @@ Each annotation has a kind and an anchor ("at"), the point it is about:
                it is turned, so it is always seen as the rectangle it is. With "facing": "fixed"
                it faces along "normal" and stays so. "frame" puts a border about it. It shows
                its image as a screen would, whatever the light, and lights nothing itself.
+               Where a PNG image is clear the photo is not there: a picture cut out of its
+               background shows the cave behind it. (The draft's mosaic is whole.)
 
 Where each one stands, how large it is and what it says or shows comes from the plan; nothing is
 laid out here. With "model" the anchor is a point of that model, in the model's own coordinates:
@@ -441,5 +443,16 @@ def showing(name, image, strength):
     emission.inputs["Strength"].default_value = strength
     tree.links.new(texture.outputs["Color"], emission.inputs["Color"])
     output = tree.nodes.new("ShaderNodeOutputMaterial")
-    tree.links.new(emission.outputs["Emission"], output.inputs["Surface"])
+    if image.depth in (32, 64, 128):
+        # The image has parts that are clear (a PNG cut out of its background): there the photo
+        # is not there, and what stands behind it is seen.
+        nothing = tree.nodes.new("ShaderNodeBsdfTransparent")
+        cut = tree.nodes.new("ShaderNodeMixShader")
+        cut.name = api.CUT_OUT
+        tree.links.new(texture.outputs["Alpha"], cut.inputs[0])
+        tree.links.new(nothing.outputs[0], cut.inputs[1])
+        tree.links.new(emission.outputs["Emission"], cut.inputs[2])
+        tree.links.new(cut.outputs[0], output.inputs["Surface"])
+    else:
+        tree.links.new(emission.outputs["Emission"], output.inputs["Surface"])
     return material

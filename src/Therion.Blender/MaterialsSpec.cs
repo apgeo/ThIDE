@@ -76,4 +76,11 @@ public sealed record LightingSpec
     /// vertical, in degrees, anticlockwise seen from above: what stood in the east stands in
     /// the north at 90. Drawn by the player only.</summary>
     public double HdriRotation { get; init; }
+
+    /// <summary>For <see cref="LightingRig.Headlamp"/>: the lamp reaches as far as the camera
+    /// looks. Its light is turned up by the square of the distance from the camera to what it
+    /// looks at, beyond <see cref="Plan.LampReach.DefaultDistance"/>, so that a cave seen from
+    /// far away is lit as one seen from near, where it would otherwise be dark. Drawn by the
+    /// player only.</summary>
+    public bool LampReach { get; init; }
 }

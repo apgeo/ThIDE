@@ -37,7 +37,7 @@
             <DockPanel>
                 <Button AutomationProperties.AutomationId="Blender.DeletePreset" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_DeletePreset}" Command="{Binding Blender.DeletePresetCommand}" Margin="4,0,0,0" />
                 <Button AutomationProperties.AutomationId="Blender.SavePreset" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_SavePreset}" Command="{Binding Blender.SavePresetCommand}" Margin="4,0,0,0" />
-                <TextBox AutomationProperties.AutomationId="Blender.NewPresetName" AutomationProperties.Name="{l:Loc Blender_UI_NewPresetName}" Watermark="{l:Loc Blender_UI_NewPresetName}" Text="{Binding Blender.NewPresetName}" />
+                <TextBox AutomationProperties.AutomationId="Blender.NewPresetName" AutomationProperties.Name="{l:Loc Blender_UI_NewPresetName}" PlaceholderText="{l:Loc Blender_UI_NewPresetName}" Text="{Binding Blender.NewPresetName}" />
             </DockPanel>
 
             <Separator />
@@ -45,7 +45,7 @@
             <!-- source -->
             <TextBlock Text="{l:Loc Blender_UI_Source}" FontWeight="Bold" />
             <CheckBox AutomationProperties.AutomationId="Blender.UseExternalFile" Content="{l:Loc Blender_UI_UseExternalFile}" IsChecked="{Binding Blender.UseExternalFile}" />
-            <TextBox Watermark="{l:Loc Blender_UI_ExternalFile}" Text="{Binding Blender.ExternalFilePath}"
+            <TextBox PlaceholderText="{l:Loc Blender_UI_ExternalFile}" Text="{Binding Blender.ExternalFilePath}"
                      AutomationProperties.AutomationId="Blender.ExternalFilePath" AutomationProperties.Name="{l:Loc Blender_UI_ExternalFile}"
                      IsVisible="{Binding Blender.UseExternalFile}" />
             <DockPanel IsVisible="{Binding !Blender.UseExternalFile}">
@@ -85,6 +85,7 @@
                 <TextBox AutomationProperties.AutomationId="Blender.HdriPath" AutomationProperties.Name="{l:Loc Blender_UI_HdriPath}" Text="{Binding Blender.HdriPath}" IsEnabled="{Binding Blender.IsHdri}" ToolTip.Tip="{l:Loc Blender_UI_HdriPath_Tip}" /></DockPanel>
             <DockPanel IsEnabled="{Binding Blender.IsHdri}"><TextBlock Text="{l:Loc Blender_UI_HdriRotation}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
                 <TextBox AutomationProperties.AutomationId="Blender.HdriRotation" AutomationProperties.Name="{l:Loc Blender_UI_HdriRotation}" Text="{Binding Blender.HdriRotation}" ToolTip.Tip="{l:Loc Blender_UI_HdriRotation_Tip}" /></DockPanel>
+            <CheckBox AutomationProperties.AutomationId="Blender.LampReach" Content="{l:Loc Blender_UI_LampReach}" IsChecked="{Binding Blender.LampReach}" IsEnabled="{Binding Blender.IsHeadlamp}" ToolTip.Tip="{l:Loc Blender_UI_LampReach_Tip}" />
 
             <TextBlock Text="{l:Loc Blender_UI_Engine}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Engine}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
@@ -155,7 +156,7 @@
                 <Button AutomationProperties.AutomationId="Blender.ClearAnnotations" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_ClearAnnotations}" Command="{Binding Blender.ClearAnnotationsCommand}" Margin="4,0,0,0" ToolTip.Tip="{l:Loc Blender_UI_ClearAnnotations_Tip}" />
                 <Button AutomationProperties.AutomationId="Blender.LoadAnnotations" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_LoadAnnotations}" Command="{Binding Blender.LoadAnnotationsCommand}" Margin="4,0,0,0" ToolTip.Tip="{l:Loc Blender_UI_LoadAnnotations_Tip}" />
                 <Button AutomationProperties.AutomationId="Blender.BrowseAnnotations" AutomationProperties.Name="{l:Loc Blender_UI_BrowseAnnotations}" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_Browse}" Command="{Binding Blender.BrowseAnnotationsCommand}" Margin="4,0,0,0" ToolTip.Tip="{l:Loc Blender_UI_BrowseAnnotations}" />
-                <TextBox AutomationProperties.AutomationId="Blender.AnnotationsPath" AutomationProperties.Name="{l:Loc Blender_UI_AnnotationsPath}" Watermark="{l:Loc Blender_UI_AnnotationsPath}" Text="{Binding Blender.AnnotationsPath}" ToolTip.Tip="{l:Loc Blender_UI_Annotations_Tip}" />
+                <TextBox AutomationProperties.AutomationId="Blender.AnnotationsPath" AutomationProperties.Name="{l:Loc Blender_UI_AnnotationsPath}" PlaceholderText="{l:Loc Blender_UI_AnnotationsPath}" Text="{Binding Blender.AnnotationsPath}" ToolTip.Tip="{l:Loc Blender_UI_Annotations_Tip}" />
             </DockPanel>
             <TextBlock AutomationProperties.AutomationId="Blender.AnnotationsSummary" Text="{Binding Blender.AnnotationsSummary}" TextWrapping="Wrap" />
             <ItemsControl AutomationProperties.AutomationId="Blender.AnnotationProblems" AutomationProperties.Name="{l:Loc Blender_UI_AnnotationProblems}" ItemsSource="{Binding Blender.AnnotationProblems}" Foreground="#C05050">
@@ -202,7 +203,7 @@
                         <Grid ColumnDefinitions="22,*,96,96,30" Margin="0,0,0,4">
                             <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center" Opacity="0.7" />
                             <TextBox Grid.Column="1" AutomationProperties.AutomationId="{Binding TextId}" AutomationProperties.Name="{l:Loc Blender_UI_CaptionText}"
-                                     Watermark="{l:Loc Blender_UI_CaptionText}" Text="{Binding Text}" />
+                                     PlaceholderText="{l:Loc Blender_UI_CaptionText}" Text="{Binding Text}" />
                             <TextBox Grid.Column="2" AutomationProperties.AutomationId="{Binding StartId}" AutomationProperties.Name="{l:Loc Blender_UI_CaptionStart}"
                                      Text="{Binding Start}" Margin="4,0,0,0" ToolTip.Tip="{l:Loc Blender_UI_CaptionStart_Tip}" />
                             <TextBox Grid.Column="3" AutomationProperties.AutomationId="{Binding EndId}" AutomationProperties.Name="{l:Loc Blender_UI_CaptionEnd}"

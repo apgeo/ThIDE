@@ -37,7 +37,7 @@
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc QExport_SurveyOpt}" VerticalAlignment="Center" />
                 <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Survey, Mode=TwoWay}"
                          AutomationProperties.AutomationId="QuickExport.Survey" AutomationProperties.Name="{l:Loc QExport_SurveyOpt}"
-                         Watermark="{l:Loc QExport_SurveyWm}" />
+                         PlaceholderText="{l:Loc QExport_SurveyWm}" />
 
                 <TextBlock Grid.Row="3" Grid.Column="0" Text="{l:Loc QExport_Scale}" VerticalAlignment="Center"
                            IsVisible="{Binding IsMap}" />
@@ -52,7 +52,7 @@
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="{l:Loc QExport_OutputName}" VerticalAlignment="Center" />
                 <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding OutputName, Mode=TwoWay}"
                          AutomationProperties.AutomationId="QuickExport.OutputName" AutomationProperties.Name="{l:Loc QExport_OutputName}"
-                         Watermark="quick-export" />
+                         PlaceholderText="quick-export" />
             </Grid>
         </StackPanel>
     </DockPanel>

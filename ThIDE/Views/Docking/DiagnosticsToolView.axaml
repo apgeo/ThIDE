@@ -89,7 +89,7 @@
 
         <!-- search + severity/category filters + suppression. -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="4,0,4,3" Spacing="6">
-            <TextBox Width="180" Watermark="{l:Loc Common_Filter}" FontSize="11" Padding="4,1"
+            <TextBox Width="180" PlaceholderText="{l:Loc Common_Filter}" FontSize="11" Padding="4,1"
                      AutomationProperties.AutomationId="Diagnostics.Filter" AutomationProperties.Name="{l:Loc Common_Filter}"
                      Text="{Binding Diagnostics.SearchText, Mode=TwoWay}" />
             <ToggleButton AutomationProperties.AutomationId="Diagnostics.ShowErrors" Content="{l:Loc Diag_Errors}"   IsChecked="{Binding Diagnostics.ShowErrors, Mode=TwoWay}"   Padding="6,2" FontSize="11" />

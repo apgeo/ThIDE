@@ -43,7 +43,7 @@
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Scaffold_Entrance}" VerticalAlignment="Center" />
                     <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EntranceStation, Mode=TwoWay}"
                              AutomationProperties.AutomationId="Scaffold.EntranceStation" AutomationProperties.Name="{l:Loc Scaffold_Entrance}"
-                             Watermark="{l:Loc Scaffold_EntranceWm}" />
+                             PlaceholderText="{l:Loc Scaffold_EntranceWm}" />
 
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Scaffold_Cs}" VerticalAlignment="Center" />
                     <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding CoordinateSystems}"
@@ -53,12 +53,12 @@
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Scaffold_Coord1}" VerticalAlignment="Center" />
                     <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FixCoord1, Mode=TwoWay}"
                              AutomationProperties.AutomationId="Scaffold.FixCoord1" AutomationProperties.Name="{l:Loc Scaffold_Coord1}"
-                             Watermark="{l:Loc Scaffold_Coord1Wm}" />
+                             PlaceholderText="{l:Loc Scaffold_Coord1Wm}" />
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{l:Loc Scaffold_Coord2}" VerticalAlignment="Center" />
                     <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding FixCoord2, Mode=TwoWay}"
                              AutomationProperties.AutomationId="Scaffold.FixCoord2" AutomationProperties.Name="{l:Loc Scaffold_Coord2}"
-                             Watermark="{l:Loc Scaffold_Coord2Wm}" />
+                             PlaceholderText="{l:Loc Scaffold_Coord2Wm}" />
 
                     <TextBlock Grid.Row="4" Grid.Column="0" Text="{l:Loc Scaffold_Altitude}" VerticalAlignment="Center" />
                     <TextBox AutomationProperties.AutomationId="Scaffold.FixAltitude" AutomationProperties.Name="{l:Loc Scaffold_Altitude}" Grid.Row="4" Grid.Column="1" Text="{Binding FixAltitude, Mode=TwoWay}" />

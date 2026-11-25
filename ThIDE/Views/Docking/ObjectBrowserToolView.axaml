@@ -26,7 +26,7 @@
         </Border>
         <TextBox Text="{Binding Browser.ActiveFilter.Text, Mode=TwoWay}"
                  AutomationProperties.AutomationId="ObjectBrowser.Filter" AutomationProperties.Name="{l:Loc OB_FilterWatermark}"
-                 Watermark="{l:Loc OB_FilterWatermark}" VerticalAlignment="Center" />
+                 PlaceholderText="{l:Loc OB_FilterWatermark}" VerticalAlignment="Center" />
       </DockPanel>
     </Border>
 
