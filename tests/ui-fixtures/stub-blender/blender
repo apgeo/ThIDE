@@ -4,7 +4,7 @@
 # The application gives Blender either a scene plan with the player that plays it, or a generated
 # script; the stub reads where the output goes from whichever it was given. It keeps a copy of
 # each script, and of each plan, in $THIDE_STUB_BLENDER_SCRIPTS, so a test can check what the
-# application made.
+# application made. With THIDE_STUB_BLENDER_FAIL set, a run ends as a Blender that crashed does.
 import json
 import os
 import re
@@ -14,6 +14,10 @@ import sys
 if "--version" in sys.argv:
     print("Blender 99.0.0 (stub)")
     sys.exit(0)
+
+if os.environ.get("THIDE_STUB_BLENDER_FAIL"):
+    print("Error: the stub was told to fail", file=sys.stderr)
+    sys.exit(1)
 
 
 def say(*lines):

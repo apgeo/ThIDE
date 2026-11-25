@@ -34,7 +34,8 @@ public sealed class UiFactAttribute : FactAttribute
 }
 
 /// <summary>
-/// One running ThIDE process with the UI-automation server on, a throw-away profile, and an MCP client.
+/// One running ThIDE process with the UI-automation server on, a throw-away profile, a temp folder
+/// of its own, and an MCP client.
 /// Selectors and tools are documented on the server (ui_* tools in ThIDE/Services/UiAutomation).
 /// </summary>
 public sealed class ThideApp : IAsyncDisposable
@@ -44,11 +45,16 @@ public sealed class ThideApp : IAsyncDisposable
     private readonly StringBuilder _output = new();
     private McpClient _client = null!;
 
-    private ThideApp(Process process, string home)
+    private ThideApp(Process process, string home, string tempDirectory)
     {
         _process = process;
         _home = home;
+        TempDirectory = tempDirectory;
     }
+
+    /// <summary>The app's own temp folder: what <c>Path.GetTempPath()</c> is inside the app. Deleted
+    /// when the app is disposed.</summary>
+    public string TempDirectory { get; }
 
     public static string FixturesDir => Metadata("UiFixtures");
 
@@ -103,10 +109,25 @@ public sealed class ThideApp : IAsyncDisposable
         psi.Environment["XDG_CONFIG_HOME"] = Directory.CreateDirectory(Path.Combine(home, "config")).FullName;
         psi.Environment["XDG_DATA_HOME"] = Directory.CreateDirectory(Path.Combine(home, "data")).FullName;
         psi.Environment["XDG_CACHE_HOME"] = Directory.CreateDirectory(Path.Combine(home, "cache")).FullName;
+        // A temp folder of its own as well: the app keeps render jobs, tool probes and viewer models
+        // under fixed names in the temp folder (<temp>/ThIDE/...), where a ThIDE the developer has
+        // open keeps its own.
+        var temp = CreateTempDirectory();
+        foreach (var name in TempVariables) psi.Environment[name] = temp;
         foreach (var (name, value) in environment) psi.Environment[name] = value;
 
-        var process = Process.Start(psi) ?? throw new InvalidOperationException("Could not start ThIDE.");
-        var app = new ThideApp(process, home);
+        Process process;
+        try
+        {
+            process = Process.Start(psi) ?? throw new InvalidOperationException("Could not start ThIDE.");
+        }
+        catch
+        {
+            DeleteQuietly(temp);
+            DeleteQuietly(home);
+            throw;
+        }
+        var app = new ThideApp(process, home, temp);
         process.OutputDataReceived += (_, e) => { lock (app._output) app._output.AppendLine(e.Data); };
         process.ErrorDataReceived += (_, e) => { lock (app._output) app._output.AppendLine(e.Data); };
         process.BeginOutputReadLine();
@@ -196,7 +217,50 @@ public sealed class ThideApp : IAsyncDisposable
         try { if (!_process.HasExited) _process.Kill(entireProcessTree: true); } catch { /* already gone */ }
         await _process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10)).ContinueWith(_ => { });
         _process.Dispose();
-        try { Directory.Delete(_home, recursive: true); } catch { /* best effort */ }
+        DeleteQuietly(_home);
+        DeleteQuietly(TempDirectory);
+    }
+
+    /// <summary>The variables that name the temp folder: TMPDIR on Linux and macOS, TEMP and TMP on Windows.</summary>
+    internal static readonly string[] TempVariables = ["TMPDIR", "TEMP", "TMP"];
+
+    /// <summary>
+    /// Makes a new, empty temp folder for one app and returns its path, which is short and has no
+    /// symbolic link in it.
+    /// Short, because .NET puts Unix sockets in the temp folder (the diagnostics socket and every
+    /// named pipe) and a socket path is at most about a hundred bytes: with a longer temp path the
+    /// app never finishes starting. So on Linux and macOS the folder goes straight under /tmp,
+    /// whatever TMPDIR the tests themselves run with.
+    /// Without links, because a file under a linked folder has two spellings, the one given and
+    /// the resolved one, and the app goes wrong where it meets both (with a project in such a
+    /// folder, Link Survey File writes a wrong relative path).
+    /// </summary>
+    internal static string CreateTempDirectory()
+    {
+        var root = RealPath(OperatingSystem.IsWindows() ? Path.GetTempPath() : "/tmp");
+        var dir = Path.Combine(root, "thui-" + Guid.NewGuid().ToString("N")[..8]);
+        if (OperatingSystem.IsWindows()) Directory.CreateDirectory(dir);
+        else Directory.CreateDirectory(dir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        return dir;
+    }
+
+    /// <summary><paramref name="path"/>, which must exist, with every symbolic link in it followed.</summary>
+    internal static string RealPath(string path)
+    {
+        var full = Path.GetFullPath(path);
+        var real = Path.GetPathRoot(full)!;
+        foreach (var part in full[real.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+        {
+            real = Path.Combine(real, part);
+            if (Directory.ResolveLinkTarget(real, returnFinalTarget: true) is { } target)
+                real = RealPath(target.FullName); // the target's own path may go through links too
+        }
+        return real;
+    }
+
+    private static void DeleteQuietly(string dir)
+    {
+        try { Directory.Delete(dir, recursive: true); } catch { /* best effort */ }
     }
 
     private static string Metadata(string key) =>
