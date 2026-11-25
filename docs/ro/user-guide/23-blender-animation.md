@@ -47,8 +47,14 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
    - **Imagini pentru documentare (Documentation stills)** — imagini încadrate de sus / din față /
      din lateral / izometrice.
 
-   O presetare completează dintr-odată camera, materialele, iluminarea și ieșirea. Puteți apoi
-   ajusta orice setare de sub ea.
+   O presetare completează dintr-odată camera, materialele, iluminarea, ieșirea și textele.
+   Puteți apoi ajusta orice setare de sub ea.
+
+   Fiecare presetare integrată **scrie numele peșterii peste imagine**: *Orbit showcase*, *Map
+   reveal* și *Documentation stills* sus, tot timpul, iar *Helix descent* și *Full flythrough*
+   pe un cadru de titlu cu care începe filmul, timp de trei secunde. Numele este cel pe care îl
+   are modelul; peste un model fără nume nu se scrie nimic. Îl schimbați sau îl ștergeți în
+   câmpul **Titlu** al panoului: vedeți [Textele din panou](#textele-din-panou).
 
 3. **Ajustați setările** după nevoie:
    - **Cameră** — șablonul de mișcare.
@@ -72,10 +78,8 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
      fel. *Etichete deasupra*
      alege tavanul deasupra căruia se ridică eticheta unei stații: întâi înălțimea măsurată, întâi
      pereții, doar pereții sau deloc (pe stație).
-     **Linie de credite** este o linie mică ce rămâne în colțul din dreapta jos al imaginii (cine a
-     topografiat, cine a desenat, o licență), iar **Cadru de final** un text pe o imagine neagră cu
-     care se încheie filmul, timp de secundele de alături. Celelalte texte sunt descrise la
-     [Texte peste imagine](#texte-peste-imagine).
+   - **Texte peste imagine** — **Titlul**, **Linia de credite**, **Cadrul de final** și
+     **Subtitrările**, fiecare în timpul ei: vedeți [Textele din panou](#textele-din-panou).
    - **Constructor de scenă (avansat)** — ce construiește scena în Blender; lăsați-l pe *Auto*.
      Vedeți [Doi constructori de scenă](#doi-constructori-de-scenă).
    - **Folder randare** — unde se salvează videoclipul, cadrele sau imaginea; implicit
@@ -122,10 +126,46 @@ Literele sunt cele ale fontului propriu al Blender (cu diacriticele românești 
 cu un contur întunecat, și au mărimea dată de înălțimea imaginii, așa că un film se citește la fel
 la orice rezoluție. Totul păstrează o margine de 5 % față de marginile imaginii.
 
-Panoul are câmpuri pentru linia de credite și pentru cadrul de final. Celelalte texte se setează
-într-o specificație de randare (JSON-ul pe care îl ține o presetare, la `labels.overlays`), în
-linia de comandă (`--title`, `--credits`, `--end-card`, `--caption`) sau de către un asistent, prin
-uneltele MCP.
+### Textele din panou
+
+La **Texte peste imagine**, panoul are textele pe care cel mai probabil le scrieți chiar
+dumneavoastră:
+
+- **Titlu** — titlul. Presetarea stabilește dacă rămâne în partea de sus a imaginii sau este un
+  cadru cu care începe filmul; ce scrieți aici este textul. Gol, nu există titlu.
+- **Linie de credite** — o linie mică ce rămâne în colțul din dreapta jos (cine a topografiat,
+  cine a desenat, o licență).
+- **Cadru de final** — un text pe o imagine neagră cu care se încheie filmul, timp de secundele
+  de alături.
+- **Subtitrări** — linii în partea de jos a imaginii, fiecare în timpul ei. **Adaugă subtitrare**
+  adaugă un rând după ultimul, lung de trei secunde: scrieți-i **textul** și puneți secundele
+  **de la** care și **până la** care se vede, numărate de la începutul filmului. **✕** de la
+  capătul rândului îl șterge. Un rând fără text este lăsat deoparte; o subtitrare care se termină
+  înainte să înceapă apare la **De corectat înainte de randare**.
+
+Sub rânduri, o **bandă** arată subtitrările de-a lungul clipului, fiecare acolo unde cad
+secundele ei, cu numărul ei. Partea gri este clipul însuși: o subtitrare care trece de ea ar
+continua după ce scena s-a încheiat, iar banda se lungește ca să arate cu cât. Se vede câte o
+singură subtitrare, așa că, din două care se suprapun pe bandă, cea care începe mai târziu o
+scurtează pe cealaltă.
+
+**Numele peșterii într-un text.** Scrieți `{cave}` acolo unde trebuie să stea numele peșterii:
+în titlu, în linia de credite, în cadrul de final sau într-o subtitrare. Este completat din model
+când pornește randarea: titlul unui fișier `.3d` sau titlul ridicării din vârful unui fișier
+`.lox` (`-title` al celui mai din afară `survey` al proiectului). Presetările integrate îl
+folosesc pentru titlurile lor, de aceea câmpul Titlu arată `{cave}` până scrieți altceva. Un text
+care nu este altceva decât numele este lăsat deoparte când modelul nu are nume.
+
+**Texte în presetări.** O presetare păstrează textele împreună cu toate celelalte. **Salvează**
+stochează titlul, linia de credite, cadrul de final și subtitrările așa cum sunt în panou, iar
+alegerea presetării le aduce înapoi mai târziu, subtitrările ca rânduri pe care le puteți
+modifica. Folosiți `{cave}` într-o presetare pe care vreți să o folosiți pentru mai multe peșteri.
+
+Celelalte texte (scara grafică, săgeata nordului, legenda adâncimii, un subtitlu, linia de colț,
+trecerile) se setează într-o specificație de randare (JSON-ul pe care îl ține o presetare, la
+`labels.overlays`); titlul, linia de credite, cadrul de final și subtitrările se pot da și în
+linia de comandă (`--title`, `--credits`, `--end-card`, `--caption`) sau de către un asistent,
+prin uneltele MCP. O presetare care le are le păstrează cât timp schimbați textele de mai sus.
 
 **Un cadru de final peste scenă.** Într-o specificație de randare, cadrul de final mai are două
 setări, la `labels.overlays.endCard`. `backdrop` spune cât de întunecat este cadrul: 1 (implicit)
@@ -197,6 +237,7 @@ uneltele MCP (`reveal`) sau chiar în specificația de randare:
 - `glow` face să strălucească ce tocmai a apărut (în culoarea `glowColor`, un portocaliu cald
   dacă nu spuneți altceva), până când dezvăluirea a trecut mai departe.
 - `counter` (pentru `date`) scrie deasupra scării grafice anul la care a ajuns dezvăluirea.
+  **Map reveal** îl are pornit: treceți presetarea pe `date` și ea numără anii.
 - `from` (pentru `distance`) este numele stației de la care se măsoară distanțele.
 - `datesPath` (pentru `date`) numește fișierul care are datele.
 
@@ -285,24 +326,58 @@ specificație de randare, aceeași listă stă la `annotations`. Panoul nu are �
 - O previzualizare arată o fotografie ca pe un mozaic al culorilor ei (vizualizarea solidă a
   Blender nu desenează imagini), iar o apariție treptată ca pe o tăietură.
 
+## Iluminarea cu o imagine (HDRI)
+
+O scenă poate fi luminată de imaginea unui întreg loc: un cer, un studio, o carieră la apus. O
+asemenea imagine (un *HDRI*) este așezată de jur împrejurul scenei, este ceea ce vede camera în
+spatele peșterii și luminează peștera cu propriile ei culori, din locurile ei luminoase. ThIDE nu
+vine cu niciuna; multe se pot descărca gratuit.
+
+Este o setare a specificației de randare, la `lighting`, și a liniei de comandă:
+
+```json
+"lighting": { "rig": "HdriFile", "hdriPath": "ceruri/seara.hdr", "strength": 1.5, "hdriRotation": 90 }
+```
+
+```
+therion-cli blender cave.lox --hdri ceruri/seara.hdr --hdri-rotation 90 --hdri-strength 1.5 --out renders
+```
+
+- **Imaginea** este un fișier Radiance **`.hdr`** sau OpenEXR **`.exr`**, formatele obișnuite ale
+  unor asemenea imagini: de două ori mai lată decât înaltă, cu tot orizontul de la un capăt la
+  altul și cu cerul sus. ThIDE verifică fișierul înainte să pornească Blender, după ce conține,
+  nu după nume, și refuză unul care nu este niciunul dintre cele două sau care este mai mare de
+  256 MiB, de 16.384 de pixeli pe o latură sau de 16.384 × 8.192 pixeli. O imagine lată de 4.096
+  de pixeli luminează o scenă la fel de bine ca una mai mare; una mai mare face doar fundalul mai
+  clar.
+- **`hdriRotation`** rotește imaginea în jurul verticalei, în grade, în sens invers acelor de
+  ceasornic văzut de sus: folosiți-o ca să aduceți soarele din imagine acolo de unde vreți să
+  vină lumina. Nerotită, imaginea are mijlocul spre est.
+- **`strength`** o face mai luminoasă sau mai slabă: 1 este imaginea așa cum este.
+- Fișierul rămâne unde este. ThIDE îl copiază pentru randare și într-un
+  [pachet](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator) (în dosarul lui `hdri`), așa
+  că un pachet se randează pe alt calculator fără el.
+- O previzualizare nu desenează nicio imagine: fundalul ei este un gri simplu, la fel de puternic
+  cum este setată imaginea.
+- Panoul nu are încă un câmp pentru ea: salvați o specificație care o are ca fișier de presetare
+  sau folosiți linia de comandă.
+
 ## Doi constructori de scenă
 
 ThIDE are două moduri de a construi scena în Blender, iar **Constructor de scenă (avansat)** alege
 între ele:
 
-- **Auto** (implicit) folosește *playerul* ori de câte ori acesta poate arăta tot ce cere scena și
-  *generatorul de scripturi* altfel. Când a fost folosit generatorul de scripturi, panoul spune de
-  ce.
+- **Auto** (implicit) folosește *playerul*, care arată tot ce poate cere o scenă.
 - **Player** — constructorul mai nou. ThIDE scrie scena ca date (un *plan de scenă*), iar un
   program fix din Blender o redă. El scrie textele în a doua etapă, randează previzualizările și
-  poate continua o randare care a fost oprită. Cerut pe nume, refuză o scenă pe care nu o poate
-  arăta complet și spune ce nu poate arăta: deocamdată o imagine HDRI ca iluminare.
-- **Generator** — constructorul mai vechi, păstrat așa cum era, pentru comparație și pentru ce nu
-  face încă playerul. Scrie câte un script Python pentru fiecare scenă. Desenează titlul, scara
-  grafică, săgeata nordului și legenda adâncimii ca obiecte în scenă (unde un perete le poate
-  ascunde) și nu desenează linia de credite, subtitrările, cadrul de final, trecerile,
-  [adnotările](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii) sau o
-  [dezvăluire](#dezvăluirea-peșterii-parte-cu-parte).
+  poate continua o randare care a fost oprită.
+- **Generator** — constructorul mai vechi, păstrat așa cum era, pentru comparație. Este folosit
+  doar când îl alegeți aici. Scrie câte un script Python pentru fiecare scenă. Desenează titlul,
+  scara grafică, săgeata nordului și legenda adâncimii ca obiecte în scenă (unde un perete le
+  poate ascunde) și nu desenează un cadru de titlu, linia de credite, subtitrările, cadrul de
+  final, trecerile, [adnotările](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii) sau o
+  [dezvăluire](#dezvăluirea-peșterii-parte-cu-parte) și nu rotește o
+  [imagine HDRI](#iluminarea-cu-o-imagine-hdri). Rezultatul spune ce a lăsat deoparte.
 
 O previzualizare este mereu a playerului, orice s-ar alege aici. **Exportă scriptul…** și
 **Deschide în Blender…** folosesc generatorul de scripturi.
@@ -322,8 +397,9 @@ O previzualizare este mereu a playerului, orice s-ar alege aici. **Exportă scri
     dacă nu o bifați.
 - **Deschide în Blender…** — deschide scena în fereastra *interactivă* a Blender, ca să o
   inspectați sau să o ajustați manual înainte de randare.
-- **Salvează** presetarea — stochează setările curente ca presetare proprie; aceasta apare în bandă
-  alături de cele integrate și se păstrează de la o sesiune la alta.
+- **Salvează** presetarea — stochează setările curente ca presetare proprie, cu tot cu texte și
+  subtitrări; aceasta apare în bandă alături de cele integrate și se păstrează de la o sesiune la
+  alta.
 
 ## Din linia de comandă
 
@@ -337,7 +413,8 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] \
                     [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]... \
                     [--reveal date|order|distance [--reveal-from <station>] \
-                     [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]]
+                     [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]] \
+                    [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]]
 ```
 
 `--export` scrie scriptul și resursele fără a rula Blender; altfel randează. Căile fișierelor
@@ -346,12 +423,17 @@ randării, `2` la o eroare de utilizare sau de specificație.
 
 - `--draft` randează previzualizarea rapidă în locul randării, ca butonul **Previzualizare** al
   panoului.
-- `--builder` alege constructorul de scenă; `auto` este implicit. Cu `player`, o scenă pe care
-  playerul nu o poate arăta complet este o eroare de utilizare care spune ce nu poate arăta.
+- `--builder` alege constructorul de scenă; `auto` este implicit și înseamnă playerul.
+  `generator` cere constructorul mai vechi.
 - `--title`, `--credits`, `--end-card` (cu `--end-card-seconds`) și `--caption` adaugă texte la
   cele ale presetării sau ale specificației. O subtitrare este un singur argument, cu timpii în
   secunde de la începutul filmului: `--caption "2.5-6:Sala Mare"`; dați opțiunea o dată pentru
-  fiecare subtitrare.
+  fiecare subtitrare. `{cave}` în oricare dintre ele ține locul numelui peșterii. Presetările
+  integrate scriu acest nume ca titlu: `--title ""` randează fără titlu.
+- `--hdri seara.hdr` luminează scena cu o imagine așezată de jur împrejurul ei, care este și
+  fundalul: vedeți [Iluminarea cu o imagine (HDRI)](#iluminarea-cu-o-imagine-hdri).
+  `--hdri-rotation 90` o rotește, iar `--hdri-strength 1.5` o face mai luminoasă. Merge și cu
+  `--bundle`.
 - `--annotations note.json` adaugă etichetele, notele cu linie, marcajele și fotografiile dintr-un
   fișier la cele ale presetării sau ale specificației: vezi
   [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii). Merge și cu `--bundle`. Un
@@ -409,7 +491,8 @@ Windows); variabila de mediu `BLENDER` indică altă instalare, de exemplu
 `BLENDER=/opt/blender-4.5/blender sh render.sh`.
 
 Un pachet conține suprafața terenului și imaginea ei atunci când scena le desenează (`surface.ply`,
-`surface.png`), adnotările cu fotografiile lor (`photos/`) și textele de peste imagine, la `texts`
+`surface.png`), adnotările cu fotografiile lor (`photos/`), imaginea care luminează scena
+(`hdri/`) și textele de peste imagine, la `texts`
 în plan. O scenă cu texte se randează și
 acolo în două etape, în dosarul `frames` al pachetului și apoi în `out`; pornită din nou după ce a
 fost oprită, continuă. `sh render.sh --keep-frames` păstrează cadrele, iar
@@ -433,10 +516,9 @@ din `scene-plan.json` a fost schimbat. Subtitrările sunt deja în pachet ca fi�
   opțiune, el este în engleză.
 - Același model cu aceleași setări dă întotdeauna, sub același nume, aceeași arhivă, octet cu
   octet.
-- Un plan de scenă nu poate exprima încă tot ce poate o specificație de randare: iluminarea HDRI
-  este omisă. Comanda avertizează pentru ce omite, iar fișierul `README.txt` al pachetului
-  enumeră ce a fost omis. Afișarea și ascunderea temporizată a etichetelor se află în plan (la
-  `changes`), așa că un pachet le redă.
+- Un plan de scenă spune tot ce poate spune o specificație de randare, așa că un pachet nu lasă
+  nimic deoparte: afișarea și ascunderea temporizată a etichetelor se află în plan (la
+  `changes`), iar imaginea unei iluminări HDRI este printre fișierele lui.
 
 **Ce poate spune un plan de scenă.** `scene-plan.json` este JSON simplu, pe care orice editor de
 text îl poate modifica și orice program îl poate scrie, și poate spune mai mult decât folosesc
@@ -446,7 +528,8 @@ scenele făcute de ThIDE:
   arătat, ascuns sau estompat (`visible`), este acolo doar în parte (`opacity`), capătă o culoare
   (`tint`); un model este întins (`scale`) și mutat (`offset`); o lumină este întărită sau slăbită
   (`energy` — un soare care se stinge când camera intră în subteran); lumea își schimbă culoarea
-  și intensitatea (`worldColor`, `worldStrength`). O cheie poate sta după sfârșitul clipului,
+  și intensitatea (`worldColor`, `worldStrength`: și intensitatea unei imagini HDRI, așa că un cer
+  poate păli când camera intră în peșteră). O cheie poate sta după sfârșitul clipului,
   două chei pe același cadru înseamnă o mișcare care se termină cu un salt, iar o culoare poate
   trece de la o cheie la alta așa cum amestecă un ecran culorile (`"mix": "srgb"`).
 - Tot la `changes`, un model sau o linie este arătat parte cu parte (`reveal`): cheile sunt un
@@ -468,6 +551,9 @@ scenele făcute de ThIDE:
   culorile rămân pe rocă atunci când un model este întins sau mutat.
 - O poziție a camerei poate avea propriul interval de vizibilitate (`clipStart`, `clipEnd`),
   pentru un zbor care vine de departe până aproape.
+- La `look.world`, ce înconjoară scena: o singură culoare, un cer de zi sau o imagine (`"kind":
+  "image"`, cu fișierul ei `image`, cu intensitatea `strength` și cu rotirea `rotation`, în
+  grade).
 
 O previzualizare arată nuanța unui model, iar cât dintr-un model care se estompează mai este acolo
 se vede după partea din fețele lui pe care le desenează; o dezvăluire este o tăietură de-a lungul
@@ -495,6 +581,8 @@ fețelor; o fotografie este acolo un mozaic al culorilor ei. Schema care descrie
 | Lista derulantă a sursei este goală | Compilați mai întâi proiectul (**Compilare → Compilează**) sau bifați **Folosește un fișier extern**. |
 | Randarea a eșuat | Deschideți **jurnalul lucrării** din notificare sau din panou — conține întreaga ieșire a Blender. |
 | Randarea EEVEE eșuează pe un server | Schimbați motorul la **Cycles**. |
-| *„Playerul nu poate construi această scenă…”* | Scena cere ceva ce playerul nu arată încă (mesajul spune ce). Puneți **Constructor de scenă** pe *Auto* sau *Generator*. |
+| *„…the player lights a scene with a Radiance .hdr or an OpenEXR .exr image…”*, *„…cannot travel with the plan…”* | Imaginea iluminării HDRI este alt fel de imagine, este deteriorată sau este prea mare (mesajul spune care). Folosiți un fișier `.hdr` sau `.exr`; sau puneți **Constructor de scenă** pe *Generator*, care încarcă orice imagine pe care o citește Blender. |
+| Fiecare randare are numele peșterii scris sus | Îl scriu presetările integrate. Goliți câmpul **Titlu** (sau `--title ""`). |
+| Titlul este un cod scurt, nu numele peșterii | Este numele pe care îl are modelul: dați celui mai din afară `survey` al proiectului un `-title` sau scrieți titlul pe care îl vreți. |
 | Previzualizarea nu are teren | Un teren transparent nu apare în previzualizări; randarea îl desenează. |
 | Un titlu sau săgeata nordului sunt ascunse de pereți | Scena a fost construită de generatorul de scripturi (el le desenează în scenă). Puneți **Constructor de scenă** pe *Auto* sau *Player*. |
