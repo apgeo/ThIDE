@@ -170,6 +170,32 @@ public class ScenePlanSerializerTests
     }
 
     [Fact]
+    public void AWorldOfAnImage_IsWrittenWithItsFileAndItsTurn_AndReadsBack()
+    {
+        ScenePlan With(PlanWorld world) => PlanFixtures.Full() with { Look = PlanFixtures.Full().Look with { World = world }, Changes = null };
+        var world = new PlanWorld { Kind = PlanWorldKind.Image, Image = "hdri/evening_sky.hdr", Strength = 1.5, Rotation = 90 };
+
+        string json = ScenePlanSerializer.Write(With(world));
+
+        Assert.Contains(
+            "    \"world\": {\n      \"kind\": \"image\",\n      \"strength\": 1.5,\n      \"image\": \"hdri/evening_sky.hdr\",\n      \"rotation\": 90\n    }",
+            json);
+        Assert.Equal(world, ScenePlanSerializer.Read(json).Look.World);
+        Assert.Empty(JsonSchemaSubset.Validate(ScenePlanSchema.Text, json));
+        // A world that is not turned does not say so, and the other worlds are written as they were.
+        Assert.DoesNotContain("rotation\": 9", ScenePlanSerializer.Write(With(world with { Rotation = null })));
+        string sky = ScenePlanSerializer.Write(With(new PlanWorld { Kind = PlanWorldKind.Sky, Strength = 0.5 }));
+        Assert.Contains("    \"world\": {\n      \"kind\": \"sky\",\n      \"strength\": 0.5\n    }", sky);
+        // The schema has the rule of the validator: an HDR or an EXR file beside the plan.
+        Assert.Contains(
+            "$.look.world.image: 'hdri/evening_sky.png' does not match",
+            Assert.Single(JsonSchemaSubset.Validate(ScenePlanSchema.Text, json.Replace("evening_sky.hdr", "evening_sky.png"))));
+        Assert.Contains(
+            "$.look.world.image: '/skies/evening_sky.hdr' does not match",
+            Assert.Single(JsonSchemaSubset.Validate(ScenePlanSchema.Text, json.Replace("hdri/evening_sky.hdr", "/skies/evening_sky.hdr"))));
+    }
+
+    [Fact]
     public void AnOutputThatDoesNotRender_SaysSo_AndReadsBack()
     {
         var plan = PlanFixtures.Full() with { Output = PlanFixtures.Full().Output with { Render = false } };

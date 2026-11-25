@@ -15,9 +15,10 @@
 // the plan's, each at the place of its station or its point, and the times it is there become
 // changes that show and hide it (AnnotationPlanner). The reveal of the spec becomes one more
 // change, of the cave's model: a threshold that runs over the reveal values the conversion gave
-// the mesh, with a counter of the years for a reveal by date (RevealPlanner). Not carried, because the player has no
-// module for it: the HDRI light rig. NotCarried lists what a given spec loses; Notices says what
-// a render of the plan cannot say for itself.
+// the mesh, with a counter of the years for a reveal by date (RevealPlanner). The HDRI light rig
+// becomes a world of an image, which travels with the plan as the photos do (Files).
+// A plan carries everything a spec says: NotCarried is empty for every spec, and stays for
+// whoever asks. Notices says what a render of the plan cannot say for itself.
 //
 // Positions and colours are rounded to six decimals before they are written. They come through
 // sin, cos and pow, which agree between platforms only to the last bit; a micrometre is far below
@@ -70,10 +71,12 @@ public static class ScenePlanBuilder
     /// <remarks>The model is named by the file name of <see cref="SourceSpec.PlyPath"/> alone,
     /// and so are the terrain (<see cref="SourceSpec.SurfacePlyPath"/>) and its image: a plan
     /// lies beside its files. The photos of the annotations are named in the folder
-    /// <see cref="AnnotationPlanner.PhotosFolder"/> (<see cref="AnnotationFiles"/> says which
-    /// file each is). The output directory is taken as it is.</remarks>
+    /// <see cref="AnnotationPlanner.PhotosFolder"/> and the image of an HDRI light rig in the
+    /// folder <see cref="EnvironmentFolder"/> (<see cref="Files"/> says which file each is). The
+    /// output directory is taken as it is.</remarks>
     /// <exception cref="ArgumentException">Also when an annotation names a station the model
-    /// does not have.</exception>
+    /// does not have, or the image of an HDRI light rig is not a <c>.hdr</c> or an
+    /// <c>.exr</c> file by its name.</exception>
     public static ScenePlan FromSpec(SceneSpec spec, CameraFraming framing, SceneMeta? meta = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
@@ -280,13 +283,13 @@ public static class ScenePlanBuilder
         => a with { Stops = null } == b with { Stops = null } && (a.Stops ?? []).SequenceEqual(b.Stops ?? []);
 
     /// <summary>The settings of <paramref name="spec"/> that <see cref="FromSpec"/> leaves out,
-    /// as field paths; empty when the plan says everything the spec does.</summary>
+    /// as field paths; empty when the plan says everything the spec does. A plan says all of
+    /// every spec now (the HDRI light rig was the last it did not), so this is empty; it stays
+    /// for what a later spec may ask for before the player has it.</summary>
     public static IReadOnlyList<string> NotCarried(SceneSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
-        var lost = new List<string>();
-        if (spec.Lighting.Rig == LightingRig.HdriFile) lost.Add("lighting.hdriPath");
-        return lost;
+        return [];
     }
 
     /// <summary>
@@ -333,6 +336,38 @@ public static class ScenePlanBuilder
     {
         ArgumentNullException.ThrowIfNull(spec);
         return AnnotationPlanner.Files(spec.Annotations);
+    }
+
+    /// <summary>The folder, beside the plan, of the image of an HDRI light rig.</summary>
+    public const string EnvironmentFolder = "hdri";
+
+    /// <summary>
+    /// Every file the plan of <paramref name="spec"/> names that the spec has somewhere else, as
+    /// plan path → the file the spec names: the photos of its annotations
+    /// (<see cref="AnnotationFiles"/>) and the image of its HDRI light rig. What whoever writes
+    /// the plan of <see cref="FromSpec"/> into a folder or a bundle puts beside it.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> Files(SceneSpec spec)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        var files = new Dictionary<string, string>(AnnotationPlanner.Files(spec.Annotations), StringComparer.Ordinal);
+        if (spec.Lighting is { Rig: LightingRig.HdriFile, HdriPath: { } image } && !string.IsNullOrWhiteSpace(image))
+            files[EnvironmentPath(image)] = image;
+        return files;
+    }
+
+    /// <summary>The plan path of the image of an HDRI light rig: its own file name, with every
+    /// character but letters, digits, '.', '-' and '_' made a '_', in
+    /// <see cref="EnvironmentFolder"/>.</summary>
+    private static string EnvironmentPath(string image)
+    {
+        string name = FileName(image);
+        var safe = new char[name.Length];
+        for (int i = 0; i < name.Length; i++)
+            safe[i] = char.IsAsciiLetterOrDigit(name[i]) || name[i] is '.' or '-' or '_' ? name[i] : '_';
+        // A name that is all extension (".hdr") gets a stem.
+        string result = new string(safe).TrimStart('.');
+        return EnvironmentFolder + "/" + (result.Contains('.') ? result : "world." + result);
     }
 
     /// <summary>The terrain's material, as the generated scripts make it: see-through from above
@@ -682,8 +717,11 @@ public static class ScenePlanBuilder
     /// The lights and the world <see cref="FromSpec"/> gives a scene for <paramref name="l"/>:
     /// the rigs of the script generator, as data. The lamp that rides the camera is "Headlamp",
     /// the sun under a sky "Sun", the three suns "Key", "Fill" and "Rim". The rig of an image
-    /// file gives no lights and a dim plain world, which is what a plan can say of it.
+    /// file gives no lights and a world of that image, named in <see cref="EnvironmentFolder"/>
+    /// (<see cref="Files"/> says which file it is), as strong as the rig and turned as it says.
     /// </summary>
+    /// <exception cref="ArgumentException">The image of an HDRI rig is not a <c>.hdr</c> or an
+    /// <c>.exr</c> file by its name: a world's image is one of the two.</exception>
     public static (IReadOnlyList<PlanLight> Lights, PlanWorld? World) Lighting(LightingSpec l)
     {
         ArgumentNullException.ThrowIfNull(l);
@@ -700,9 +738,17 @@ public static class ScenePlanBuilder
                 return ([Sun("Key", 4.0 * s, 0.9, 0.1, 0.5), Sun("Fill", 1.5 * s, 1.1, -0.2, -0.8), Sun("Rim", 3.0 * s, -0.6, 0.3, 2.3)], null);
 
             case LightingRig.HdriFile:
-                // An image on the user's disk is not something a plan can name yet. This is what
-                // the generated script falls back to when the image is missing.
-                return ([], new PlanWorld { Kind = PlanWorldKind.Color, Color = new ColorRgb(0.05, 0.05, 0.05), Strength = 0.5 });
+                if (!PlanEnvironmentImage.HasExtension(l.HdriPath))
+                    throw new ArgumentException(
+                        "lighting.hdriPath: the player lights a scene with a Radiance .hdr or an OpenEXR .exr image; " +
+                        $"'{FileName(l.HdriPath ?? "")}' is neither by its name.", nameof(l));
+                return ([], new PlanWorld
+                {
+                    Kind = PlanWorldKind.Image,
+                    Image = EnvironmentPath(l.HdriPath!),
+                    Strength = Rounded(s),
+                    Rotation = l.HdriRotation == 0.0 ? null : Rounded(l.HdriRotation),
+                });
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(l), l.Rig, "Unknown lighting rig.");

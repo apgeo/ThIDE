@@ -128,6 +128,53 @@ public class RenderBundleBlenderTests
         Assert.False(Directory.Exists(Path.Combine(folder, "frames")), "composing without --keep-frames removes the frames");
     }
 
+    [BlenderFact]
+    public async Task ABundleOfASceneUnderAnHdriImage_RendersWithItsRunScript_WithTheImageItCarries()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        string root = Path.Combine(SceneProbeRunner.Root, "bundle-hdri");
+        if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        string work = Path.Combine(root, "work");
+        Directory.CreateDirectory(work);
+        string lox = Path.Combine(work, "cave.lox");
+        LoxWriter.WriteFile(InventedCave.Build(InventedCaveSize.Small), lox);
+        string sky = TestImages.Write(Path.Combine(root, "skies"), "invented sky.exr", TestImages.OpenExr(64, 32, TestImages.Compass));
+        var spec = PlanFixtures.Preset("Orbit showcase") with
+        {
+            Engine = new EngineSpec { Kind = RenderEngineKind.Cycles, Samples = 1, Denoise = false, Gpu = GpuMode.CpuOnly },
+            Materials = new MaterialsSpec { Rock = RockMaterial.Flat, BaseColor = new ColorRgb(0.5, 0.5, 0.5) },
+            Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = sky, HdriRotation = 45 },
+            Labels = new LabelsSpec(),
+            Animation = new AnimationSpec { Fps = 5, DurationSeconds = 0.4 },
+            Output = new OutputSpec { Kind = OutputKind.FrameSequence, Width = 160, Height = 90, BaseName = "clip" },
+        };
+        var content = RenderBundleWriter.FromModel(
+            new ResolvedModelSource { Path = lox, Format = CaveSourceFormat.Lox, Kind = ModelSourceKind.ExternalFile }, spec, work, draft: true);
+        Assert.Empty(content.NotCarried);
+        string zip = Path.Combine(root, "sky-bundle.zip");
+        RenderBundleWriter.WriteZip(content, zip);
+        // Nothing of where the bundle was made is left: not the conversion, not the image.
+        Directory.Delete(work, recursive: true);
+        Directory.Delete(Path.Combine(root, "skies"), recursive: true);
+
+        string unpacked = Path.Combine(root, "unpacked");
+        Unzip(zip, unpacked);
+        string folder = Path.Combine(unpacked, "sky-bundle");
+        Assert.True(File.Exists(Path.Combine(folder, "hdri", "invented_sky.exr")));
+
+        var (code, log) = await RunScript(folder);
+        Assert.True(code == 0, $"render.sh failed (exit code {code}): {Failure(log)}\n  logs: {root}");
+        Assert.Empty(PlayerRunner.Reported(log, "warning"));
+        // The sky above the cave is the image's: every pixel of the upper edge one of its colours.
+        var top = RenderedPicture.Read(Path.Combine(folder, "out", "clip_0001.png")).Part(0, 1, 0, 0.15);
+        int coloured = new[] { new ColorRgb(1, 0, 0), new ColorRgb(0, 1, 0), new ColorRgb(0, 0, 1), new ColorRgb(1, 1, 0) }.Sum(c => top.Of(c).Count);
+        Assert.True(coloured > 0.9 * top.Width * top.Height, $"{coloured} of {top.Width * top.Height} pixels of the upper edge are of the image's colours");
+
+        (code, log) = await RunScript(folder, "--draft");
+        Assert.True(code == 0, $"render.sh --draft failed (exit code {code}): {Failure(log)}\n  logs: {root}");
+        Assert.True(File.Exists(Path.Combine(folder, "out", "clip-draft_0001.png")));
+    }
+
     /// <summary>Unpacks with the system's unzip when there is one, as a user would; with .NET's
     /// own reader otherwise. Either keeps render.sh executable.</summary>
     private static void Unzip(string zip, string folder)

@@ -155,6 +155,71 @@ public class BlenderRenderServiceBlenderTests : IDisposable
         Assert.Equal(0, Player.RenderedPicture.Read(draft.OutputPaths[0]).Of(red).Count);
     }
 
+    /// <summary>The share of the upper edge of a frame that is of each of the four colours of
+    /// the invented sky (<see cref="Player.TestImages.Compass"/>).</summary>
+    private static Dictionary<string, double> SkyColours(string png)
+    {
+        var top = Player.RenderedPicture.Read(png).Part(0, 1, 0, 0.15);
+        double pixels = top.Width * top.Height;
+        return new Dictionary<string, double>
+        {
+            ["red"] = top.Of(new ColorRgb(1, 0, 0)).Count / pixels,
+            ["green"] = top.Of(new ColorRgb(0, 1, 0)).Count / pixels,
+            ["blue"] = top.Of(new ColorRgb(0, 0, 1)).Count / pixels,
+            ["yellow"] = top.Of(new ColorRgb(1, 1, 0)).Count / pixels,
+        };
+    }
+
+    [BlenderFact]
+    public async Task ASpecUnderAnHdriImage_WithAnAnnotation_IsRenderedByThePlayer_TheImageBehindTheCave_AndTurnedAsTheSpecSays()
+    {
+        string sky = Player.TestImages.Write(
+            Path.Combine(_root, "skies"), "invented sky.hdr", Player.TestImages.RadianceHdr(64, 32, Player.TestImages.Compass));
+        var spec = Orbit(new OverlaySpec()) with
+        {
+            Engine = new EngineSpec { Kind = RenderEngineKind.Cycles, Samples = 4, Denoise = false, Gpu = GpuMode.CpuOnly },
+            Materials = new MaterialsSpec { Rock = RockMaterial.Flat, BaseColor = new ColorRgb(0.5, 0.5, 0.5) },
+            Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = sky },
+            Animation = new AnimationSpec { Fps = 4, DurationSeconds = 0.5 },
+            Output = new OutputSpec { Kind = OutputKind.FrameSequence, Width = 160, Height = 90, BaseName = "clip", OutputDirectory = OutDir },
+            Annotations = [new AnnotationSpec { Id = "end", Kind = AnnotationKind.Marker, Station = "main12", Color = new ColorRgb(1, 1, 1) }],
+        };
+
+        // The builder is left to be chosen: it is the player, which used not to carry the image.
+        var result = await Service().RenderAsync(spec, Cave(), new RenderOptions());
+
+        Assert.True(result.Succeeded, $"{result.FailureKind}: {result.ErrorMessage}\n  log: {result.JobLogPath}");
+        Assert.Equal((SceneBuilder.Player, 2), (result.Builder, result.FrameCount));
+        Assert.Empty(result.NotCarried);
+        Assert.Empty(result.LeftOut);
+        Assert.Empty(result.Warnings);
+        // The sky above the cave is the image's: all of it one of its four colours.
+        var colours = SkyColours(result.OutputPaths[0]);
+        string seen = string.Join(", ", colours.Select(c => $"{c.Key} {c.Value:0.00}"));
+        Assert.True(colours.Values.Sum() > 0.9, $"the upper edge of the first frame: {seen}");
+        // The copy of the image went with the job's folder; the image itself stays.
+        Assert.Empty(Directory.GetDirectories(Path.Combine(_root, "jobs")));
+        Assert.True(File.Exists(sky));
+
+        // Turned half round, the colours that were behind the camera are before it.
+        var turned = await Service().RenderAsync(
+            spec with { Lighting = spec.Lighting with { HdriRotation = 180 } }, Cave(), new RenderOptions { Builder = SceneBuilder.Player });
+        Assert.True(turned.Succeeded, $"{turned.FailureKind}: {turned.ErrorMessage}\n  log: {turned.JobLogPath}");
+        var others = SkyColours(turned.OutputPaths[0]);
+        string Opposite(string colour) => colour switch { "red" => "blue", "blue" => "red", "green" => "yellow", _ => "green" };
+        Assert.All(colours, c => Assert.True(
+            Math.Abs(c.Value - others[Opposite(c.Key)]) < 0.05,
+            $"{c.Key} was {c.Value:0.00} of the sky; turned half round, {Opposite(c.Key)} is {others[Opposite(c.Key)]:0.00}"));
+
+        // The script generator still builds the scene when it is asked for, the image read from
+        // where the spec has it, and says what it leaves out.
+        var generated = await Service().RenderAsync(spec, Cave(), new RenderOptions { Builder = SceneBuilder.Generator });
+        Assert.True(generated.Succeeded, $"{generated.FailureKind}: {generated.ErrorMessage}\n  log: {generated.JobLogPath}");
+        Assert.Equal(SceneBuilder.Generator, generated.Builder);
+        Assert.Equal(["annotations"], generated.LeftOut);
+        Assert.DoesNotContain(generated.Warnings, w => w.Contains("HDRI file not found", StringComparison.Ordinal));
+    }
+
     [BlenderFact]
     public async Task ASpecWithAReveal_IsRenderedByThePlayer_TheCaveGrowingFromFrameToFrame_AndTheGeneratorLeavesItOut()
     {

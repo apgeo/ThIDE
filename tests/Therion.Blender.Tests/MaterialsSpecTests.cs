@@ -73,6 +73,30 @@ public class MaterialsSpecTests
     }
 
     [Fact]
+    public void TheTurnOfAnHdriImage_IsWrittenOnlyWhenItIsTurned_SoASpecWithoutOneHasTheHashItHad()
+    {
+        var plain = Base() with { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "/hdris/cave.exr" } };
+        var turned = plain with { Lighting = plain.Lighting with { HdriRotation = 135.5 } };
+
+        Assert.DoesNotContain("hdriRotation", SceneSpecSerializer.Write(plain));
+        Assert.DoesNotContain("hdriRotation", SceneSpecSerializer.Write(Base()));
+        string json = SceneSpecSerializer.Write(turned);
+        Assert.Contains("\"hdriRotation\": 135.5", json);
+        Assert.Equal(135.5, SceneSpecSerializer.Read(json).Lighting.HdriRotation);
+        Assert.Equal(json, SceneSpecSerializer.Write(SceneSpecSerializer.Read(json)));
+        Assert.NotEqual(SceneSpecSerializer.ComputeHash(plain), SceneSpecSerializer.ComputeHash(turned));
+        // A spec from before the field existed reads as one that is not turned, with its hash.
+        var old = SceneSpecSerializer.Read(SceneSpecSerializer.Write(plain));
+        Assert.Equal(0.0, old.Lighting.HdriRotation);
+        Assert.Equal(SceneSpecSerializer.ComputeHash(plain), SceneSpecSerializer.ComputeHash(old));
+
+        Assert.Contains(
+            "lighting.hdriRotation",
+            SceneSpecValidator.Validate(turned with { Lighting = turned.Lighting with { HdriRotation = double.NaN } }).Select(e => e.Path));
+        Assert.Empty(SceneSpecValidator.Validate(turned with { Lighting = turned.Lighting with { HdriRotation = -720 } }));
+    }
+
+    [Fact]
     public void Json_UsesStringEnums_ForMaterialsAndLighting()
     {
         var json = SceneSpecSerializer.Write(Base());

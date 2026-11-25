@@ -383,7 +383,7 @@ public sealed class BlenderRenderToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task A_builder_that_does_not_exist_or_cannot_build_the_scene_is_refused_before_a_job_starts()
+    public async Task A_builder_that_does_not_exist_is_refused_before_a_job_starts_and_the_player_builds_a_scene_under_an_HDRI_image()
     {
         _blender.Saved.Add(new RenderPreset
         {
@@ -392,14 +392,14 @@ public sealed class BlenderRenderToolsTests : IDisposable
         var (render, _) = await ToolsAsync();
 
         var unknown = await render.StartRender(builder: "blender");
-        var refused = await render.StartRender(preset: "Under a sky", builder: "player");
 
         Assert.Equal(ToolErrorCodes.InvalidArgument, unknown.Error!.Code);
         Assert.Contains("auto, player, generator", unknown.Error.Message);
-        Assert.Equal(ToolErrorCodes.InvalidArgument, refused.Error!.Code);
-        Assert.Contains("does not carry lighting.hdriPath", refused.Error.Message);
         Assert.Empty(_blender.Requests);
-        // The same preset is rendered when the builder is left to be chosen, or as a draft.
+        // The player carries the image of an HDRI light rig: it refuses no preset, asked for by
+        // name, left to be chosen, or for a draft.
+        Assert.True((await render.StartRender(preset: "Under a sky", model: "out/cave.3d", builder: "player")).Ok);
+        Assert.Equal(SceneBuilder.Player, _blender.Renderer.LastOptions!.Builder);
         Assert.True((await render.StartRender(preset: "Under a sky", model: "out/cave.3d", draft: true, builder: "player")).Ok);
     }
 

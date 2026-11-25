@@ -14,7 +14,8 @@
 //   thide_player/...        the player
 //   model.ply ...           the meshes, the images and any other file the plan names, at their
 //                           plan paths (surface.ply and surface.png are a terrain and its image,
-//                           photos/ holds the photos of the annotations)
+//                           photos/ holds the photos of the annotations, hdri/ the image of
+//                           the world)
 //
 // The files come from disk or from whoever makes the bundle, as streams. The README is in English
 // or in Romanian, and whoever makes the bundle may give it an opening and sections of their own.
@@ -45,9 +46,10 @@ public sealed record RenderBundleContent
     public ScenePlan? Draft { get; init; }
 
     /// <summary>The files the plans name, as plan path → the file on disk: every model's mesh,
-    /// every material's image, every photo, and the modules of the plan's module folders. A
-    /// photo is checked when the bundle is written: a PNG or a JPEG, no larger than
-    /// <see cref="PlanImage"/> allows.</summary>
+    /// every material's image, every photo, the world's image, and the modules of the plan's
+    /// module folders. A photo is checked when the bundle is written: a PNG or a JPEG, no larger
+    /// than <see cref="PlanImage"/> allows; and so is the world's image: a Radiance HDR or an
+    /// OpenEXR picture, no larger than <see cref="PlanEnvironmentImage"/> allows.</summary>
     public IReadOnlyDictionary<string, string> Files { get; init; } = new Dictionary<string, string>();
 
     /// <summary>More files the plans name, as plan path → what opens the file's content, for
@@ -177,11 +179,12 @@ public static class RenderBundleWriter
         };
         var plan = ScenePlanBuilder.FromSpec(placed, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
         // What the plan names of what the conversion wrote: the mesh, and the terrain with its
-        // image when the plan draws them; and the photos, where the spec has them.
+        // image when the plan draws them; and the photos and the world's image, where the spec
+        // has them.
         var written = new[] { manifest.ModelPath, manifest.SurfacePath, manifest.SurfaceImagePath }.OfType<string>();
-        var photos = ScenePlanBuilder.AnnotationFiles(spec);
+        var elsewhere = ScenePlanBuilder.Files(spec);
         var files = PlayerWriter.FilesOf(plan).ToDictionary(
-            f => f.Path, f => photos.TryGetValue(f.Path, out string? photo) ? photo : written.First(w => Path.GetFileName(w) == f.Path));
+            f => f.Path, f => elsewhere.TryGetValue(f.Path, out string? file) ? file : written.First(w => Path.GetFileName(w) == f.Path));
         return new RenderBundleContent
         {
             Plan = plan,
@@ -225,7 +228,7 @@ public static class RenderBundleWriter
     /// <exception cref="ArgumentException">A plan is invalid; its output directory does not lie
     /// beside it; a path of <see cref="RenderBundleContent.Files"/> is not a path inside the
     /// bundle or is one the bundle uses itself; a model's file or a module folder is not among
-    /// the files; a photo's file is not an image a plan carries.</exception>
+    /// the files; a photo's file, or the world's, is not an image a plan carries.</exception>
     /// <exception cref="FileNotFoundException">A file of
     /// <see cref="RenderBundleContent.Files"/> does not exist.</exception>
     public static IReadOnlyList<string> WriteZip(RenderBundleContent content, Stream destination, string name)
@@ -423,7 +426,9 @@ public static class RenderBundleWriter
                     ? T("the image of a material", "imaginea unui material")
                     : (plan.Annotations ?? []).Any(a => a.Image is { } image && Normalized(image) == path)
                         ? T("a photo shown in the scene", "o fotografie afișată în scenă")
-                        : T("a file the plan names", "un fișier numit de plan")));
+                        : plan.Look.World?.Image is { } world && Normalized(world) == path
+                            ? T("the image round the scene, which lights it (HDRI)", "imaginea din jurul scenei, care o luminează (HDRI)")
+                            : T("a file the plan names", "un fișier numit de plan")));
         int width = files.Max(f => f.Item1.Length) + 2;
         foreach (var (path, what) in files)
             Line("  " + path.PadRight(width) + what);
@@ -559,6 +564,7 @@ public static class RenderBundleWriter
                 if (!files.TryGetValue(Normalized(path), out var open))
                     throw new ArgumentException($"The file of {what} ({path}) is not among the bundle's files.", nameof(content));
                 if (photos.Contains(path) && checkedPhotos.Add(Normalized(path))) PlayerWriter.CheckPhoto(path, what, open);
+                if (path == plan.Look.World?.Image && checkedPhotos.Add(Normalized(path))) PlayerWriter.CheckEnvironment(path, what, open);
             }
             foreach (string folder in plan.ModuleFolders)
                 if (!files.Keys.Any(f => f.StartsWith(Normalized(folder) + "/", StringComparison.OrdinalIgnoreCase)))

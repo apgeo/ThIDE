@@ -3,6 +3,7 @@
 
 using Therion.Blender.Emit;
 using Therion.Blender.Plan;
+using Therion.Blender.Player;
 using Therion.Blender.Presets;
 using Therion.Cave3D;
 using Therion.CaveGeometry;
@@ -651,10 +652,10 @@ public class ScenePlanBuilderTests
         Assert.Empty(ScenePlanBuilder.Notices(spec with { Labels = new LabelsSpec { Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Named, MaxCount = 5000 } } }, PlanFixtures.MediumMeta));
     }
 
-    // ---- what a plan does not say yet ----
+    // ---- what a plan does not say: nothing ----
 
     [Fact]
-    public void NotCarried_NamesWhatThePlanLeavesOut()
+    public void NotCarried_IsEmptyForEverySpec_TheHdriRigIncluded()
     {
         var spec = new SceneSpec
         {
@@ -670,19 +671,62 @@ public class ScenePlanBuilderTests
             Surface = new SurfaceSpec { Mode = SurfaceMode.Textured },
         };
 
-        Assert.Equal(["lighting.hdriPath"], ScenePlanBuilder.NotCarried(spec));
+        Assert.Empty(ScenePlanBuilder.NotCarried(spec));
         Assert.Empty(ScenePlanBuilder.NotCarried(spec with { Lighting = new LightingSpec() }));
         Assert.Empty(ScenePlanBuilder.NotCarried(new SceneSpec()));
         Assert.All(BuiltInPresets.All, preset => Assert.Empty(ScenePlanBuilder.NotCarried(preset.Spec)));
     }
 
     [Fact]
-    public void HdriRig_FallsBackToADimPlainWorld()
+    public void HdriRig_IsAWorldOfTheImage_AsStrongAsTheRig_AndTurnedAsItSays()
     {
-        var look = LookOf(new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "sky.hdr" });
+        var look = LookOf(new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "/skies/evening sky.HDR", Strength = 2.5, HdriRotation = -30 });
 
         Assert.Empty(look.Lights);
-        Assert.Equal(PlanWorldKind.Color, look.World!.Kind);
+        Assert.Equal(
+            new PlanWorld { Kind = PlanWorldKind.Image, Image = "hdri/evening_sky.HDR", Strength = 2.5, Rotation = -30 }, look.World);
+
+        // No turn is not written, and the strength is the rig's own.
+        var plain = LookOf(new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = @"C:\skies\dawn.exr" }).World!;
+        Assert.Equal((PlanWorldKind.Image, "hdri/dawn.exr", 1.0, null), (plain.Kind, plain.Image, plain.Strength, plain.Rotation));
+        Assert.Null(plain.Color);
+        // A name that is all extension still names a file.
+        Assert.Equal("hdri/world.hdr", LookOf(new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "/skies/.hdr" }).World!.Image);
+        // The other rigs have no image, and their plans are as they were.
+        Assert.Null(LookOf(new LightingSpec { Rig = LightingRig.SunSky, HdriPath = "sky.hdr", HdriRotation = 20 }).World!.Image);
+    }
+
+    [Fact]
+    public void Files_NameTheImageOfAnHdriRig_BesideThePhotos_WhereTheSpecHasThem()
+    {
+        var spec = Spec(new CameraSpec()) with
+        {
+            Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "/skies/evening sky.hdr" },
+            Annotations = [new AnnotationSpec { Kind = AnnotationKind.Photo, At = new CaveVector3(1, 2, 3), Image = "/pictures/hall.jpg" }],
+        };
+
+        Assert.Equal(
+            new Dictionary<string, string> { ["photos/hall.jpg"] = "/pictures/hall.jpg", ["hdri/evening_sky.hdr"] = "/skies/evening sky.hdr" },
+            ScenePlanBuilder.Files(spec));
+        // The plan names the same path, and the writer of a job folder looks for the file there.
+        var plan = ScenePlanBuilder.FromSpec(spec, BoxFraming);
+        Assert.Contains(("hdri/evening_sky.hdr", "the world"), PlayerWriter.FilesOf(plan));
+        Assert.Empty(ScenePlanValidator.Validate(plan));
+        // Another rig brings no image, whatever path is left in the spec.
+        Assert.Empty(ScenePlanBuilder.Files(spec with { Lighting = new LightingSpec { HdriPath = "/skies/evening sky.hdr" }, Annotations = [] }));
+    }
+
+    [Fact]
+    public void AnHdriImageOfAnotherKind_IsRefusedByItsName_BeforeAnythingIsPlanned()
+    {
+        var spec = Spec(new CameraSpec()) with { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "/skies/panorama.jpg" } };
+
+        var ex = Assert.Throws<ArgumentException>(() => ScenePlanBuilder.FromSpec(spec, BoxFraming));
+        Assert.StartsWith(
+            "lighting.hdriPath: the player lights a scene with a Radiance .hdr or an OpenEXR .exr image; 'panorama.jpg' is neither by its name.",
+            ex.Message);
+        // The spec itself is valid: a generated script loads whatever Blender reads.
+        Assert.Empty(SceneSpecValidator.Validate(PlanFixtures.WithPaths(spec)));
     }
 
     // ---- errors ----

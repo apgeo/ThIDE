@@ -84,6 +84,8 @@ public static class SceneSpecValidator
             Bad("lighting.strength", $"Light strength must be within 0–{MaxLightStrength}.");
         if (spec.Lighting.Rig == LightingRig.HdriFile && string.IsNullOrWhiteSpace(spec.Lighting.HdriPath))
             Bad("lighting.hdriPath", "The HDRI rig needs a file path.");
+        if (!double.IsFinite(spec.Lighting.HdriRotation))
+            Bad("lighting.hdriRotation", "The turn of the HDRI image is a number of degrees.");
 
         // ---- labels ----
         ValidateLabels(spec, Bad);

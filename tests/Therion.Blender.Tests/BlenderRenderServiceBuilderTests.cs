@@ -41,7 +41,24 @@ public class BlenderRenderServiceBuilderTests : IDisposable
         Output = new OutputSpec { Kind = OutputKind.Video, Width = 64, Height = 64, BaseName = "clip", OutputDirectory = OutDir },
     };
 
-    private static SceneSpec WithHdri(SceneSpec spec) => spec with { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "sky.hdr" } };
+    /// <summary>The spec lit by an invented image of a sky, which lies in the test's folder.</summary>
+    private SceneSpec WithHdri(SceneSpec spec, double rotation = 0) => spec with
+    {
+        Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = SkyImage, HdriRotation = rotation },
+    };
+
+    private string SkyImage
+    {
+        get
+        {
+            string path = Path.Combine(_root, "skies", "evening sky.hdr");
+            if (!File.Exists(path)) Player.TestImages.Write(Path.Combine(_root, "skies"), "evening sky.hdr", Player.TestImages.RadianceHdr(16, 8, Player.TestImages.Compass));
+            return path;
+        }
+    }
+
+    /// <summary>A setting no spec has: what the rule does with one the player would not carry.</summary>
+    private static readonly string[] NotCarriedYet = ["lighting.somethingNew"];
 
     // ---- a stand-in for Blender ----
 
@@ -64,10 +81,14 @@ public class BlenderRenderServiceBuilderTests : IDisposable
             string planPath = Path.Combine(cwd, "scene-plan.json");
             var plan = File.Exists(planPath) ? ScenePlanSerializer.ReadFile(planPath) : null;
             var files = Directory.EnumerateFileSystemEntries(cwd).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToList();
-            // The photos of the annotations lie in a folder of their own.
-            string photos = Path.Combine(cwd, AnnotationPlanner.PhotosFolder);
-            if (Directory.Exists(photos))
-                files.AddRange(Directory.EnumerateFiles(photos).Select(f => AnnotationPlanner.PhotosFolder + "/" + Path.GetFileName(f)).Order(StringComparer.Ordinal));
+            // The photos of the annotations lie in a folder of their own, and so does the
+            // image of an HDRI light rig.
+            foreach (string name in new[] { AnnotationPlanner.PhotosFolder, ScenePlanBuilder.EnvironmentFolder })
+            {
+                string folder = Path.Combine(cwd, name);
+                if (Directory.Exists(folder))
+                    files.AddRange(Directory.EnumerateFiles(folder).Select(f => name + "/" + Path.GetFileName(f)).Order(StringComparer.Ordinal));
+            }
             Starts.Add(new Start(own, script, files!, plan));
 
             string stage = Value(own, "--stage") ?? "all";
@@ -150,11 +171,19 @@ public class BlenderRenderServiceBuilderTests : IDisposable
         Assert.Equal((SceneBuilder.Player, null), (carried.Builder, carried.Refusal));
         Assert.Empty(carried.NotCarried);
 
-        var hdri = SceneBuilders.Choose(WithHdri(Orbit(new OverlaySpec { Title = "T", Credits = "the team", Captions = [new CaptionSpec { Text = "c", End = 1 }] })));
-        Assert.Equal((SceneBuilder.Generator, null), (hdri.Builder, hdri.Refusal));
-        Assert.Equal(["lighting.hdriPath"], hdri.NotCarried);
-        // The generator draws the title in the scene, and none of the texts that came after it.
-        Assert.Equal(["labels.overlays.credits", "labels.overlays.captions"], hdri.LeftOut);
+        // An HDRI light rig is the player's too: it was the last thing a plan did not carry.
+        var texts = new OverlaySpec { Title = "T", Credits = "the team", Captions = [new CaptionSpec { Text = "c", End = 1 }] };
+        var hdri = SceneBuilders.Choose(WithHdri(Orbit(texts)));
+        Assert.Equal((SceneBuilder.Player, null), (hdri.Builder, hdri.Refusal));
+        Assert.Empty(hdri.NotCarried);
+        Assert.Empty(hdri.LeftOut);
+
+        // The rule itself, for a setting the player would not carry: the generator, which
+        // draws the title in the scene, and none of the texts that came after it.
+        var fallen = SceneBuilders.Choose(Orbit(texts), null, NotCarriedYet);
+        Assert.Equal((SceneBuilder.Generator, null), (fallen.Builder, fallen.Refusal));
+        Assert.Equal(NotCarriedYet, fallen.NotCarried);
+        Assert.Equal(["labels.overlays.credits", "labels.overlays.captions"], fallen.LeftOut);
 
         Assert.All(BuiltInPresets.All, preset => Assert.Equal(SceneBuilder.Player, SceneBuilders.Choose(preset.Spec).Builder));
 
@@ -175,13 +204,16 @@ public class BlenderRenderServiceBuilderTests : IDisposable
     [Fact]
     public void Choose_ThePlayerAskedFor_RefusesWhatItCannotCarry_ByName()
     {
-        var choice = SceneBuilders.Choose(WithHdri(Orbit()), new RenderOptions { Builder = SceneBuilder.Player });
+        var choice = SceneBuilders.Choose(Orbit(), new RenderOptions { Builder = SceneBuilder.Player }, NotCarriedYet);
 
-        Assert.Equal(["lighting.hdriPath"], choice.NotCarried);
+        Assert.Equal(NotCarriedYet, choice.NotCarried);
         Assert.Equal(
-            "The player cannot build this scene: it does not carry lighting.hdriPath. " +
+            "The player cannot build this scene: it does not carry lighting.somethingNew. " +
             "Choose the script generator, or let the builder be chosen automatically.", choice.Refusal);
+        // There is no such setting today: the player refuses no spec, an HDRI light rig included.
         Assert.Null(SceneBuilders.Choose(Orbit(), new RenderOptions { Builder = SceneBuilder.Player }).Refusal);
+        var hdri = SceneBuilders.Choose(WithHdri(Orbit()), new RenderOptions { Builder = SceneBuilder.Player });
+        Assert.Equal((SceneBuilder.Player, null, 0), (hdri.Builder, hdri.Refusal, hdri.NotCarried.Count));
     }
 
     [Fact]
@@ -202,6 +234,17 @@ public class BlenderRenderServiceBuilderTests : IDisposable
              "labels.overlays.endCard", "labels.overlays.fadeFromBlack", "labels.overlays.fadeToBlack"],
             choice.LeftOut);
         Assert.Empty(SceneBuilders.NotDrawnByTheGenerator(Orbit(new OverlaySpec { Title = "T", ScaleBar = true, NorthArrow = true, DepthLegend = true })));
+
+        // The generator stays selectable for a spec with an HDRI light rig, and loads the image
+        // as it always did; it does not turn it.
+        var hdri = SceneBuilders.Choose(WithHdri(Orbit()), new RenderOptions { Builder = SceneBuilder.Generator });
+        Assert.Equal((SceneBuilder.Generator, null), (hdri.Builder, hdri.Refusal));
+        Assert.Empty(hdri.LeftOut);
+        Assert.Equal(
+            ["lighting.hdriRotation"],
+            SceneBuilders.Choose(WithHdri(Orbit(), rotation: 90), new RenderOptions { Builder = SceneBuilder.Generator }).LeftOut);
+        // A turn without the rig says nothing.
+        Assert.Empty(SceneBuilders.NotDrawnByTheGenerator(Orbit() with { Lighting = new LightingSpec { HdriRotation = 90 } }));
     }
 
     [Fact]
@@ -209,13 +252,18 @@ public class BlenderRenderServiceBuilderTests : IDisposable
     {
         var draft = SceneBuilders.Choose(WithHdri(Orbit()), new RenderOptions { Builder = SceneBuilder.Generator, Draft = true });
         Assert.Equal((SceneBuilder.Player, null), (draft.Builder, draft.Refusal));
-        Assert.Equal(["lighting.hdriPath"], draft.LeftOut);
+        Assert.Empty(draft.LeftOut);
+        // A draft of a spec the player would not carry all of says what it does not show.
+        Assert.Equal(NotCarriedYet, SceneBuilders.Choose(Orbit(), new RenderOptions { Draft = true }, NotCarriedYet).LeftOut);
 
         string? kept = SceneBuilders.Choose(Orbit(), new RenderOptions { Builder = SceneBuilder.Generator, KeepFrames = true }).Refusal;
         Assert.Equal("Keeping the frames needs the player: the script generator renders in one stage.", kept);
-        string? composed = SceneBuilders.Choose(WithHdri(Orbit()), new RenderOptions { ComposeOnly = true }).Refusal;
-        Assert.Equal("Writing the output from the frames that are there needs the player, which does not carry lighting.hdriPath.", composed);
+        string? composed = SceneBuilders.Choose(Orbit(), new RenderOptions { ComposeOnly = true }, NotCarriedYet).Refusal;
+        Assert.Equal("Writing the output from the frames that are there needs the player, which does not carry lighting.somethingNew.", composed);
         Assert.Equal(SceneBuilder.Player, SceneBuilders.Choose(Orbit(), new RenderOptions { KeepFrames = true }).Builder);
+        // The frames of a scene under an HDRI image are kept and composed from as any others.
+        Assert.Null(SceneBuilders.Choose(WithHdri(Orbit()), new RenderOptions { ComposeOnly = true }).Refusal);
+        Assert.Equal(SceneBuilder.Player, SceneBuilders.Choose(WithHdri(Orbit()), new RenderOptions { KeepFrames = true }).Builder);
     }
 
     [Fact]
@@ -236,11 +284,19 @@ public class BlenderRenderServiceBuilderTests : IDisposable
         var asked = SceneBuilders.Choose(annotated, new RenderOptions { Builder = SceneBuilder.Generator });
         Assert.Equal((SceneBuilder.Generator, null), (asked.Builder, asked.Refusal));
         Assert.Equal(["annotations"], asked.LeftOut);
-        var fallen = SceneBuilders.Choose(WithHdri(annotated));
+        var fallen = SceneBuilders.Choose(annotated, null, NotCarriedYet);
         Assert.Equal(SceneBuilder.Generator, fallen.Builder);
-        Assert.Equal(["lighting.hdriPath"], fallen.NotCarried);
+        Assert.Equal(NotCarriedYet, fallen.NotCarried);
         Assert.Equal(["annotations"], fallen.LeftOut);
         Assert.Empty(SceneBuilders.NotDrawnByTheGenerator(Orbit()));
+
+        // Annotations under an HDRI image: the player's, with nothing left out. It used to be
+        // the generator's, for the image, and lost the annotations.
+        var both = SceneBuilders.Choose(WithHdri(annotated));
+        Assert.Equal((SceneBuilder.Player, null), (both.Builder, both.Refusal));
+        Assert.Empty(both.NotCarried);
+        Assert.Empty(both.LeftOut);
+        Assert.Empty(ScenePlanBuilder.NotCarried(WithHdri(annotated)));
     }
 
     // ---- the service ----
@@ -306,15 +362,73 @@ public class BlenderRenderServiceBuilderTests : IDisposable
     public async Task ASpecWithAnnotations_ThatAGeneratedScriptBuilds_IsRenderedWithoutThem_AndTheResultSaysSo()
     {
         var blender = new FakeBlender();
-        var spec = WithHdri(Orbit()) with { Annotations = [new AnnotationSpec { Kind = AnnotationKind.Marker, Station = "main3" }] };
+        var spec = WithHdri(Orbit(), rotation: 45) with { Annotations = [new AnnotationSpec { Kind = AnnotationKind.Marker, Station = "main3" }] };
+
+        // The generator builds a scene only when it is asked for.
+        var result = await Service(blender).RenderAsync(spec, Cave(), new RenderOptions { Builder = SceneBuilder.Generator });
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.Equal(SceneBuilder.Generator, result.Builder);
+        Assert.Empty(result.NotCarried);
+        Assert.Equal(["annotations", "lighting.hdriRotation"], result.LeftOut);
+        var start = Assert.Single(blender.Starts);
+        Assert.Null(start.Plan);
+        // The generated script loads the image from where the spec has it, as before.
+        Assert.Contains("HDRI_PATH = " + System.Text.Json.JsonSerializer.Serialize(SkyImage), start.Script);
+    }
+
+    [Fact]
+    public async Task ASpecWithAnnotations_UnderAnHdriImage_IsPlayed_WithTheImageBesideThePlan_AndItsCopyIsRemovedAfterwards()
+    {
+        var blender = new FakeBlender();
+        var spec = WithHdri(Orbit(), rotation: 45) with
+        {
+            Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = SkyImage, HdriRotation = 45, Strength = 2 },
+            Annotations = [new AnnotationSpec { Kind = AnnotationKind.Marker, Station = "main3" }],
+        };
 
         var result = await Service(blender).RenderAsync(spec, Cave());
 
         Assert.True(result.Succeeded, result.ErrorMessage);
-        Assert.Equal(SceneBuilder.Generator, result.Builder);
-        Assert.Equal(["lighting.hdriPath"], result.NotCarried);
-        Assert.Equal(["annotations"], result.LeftOut);
-        Assert.Null(Assert.Single(blender.Starts).Plan);
+        Assert.Equal(SceneBuilder.Player, result.Builder);
+        Assert.Empty(result.NotCarried);
+        Assert.Empty(result.LeftOut);
+        var start = Assert.Single(blender.Starts);
+        Assert.Equal(
+            ["hdri", "model.ply", "render.py", "scene-meta.json", "scene-plan.json", "thide_player", "hdri/evening_sky.hdr"], start.JobFiles);
+        var world = start.Plan!.Look.World!;
+        Assert.Equal((PlanWorldKind.Image, "hdri/evening_sky.hdr", 2.0, 45.0), (world.Kind, world.Image, world.Strength, world.Rotation));
+        Assert.Empty(start.Plan.Look.Lights);
+        Assert.Single(start.Plan.Annotations!);
+        // The image itself stays where it was, and nothing is left of the job.
+        Assert.True(File.Exists(SkyImage));
+        Assert.Empty(Directory.GetDirectories(JobRoot));
+    }
+
+    [Fact]
+    public async Task AnHdriImageThatIsNoImage_OrIsNotThere_StopsTheRenderBeforeBlenderStarts_AndLeavesNoCopies()
+    {
+        string notAnImage = Player.TestImages.Write(Path.Combine(_root, "skies"), "notes.hdr", "These are notes, not a picture."u8.ToArray());
+        string aPhoto = Player.TestImages.Write(Path.Combine(_root, "skies"), "flag.exr", Player.TestImages.FlagPng());
+        SceneSpec With(string image) => Orbit() with { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = image } };
+        var blender = new FakeBlender();
+
+        var refused = await Assert.ThrowsAsync<ArgumentException>(() => Service(blender).RenderAsync(With(notAnImage), Cave()));
+        Assert.StartsWith(
+            "The file of the world (hdri/notes.hdr) cannot travel with the plan: the file is neither a Radiance HDR nor an OpenEXR image.",
+            refused.Message);
+        // By what the file holds, not by its name.
+        refused = await Assert.ThrowsAsync<ArgumentException>(() => Service(blender).RenderAsync(With(aPhoto), Cave()));
+        Assert.Contains("(hdri/flag.exr) cannot travel with the plan: the file is neither a Radiance HDR nor an OpenEXR image.", refused.Message);
+        await Assert.ThrowsAsync<FileNotFoundException>(() => Service(blender).RenderAsync(With(Path.Combine(_root, "skies", "gone.hdr")), Cave()));
+        // A picture of another kind is named as what the player does not light a scene with.
+        var named = await Assert.ThrowsAsync<ArgumentException>(() => Service(blender).RenderAsync(With(Path.Combine(_root, "skies", "panorama.jpg")), Cave()));
+        Assert.StartsWith(
+            "lighting.hdriPath: the player lights a scene with a Radiance .hdr or an OpenEXR .exr image; 'panorama.jpg' is neither by its name.",
+            named.Message);
+
+        Assert.Empty(blender.Starts);
+        Assert.All(Directory.GetDirectories(JobRoot), job => Assert.False(Directory.Exists(Path.Combine(job, ScenePlanBuilder.EnvironmentFolder))));
     }
 
     [Fact]
@@ -345,20 +459,22 @@ public class BlenderRenderServiceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task ASpecThePlayerCannotCarry_IsGenerated_AndTheResultSaysWhy()
+    public async Task ASpecUnderAnHdriImage_WithTexts_IsPlayedInTwoStages_AndNothingIsLeftOut()
     {
         var blender = new FakeBlender();
         var spec = WithHdri(Orbit(new OverlaySpec { Credits = "the team" }));
 
         var result = await Service(blender).RenderAsync(spec, Cave());
 
+        // It used to be generated, for the image, and lost the credits.
         Assert.True(result.Succeeded, result.ErrorMessage);
-        Assert.Equal(SceneBuilder.Generator, result.Builder);
-        Assert.Equal(["lighting.hdriPath"], result.NotCarried);
-        Assert.Equal(["labels.overlays.credits"], result.LeftOut);
-        var start = Assert.Single(blender.Starts);
-        Assert.StartsWith("# Generated by ThIDE", start.Script);
-        Assert.Null(start.Plan);
+        Assert.Equal(SceneBuilder.Player, result.Builder);
+        Assert.Empty(result.NotCarried);
+        Assert.Empty(result.LeftOut);
+        Assert.Equal(2, blender.Starts.Count);
+        Assert.All(blender.Starts, start => Assert.Contains("from thide_player import core", start.Script));
+        Assert.Equal("the team", blender.Starts[0].Plan!.Texts!.Items.Single(i => i.Role == "credits").Text);
+        Assert.Equal(PlanWorldKind.Image, blender.Starts[0].Plan!.Look.World!.Kind);
     }
 
     [Fact]
@@ -372,15 +488,16 @@ public class BlenderRenderServiceBuilderTests : IDisposable
         Assert.Empty(generated.NotCarried);
         Assert.Null(Assert.Single(blender.Starts).Plan);
 
-        var refused = await service.RenderAsync(WithHdri(Orbit()), Cave(), new RenderOptions { Builder = SceneBuilder.Player });
-        Assert.Equal((false, RenderFailureKind.BuilderRefused), (refused.Succeeded, refused.FailureKind));
-        Assert.Equal(["lighting.hdriPath"], refused.NotCarried);
-        Assert.Contains("does not carry lighting.hdriPath", refused.ErrorMessage);
-        Assert.Single(blender.Starts);
+        // The player, asked for, builds a scene under an HDRI image: it refuses no spec.
+        var played = await service.RenderAsync(WithHdri(Orbit()), Cave(), new RenderOptions { Builder = SceneBuilder.Player });
+        Assert.Equal((true, SceneBuilder.Player), (played.Succeeded, played.Builder));
+        Assert.Empty(played.NotCarried);
+        Assert.Equal(2, blender.Starts.Count);
+        Assert.NotNull(blender.Starts[1].Plan);
 
         var noFrames = await service.RenderAsync(Orbit(), Cave(), new RenderOptions { Builder = SceneBuilder.Generator, KeepFrames = true });
         Assert.Equal(RenderFailureKind.BuilderRefused, noFrames.FailureKind);
-        Assert.Single(blender.Starts);
+        Assert.Equal(2, blender.Starts.Count);
     }
 
     [Fact]
@@ -477,7 +594,7 @@ public class BlenderRenderServiceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task ADraft_IsThePlayersQuickLook_WhateverBuilderWasAskedFor_AndSaysWhatItDoesNotShow()
+    public async Task ADraft_IsThePlayersQuickLook_WhateverBuilderWasAskedFor_OfTheWholeSpec()
     {
         var blender = new FakeBlender();
         var spec = WithHdri(Orbit(new OverlaySpec { Title = "Invented Cave" }));
@@ -486,9 +603,12 @@ public class BlenderRenderServiceBuilderTests : IDisposable
 
         Assert.True(result.Succeeded, result.ErrorMessage);
         Assert.Equal(SceneBuilder.Player, result.Builder);
-        Assert.Equal(["lighting.hdriPath"], result.LeftOut);
+        // A draft plays the whole spec now: the image is in its plan, though the solid view
+        // shows a plain grey for it.
+        Assert.Empty(result.LeftOut);
         Assert.Empty(result.NotCarried);
         var plan = blender.Starts[0].Plan!;
+        Assert.Equal(PlanWorldKind.Image, plan.Look.World!.Kind);
         Assert.Equal((PlanEngine.Workbench, 32, 32, "clip-draft"), (plan.Look.Engine, plan.Look.Width, plan.Look.Height, plan.Output.BaseName));
         Assert.True(plan.HasTexts);
         Assert.Equal(2, blender.Starts.Count);

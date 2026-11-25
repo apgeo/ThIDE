@@ -10,7 +10,14 @@ headlamp rides the camera.
 The engine "workbench" is the draft look: Blender's solid view, many times faster than a real
 render. It knows no lights and no node materials, so every model is given the colours of its
 material as a colour attribute, which that engine does show.
+
+The world is one colour, a sky, or an image all round (an HDRI): a Radiance .hdr or an OpenEXR
+.exr picture by longitude and latitude, which is the background and lights the scene. Its
+strength is the Strength of the world's Background node, whatever the kind, so a change of the
+scene keys it the same way for all three ("changes": worldStrength).
 """
+
+import math
 
 import bpy
 import mathutils
@@ -27,7 +34,7 @@ KEYS = {
         "bump": None,
     }],
     "lights": [{"id": None, "kind": None, "energy": None, "direction": None, "size": None}],
-    "world": {"kind": None, "color": None, "strength": None},
+    "world": {"kind": None, "color": None, "strength": None, "image": None, "rotation": None},
 }
 
 GPU_BACKENDS = {"optix": "OPTIX", "cuda": "CUDA", "hip": "HIP", "oneapi": "ONEAPI", "metal": "METAL"}
@@ -55,7 +62,7 @@ def build(ctx, look):
     for index, light in enumerate(look.get("lights", [])):
         add_light(scene, light, "look.lights[%d]" % index)
     if look.get("world"):
-        set_world(scene, look["world"])
+        set_world(ctx, look["world"])
     else:
         scene.world = None  # black, and it lights nothing
 
@@ -297,7 +304,8 @@ def add_light(scene, light, where):
     api.stamp(obj, "light", light["id"])
 
 
-def set_world(scene, spec):
+def set_world(ctx, spec):
+    scene = ctx.scene
     world = bpy.data.worlds.new("CaveWorld")
     scene.world = world
     world.use_nodes = True
@@ -315,5 +323,43 @@ def set_world(scene, spec):
         # Blender 4 calls the physical sky NISHITA; Blender 5 has the two scattering models instead.
         api.set_enum(sky, "sky_type", ("NISHITA", "MULTIPLE_SCATTERING", "SINGLE_SCATTERING"))
         tree.links.new(sky.outputs["Color"], background.inputs["Color"])
+    elif kind == "image":
+        world.color = [min(1.0, 0.5 * strength)] * 3  # a draft shows no image: a grey as strong
+        image = load_environment(ctx, spec.get("image"))
+        # The image lies round the scene by longitude and latitude, its upper edge overhead and
+        # its middle in the east (+X). Turning the direction it is looked up by one way turns
+        # the image the other way.
+        coordinates = tree.nodes.new("ShaderNodeTexCoord")
+        mapping = tree.nodes.new("ShaderNodeMapping")
+        mapping.vector_type = "POINT"
+        mapping.inputs["Rotation"].default_value = (0.0, 0.0, -math.radians(spec.get("rotation", 0.0)))
+        environment = tree.nodes.new("ShaderNodeTexEnvironment")
+        environment.image = image
+        environment.projection = "EQUIRECTANGULAR"
+        tree.links.new(coordinates.outputs["Generated"], mapping.inputs["Vector"])
+        tree.links.new(mapping.outputs["Vector"], environment.inputs["Vector"])
+        tree.links.new(environment.outputs["Color"], background.inputs["Color"])
     else:
         raise api.PlanError('look.world.kind: unknown world "%s"' % kind)
+
+
+ENVIRONMENT_HEADS = (b"#?", b"\x76\x2f\x31\x01")  # Radiance HDR, OpenEXR
+
+
+def load_environment(ctx, name):
+    """The world's image, loaded. A file that is not a Radiance HDR or an OpenEXR picture by
+    what it holds is refused before Blender is asked to read it."""
+    where = "look.world.image"
+    if not name:
+        raise api.PlanError("%s: a world of the kind \"image\" needs its image file" % where)
+    path = ctx.input_file(name, where)
+    with open(path, "rb") as stream:
+        head = stream.read(4)
+    if not head.startswith(ENVIRONMENT_HEADS):
+        raise api.PlanError('%s: "%s" is neither a Radiance HDR nor an OpenEXR image' % (where, name))
+    image = bpy.data.images.load(path)
+    # Reading the size loads the file: one that cannot be read has none.
+    if image.size[0] < 1 or image.size[1] < 1:
+        bpy.data.images.remove(image)
+        raise api.PlanError('%s: "%s" cannot be read as an image' % (where, name))
+    return image

@@ -108,24 +108,89 @@ public class BlenderBundleVerbTests : IDisposable
         Assert.Contains("camera_track", File.ReadAllText(Path.Combine(folder, "scene-plan.json")));
     }
 
+    /// <summary>An invented sky as a Radiance HDR picture of four pixels by two, made here.</summary>
+    private string InventedSky(string name = "evening sky.hdr")
+    {
+        string path = Path.Combine(_dir, name);
+        byte[] head = System.Text.Encoding.ASCII.GetBytes("#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 2 +X 4\n");
+        byte[] pixels = [.. Enumerable.Range(0, 8).SelectMany(i => new byte[] { (byte)(i < 4 ? 200 : 60), 140, (byte)(i < 4 ? 60 : 200), 129 })];
+        File.WriteAllBytes(path, [.. head, .. pixels]);
+        return path;
+    }
+
     [Fact]
-    public async Task Bundle_WarnsOfWhatThePlanLeavesOut()
+    public async Task Bundle_CarriesTheImageOfAnHdriRig_AndWarnsOfWhatTheModelDoesNotHave()
     {
         string spec = Path.Combine(_dir, "spec.json");
-        await File.WriteAllTextAsync(spec, """
+        await File.WriteAllTextAsync(spec, $$"""
             { "version": 1, "camera": { "template": "Orbit" },
-              "lighting": { "rig": "HdriFile", "hdriPath": "sky.hdr" },
+              "lighting": { "rig": "HdriFile", "hdriPath": {{System.Text.Json.JsonSerializer.Serialize(InventedSky())}}, "hdriRotation": 30 },
               "surface": { "mode": "Solid" } }
             """);
         string zip = Path.Combine(_dir, "cave.zip");
         var (code, _, stderr) = await Run("blender", _lox, "--spec", spec, "--bundle", zip);
 
         Assert.True(code == 0, stderr);
-        Assert.Contains("warning: the bundle leaves out 'lighting.hdriPath'", stderr);
+        // The image travels with the plan: nothing is left out, and the README does not say so.
+        Assert.DoesNotContain("leaves out", stderr);
         Assert.Contains("warning: The model has no terrain surface; rendering without one.", stderr);
         using var archive = ZipFile.OpenRead(zip);
+        Assert.Equal(new FileInfo(InventedSky()).Length, archive.GetEntry("cave/hdri/evening_sky.hdr")!.Length);
         using var readme = new StreamReader(archive.GetEntry("cave/README.txt")!.Open());
-        Assert.Contains("NOT IN THIS SCENE", readme.ReadToEnd());
+        Assert.DoesNotContain("NOT IN THIS SCENE", readme.ReadToEnd());
+        using var plan = new StreamReader(archive.GetEntry("cave/scene-plan.json")!.Open());
+        string planText = plan.ReadToEnd();
+        Assert.Contains("\"kind\": \"image\"", planText);
+        Assert.Contains("\"image\": \"hdri/evening_sky.hdr\"", planText);
+        Assert.Contains("\"rotation\": 30", planText);
+    }
+
+    [Fact]
+    public async Task Hdri_OnTheCommandLine_LightsThePresetsSceneByTheImage_TurnedAndAsStrongAsAsked()
+    {
+        string folder = Path.Combine(_dir, "sky-bundle");
+        var (code, _, stderr) = await Run(
+            "blender", _lox, "--preset", "Helix descent", "--hdri", InventedSky(), "--hdri-rotation", "-45", "--hdri-strength", "2.5", "--bundle", folder);
+
+        Assert.True(code == 0, stderr);
+        Assert.True(File.Exists(Path.Combine(folder, "hdri", "evening_sky.hdr")));
+        string plan = File.ReadAllText(Path.Combine(folder, "scene-plan.json"));
+        Assert.Contains("\"world\": {\n      \"kind\": \"image\",\n      \"strength\": 2.5,\n      \"image\": \"hdri/evening_sky.hdr\",\n      \"rotation\": -45\n    }", plan);
+        Assert.Contains("\"lights\": []", plan);
+    }
+
+    [Theory]
+    [InlineData("--hdri", "nowhere.hdr", null, null, "error: file not found: nowhere.hdr")]
+    [InlineData("--hdri-rotation", "90", null, null, "error: --hdri-rotation and --hdri-strength go with an image")]
+    [InlineData("--hdri-strength", "2", null, null, "error: --hdri-rotation and --hdri-strength go with an image")]
+    [InlineData("--hdri", "@sky", "--hdri-rotation", "a quarter", "error: --hdri-rotation takes a number of degrees")]
+    [InlineData("--hdri", "@sky", "--hdri-strength", "bright", "error: --hdri-strength takes a number")]
+    [InlineData("--hdri", "@sky", "--hdri-strength", "-1", "lighting.strength")]
+    [InlineData("--hdri", "@notes", null, null, "cannot travel with the plan: the file is neither a Radiance HDR nor an OpenEXR image")]
+    [InlineData("--hdri", "@photo", null, null, "the player lights a scene with a Radiance .hdr or an OpenEXR .exr image; 'photo.png' is neither by its name")]
+    public async Task Hdri_ThatCannotBeUsed_IsAUsageError_AndWritesNothing(string option, string value, string? second, string? secondValue, string expected)
+    {
+        string zip = Path.Combine(_dir, "refused.zip");
+        if (value == "@sky") value = InventedSky();
+        if (value == "@notes")
+        {
+            value = Path.Combine(_dir, "notes.hdr");
+            await File.WriteAllTextAsync(value, "These are notes, not a picture.");
+        }
+        if (value == "@photo")
+        {
+            value = Path.Combine(_dir, "photo.png");
+            await File.WriteAllBytesAsync(value, [0x89, (byte)'P', (byte)'N', (byte)'G']);
+        }
+        string[] arguments = second is null
+            ? ["blender", _lox, option, value, "--bundle", zip]
+            : ["blender", _lox, option, value, second, secondValue!, "--bundle", zip];
+
+        var (code, _, stderr) = await Run(arguments);
+
+        Assert.Equal(2, code);
+        Assert.Contains(expected, stderr);
+        Assert.False(File.Exists(zip));
     }
 
     [Fact]
@@ -291,20 +356,14 @@ public class BlenderBundleVerbTests : IDisposable
     }
 
     [Fact]
-    public async Task ABuilderThatDoesNotExist_OrThatCannotBuildTheScene_IsAUsageError_BeforeBlenderIsLookedFor()
+    public async Task ABuilderThatDoesNotExist_OrThatCannotKeepFrames_IsAUsageError_BeforeBlenderIsLookedFor()
     {
         var (code, _, stderr) = await Run("blender", _lox, "--builder", "blender");
         Assert.Equal(2, code);
         Assert.Contains("--builder takes auto, player or generator", stderr);
 
-        string spec = Path.Combine(_dir, "hdri.json");
-        await File.WriteAllTextAsync(spec, """
-            { "version": 1, "camera": { "template": "Orbit" }, "lighting": { "rig": "HdriFile", "hdriPath": "sky.hdr" } }
-            """);
-        (code, _, stderr) = await Run("blender", _lox, "--spec", spec, "--builder", "player", "--blender", "/nowhere/blender", "--out", Path.Combine(_dir, "refused"));
-        Assert.Equal(2, code);
-        Assert.Contains("error: The player cannot build this scene: it does not carry lighting.hdriPath.", stderr);
-        Assert.False(Directory.Exists(Path.Combine(_dir, "refused")));
+        // (The player refuses no scene any more: one under an HDRI image, which it used to
+        // refuse here, is its own. SceneBuilders.Choose has the tests of that.)
 
         (code, _, stderr) = await Run("blender", _lox, "--builder", "generator", "--keep-frames", "--out", Path.Combine(_dir, "refused"));
         Assert.Equal(2, code);

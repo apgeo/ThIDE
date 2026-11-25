@@ -150,8 +150,9 @@ public sealed class BlenderRenderService : IBlenderRenderService
         if (options.Draft) plan = ScenePlanBuilder.Draft(plan);
         // What a generated script would print about the scene, a plan cannot: say it here.
         var notices = ScenePlanBuilder.Notices(placed, conversion.Meta, CameraFraming.FromGeometry(conversion.Geometry));
-        // The photos of the annotations go beside the plan, from wherever the spec has them.
-        var playerJob = PlayerWriter.WriteJob(plan, jobDir, ScenePlanBuilder.AnnotationFiles(placed));
+        // The photos of the annotations and the image of an HDRI light rig go beside the plan,
+        // from wherever the spec has them.
+        var playerJob = PlayerWriter.WriteJob(plan, jobDir, ScenePlanBuilder.Files(placed));
         var output = PlanOutputs.SpecOf(plan, outputDir);
 
         bool twoStages = plan.HasTexts || options.KeepFrames || options.ComposeOnly;
@@ -412,8 +413,9 @@ public sealed class BlenderRenderService : IBlenderRenderService
         ["model.ply", "scene-meta.json", "render.py", "surface.ply", "surface.png", "surface.jpg", ScenePlanSerializer.FileName];
 
     // The player's package, the frames of a render in two stages whose frames nobody asked for,
-    // and the copies of the annotations' photos.
-    private static readonly string[] ScratchFolderNames = [PlayerFiles.PackageName, PlanOutputs.FramesFolderName, AnnotationPlanner.PhotosFolder];
+    // and the copies of the annotations' photos and of the image of an HDRI light rig.
+    private static readonly string[] ScratchFolderNames =
+        [PlayerFiles.PackageName, PlanOutputs.FramesFolderName, AnnotationPlanner.PhotosFolder, ScenePlanBuilder.EnvironmentFolder];
 
     // What a job folder may hold and still be deleted by PruneJobFolders: scratch and the runner's logs.
     private static readonly HashSet<string> DisposableFileNames = new([.. ScratchFileNames, "job.log", FramesLogName], StringComparer.Ordinal);

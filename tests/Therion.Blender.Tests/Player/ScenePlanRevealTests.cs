@@ -396,14 +396,13 @@ public class ScenePlanRevealTests
         Assert.Equal(["reveal"], generator.LeftOut);
         Assert.Null(generator.Refusal);
 
-        // With what the player does not carry, the generator builds the scene, and the reveal is
-        // what it leaves out.
+        // Under an HDRI image the player draws the reveal too: the image no longer sends the
+        // scene to the generator, which would leave the reveal out.
         var hdri = spec with { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "/somewhere/sky.exr" } };
         var routed = SceneBuilders.Choose(hdri);
-        Assert.Equal(SceneBuilder.Generator, routed.Builder);
-        Assert.Equal(["lighting.hdriPath"], routed.NotCarried);
-        Assert.Equal(["reveal"], routed.LeftOut);
-        Assert.NotNull(SceneBuilders.Choose(hdri, new RenderOptions { Builder = SceneBuilder.Player }).Refusal);
+        Assert.Equal((SceneBuilder.Player, 0, 0), (routed.Builder, routed.NotCarried.Count, routed.LeftOut.Count));
+        Assert.Null(SceneBuilders.Choose(hdri, new RenderOptions { Builder = SceneBuilder.Player }).Refusal);
+        Assert.Equal(["reveal"], SceneBuilders.Choose(hdri, new RenderOptions { Builder = SceneBuilder.Generator }).LeftOut);
         Assert.Equal(SceneBuilder.Player, SceneBuilders.Choose(hdri, new RenderOptions { Draft = true }).Builder);
     }
 
