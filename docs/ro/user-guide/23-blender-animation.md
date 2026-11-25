@@ -65,10 +65,16 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
      terenului**, alături, alege cât din peșteră se vede prin el de sus: la 0 % terenul nu se
      vede, la 100 % ascunde peștera de sub el; implicit 40 %. O grilă foarte mare e rărită la cel
      mult 512 × 512 puncte.
+   - **Lumină** — *sistemul de lumini*: o lampă frontală pe cameră, un soare și un cer, trei
+     lumini de studio sau o imagine de jur împrejurul scenei (*HdriFile*), cu **intensitatea** ei.
+     Vedeți [Iluminarea cu o imagine (HDRI)](#iluminarea-cu-o-imagine-hdri).
    - **Motor** — *Cycles* (implicit, funcționează peste tot) sau *EEVEE* (mai rapid, dar necesită
      un afișaj; pe un server Linux fără afișaj folosiți Cycles). **Dispozitiv** alege backend-ul
      GPU pentru Cycles (Auto le încearcă pe toate și revine la CPU).
    - **Animație** — cadre pe secundă și durată; panoul afișează **numărul de cadre** rezultat.
+   - **Dezvăluire** — peștera apare parte cu parte cât rulează clipul, după distanță, după
+     ordinea ridicării sau după datele ei: vedeți
+     [Dezvăluirea peșterii, parte cu parte](#dezvăluirea-peșterii-parte-cu-parte).
    - **Ieșire** — un videoclip (MP4/MKV/WebM), o secvență PNG numerotată sau o singură imagine;
      plus rezoluția și numele fișierului.
    - **Etichete** — activați etichetele stațiilor și marcajele pistelor. *Mărimea marcajelor*
@@ -78,10 +84,15 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
      fel. *Etichete deasupra*
      alege tavanul deasupra căruia se ridică eticheta unei stații: întâi înălțimea măsurată, întâi
      pereții, doar pereții sau deloc (pe stație).
-   - **Texte peste imagine** — **Titlul**, **Linia de credite**, **Cadrul de final** și
-     **Subtitrările**, fiecare în timpul ei: vedeți [Textele din panou](#textele-din-panou).
-   - **Constructor de scenă (avansat)** — ce construiește scena în Blender; lăsați-l pe *Auto*.
-     Vedeți [Doi constructori de scenă](#doi-constructori-de-scenă).
+   - **Adnotări** — etichete, note cu linie, marcaje și fotografii proprii, încărcate dintr-un
+     fișier: vedeți [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii).
+   - **Texte peste imagine** — **Titlul** și **Subtitlul** lui, **Linia de credite**, **Cadrul de
+     final**, **Scara grafică**, **Săgeata nordului**, **Legenda adâncimii**, trecerile din și în
+     negru și **Subtitrările**, fiecare în timpul ei: vedeți
+     [Textele din panou](#textele-din-panou).
+   - **Constructor de scenă (avansat)** — ce construiește scena în Blender, la randare, la export
+     și la deschiderea în Blender; lăsați-l pe *Auto*. Vedeți
+     [Doi constructori de scenă](#doi-constructori-de-scenă).
    - **Folder randare** — unde se salvează videoclipul, cadrele sau imaginea; implicit
      *Documents/ThIDE/Renders* (*ThIDE/Renders* din dosarul personal, acolo unde nu există un dosar
      Documents). Lăsați-l gol pentru a le păstra în dosarul temporar al lucrării, pe care sistemul de
@@ -128,15 +139,19 @@ la orice rezoluție. Totul păstrează o margine de 5 % față de marginile imag
 
 ### Textele din panou
 
-La **Texte peste imagine**, panoul are textele pe care cel mai probabil le scrieți chiar
-dumneavoastră:
+La **Texte peste imagine**, panoul are textele din tabelul de mai sus:
 
 - **Titlu** — titlul. Presetarea stabilește dacă rămâne în partea de sus a imaginii sau este un
   cadru cu care începe filmul; ce scrieți aici este textul. Gol, nu există titlu.
+- **Subtitlu** — o linie mai mică sub titlu. Fără titlu, nu se arată.
 - **Linie de credite** — o linie mică ce rămâne în colțul din dreapta jos (cine a topografiat,
   cine a desenat, o licență).
 - **Cadru de final** — un text pe o imagine neagră cu care se încheie filmul, timp de secundele
   de alături.
+- **Scară grafică**, **Săgeata nordului**, **Legenda adâncimii** — bifați-le pe cele pe care
+  trebuie să le aibă imaginea.
+- **Ieșire din negru** și **Intrare în negru** — cât durează ca filmul să iasă din negru la
+  început și să intre în negru la sfârșit, în secunde; 0 înseamnă fără trecere.
 - **Subtitrări** — linii în partea de jos a imaginii, fiecare în timpul ei. **Adaugă subtitrare**
   adaugă un rând după ultimul, lung de trei secunde: scrieți-i **textul** și puneți secundele
   **de la** care și **până la** care se vede, numărate de la începutul filmului. **✕** de la
@@ -157,12 +172,12 @@ folosesc pentru titlurile lor, de aceea câmpul Titlu arată `{cave}` până scr
 care nu este altceva decât numele este lăsat deoparte când modelul nu are nume.
 
 **Texte în presetări.** O presetare păstrează textele împreună cu toate celelalte. **Salvează**
-stochează titlul, linia de credite, cadrul de final și subtitrările așa cum sunt în panou, iar
-alegerea presetării le aduce înapoi mai târziu, subtitrările ca rânduri pe care le puteți
-modifica. Folosiți `{cave}` într-o presetare pe care vreți să o folosiți pentru mai multe peșteri.
+stochează titlul și subtitlul lui, linia de credite, cadrul de final, scara grafică, săgeata
+nordului, legenda adâncimii, trecerile și subtitrările așa cum sunt în panou, iar alegerea
+presetării le aduce înapoi mai târziu, subtitrările ca rânduri pe care le puteți modifica. Folosiți `{cave}` într-o presetare pe care vreți să o folosiți pentru mai multe peșteri.
 
-Celelalte texte (scara grafică, săgeata nordului, legenda adâncimii, un subtitlu, linia de colț,
-trecerile) se setează într-o specificație de randare (JSON-ul pe care îl ține o presetare, la
+Ceea ce nu are câmp în panou (linia de colț și textele ei temporizate, secundele unui cadru de
+titlu) se setează într-o specificație de randare (JSON-ul pe care îl ține o presetare, la
 `labels.overlays`); titlul, linia de credite, cadrul de final și subtitrările se pot da și în
 linia de comandă (`--title`, `--credits`, `--end-card`, `--caption`) sau de către un asistent,
 prin uneltele MCP. O presetare care le are le păstrează cât timp schimbați textele de mai sus.
@@ -222,9 +237,31 @@ parte cu parte cât rulează clipul, într-o ordine pe care o dă chiar ridicare
 | `order` (după ordine) | viză cu viză, în ordinea în care le are ridicarea, fiecare viză crescând dinspre capătul care este deja acolo | nimic |
 | `date` (după dată) | în ordinea **datelor ridicării**: istoria explorării, cu un **contor al anilor** într-un colț al imaginii | datele ridicării |
 
-Presetarea **Map reveal** dezvăluie după distanță. Orice altă presetare sau specificație primește
-o dezvăluire din linia de comandă (`--reveal date`, vezi [mai jos](#din-linia-de-comandă)), prin
-uneltele MCP (`reveal`) sau chiar în specificația de randare:
+Presetarea **Map reveal** dezvăluie după distanță. Orice altă presetare primește o dezvăluire în
+panou:
+
+- **Dezvăluie peștera după** — *Off* (toată peștera de la primul cadru), *Distance* (după
+  distanță), *Order* (după ordine) sau *Date* (după dată). Câmpurile de sub el apar după ce
+  alegeți o dezvăluire.
+- **De la stația** (după distanță) — stația de la care se măsoară distanțele; gol, se măsoară de
+  la intrări.
+- **Fișier cu date** (după dată) — fișierul `.3d` care are datele ridicării, scris sau ales cu
+  **Răsfoiește…**; gol, se folosește un `.3d` cu același nume de lângă model (vedeți *De unde vin
+  datele*, mai jos).
+- **Dezvăluirea începe** — secunda la care începe dezvăluirea. **Dezvăluie până la sfârșitul
+  clipului** este bifat la început; debifați-l, iar **Dezvăluirea se termină** primește secunda
+  la care toată peștera este acolo. Lăsați peșterii o secundă sau două la sfârșit.
+- **Marginea dezvăluirii** — cât de moale este marginea (0 înseamnă o tăietură netă) și
+  **Strălucire acolo unde apare peștera**.
+
+Un fișier care nu există, o dezvăluire care se termină înainte să înceapă sau care începe după
+sfârșitul clipului apar la **De corectat înainte de randare**. **Salvează** păstrează dezvăluirea
+în presetare.
+
+O dezvăluire vine și din linia de comandă (`--reveal date`, vezi
+[mai jos](#din-linia-de-comandă)), prin uneltele MCP (`reveal`) sau stă chiar în specificația de
+randare, care are două setări în plus față de panou (`glowColor` și `counter`; panoul le păstrează
+pe cele ale presetării):
 
 ```json
 "reveal": { "by": "Date", "start": 1, "end": 9, "edge": 0.03, "glow": true, "counter": true }
@@ -314,9 +351,19 @@ imagine lată de 2 000 de pixeli este mai mult decât arată un film: fișierele
 mai mici și randări mai rapide. Fișierele rămân unde sunt; ThIDE le copiază pentru randare și
 într-un pachet (în dosarul lui `photos`).
 
-**De unde vin.** În linia de comandă, `--annotations note.json` (o dată pentru fiecare fișier);
+**În panou.** La **Adnotări**, scrieți calea fișierului sau alegeți-l cu **Răsfoiește…** și
+apăsați **Încarcă**: scena primește adnotările fișierului *în locul* celor pe care le avea, iar
+linia de dedesubt spune câte sunt și de ce fel. Ce este greșit la ele apare cu roșu sub ea și la
+**De corectat înainte de randare**: o adnotare fără text sau fără stație, o fotografie al cărei
+fișier nu există sau nu este PNG ori JPEG. Un fișier care nu este o listă de adnotări nu este
+încărcat, iar scena le păstrează pe cele pe care le avea. Panoul citește fișierul când apăsați
+**Încarcă**: apăsați din nou după ce modificați fișierul. **Golește** scoate adnotările din scenă
+(fișierul rămâne). **Salvează** le păstrează în presetare, iar o presetare care are adnotări le
+aduce înapoi; alegerea unei presetări le înlocuiește pe cele ale unui fișier.
+
+**În altă parte.** În linia de comandă, `--annotations note.json` (o dată pentru fiecare fișier);
 prin uneltele MCP, `annotations` numește un astfel de fișier din spațiul de lucru; într-o
-specificație de randare, aceeași listă stă la `annotations`. Panoul nu are încă un câmp pentru ele.
+specificație de randare, aceeași listă stă la `annotations`.
 
 - O stație pe care modelul nu o are oprește randarea, cu numele ei.
 - O adnotare care nu este arătată niciodată (timpul ei este după sfârșitul filmului, camera nu
@@ -333,7 +380,14 @@ asemenea imagine (un *HDRI*) este așezată de jur împrejurul scenei, este ceea
 spatele peșterii și luminează peștera cu propriile ei culori, din locurile ei luminoase. ThIDE nu
 vine cu niciuna; multe se pot descărca gratuit.
 
-Este o setare a specificației de randare, la `lighting`, și a liniei de comandă:
+**În panou**, la **Lumină**: alegeți *HdriFile* ca **Sistem de lumini** și numiți imaginea la
+**Imagine HDRI**, sau apăsați **Răsfoiește…**, care alege fișierul și sistemul de lumini în locul
+dumneavoastră. **Intensitatea luminii** spune cât de puternic luminează, iar **Rotire HDRI** o
+rotește. O imagine care nu există sau care nu este nici `.hdr`, nici `.exr` apare la **De corectat
+înainte de randare**. **Salvează** păstrează în presetare calea imaginii, cu restul.
+
+Este și o setare a specificației de randare, la `lighting`, a liniei de comandă și a uneltelor MCP
+(`hdri`, `hdriStrength`, `hdriRotation`, pentru o imagine din spațiul de lucru):
 
 ```json
 "lighting": { "rig": "HdriFile", "hdriPath": "ceruri/seara.hdr", "strength": 1.5, "hdriRotation": 90 }
@@ -359,8 +413,6 @@ therion-cli blender cave.lox --hdri ceruri/seara.hdr --hdri-rotation 90 --hdri-s
   că un pachet se randează pe alt calculator fără el.
 - O previzualizare nu desenează nicio imagine: fundalul ei este un gri simplu, la fel de puternic
   cum este setată imaginea.
-- Panoul nu are încă un câmp pentru ea: salvați o specificație care o are ca fișier de presetare
-  sau folosiți linia de comandă.
 
 ## Doi constructori de scenă
 
@@ -379,24 +431,46 @@ ThIDE are două moduri de a construi scena în Blender, iar **Constructor de sce
   [dezvăluire](#dezvăluirea-peșterii-parte-cu-parte) și nu rotește o
   [imagine HDRI](#iluminarea-cu-o-imagine-hdri). Rezultatul spune ce a lăsat deoparte.
 
-O previzualizare este mereu a playerului, orice s-ar alege aici. **Exportă scriptul…** și
-**Deschide în Blender…** folosesc generatorul de scripturi.
+O previzualizare este mereu a playerului, orice s-ar alege aici. **Randează**, **Exportă
+scriptul…** și **Deschide în Blender…** folosesc toate constructorul ales aici, așa că toate trei
+arată aceeași scenă.
 
 ## Alte moduri de rulare
 
-- **Exportă scriptul…** — în loc să randeze, ThIDE scrie scriptul `render.py` împreună cu
-  `model.ply` și `scene-meta.json` într-un dosar ales de dumneavoastră, ca să îl puteți rula singur
-  mai târziu cu `blender -b --python render.py` sau să îl arhivați/distribuiți. Două opțiuni de la
-  **Ieșire** schimbă ce îi trebuie scriptului lângă el:
-  - **Script autonom** pune datele scenei (etichete, legendă) în script, așa că acesta nu mai
-    citește `scene-meta.json`. Rețeaua de poligoane a modelului, `model.ply`, o citește în
-    continuare de lângă el.
-  - **Include rețelele de poligoane în script**, care se poate bifa doar cât timp scriptul este
-    autonom, pune în script și rețeaua de poligoane (și terenul cu imaginea lui, când scena îl
-    desenează): un singur fișier `.py` care se randează oriunde, dar mult mai mare. Este oprită
-    dacă nu o bifați.
-- **Deschide în Blender…** — deschide scena în fereastra *interactivă* a Blender, ca să o
-  inspectați sau să o ajustați manual înainte de randare.
+- **Exportă scriptul…** — în loc să randeze, ThIDE scrie în **Folder export** scena pe care ar
+  arăta-o **Randează**, ca să o randați mai târziu, pe alt calculator, sau să o arhivați și să o
+  distribuiți. Este același dosar pe care îl conține un
+  [pachet de randare](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator):
+
+  | Fișier | Ce este |
+  |---|---|
+  | `scene-plan.json` | scena: modele, cameră, aspect, texte, adnotări, ieșire |
+  | `render.py`, `thide_player/` | playerul, care construiește în Blender scena din plan |
+  | `model.ply`, `photos/`, `hdri/` … | rețelele de poligoane și imaginile numite de plan |
+  | `render.sh`, `render.cmd`, `README.txt` | scripturi care pornesc Blender și cum se folosesc |
+  | `out/` | unde scrie randarea; subtitrările unui film sunt deja acolo, ca `.srt` și `.vtt` |
+
+  Rulați-l cu `sh render.sh` (`render.cmd` pe Windows) sau cu
+  `blender -b --factory-startup --python render.py`. Nimic din dosar nu are nevoie de ThIDE, iar
+  dosarul poate fi mutat.
+
+  **Script autonom (un singur fișier)**, de la **Ieșire**, face din export un singur `render.py`
+  care conține planul, playerul, rețelele de poligoane și imaginile: un fișier mult mai mare,
+  care se randează oriunde, în `out` de lângă el.
+
+  Cu *Generator* ales drept constructor de scenă, exportul este în schimb cel al generatorului de
+  scripturi: `render.py` cu `model.ply` și `scene-meta.json`, fără ceea ce acel constructor nu
+  desenează (panoul le enumeră). *Script autonom* pune atunci datele scenei în script, iar
+  **Include rețelele de poligoane în script** și rețeaua de poligoane; această a doua opțiune
+  este doar pentru generatorul de scripturi, fiindcă fișierul unic al playerului își conține
+  întotdeauna rețelele.
+- **Deschide în Blender…** — deschide scena pe care ar arăta-o **Randează** în fereastra Blender,
+  văzută prin camera ei, ca să vă uitați în jur sau să o modificați manual. Nu se randează nimic;
+  o randare pe care o porniți de acolo scrie în **Folder randare**. Scena este construită de
+  player, așa că totul este acolo: peștera, etichetele, adnotările, dezvăluirea, lumina.
+  **Textele de peste imagine nu sunt**: ele sunt scrise peste cadrele terminate, în a doua
+  etapă, iar fereastra Blender arată scena dinainte de aceasta. Panoul spune acest lucru când
+  deschide o scenă care are texte.
 - **Salvează** presetarea — stochează setările curente ca presetare proprie, cu tot cu texte și
   subtitrări; aceasta apare în bandă alături de cele integrate și se păstrează de la o sesiune la
   alta.

@@ -1,5 +1,25 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-25 — `ExportAsync`: the player's export
+
+### Additive API
+- **`BlenderRenderService.ExportAsync(spec, source, outputDir, ExportOptions, …)`** implements
+  `IBlenderRenderService.ExportAsync` (see Therion.Blender's changes): the player's folder as a
+  render bundle holds it, one script (`ExportOptions.SingleFile`, written as
+  `BlenderRenderService.ExportScriptName`), the job folder for Blender's window
+  (`ExportOptions.Interactive`), or the generated script when `ExportOptions.Builder` is
+  `Generator`. It needs no Blender and starts none.
+- The model is converted in a scratch folder under the job root, which is removed when the
+  export is written: the export's folder gets nothing but the export. An export to look at is
+  converted in place, as a render's job folder is.
+- A spec that cannot be planned throws `ArgumentException`; a model that cannot be read throws
+  what the conversion throws, as `ExportScriptAsync` does.
+
+### Behaviour changes
+- None for `RenderAsync` and `ExportScriptAsync`. The player's part of a render (convert, plan,
+  write the job folder) is now one method that the export to look at shares, so the two cannot
+  drift apart.
+
 ## 2026-11-20 — the service builds scenes with the player; two stages; drafts
 
 ### Behaviour changes

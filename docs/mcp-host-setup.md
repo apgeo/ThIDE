@@ -221,7 +221,7 @@ these tools.
 | `start_render` | starts a render, or a quick draft of it (`draft`), and answers at once with a job id |
 | `render_status` | how the job is getting on; `waitSeconds` (up to 60) waits for it and streams progress |
 | `cancel_render` | stops the job, Blender included |
-| `export_render_script` | writes the Blender script, mesh and scene data into a workspace folder, without running Blender |
+| `export_render_script` | writes the scene a render would show into a workspace folder, to render with Blender elsewhere, without running Blender |
 
 A render takes minutes to hours, longer than a host waits for one tool call, so it runs as a job: start
 it, then ask `render_status` until it says `succeeded`, `failed` (with a `failureKind` such as
@@ -235,11 +235,22 @@ the long render. `title`, `credits`, `endCard` (with `endCardSeconds`) and `capt
 write as their title; an empty `title` renders without one. `builder` (`auto`, `player`, `generator`)
 chooses what builds the scene: `auto` is the player, which shows everything a scene asks for, and the
 script generator is used only when it is asked for. `render_status` says which did (`builder`) and what
-the render does not show (`leftOut`). Without a model it renders the project's own: the last build output, or — when that is
+the render does not show (`leftOut`). `annotations` names a JSON file of labels, callouts, markers and
+photos in the workspace, `reveal` (`date`, `order`, `distance`, with `revealFrom` and `revealDates`) shows
+the cave part by part, and `hdri` names an image in the workspace the scene is lit by (a `.hdr` or an
+`.exr`), with `hdriStrength` and `hdriRotation` (degrees). Without a model it renders the project's own: the last build output, or — when that is
 missing or older than the sources — a fresh export of the model alone by Therion, on a copy of the
 thconfig without its `system` lines. Outputs go to a folder in the workspace, or to a temporary folder
 that `render_status` names; paths outside the workspace and the project's config folder are refused.
 Stopping the server (or ThIDE) cancels a render still running.
+
+`export_render_script` takes what `start_render` takes (preset, model, sizes, texts, `annotations`,
+`reveal`, `hdri`) and writes the same scene for someone to render themselves. By default it is the
+player's folder: `scene-plan.json`, the player (`thide_player/`), the meshes and images, a `README.txt`
+and `render.sh` / `render.cmd`, which start Blender; `oneFile: true` writes one `render.py` that carries
+all of it. Either is run with `blender -b --factory-startup --python render.py` and renders into `out/`
+beside the script. `builder: "generator"` writes the earlier generated script instead (`render.py`,
+`model.ply`, `scene-meta.json`), and the answer's `leftOut` names what that script does not draw.
 
 `start_render`, `cancel_render` and `export_render_script` change things, so the Assistant panel asks
 before each, as it does for `run_build`.
