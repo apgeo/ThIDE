@@ -250,7 +250,7 @@ public class BlenderPanelTests
     }
 
     [UiFact]
-    public async Task A_self_contained_script_carries_the_meshes_only_when_asked_to()
+    public async Task The_script_generators_self_contained_script_carries_the_meshes_only_when_asked_to()
     {
         if (!OnPath("therion")) return;
         var dir = await BuiltDemoCaveAsync();
@@ -263,11 +263,16 @@ public class BlenderPanelTests
         await using var app = await ThideApp.StartAsync(environment, dir, "demo.thconfig");
         await OpenPanelAsync(app, Path.Combine(dir, "renders"));
 
-        // The meshes can go into the script only when it is self-contained.
+        // The meshes can go into the script only when it is self-contained, and only the script
+        // generator's: the player's one file always carries them.
         await app.WaitAsync("#Blender.EmbedMesh");
         Assert.False(await app.ExistsAsync("#Blender.SelfContained;state:checked"));
         Assert.False(await app.ExistsAsync("#Blender.EmbedMesh;state:enabled"));
         await app.InvokeAsync("#Blender.SelfContained", "toggle");
+        await app.WaitAsync("#Blender.SelfContained;state:checked");
+        Assert.False(await app.ExistsAsync("#Blender.EmbedMesh;state:enabled"));
+        await app.KeyAsync("#Blender.Builder", "Down", "Down");
+        Assert.Equal("Generator", (await app.GetAsync("#Blender.Builder", "DataContext.Blender.Builder")).GetProperty("properties").GetProperty("DataContext.Blender.Builder").ToString());
         await app.WaitAsync("#Blender.EmbedMesh;state:enabled");
         Assert.False(await app.ExistsAsync("#Blender.EmbedMesh;state:checked"));
 
@@ -302,6 +307,188 @@ public class BlenderPanelTests
         string plain = await ExportAsync("plain");
         Assert.DoesNotContain("SCENE_META_JSON = ", plain);
         Assert.DoesNotContain("PLY_BASE64 = ", plain);
+    }
+
+    /// <summary>A Radiance picture of 4 x 2 pixels of one color: the smallest image a scene
+    /// can be lit by.</summary>
+    private static byte[] TinySky()
+    {
+        var head = System.Text.Encoding.ASCII.GetBytes("#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 2 +X 4\n");
+        return [.. head, .. Enumerable.Repeat(new byte[] { 128, 128, 128, 129 }, 8).SelectMany(pixel => pixel)];
+    }
+
+    [UiFact]
+    public async Task The_light_the_reveal_the_annotations_and_the_texts_set_in_the_panel_are_in_the_scene_that_is_rendered()
+    {
+        if (!OnPath("therion")) return;
+        var dir = await BuiltDemoCaveAsync();
+        var renders = Path.Combine(dir, "renders");
+        var scripts = Path.Combine(dir, "stub-scripts");
+        Directory.CreateDirectory(Path.Combine(dir, "extras"));
+        var sky = Path.Combine(dir, "extras", "evening sky.hdr");
+        File.WriteAllBytes(sky, TinySky());
+        var notes = Path.Combine(dir, "extras", "notes.json");
+        File.WriteAllText(notes, """
+            [
+              { "id": "way-in", "kind": "callout", "station": "0", "text": "The way in" },
+              { "kind": "marker", "station": "5" }
+            ]
+            """);
+        var environment = new Dictionary<string, string>
+        {
+            ["PATH"] = StubBlenderDirectory() + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"),
+            ["THIDE_STUB_BLENDER_SCRIPTS"] = scripts,
+        };
+
+        await using var app = await ThideApp.StartAsync(environment, dir, "demo.thconfig");
+        await OpenPanelAsync(app, renders);
+
+        // The light: an image all round the scene, turned a quarter. Its file can be named
+        // only once its rig is chosen (the last in the list).
+        await app.WaitAsync("#Blender.HdriRotation");
+        Assert.False(await app.ExistsAsync("#Blender.HdriPath;state:enabled"));
+        await app.KeyAsync("#Blender.LightRig", "Down", "Down", "Down");
+        Assert.Equal("HdriFile", (await app.GetAsync("#Blender.LightRig", "DataContext.Blender.LightRig")).GetProperty("properties").GetProperty("DataContext.Blender.LightRig").ToString());
+        await app.WaitAsync("#Blender.HdriPath;state:enabled");
+        // No image yet: the render waits for one.
+        for (int tries = 0; await app.ExistsAsync("#Blender.Render;state:enabled") && tries < 50; tries++)
+            await Task.Delay(100);
+        Assert.False(await app.ExistsAsync("#Blender.Render;state:enabled"));
+        await app.SetTextAsync("#Blender.HdriPath", sky);
+        await app.SetTextAsync("#Blender.HdriRotation", "90");
+        await app.SetTextAsync("#Blender.LightStrength", "1.5");
+        await app.WaitAsync("#Blender.Render;state:enabled");
+
+        // The reveal: off until one is chosen, then its fields are there.
+        Assert.False(await app.ExistsAsync("#Blender.RevealFrom"));
+        await app.KeyAsync("#Blender.Reveal", "Down");
+        await app.WaitAsync("#Blender.RevealFrom;state:enabled");
+        Assert.False(await app.ExistsAsync("#Blender.RevealDates;state:enabled"));
+        await app.SetTextAsync("#Blender.RevealFrom", "0");
+        await app.SetTextAsync("#Blender.RevealStart", "1");
+        Assert.False(await app.ExistsAsync("#Blender.RevealEnd;state:enabled"));
+        await app.InvokeAsync("#Blender.RevealToClipEnd", "toggle");
+        await app.WaitAsync("#Blender.RevealEnd;state:enabled");
+        await app.SetTextAsync("#Blender.RevealEnd", "6");
+        await app.SetTextAsync("#Blender.RevealEdge", "0.1");
+
+        // The annotations: none, then those of the file, counted; a file that is not one says so.
+        Assert.Equal("No annotations.", await app.TextOfAsync("#Blender.AnnotationsSummary"));
+        Assert.False(await app.ExistsAsync("#Blender.ClearAnnotations;state:enabled"));
+        await app.SetTextAsync("#Blender.AnnotationsPath", notes);
+        await app.InvokeAsync("#Blender.LoadAnnotations");
+        await app.WaitAsync("#Blender.ClearAnnotations;state:enabled");
+        Assert.Equal("2 annotations: labels 0, callouts 1, markers 1, photos 0", await app.TextOfAsync("#Blender.AnnotationsSummary"));
+        await app.SetTextAsync("#Blender.AnnotationsPath", Path.Combine(dir, "demo.th"));
+        await app.InvokeAsync("#Blender.LoadAnnotations");
+        await app.WaitAsync("#Blender.AnnotationProblems >> role:Text");
+        Assert.Equal("2 annotations: labels 0, callouts 1, markers 1, photos 0", await app.TextOfAsync("#Blender.AnnotationsSummary"));
+
+        // The texts that are switched on, and a subtitle under the preset's title.
+        await app.SetTextAsync("#Blender.Subtitle", "surveyed in a test");
+        await app.InvokeAsync("#Blender.ScaleBar", "toggle");
+        await app.InvokeAsync("#Blender.NorthArrow", "toggle");
+        await app.WaitAsync("#Blender.NorthArrow;state:checked");
+        await app.SetTextAsync("#Blender.FadeFromBlack", "0.5");
+        Directory.CreateDirectory(ThideApp.ArtifactsDir);
+        await File.WriteAllBytesAsync(Path.Combine(ThideApp.ArtifactsDir, "blender-panel-scene-controls.png"), await app.ScreenshotAsync("#Blender.Panel"));
+
+        await app.WaitAsync("#Blender.Render;state:enabled");
+        await app.InvokeAsync("#Blender.Render");
+        await app.WaitAsync("role:Text;name:Render complete.", timeoutMs: 60_000);
+
+        // All of it is in the plan both stages were given.
+        var plans = Directory.GetFiles(scripts);
+        Assert.Equal(2, plans.Length);
+        Assert.All(plans, path =>
+        {
+            using var plan = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+            var root = plan.RootElement;
+            var world = root.GetProperty("look").GetProperty("world");
+            Assert.Equal(("hdri/evening_sky.hdr", 1.5, 90.0),
+                (world.GetProperty("image").GetString(), world.GetProperty("strength").GetDouble(), world.GetProperty("rotation").GetDouble()));
+            Assert.Equal(["way-in", "annotation-2"], root.GetProperty("annotations").EnumerateArray().Select(a => a.GetProperty("id").GetString()));
+            Assert.Contains(root.GetProperty("changes").EnumerateArray(), change => change.TryGetProperty("reveal", out _));
+            var texts = root.GetProperty("texts").GetProperty("items").EnumerateArray().ToList();
+            Assert.Contains(texts, t => t.TryGetProperty("text", out var text) && text.GetString() == "surveyed in a test");
+            Assert.Contains(texts, t => t.GetProperty("role").GetString() == "scale-bar");
+            Assert.Contains(texts, t => t.GetProperty("role").GetString() == "north-arrow");
+            Assert.Equal(0.5, root.GetProperty("texts").GetProperty("fromBlack").GetDouble());
+        });
+    }
+
+    [UiFact]
+    public async Task Export_and_Open_in_Blender_give_the_scene_that_Render_shows()
+    {
+        if (!OnPath("therion")) return;
+        var dir = await BuiltDemoCaveAsync();
+        var exports = Path.Combine(dir, "exports");
+        var scripts = Path.Combine(dir, "stub-scripts");
+        var environment = new Dictionary<string, string>
+        {
+            ["PATH"] = StubBlenderDirectory() + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"),
+            ["THIDE_STUB_BLENDER_SCRIPTS"] = scripts,
+        };
+
+        await using var app = await ThideApp.StartAsync(environment, dir, "demo.thconfig");
+        var renders = Path.Combine(dir, "renders");
+        await OpenPanelAsync(app, renders);
+        await app.SetTextAsync("#Blender.Credits", "Survey: the demo team");
+
+        async Task<string> ExportAsync(string name)
+        {
+            string folder = Path.Combine(exports, name);
+            await app.SetTextAsync("#Blender.ExportDirectory", folder);
+            await app.WaitAsync("#Blender.ExportScript;state:enabled");
+            await app.InvokeAsync("#Blender.ExportScript");
+            await app.WaitAsync("#Blender.Outputs >> role:Text;name:" + Path.Combine(folder, "render.py"), timeoutMs: 60_000);
+            return folder;
+        }
+
+        // The export is the player's folder: the scene as a plan, with the texts only the
+        // player writes and the lead of the workspace, and everything to render it with.
+        string folder = await ExportAsync("folder");
+        foreach (string file in new[] { "README.txt", "render.sh", "render.cmd", "render.py", "scene-plan.json", "model.ply", "LICENSE", Path.Combine("thide_player", "core.py") })
+            Assert.True(File.Exists(Path.Combine(folder, file)), file);
+        string exported = File.ReadAllText(Path.Combine(folder, "scene-plan.json"));
+        Assert.Contains("\"text\": \"Invented demo cave\"", exported);
+        Assert.Contains("\"text\": \"Survey: the demo team\"", exported);
+        Assert.Contains("\"id\": \"lead:demo.4\", \"role\": \"lead-marker\"", exported);
+        Assert.Contains("\"directory\": \"out\"", exported);
+
+        // One file: the same plan inside one script, and nothing beside it.
+        await app.InvokeAsync("#Blender.SelfContained", "toggle");
+        await app.WaitAsync("#Blender.SelfContained;state:checked");
+        string one = await ExportAsync("one");
+        Assert.Equal(["render.py"], Directory.GetFileSystemEntries(one).Select(Path.GetFileName));
+        string script = File.ReadAllText(Path.Combine(one, "render.py"));
+        Assert.Contains("PLAN = r'''", script);
+        Assert.Contains("\"model.ply\": \"", script);
+        Assert.Contains("\"text\": \"Survey: the demo team\"", script);
+        // Exporting starts no Blender.
+        Assert.False(Directory.Exists(scripts));
+
+        // "Open in Blender" starts Blender on the same scene, to build it and stop; it says
+        // that the texts are not in the window, once.
+        await app.InvokeAsync("#Blender.OpenInBlender");
+        await app.WaitAsync("role:Text;name:Opened in Blender.", timeoutMs: 60_000);
+        await app.WaitAsync("#Blender.Warnings >> role:Text;name:The texts over the picture are not in Blender's window: the player writes them over the finished frames, after the scene is rendered.");
+        for (int tries = 0; !Directory.Exists(scripts) && tries < 100; tries++) await Task.Delay(100);
+        string opened = File.ReadAllText(Assert.Single(Directory.GetFiles(scripts)));
+        Assert.StartsWith("built-plan-", Path.GetFileName(Directory.GetFiles(scripts)[0]));
+        Assert.Contains("\"text\": \"Survey: the demo team\"", opened);
+        Assert.Contains("\"id\": \"lead:demo.4\", \"role\": \"lead-marker\"", opened);
+        // A render started in Blender's window would write where "Render" does; nothing was rendered.
+        Assert.Contains(System.Text.Json.JsonSerializer.Serialize(renders), opened);
+        Assert.False(Directory.Exists(renders) && Directory.GetFiles(renders).Length > 0);
+
+        // The scene is the one "Render" gives Blender: the same plan but for its output folder.
+        await app.InvokeAsync("#Blender.Render");
+        await app.WaitAsync("role:Text;name:Render complete.", timeoutMs: 60_000);
+        string rendered = File.ReadAllText(Directory.GetFiles(scripts, "scene-plan-*.json").First());
+        Assert.Equal(rendered, opened);
+        static string WithoutFolder(string plan) => System.Text.RegularExpressions.Regex.Replace(plan, "\"directory\": \"[^\"]*\"", "\"directory\": \"\"");
+        Assert.Equal(WithoutFolder(rendered), WithoutFolder(exported));
     }
 
     [UiFact]

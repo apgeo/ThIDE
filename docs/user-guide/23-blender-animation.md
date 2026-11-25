@@ -60,11 +60,16 @@ describes one *render job*; nothing runs until you press **Render** or **Preview
      shadow, and the camera still frames the cave. **Terrain opacity**, beside it, sets how much
      of the cave shows through from above: 0 % hides the terrain, 100 % hides the cave under it;
      the default is 40 %. A very large grid is thinned to at most 512 × 512 points.
+   - **Light** — the *light rig*: a head lamp on the camera, a sun and sky, three studio lights, or
+     an image all round the scene (*HdriFile*), with its **strength**. See
+     [Lighting by an image (HDRI)](#lighting-by-an-image-hdri).
    - **Engine** — *Cycles* (the default, works everywhere) or *EEVEE* (faster, but needs a
      display; on a headless Linux server use Cycles). **Device** picks the GPU backend for
      Cycles (Auto tries them all and falls back to CPU).
    - **Animation** — frames per second and duration; the panel shows the resulting **frame
      count**.
+   - **Reveal** — the cave appears part by part while the clip runs, by distance, survey order
+     or survey date: see [Revealing the cave part by part](#revealing-the-cave-part-by-part).
    - **Output** — a video (MP4/MKV/WebM), a numbered PNG sequence, or a single still; plus
      resolution and file name.
    - **Labels** — turn on station labels and lead markers. *Lead marker size* chooses how big a
@@ -72,9 +77,13 @@ describes one *render job*; nothing runs until you press **Render** or **Preview
      *Cave*, *Passage*, *CameraDistance* (about the same size in the picture at any distance, its
      caption with it) and *HiddenInFlythrough* fix one way. *Labels above* chooses the roof a station label is lifted
      above: the surveyed height first, the walls first, the walls only, or none (on the station).
-   - **Texts over the picture** — the **Title**, the **Credits line**, the **End card** and the
+   - **Annotations** — labels, callouts, markers and photos of your own, loaded from a file: see
+     [Annotations](#annotations-labels-callouts-markers-and-photos).
+   - **Texts over the picture** — the **Title** and its **Subtitle**, the **Credits line**, the
+     **End card**, the **Scale bar**, the **North arrow**, the **Depth legend**, the fades and the
      **Captions**, each for its time: see [Texts in the panel](#texts-in-the-panel).
-   - **Scene builder (advanced)** — what builds the scene in Blender; leave it on *Auto*. See
+   - **Scene builder (advanced)** — what builds the scene in Blender, for a render, an export
+     and a scene opened in Blender; leave it on *Auto*. See
      [Two scene builders](#two-scene-builders).
    - **Render folder** — where the video, frames or still are saved; by default *Documents/ThIDE/Renders*
      (your home folder's *ThIDE/Renders* where there is no Documents folder). Leave it empty to keep
@@ -120,13 +129,17 @@ margin of 5 % from the picture's edges.
 
 ### Texts in the panel
 
-Under **Texts over the picture** the panel has the texts you are most likely to write yourself:
+Under **Texts over the picture** the panel has the texts of the table above:
 
 - **Title** — the title. The preset decides whether it stays at the top of the picture or is a
   card the movie opens on; what you type here is the text. Empty, there is none.
+- **Subtitle** — a smaller line under the title. Without a title it is not shown.
 - **Credits line** — a small line that stays in the bottom right corner (who surveyed, who drew,
   a licence).
 - **End card** — a text on a black picture that the movie ends on, for the seconds beside it.
+- **Scale bar**, **North arrow**, **Depth legend** — tick the ones the picture should have.
+- **Fade in** and **Fade out** — how long the movie takes to come out of black at its start and
+  to go to black at its end, in seconds; 0 is no fade.
 - **Captions** — lines at the bottom of the picture, each for its time. **Add caption** adds a
   row after the last one, three seconds long: type its **text**, and set the seconds it is shown
   **from** and **to**, counted from the start of the movie. The **✕** at the end of a row removes
@@ -146,13 +159,14 @@ the Title field shows `{cave}` until you type something else. A text that is not
 name is left out when the model has none.
 
 **Texts in presets.** A preset keeps the texts with everything else. **Save preset** stores the
-title, the credits line, the end card and the captions as they are in the panel, and choosing the
-preset later brings them back, the captions as rows you can edit. Use `{cave}` in a preset you
+title and its subtitle, the credits line, the end card, the scale bar, the north arrow, the depth
+legend, the fades and the captions as they are in the panel, and choosing the preset later brings
+them back, the captions as rows you can edit. Use `{cave}` in a preset you
 mean to use for more than one cave.
 
-The other texts (the scale bar, the north arrow, the depth legend, a subtitle, the corner line,
-the fades) are set in a render spec (the JSON a preset holds, under `labels.overlays`); the title,
-the credits line, the end card and captions also on the command line (`--title`, `--credits`,
+What the panel has no field for (the corner line and its timed texts, the seconds of a title
+card) is set in a render spec (the JSON a preset holds, under `labels.overlays`); the title, the
+credits line, the end card and captions also on the command line (`--title`, `--credits`,
 `--end-card`, `--caption`) or by an assistant through the MCP tools. A preset that has them keeps
 them while you change the texts above.
 
@@ -207,9 +221,27 @@ the clip runs, in an order the survey itself gives:
 | `order` | leg by leg, in the order the survey has its legs in, each leg growing from the end that is already there | nothing |
 | `date` | in the order of the **survey dates**: the history of the exploration, with a **counter of the years** in a corner of the picture | survey dates |
 
-The preset **Map reveal** reveals by distance. Any other preset or spec takes a reveal from the
-command line (`--reveal date`, see [below](#from-the-command-line)), from the MCP tools
-(`reveal`), or in the render spec itself:
+The preset **Map reveal** reveals by distance. Any other preset takes a reveal in the panel:
+
+- **Reveal the cave by** — *Off* (the whole cave from the first frame), *Distance*, *Order* or
+  *Date*. The fields below it appear once a reveal is chosen.
+- **From station** (by distance) — the station the distances are measured from; empty, they are
+  measured from the entrances.
+- **Dates file** (by date) — the `.3d` file that has the survey dates, typed or picked with
+  **Browse…**; empty, a `.3d` of the same name beside the model is used (see *Where the dates
+  come from*, below).
+- **Reveal starts** — the second the reveal begins at. **Reveal until the end of the clip** is
+  ticked at first; untick it and **Reveal ends** takes the second at which the whole cave is
+  there. Give the cave a second or two at the end.
+- **Reveal edge** — how soft the edge is (0 is a clean cut), and **Glow where the cave
+  appears**.
+
+A file that is not there, a reveal that ends before it starts or starts after the clip are listed
+under **Fix before rendering**. **Save preset** keeps the reveal.
+
+A reveal also comes from the command line (`--reveal date`, see [below](#from-the-command-line)),
+from the MCP tools (`reveal`), or stands in the render spec itself, which has two settings more
+than the panel (`glowColor` and `counter`; the panel keeps a preset's):
 
 ```json
 "reveal": { "by": "Date", "start": 1, "end": 9, "edge": 0.03, "glow": true, "counter": true }
@@ -296,9 +328,19 @@ pixels; anything else is refused before Blender starts. A picture 2,000 pixels w
 a movie shows: smaller files make smaller bundles and faster renders. The files stay where they
 are; ThIDE copies them for the render, and into a bundle (its `photos` folder).
 
-**Where they come from.** On the command line, `--annotations notes.json` (once for each file);
-through the MCP tools, `annotations` names such a file in the workspace; in a render spec, the same
-list stands under `annotations`. The panel has no field for them yet.
+**In the panel.** Under **Annotations**, type the file's path or pick it with **Browse…**, and
+press **Load**: the scene takes the file's annotations *in place of* those it had, and the line
+below says how many there are and of which kinds. What is wrong with them is listed in red
+under it, and under **Fix before rendering**: an annotation without a text or a station, a photo
+whose file is not there or is not a PNG or a JPEG. A file that is not a list of annotations is
+not loaded, and the scene keeps the ones it had. The panel reads the file when you press
+**Load**: press it again after changing the file. **Clear** takes the annotations out of the
+scene (the file stays). **Save preset** keeps them, and a preset that has annotations brings
+them back; choosing a preset replaces the ones of a file.
+
+**Elsewhere.** On the command line, `--annotations notes.json` (once for each file); through the
+MCP tools, `annotations` names such a file in the workspace; in a render spec, the same list
+stands under `annotations`.
 
 - A station the model does not have stops the render, with its name.
 - An annotation that is never shown (its time lies after the movie, the camera never comes that
@@ -315,7 +357,14 @@ picture (an *HDRI*) is laid round the scene, is what the camera sees behind the 
 the cave with its own colours and from its own bright places. ThIDE ships none; many are free to
 download.
 
-It is a setting of the render spec, under `lighting`, and of the command line:
+**In the panel**, under **Light**: choose *HdriFile* as the **Light rig** and name the image in
+**HDRI image**, or press **Browse…**, which picks the file and chooses the rig for you. **Light
+strength** says how brightly it shines and **HDRI rotation** turns it. An image that is not
+there, or is neither a `.hdr` nor an `.exr`, is listed under **Fix before rendering**. **Save
+preset** keeps the image's path with the rest.
+
+It is also a setting of the render spec, under `lighting`, of the command line, and of the MCP
+tools (`hdri`, `hdriStrength`, `hdriRotation`, for an image in the workspace):
 
 ```json
 "lighting": { "rig": "HdriFile", "hdriPath": "skies/evening.hdr", "strength": 1.5, "hdriRotation": 90 }
@@ -339,7 +388,6 @@ therion-cli blender cave.lox --hdri skies/evening.hdr --hdri-rotation 90 --hdri-
   [bundle](#a-render-bundle-to-render-on-another-machine) (its `hdri` folder), so a bundle renders
   on another machine without it.
 - A preview draws no image: its background is a plain grey, as strong as the image is set.
-- The panel has no field for it yet: save a spec with it as a preset file, or use the command line.
 
 ## Two scene builders
 
@@ -358,22 +406,43 @@ between them:
   [reveal](#revealing-the-cave-part-by-part), and it does not turn an
   [HDRI image](#lighting-by-an-image-hdri). The result says what it left out.
 
-A preview is always the player's, whatever is chosen here. **Export script…** and **Open in
-Blender…** use the script generator.
+A preview is always the player's, whatever is chosen here. **Render**, **Export script…** and
+**Open in Blender…** all use the builder chosen here, so the three show the same scene.
 
 ## Other ways to run it
 
-- **Export script…** — instead of rendering, ThIDE writes the `render.py` script plus its
-  `model.ply` and `scene-meta.json` to a folder you pick, so you can run it yourself later with
-  `blender -b --python render.py`, or archive/share it. Two options under **Output** change what
-  the script needs beside it:
-  - **Self-contained script** puts the scene's data (labels, legend) inside the script, so it no
-    longer reads `scene-meta.json`. It still reads the model's mesh, `model.ply`, from beside it.
-  - **Embed the meshes in the script**, which can be ticked only while the script is
-    self-contained, puts the mesh in as well (and the terrain with its image, when the scene draws
-    it): one `.py` file that renders anywhere, but a much larger one. It is off unless you tick it.
-- **Open in Blender…** — opens the scene in Blender's *interactive* window so you can inspect or
-  tweak it by hand before rendering.
+- **Export script…** — instead of rendering, ThIDE writes the scene **Render** would show into
+  the **Export folder**, for you to render later, on another machine, or to archive and share. It
+  is the same folder a [render bundle](#a-render-bundle-to-render-on-another-machine) holds:
+
+  | File | What it is |
+  |---|---|
+  | `scene-plan.json` | the scene: models, camera, look, texts, annotations, output |
+  | `render.py`, `thide_player/` | the player, which builds the scene from the plan in Blender |
+  | `model.ply`, `photos/`, `hdri/` … | the meshes and the images the plan names |
+  | `render.sh`, `render.cmd`, `README.txt` | scripts that start Blender, and how to use them |
+  | `out/` | where the render writes; a movie's captions are there already as `.srt` and `.vtt` |
+
+  Run it with `sh render.sh` (`render.cmd` on Windows) or
+  `blender -b --factory-startup --python render.py`. Nothing in the folder needs ThIDE, and the
+  folder can be moved.
+
+  **Self-contained script (one file)**, under **Output**, makes the export one `render.py` that
+  carries the plan, the player, the meshes and the images inside itself: a much larger file that
+  renders anywhere, into `out` beside it.
+
+  With the *Generator* chosen as the scene builder, the export is the script generator's instead:
+  `render.py` with `model.ply` and `scene-meta.json`, without what that builder does not draw (the
+  panel lists it). *Self-contained script* then puts the scene's data inside the script, and
+  **Embed the meshes in the script** the mesh as well; that second option is for the script
+  generator only, since the player's one file always carries its meshes.
+- **Open in Blender…** — opens the scene **Render** would show in Blender's own window, seen
+  through its camera, so you can look round it or change it by hand. Nothing is rendered; a
+  render you start there writes to the **Render folder**. The player builds the scene, so
+  everything in it is there: the cave, the labels, the annotations, the reveal, the light. **The
+  texts over the picture are not**: they are written over the finished frames in the second
+  stage, and Blender's window shows the scene before that. The panel says so when it opens a
+  scene that has texts.
 - **Save preset** — store the current settings as your own preset, the texts and captions
   included; they appear in the strip alongside the built-ins and persist between sessions.
 

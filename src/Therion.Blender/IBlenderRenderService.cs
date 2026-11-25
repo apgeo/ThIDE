@@ -60,9 +60,12 @@ public interface IBlenderRenderService
         => RenderAsync(spec, source, new RenderOptions(), progress, ct);
 
     /// <summary>
-    /// Export-only mode (FR-10a): convert + generate, writing the Blender Python script and its
-    /// assets (PLY + scene-meta, or a self-contained <c>.py</c>) into <paramref name="outputDir"/>
-    /// for the user to run manually. Does not launch Blender.
+    /// Export-only mode (FR-10a) of the script generator: convert + generate, writing the
+    /// generated Blender Python script and its assets (PLY + scene-meta, or a self-contained
+    /// <c>.py</c>) into <paramref name="outputDir"/> for the user to run manually. Does not launch
+    /// Blender. A generated script does not show everything a render shows
+    /// (<see cref="SceneBuilders.NotDrawnByTheGenerator"/>); <see cref="ExportAsync"/> exports the
+    /// scene the render's own builder builds.
     /// </summary>
     /// <param name="spec">The render presentation.</param>
     /// <param name="source">The resolved model + leads to convert.</param>
@@ -79,4 +82,36 @@ public interface IBlenderRenderService
         IProgress<RenderProgress>? progress = null,
         CancellationToken ct = default,
         bool interactive = false);
+
+    /// <summary>
+    /// Exports the scene for someone to run in Blender themselves, built by the same builder a
+    /// render uses: by default the player's folder (a scene plan, the player, the meshes and the
+    /// images, a README and scripts that start Blender), or one script with all of it inside
+    /// (<see cref="ExportOptions.SingleFile"/>); with <see cref="SceneBuilder.Generator"/> the
+    /// generated script of <see cref="ExportScriptAsync"/>. Does not launch Blender.
+    /// </summary>
+    /// <param name="outputDir">Destination folder. Files of the same names are replaced;
+    /// anything else in it stays.</param>
+    /// <remarks>An implementation that does not override this exports the generated script,
+    /// whatever builder is asked for, and says so in <see cref="RenderExport.Builder"/>.</remarks>
+    async Task<RenderExport> ExportAsync(
+        SceneSpec spec,
+        RenderSource source,
+        string outputDir,
+        ExportOptions options,
+        IProgress<RenderProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        ArgumentNullException.ThrowIfNull(options);
+        string script = await ExportScriptAsync(spec, source, outputDir, progress, ct, options.Interactive).ConfigureAwait(false);
+        return new RenderExport
+        {
+            ScriptPath = script,
+            Directory = outputDir,
+            Builder = SceneBuilder.Generator,
+            FrameCount = SceneSpecValidator.FrameCount(spec),
+            LeftOut = SceneBuilders.NotDrawnByTheGenerator(spec),
+        };
+    }
 }

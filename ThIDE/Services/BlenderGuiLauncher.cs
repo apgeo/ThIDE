@@ -1,8 +1,11 @@
-// "Open in Blender GUI" (BA-B13): launch the desktop Blender on a generated script so the user
+// "Open in Blender GUI" (BA-B13): launch the desktop Blender on an exported script so the user
 // can inspect/tweak the scene interactively — `blender --python <script>` WITHOUT -b, so a window
-// opens. Behind an interface so the ViewModel is testable with a fake (no process spawned).
+// opens. The script is the player's entry script with the scene plan beside it, given the
+// arguments that make it leave the scene open ("--build-only"), or a generated script. Behind an
+// interface so the ViewModel is testable with a fake (no process spawned).
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Therion.Blender.Execution;
 
@@ -11,9 +14,10 @@ namespace ThIDE.Services;
 /// <summary>Opens a generated script in the interactive Blender GUI.</summary>
 public interface IBlenderGuiLauncher
 {
-    /// <summary>Launches Blender's GUI running <paramref name="scriptPath"/>. Returns false when
-    /// no usable Blender is found or the launch fails (the caller surfaces a not-found message).</summary>
-    bool Launch(string scriptPath);
+    /// <summary>Launches Blender's GUI running <paramref name="scriptPath"/>, which is given
+    /// <paramref name="scriptArguments"/> after <c>--</c>. Returns false when no usable Blender
+    /// is found or the launch fails (the caller surfaces a not-found message).</summary>
+    bool Launch(string scriptPath, IReadOnlyList<string>? scriptArguments = null);
 }
 
 /// <summary>Real launcher: locates Blender (honouring the Preferences override) and starts its GUI.</summary>
@@ -28,7 +32,7 @@ public sealed class BlenderGuiLauncher : IBlenderGuiLauncher
         _overridePath = overridePath ?? throw new ArgumentNullException(nameof(overridePath));
     }
 
-    public bool Launch(string scriptPath)
+    public bool Launch(string scriptPath, IReadOnlyList<string>? scriptArguments = null)
     {
         var located = _locator.Locate(_overridePath());
         if (!located.IsUsable) return false;
@@ -51,6 +55,11 @@ public sealed class BlenderGuiLauncher : IBlenderGuiLauncher
             psi.ArgumentList.Add("--factory-startup");
             psi.ArgumentList.Add("--python");
             psi.ArgumentList.Add(scriptPath);
+            if (scriptArguments is { Count: > 0 })
+            {
+                psi.ArgumentList.Add("--");
+                foreach (string argument in scriptArguments) psi.ArgumentList.Add(argument);
+            }
 
             var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
             var log = new StreamWriter(scriptPath + ".blender.log", append: false) { AutoFlush = true };

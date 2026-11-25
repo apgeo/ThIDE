@@ -4,6 +4,12 @@
 // The Render/Export commands run off the UI thread via the render service; progress arrives
 // through Progress<RenderProgress> (which marshals back to the UI thread) so no manual OnUi is
 // needed. The VM holds ZERO pipeline logic — Therion.Blender computes, the VM orchestrates.
+//
+// Beside the knobs it holds the scene's annotations, which come from a JSON file (the one the
+// command line and the agent tools take) and are shown as a count with what is wrong with them.
+// Files are named in text fields; a "Browse" command asks the view for one through PickFile.
+// "Export script…" and "Open in Blender…" go through the service's export, by the builder that
+// "Render" uses.
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +21,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Blender;
+using Therion.Blender.Plan;
 using Therion.Blender.Presets;
 using Therion.Blender.Sources;
 using Therion.Build;
@@ -40,6 +47,11 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         nameof(BaseName), nameof(SelfContained), nameof(EmbedMesh), nameof(ShowStationLabels), nameof(ShowLeadMarkers),
         nameof(LeadMarkerSizing), nameof(LabelRoof), nameof(SurfaceMode), nameof(SurfaceOpacity),
         nameof(Title), nameof(Credits), nameof(EndCardText), nameof(EndCardSeconds),
+        nameof(Subtitle), nameof(ShowScaleBar), nameof(ShowNorthArrow), nameof(ShowDepthLegend),
+        nameof(FadeFromBlack), nameof(FadeToBlack),
+        nameof(LightRig), nameof(LightStrength), nameof(HdriPath), nameof(HdriRotation),
+        nameof(RevealMode), nameof(RevealFrom), nameof(RevealDatesPath), nameof(RevealStart),
+        nameof(RevealToClipEnd), nameof(RevealEnd), nameof(RevealEdge), nameof(RevealGlow),
     };
 
     private SceneSpec _spec;
@@ -51,6 +63,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     public ObservableCollection<string> Blockers { get; } = [];
     public ObservableCollection<string> Outputs { get; } = [];
     public ObservableCollection<string> Warnings { get; } = [];
+
+    /// <summary>What is wrong with the annotations: a file that could not be read, what the
+    /// validator says of them, a photo that is missing or cannot be used.</summary>
+    public ObservableCollection<string> AnnotationProblems { get; } = [];
 
     /// <summary>Most-recent-first history of finished render jobs (BA-B13).</summary>
     public ObservableCollection<JobHistoryEntry> Jobs { get; } = [];
@@ -114,7 +130,9 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     [ObservableProperty] private int _width;
     [ObservableProperty] private int _height;
     [ObservableProperty] private string _baseName = "cave-render";
-    [ObservableProperty] private bool _selfContained;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEmbedMesh))]
+    private bool _selfContained;
     /// <summary>The self-contained script carries the meshes too, so it needs no file beside
     /// it. Only with <see cref="SelfContained"/>; turning that off turns this off.</summary>
     [ObservableProperty] private bool _embedMesh;
@@ -144,6 +162,217 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     /// <summary>How long the end card stays, in seconds.</summary>
     [ObservableProperty] private double _endCardSeconds = new EndCardSpec().Seconds;
+
+    /// <summary>A smaller line under the title; empty is none. Not shown without a title.</summary>
+    [ObservableProperty] private string _subtitle = "";
+
+    [ObservableProperty] private bool _showScaleBar;
+    [ObservableProperty] private bool _showNorthArrow;
+    [ObservableProperty] private bool _showDepthLegend;
+
+    /// <summary>How long the movie takes to come out of black at its start, and to go to black
+    /// at its end, in seconds; 0 is no fade.</summary>
+    [ObservableProperty] private double _fadeFromBlack;
+    [ObservableProperty] private double _fadeToBlack;
+
+    // ---- light ----
+
+    /// <summary>The light rig. <see cref="LightingRig.HdriFile"/> lights the scene by the image
+    /// of <see cref="HdriPath"/>, which is also what is seen behind the cave.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHdri))]
+    private LightingRig _lightRig;
+
+    /// <summary>How brightly the rig shines: 1 is the rig, or the image, as it is.</summary>
+    [ObservableProperty] private double _lightStrength = 1.0;
+
+    /// <summary>The image of an HDRI rig: a Radiance <c>.hdr</c> or an OpenEXR <c>.exr</c> file.</summary>
+    [ObservableProperty] private string _hdriPath = "";
+
+    /// <summary>How far the image is turned about the vertical, in degrees.</summary>
+    [ObservableProperty] private double _hdriRotation;
+
+    /// <summary>True when the scene is lit by an image: only then do its file and its turn matter.</summary>
+    public bool IsHdri => LightRig == LightingRig.HdriFile;
+
+    // ---- reveal ----
+
+    /// <summary>What the cave is revealed by while the clip runs; <see cref="RevealChoice.Off"/>
+    /// shows all of it throughout.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReveal), nameof(RevealsByDistance), nameof(RevealsByDate), nameof(RevealHasItsOwnEnd))]
+    private RevealChoice _revealMode;
+
+    /// <summary>By distance: the station the distances are measured from; empty measures from
+    /// the entrances.</summary>
+    [ObservableProperty] private string _revealFrom = "";
+
+    /// <summary>By date: a <c>.3d</c> file of the same cave that has the survey dates; empty
+    /// looks for one of the same name beside the model.</summary>
+    [ObservableProperty] private string _revealDatesPath = "";
+
+    /// <summary>When the reveal starts, in seconds.</summary>
+    [ObservableProperty] private double _revealStart;
+
+    /// <summary>The whole cave is there at the end of the clip; unticked, at <see cref="RevealEnd"/>.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RevealHasItsOwnEnd))]
+    private bool _revealToClipEnd = true;
+
+    /// <summary>When the whole cave is there, in seconds, unless <see cref="RevealToClipEnd"/>.</summary>
+    [ObservableProperty] private double _revealEnd;
+
+    /// <summary>How soft the edge of the reveal is, as a share of the whole reveal; 0 is a cut.</summary>
+    [ObservableProperty] private double _revealEdge = new RevealSpec().Edge;
+
+    /// <summary>Whether what has just appeared glows.</summary>
+    [ObservableProperty] private bool _revealGlow = new RevealSpec().Glow;
+
+    public bool HasReveal => RevealMode != RevealChoice.Off;
+    public bool RevealsByDistance => RevealMode == RevealChoice.Distance;
+    public bool RevealsByDate => RevealMode == RevealChoice.Date;
+    public bool RevealHasItsOwnEnd => HasReveal && !RevealToClipEnd;
+
+    /// <summary>What a reveal has beside what the panel shows (the color of its glow, the
+    /// counter of the years): kept while the reveal is off, for when it is turned on again.</summary>
+    private RevealSpec _revealKept = new();
+
+    // ---- annotations ----
+
+    /// <summary>The scene's annotations: a preset's, or those of the file that was loaded.</summary>
+    private IReadOnlyList<AnnotationSpec> _annotations = [];
+
+    /// <summary>What is wrong with the photos' files, found when the annotations were taken.</summary>
+    private IReadOnlyList<string> _photoProblems = [];
+
+    /// <summary>Why the file that was last asked for was not loaded; null when it was.</summary>
+    private string? _annotationsNotLoaded;
+
+    /// <summary>The annotations file to load: a JSON list of labels, callouts, markers and photos.</summary>
+    [ObservableProperty] private string _annotationsPath = "";
+
+    /// <summary>How many annotations the scene has, and of which kinds.</summary>
+    [ObservableProperty] private string _annotationsSummary = "";
+
+    /// <summary>True when the scene has annotations: they can be cleared.</summary>
+    public bool HasAnnotations => _annotations.Count > 0;
+
+    /// <summary>Loads the annotations of <see cref="AnnotationsPath"/> in place of the scene's.
+    /// A file that cannot be read leaves the scene's as they are, and says why.</summary>
+    [RelayCommand]
+    private void LoadAnnotations()
+    {
+        string path = (AnnotationsPath ?? "").Trim();
+        if (path.Length == 0) return;
+        string name = System.IO.Path.GetFileName(path);
+        try
+        {
+            SetAnnotations(AnnotationsFile.ReadFile(path));
+        }
+        catch (SceneSpecFormatException ex)
+        {
+            AnnotationsNotLoaded(string.Format(Tr.Get("Blender_Annotations_NotAList"), name, ex.Message));
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            AnnotationsNotLoaded(string.Format(Tr.Get("Blender_Annotations_NotRead"), name, IoErrorText.Reason(ex)));
+        }
+    }
+
+    /// <summary>Takes the scene's annotations away.</summary>
+    [RelayCommand(CanExecute = nameof(HasAnnotations))]
+    private void ClearAnnotations() => SetAnnotations([]);
+
+    private void SetAnnotations(IReadOnlyList<AnnotationSpec> annotations)
+    {
+        _annotations = annotations;
+        _annotationsNotLoaded = null;
+        _photoProblems = PhotoProblems(annotations);
+        ApplyKnobsToSpec();
+    }
+
+    private void AnnotationsNotLoaded(string why)
+    {
+        _annotationsNotLoaded = why;
+        Revalidate();
+    }
+
+    /// <summary>What is wrong with the files of the photos: one that is not there, or is not an
+    /// image a scene carries (a PNG or a JPEG, within the sizes <see cref="PlanImage"/> allows).</summary>
+    private static List<string> PhotoProblems(IReadOnlyList<AnnotationSpec> annotations)
+    {
+        var problems = new List<string>();
+        for (int i = 0; i < annotations.Count; i++)
+        {
+            if (annotations[i] is not { Kind: AnnotationKind.Photo, Image: { Length: > 0 } image } photo) continue;
+            string id = photo.IdAt(i), name = System.IO.Path.GetFileName(image);
+            try
+            {
+                if (!System.IO.File.Exists(image)) problems.Add(string.Format(Tr.Get("Blender_Annotations_PhotoMissing"), id, name));
+                else PlanImage.Check(image);
+            }
+            catch (PlanImageException ex)
+            {
+                problems.Add(string.Format(Tr.Get("Blender_Annotations_PhotoRefused"), id, name, ex.Message));
+            }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+            {
+                problems.Add(string.Format(Tr.Get("Blender_Annotations_PhotoRefused"), id, name, IoErrorText.Reason(ex)));
+            }
+        }
+        return problems;
+    }
+
+    /// <summary>The count of the annotations with their kinds, and what is wrong with them:
+    /// <paramref name="invalid"/> is what the validator says of them.</summary>
+    private void RefreshAnnotations(IEnumerable<string> invalid)
+    {
+        int Of(AnnotationKind kind) => _annotations.Count(a => a.Kind == kind);
+        AnnotationsSummary = _annotations.Count == 0
+            ? Tr.Get("Blender_Annotations_None")
+            : Tr.Plural("Blender_Annotations_Count", _annotations.Count) + ": " + string.Format(
+                Tr.Get("Blender_Annotations_Kinds"),
+                Of(AnnotationKind.Label), Of(AnnotationKind.Callout), Of(AnnotationKind.Marker), Of(AnnotationKind.Photo));
+        AnnotationProblems.Clear();
+        if (_annotationsNotLoaded is { } notLoaded) AnnotationProblems.Add(notLoaded);
+        foreach (string problem in invalid.Concat(_photoProblems)) AnnotationProblems.Add(problem);
+        OnPropertyChanged(nameof(HasAnnotations));
+        ClearAnnotationsCommand.NotifyCanExecuteChanged();
+    }
+
+    // ---- files ----
+
+    /// <summary>Asks the user for a file of a kind; null when they chose none. Set by the view,
+    /// which owns the file dialog; without it the paths are typed.</summary>
+    public Func<BlenderFileKind, Task<string?>>? PickFile { get; set; }
+
+    /// <summary>Picks the image the scene is lit by, and lights the scene by it.</summary>
+    [RelayCommand]
+    private async Task BrowseHdriAsync()
+    {
+        if (await PickAsync(BlenderFileKind.HdriImage) is not { } path) return;
+        HdriPath = path;
+        LightRig = LightingRig.HdriFile;
+    }
+
+    /// <summary>Picks the file with the survey dates of a reveal by date.</summary>
+    [RelayCommand]
+    private async Task BrowseRevealDatesAsync()
+    {
+        if (await PickAsync(BlenderFileKind.RevealDates) is { } path) RevealDatesPath = path;
+    }
+
+    /// <summary>Picks an annotations file and loads it.</summary>
+    [RelayCommand]
+    private async Task BrowseAnnotationsAsync()
+    {
+        if (await PickAsync(BlenderFileKind.Annotations) is not { } path) return;
+        AnnotationsPath = path;
+        LoadAnnotations();
+    }
+
+    private async Task<string?> PickAsync(BlenderFileKind kind)
+        => PickFile is { } pick && await pick(kind).ConfigureAwait(true) is { Length: > 0 } path ? path : null;
 
     // ---- captions ----
 
@@ -218,8 +447,15 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     // ---- how the render is made (not part of the scene, so not of a preset) ----
 
-    /// <summary>What builds the scene in Blender; a preview is always the player's.</summary>
-    [ObservableProperty] private SceneBuilder _builder = SceneBuilder.Auto;
+    /// <summary>What builds the scene in Blender, for a render, an export and a scene opened
+    /// in Blender; a preview is always the player's.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEmbedMesh))]
+    private SceneBuilder _builder = SceneBuilder.Auto;
+
+    /// <summary>True when "Embed the meshes" can be chosen: for the script generator's
+    /// self-contained script. The player's one file always carries them.</summary>
+    public bool CanEmbedMesh => SelfContained && Builder == SceneBuilder.Generator;
 
     // ---- export target ----
     [ObservableProperty] private string? _exportDirectory;
@@ -267,6 +503,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     public IReadOnlyList<LabelRoofSource> LabelRoofSources { get; } = Enum.GetValues<LabelRoofSource>();
     public IReadOnlyList<SurfaceMode> SurfaceModes { get; } = Enum.GetValues<SurfaceMode>();
     public IReadOnlyList<SceneBuilder> Builders { get; } = Enum.GetValues<SceneBuilder>();
+    public IReadOnlyList<LightingRig> LightRigs { get; } = Enum.GetValues<LightingRig>();
+    public IReadOnlyList<RevealChoice> RevealChoices { get; } = Enum.GetValues<RevealChoice>();
 
     // ---- change wiring ----
 
@@ -280,7 +518,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             // The strip of the captions is as long as the clip.
             if (e.PropertyName == nameof(DurationSeconds)) RefreshCaptionStrip();
         }
-        else if (e.PropertyName is nameof(UseExternalFile) or nameof(ExternalFilePath) or nameof(SelectedArtifact) or nameof(IsBusy))
+        else if (e.PropertyName is nameof(UseExternalFile) or nameof(ExternalFilePath) or nameof(SelectedArtifact) or nameof(IsBusy)
+                 or nameof(Builder))
             Revalidate();
     }
 
@@ -292,6 +531,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         {
             // Keep the current source/output location; take the preset's presentation.
             _spec = value.Preset.Spec with { Output = value.Preset.Spec.Output with { BaseName = BaseName } };
+            // The annotations are the preset's now, not those of a file.
+            AnnotationsPath = "";
             PushSpecToKnobs(_spec);
         }
         finally { _suspend = false; }
@@ -315,6 +556,12 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
                 Overlays = _spec.Labels.Overlays with
                 {
                     Title = string.IsNullOrWhiteSpace(Title) ? null : Title.Trim(),
+                    Subtitle = string.IsNullOrWhiteSpace(Subtitle) ? null : Subtitle.Trim(),
+                    ScaleBar = ShowScaleBar,
+                    NorthArrow = ShowNorthArrow,
+                    DepthLegend = ShowDepthLegend,
+                    FadeFromBlack = FadeFromBlack,
+                    FadeToBlack = FadeToBlack,
                     Credits = string.IsNullOrWhiteSpace(Credits) ? null : Credits.Trim(),
                     // A row without a text is not a caption yet.
                     Captions = Captions.Where(c => !string.IsNullOrWhiteSpace(c.Text))
@@ -327,8 +574,48 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             },
             // A slider's steps are not exact in binary; the spec keeps whole percents.
             Surface = _spec.Surface with { Mode = SurfaceMode, Opacity = Math.Round(SurfaceOpacity, 2) },
+            // The image stays with the scene while another rig lights it, for when it is chosen again.
+            Lighting = _spec.Lighting with
+            {
+                Rig = LightRig,
+                Strength = LightStrength,
+                HdriPath = string.IsNullOrWhiteSpace(HdriPath) ? null : HdriPath.Trim(),
+                HdriRotation = HdriRotation,
+            },
+            Reveal = RevealFromKnobs(),
+            Annotations = _annotations,
         };
+        if (_spec.Reveal is { } reveal) _revealKept = reveal;
         Revalidate();
+    }
+
+    /// <summary>The reveal the knobs say, or none: what the panel does not show of it (the
+    /// color of its glow, the counter of the years) is kept as it was.</summary>
+    private RevealSpec? RevealFromKnobs()
+    {
+        if (RevealMode == RevealChoice.Off) return null;
+        var by = RevealMode switch
+        {
+            RevealChoice.Date => RevealBy.Date,
+            RevealChoice.Order => RevealBy.Order,
+            _ => RevealBy.Distance,
+        };
+        return (_spec.Reveal ?? _revealKept) with
+        {
+            By = by,
+            From = by == RevealBy.Distance && !string.IsNullOrWhiteSpace(RevealFrom) ? RevealFrom.Trim() : null,
+            DatesPath = by == RevealBy.Date && !string.IsNullOrWhiteSpace(RevealDatesPath) ? RevealDatesPath.Trim() : null,
+            Start = RevealStart,
+            End = RevealToClipEnd ? null : RevealEnd,
+            Edge = RevealEdge,
+            Glow = RevealGlow,
+        };
+    }
+
+    partial void OnRevealToClipEndChanged(bool value)
+    {
+        // An end of its own starts at the end of the clip, unless it lies inside the clip already.
+        if (!value && !_suspend && !(RevealEnd > RevealStart && RevealEnd <= DurationSeconds)) RevealEnd = DurationSeconds;
     }
 
     private void PushSpecToKnobs(SceneSpec spec)
@@ -360,6 +647,38 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         RefreshCaptionStrip();
         EndCardText = spec.Labels.Overlays.EndCard?.Text ?? "";
         EndCardSeconds = spec.Labels.Overlays.EndCard?.Seconds ?? new EndCardSpec().Seconds;
+        Subtitle = spec.Labels.Overlays.Subtitle ?? "";
+        ShowScaleBar = spec.Labels.Overlays.ScaleBar;
+        ShowNorthArrow = spec.Labels.Overlays.NorthArrow;
+        ShowDepthLegend = spec.Labels.Overlays.DepthLegend;
+        FadeFromBlack = spec.Labels.Overlays.FadeFromBlack;
+        FadeToBlack = spec.Labels.Overlays.FadeToBlack;
+
+        LightRig = spec.Lighting.Rig;
+        LightStrength = spec.Lighting.Strength;
+        HdriPath = spec.Lighting.HdriPath ?? "";
+        HdriRotation = spec.Lighting.HdriRotation;
+
+        var reveal = spec.Reveal;
+        _revealKept = reveal ?? new RevealSpec();
+        RevealMode = reveal?.By switch
+        {
+            null => RevealChoice.Off,
+            RevealBy.Date => RevealChoice.Date,
+            RevealBy.Order => RevealChoice.Order,
+            _ => RevealChoice.Distance,
+        };
+        RevealFrom = reveal?.From ?? "";
+        RevealDatesPath = reveal?.DatesPath ?? "";
+        RevealStart = reveal?.Start ?? 0;
+        RevealToClipEnd = reveal?.End is null;
+        RevealEnd = reveal?.End ?? spec.Animation.DurationSeconds;
+        RevealEdge = _revealKept.Edge;
+        RevealGlow = _revealKept.Glow;
+
+        _annotations = spec.Annotations;
+        _annotationsNotLoaded = null;
+        _photoProblems = PhotoProblems(_annotations);
     }
 
     private void Revalidate()
@@ -372,10 +691,24 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             Output = _spec.Output with { OutputDirectory = "out" },
         };
         Blockers.Clear();
-        foreach (var error in SceneSpecValidator.Validate(probe))
+        var errors = SceneSpecValidator.Validate(probe);
+        foreach (var error in errors)
             Blockers.Add($"{error.Path}: {error.Message}");
         if (!HasSource)
             Blockers.Add(Tr.Get("Blender_Blocker_NoSource"));
+        // The files the scene names: found before Blender is started, not by it.
+        if (IsHdri && _spec.Lighting.HdriPath is { } image)
+        {
+            // The player lights a scene by a .hdr or an .exr; the script generator loads any picture.
+            if (Builder != SceneBuilder.Generator && !PlanEnvironmentImage.HasExtension(image))
+                Blockers.Add(Tr.Get("Blender_Blocker_HdriKind"));
+            else if (!System.IO.File.Exists(image))
+                Blockers.Add(string.Format(Tr.Get("Blender_Blocker_FileNotFound"), image));
+        }
+        if (_spec.Reveal is { By: RevealBy.Date, DatesPath: { } dates } && !System.IO.File.Exists(dates))
+            Blockers.Add(string.Format(Tr.Get("Blender_Blocker_FileNotFound"), dates));
+        foreach (string problem in _photoProblems) Blockers.Add(problem);
+        RefreshAnnotations(errors.Where(e => e.Path.StartsWith("annotations", StringComparison.Ordinal)).Select(e => $"{e.Path}: {e.Message}"));
 
         OnPropertyChanged(nameof(EstimatedFrameCount));
         OnPropertyChanged(nameof(CurrentSpec));
@@ -495,8 +828,17 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             var progress = new Progress<RenderProgress>(OnProgress);
             StatusMessage = Tr.Get("Blender_Status_Exporting");
             var source = await _sources!.AcquireAsync(BuildRequest(), _cts.Token).ConfigureAwait(true);
-            var scriptPath = await _renderService!.ExportScriptAsync(_spec, source, ExportDirectory!, progress, _cts.Token).ConfigureAwait(true);
-            Outputs.Add(scriptPath);
+            // The scene "Render" shows, by the builder it uses: the player's folder, or one
+            // script with all of it inside; the script generator's script when it is chosen.
+            var options = new ExportOptions
+            {
+                Builder = Builder,
+                SingleFile = Builder != SceneBuilder.Generator && SelfContained,
+                Language = Tr.Culture.TwoLetterISOLanguageName,
+            };
+            var export = await _renderService!.ExportAsync(_spec, source, ExportDirectory!.Trim(), options, progress, _cts.Token).ConfigureAwait(true);
+            Outputs.Add(export.ScriptPath);
+            AddExportWarnings(export);
             StatusMessage = Tr.Get("Blender_Status_Exported");
         }
         catch (OperationCanceledException)
@@ -518,6 +860,15 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     }
 
     private bool CanExport => CanStart && !string.IsNullOrWhiteSpace(ExportDirectory);
+
+    /// <summary>What an export says of its scene: what it shows less of than was asked for,
+    /// and what the script generator does not draw.</summary>
+    private void AddExportWarnings(RenderExport export)
+    {
+        foreach (string notice in export.Notices) Warnings.Add(notice);
+        if (export.LeftOut.Count > 0)
+            Warnings.Add(string.Format(Tr.Get("Blender_Builder_LeftOutGenerator"), string.Join(", ", export.LeftOut)));
+    }
 
     [RelayCommand]
     private void Cancel() => _cts?.Cancel();
@@ -712,12 +1063,15 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     private bool HasJobLog => _lastJobLogPath is not null && _shell is not null;
 
-    /// <summary>Exports the script to a temp folder and opens it in the interactive Blender GUI
-    /// so the user can inspect/tweak the scene (BA-B13).</summary>
+    /// <summary>Writes the scene to a temp folder and opens it in the interactive Blender GUI so
+    /// the user can inspect/tweak it (BA-B13): the scene "Render" shows, built by the builder it
+    /// uses. The player builds it in Blender's window and stops; its texts over the picture are
+    /// written in its second stage, after the frames, so the window does not show them.</summary>
     [RelayCommand(CanExecute = nameof(CanOpenInBlender))]
     private async Task OpenInBlenderGuiAsync()
     {
         if (_gui is null || _renderService is null || _sources is null) return;
+        Warnings.Clear();
         LastError = null;
         BlenderMissing = false;
         IsBusy = true;
@@ -726,8 +1080,13 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThIDE", "blender-gui", System.Guid.NewGuid().ToString("N")[..8]);
             var progress = new Progress<RenderProgress>(OnProgress);
             var source = await _sources.AcquireAsync(BuildRequest()).ConfigureAwait(true);
-            var scriptPath = await _renderService.ExportScriptAsync(_spec, source, dir, progress, interactive: true).ConfigureAwait(true);
-            if (!_gui.Launch(scriptPath))
+            // A render started from Blender's window writes where "Render" would.
+            var spec = string.IsNullOrWhiteSpace(RenderDirectory)
+                ? _spec
+                : _spec with { Output = _spec.Output with { OutputDirectory = RenderDirectory.Trim() } };
+            var export = await _renderService.ExportAsync(
+                spec, source, dir, new ExportOptions { Builder = Builder, Interactive = true }, progress).ConfigureAwait(true);
+            if (!_gui.Launch(export.ScriptPath, export.ScriptArguments))
             {
                 BlenderMissing = true;
                 LastError = Tr.Get("Blender_Fail_NotFound");
@@ -735,6 +1094,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             else
             {
                 StatusMessage = Tr.Get("Blender_Status_OpenedInBlender");
+                AddExportWarnings(export);
+                if (export.TextsInSecondStage) Warnings.Add(Tr.Get("Blender_OpenInBlender_TextsNote"));
             }
         }
         catch (Exception ex)
@@ -807,6 +1168,26 @@ public sealed partial class CaptionRowViewModel : ObservableObject
         StripStart = timed ? Math.Clamp(Start / stripSeconds, 0, 1) : 0;
         StripEnd = timed ? Math.Clamp(End / stripSeconds, 0, 1) : 0;
     }
+}
+
+/// <summary>What the panel reveals a cave by; <see cref="Off"/> is no reveal.</summary>
+public enum RevealChoice
+{
+    Off,
+    Distance,
+    Order,
+    Date,
+}
+
+/// <summary>A file the panel asks the user for.</summary>
+public enum BlenderFileKind
+{
+    /// <summary>The image a scene is lit by: a Radiance <c>.hdr</c> or an OpenEXR <c>.exr</c>.</summary>
+    HdriImage,
+    /// <summary>A model file with the survey dates of a reveal by date: a <c>.3d</c>.</summary>
+    RevealDates,
+    /// <summary>A JSON list of annotations.</summary>
+    Annotations,
 }
 
 /// <summary>A preset in the gallery strip (built-in or user).</summary>

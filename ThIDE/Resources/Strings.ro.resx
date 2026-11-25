@@ -430,10 +430,10 @@
   <data name="Blender_UI_Width" xml:space="preserve"><value>Lățime</value></data>
   <data name="Blender_UI_Height" xml:space="preserve"><value>Înălțime</value></data>
   <data name="Blender_UI_BaseName" xml:space="preserve"><value>Nume fișier</value></data>
-  <data name="Blender_UI_SelfContained" xml:space="preserve"><value>Script autonom</value></data>
-  <data name="Blender_UI_SelfContained_Tip" xml:space="preserve"><value>Un script exportat conține el însuși datele scenei (etichete, legendă), în loc să citească scene-meta.json de lângă el. Rețeaua de poligoane a modelului rămâne lângă el, dacă nu este inclusă și ea.</value></data>
+  <data name="Blender_UI_SelfContained" xml:space="preserve"><value>Script autonom (un singur fișier)</value></data>
+  <data name="Blender_UI_SelfContained_Tip" xml:space="preserve"><value>Exportul este un singur script care conține tot ce îi trebuie (scena, playerul, rețelele de poligoane și imaginile), în locul unui folder: un fișier mult mai mare, care se randează oriunde. Cu generatorul de scripturi, scriptul conține el însuși datele scenei (etichete, legendă), iar rețeaua de poligoane a modelului rămâne lângă el, dacă nu este inclusă și ea.</value></data>
   <data name="Blender_UI_EmbedMesh" xml:space="preserve"><value>Include rețelele de poligoane în script</value></data>
-  <data name="Blender_UI_EmbedMesh_Tip" xml:space="preserve"><value>Scriptul autonom conține și rețeaua de poligoane a modelului, precum și terenul cu imaginea lui: un singur fișier care se randează oriunde, dar mult mai mare.</value></data>
+  <data name="Blender_UI_EmbedMesh_Tip" xml:space="preserve"><value>Pentru generatorul de scripturi: scriptul lui autonom conține și rețeaua de poligoane a modelului, precum și terenul cu imaginea lui: un singur fișier care se randează oriunde, dar mult mai mare. Fișierul unic al playerului le conține întotdeauna.</value></data>
   <data name="Blender_UI_Labels" xml:space="preserve"><value>Etichete</value></data>
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Etichete stații</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Marcaje continuări</value></data>
@@ -2145,7 +2145,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Folder randare</value></data>
   <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Unde se salvează videoclipul, cadrele sau imaginea. Lăsați gol pentru a le păstra în folderul temporar al lucrării.</value></data>
   <data name="Blender_UI_Builder" xml:space="preserve"><value>Constructor de scenă (avansat)</value></data>
-  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>Ce construiește scena în Blender. Auto: playerul, care arată tot ce cere o scenă. Player: același, cerut pe nume; scrie textele peste cadrele terminate, așa că nimic nu le ascunde. Generator: constructorul mai vechi, păstrat pentru comparație; desenează titlul în scenă, nu desenează creditele, cadrul de final sau subtitrările și nu rotește o imagine HDRI. O previzualizare este mereu a playerului.</value></data>
+  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>Ce construiește scena în Blender, la randare, la export și la deschiderea în Blender. Auto: playerul, care arată tot ce cere o scenă. Player: același, cerut pe nume; scrie textele peste cadrele terminate, așa că nimic nu le ascunde. Generator: constructorul mai vechi, păstrat pentru comparație; desenează titlul în scenă, nu desenează creditele, cadrul de final sau subtitrările, nici adnotările sau o dezvăluire, și nu rotește o imagine HDRI. O previzualizare este mereu a playerului.</value></data>
   <data name="Blender_UI_Preview" xml:space="preserve"><value>Previzualizare</value></data>
   <data name="Blender_UI_Preview_Tip" xml:space="preserve"><value>O schiță rapidă a randării: jumătate din mărime, fără lumini și umbre, o fracțiune de secundă pe cadru. Pentru a verifica mișcarea camerei, încadrarea și textele înainte de randarea lungă. Se salvează lângă randare, cu -draft adăugat la nume.</value></data>
   <data name="Blender_UI_Credits" xml:space="preserve"><value>Linie de credite</value></data>
@@ -2175,6 +2175,72 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_Builder_LeftOutGenerator" xml:space="preserve"><value>Generatorul de scripturi nu desenează {0}.</value></data>
   <data name="Blender_Builder_LeftOutPreview" xml:space="preserve"><value>Previzualizarea nu arată {0}.</value></data>
   <data name="Blender_Fail_BuilderRefused" xml:space="preserve"><value>Playerul nu poate construi această scenă: nu redă {0}. Alegeți generatorul de scripturi sau Auto.</value></data>
+  <data name="Blender_UI_Light" xml:space="preserve"><value>Lumină</value></data>
+  <data name="Blender_UI_LightRig" xml:space="preserve"><value>Sistem de lumini</value></data>
+  <data name="Blender_UI_LightRig_Tip" xml:space="preserve"><value>Ce luminează scena. Headlamp: o lampă pe cameră, ca frontala unui speolog. SunSky: un soare și un cer. ThreePoint: trei lumini, ca într-un studio. HdriFile: o imagine de jur împrejurul scenei (HDRI), care o luminează și este ceea ce se vede în spatele peșterii.</value></data>
+  <data name="Blender_UI_LightStrength" xml:space="preserve"><value>Intensitatea luminii</value></data>
+  <data name="Blender_UI_LightStrength_Tip" xml:space="preserve"><value>Cât de puternic luminează: 1 este sistemul de lumini, sau imaginea, așa cum este; 2 este de două ori mai puternic.</value></data>
+  <data name="Blender_UI_HdriPath" xml:space="preserve"><value>Imagine HDRI</value></data>
+  <data name="Blender_UI_HdriPath_Tip" xml:space="preserve"><value>Imaginea cu care este luminată scena când sistemul de lumini este HdriFile: un fișier Radiance .hdr sau OpenEXR .exr, de două ori mai lat decât înalt. Fișierul rămâne unde este; ThIDE îl copiază pentru randare.</value></data>
+  <data name="Blender_UI_Browse" xml:space="preserve"><value>Răsfoiește…</value></data>
+  <data name="Blender_UI_BrowseHdri" xml:space="preserve"><value>Alegeți imaginea HDRI</value></data>
+  <data name="Blender_UI_HdriRotation" xml:space="preserve"><value>Rotire HDRI (grade)</value></data>
+  <data name="Blender_UI_HdriRotation_Tip" xml:space="preserve"><value>Cu cât este rotită imaginea în jurul verticalei, în sens invers acelor de ceasornic văzut de sus: aduce soarele din imagine acolo de unde trebuie să vină lumina. Doar playerul o rotește.</value></data>
+  <data name="Blender_UI_Reveal" xml:space="preserve"><value>Dezvăluire</value></data>
+  <data name="Blender_UI_RevealBy" xml:space="preserve"><value>Dezvăluie peștera după</value></data>
+  <data name="Blender_UI_RevealBy_Tip" xml:space="preserve"><value>Arată peștera parte cu parte cât rulează clipul. Off: toată, de la primul cadru. Distance: de la intrări spre interior. Order: viză cu viză, în ordinea ridicării topografice. Date: în ordinea datelor ridicării, cu un contor al anilor. O imagine statică arată toată peștera, iar o dezvăluire este desenată doar de player.</value></data>
+  <data name="Blender_UI_RevealFrom" xml:space="preserve"><value>De la stația</value></data>
+  <data name="Blender_UI_RevealFrom_Tip" xml:space="preserve"><value>După distanță: numele stației de la care se măsoară distanțele, așa cum îl are modelul. Gol, se măsoară de la intrări.</value></data>
+  <data name="Blender_UI_RevealDates" xml:space="preserve"><value>Fișier cu date</value></data>
+  <data name="Blender_UI_RevealDates_Tip" xml:space="preserve"><value>După dată: un fișier .3d al aceleiași peșteri, care are datele ridicării, pentru un model .lox, care nu le are. Gol, se folosește un .3d cu același nume de lângă model.</value></data>
+  <data name="Blender_UI_BrowseRevealDates" xml:space="preserve"><value>Alegeți fișierul cu datele ridicării</value></data>
+  <data name="Blender_UI_RevealStart" xml:space="preserve"><value>Dezvăluirea începe (secunde)</value></data>
+  <data name="Blender_UI_RevealStart_Tip" xml:space="preserve"><value>Când începe dezvăluirea, în secunde de la începutul clipului: până atunci nu se vede nimic din peșteră.</value></data>
+  <data name="Blender_UI_RevealToClipEnd" xml:space="preserve"><value>Dezvăluie până la sfârșitul clipului</value></data>
+  <data name="Blender_UI_RevealToClipEnd_Tip" xml:space="preserve"><value>Toată peștera este acolo când se termină clipul. Nebifat, ea este acolo la secunda de mai jos și rămâne întreagă pentru restul clipului.</value></data>
+  <data name="Blender_UI_RevealEnd" xml:space="preserve"><value>Dezvăluirea se termină (secunde)</value></data>
+  <data name="Blender_UI_RevealEnd_Tip" xml:space="preserve"><value>Când este acolo toată peștera, în secunde de la începutul clipului.</value></data>
+  <data name="Blender_UI_RevealEdge" xml:space="preserve"><value>Marginea dezvăluirii</value></data>
+  <data name="Blender_UI_RevealEdge_Tip" xml:space="preserve"><value>Cât de moale este marginea dezvăluirii, ca parte din toată dezvăluirea: ce apare are nevoie de atât din ea ca să devină opac. 0 înseamnă o tăietură netă; valoarea implicită este 0,03.</value></data>
+  <data name="Blender_UI_RevealGlow" xml:space="preserve"><value>Strălucire acolo unde apare peștera</value></data>
+  <data name="Blender_UI_RevealGlow_Tip" xml:space="preserve"><value>Ce tocmai a apărut strălucește până când dezvăluirea a trecut mai departe.</value></data>
+  <data name="Blender_UI_Annotations" xml:space="preserve"><value>Adnotări</value></data>
+  <data name="Blender_UI_Annotations_Tip" xml:space="preserve"><value>Etichete, note cu linie, marcaje și fotografii proprii, fiecare la o stație sau într-un punct: o listă JSON într-un fișier, cel pe care linia de comandă îl primește cu --annotations. Imaginea unei fotografii este numită față de locul în care se află fișierul. Încărcarea unui fișier înlocuiește adnotările pe care le are scena. Doar playerul le desenează.</value></data>
+  <data name="Blender_UI_AnnotationsPath" xml:space="preserve"><value>Fișier de adnotări (.json)</value></data>
+  <data name="Blender_UI_BrowseAnnotations" xml:space="preserve"><value>Alegeți un fișier de adnotări</value></data>
+  <data name="Blender_UI_LoadAnnotations" xml:space="preserve"><value>Încarcă</value></data>
+  <data name="Blender_UI_LoadAnnotations_Tip" xml:space="preserve"><value>Citește fișierul și ia adnotările lui în locul celor ale scenei. Încărcați-l din nou după ce îl modificați.</value></data>
+  <data name="Blender_UI_ClearAnnotations" xml:space="preserve"><value>Golește</value></data>
+  <data name="Blender_UI_ClearAnnotations_Tip" xml:space="preserve"><value>Scoate adnotările din scenă. Fișierul rămâne așa cum este.</value></data>
+  <data name="Blender_UI_AnnotationProblems" xml:space="preserve"><value>Probleme cu adnotările</value></data>
+  <data name="Blender_Annotations_None" xml:space="preserve"><value>Nicio adnotare.</value></data>
+  <data name="Blender_Annotations_Count_One" xml:space="preserve"><value>{0} adnotare</value></data>
+  <data name="Blender_Annotations_Count_Few" xml:space="preserve"><value>{0} adnotări</value></data>
+  <data name="Blender_Annotations_Count_Many" xml:space="preserve"><value>{0} de adnotări</value></data>
+  <data name="Blender_Annotations_Kinds" xml:space="preserve"><value>etichete {0}, note cu linie {1}, marcaje {2}, fotografii {3}</value></data>
+  <data name="Blender_Annotations_NotAList" xml:space="preserve"><value>{0} nu a fost încărcat: {1}</value></data>
+  <data name="Blender_Annotations_NotRead" xml:space="preserve"><value>{0} nu a putut fi citit: {1}.</value></data>
+  <data name="Blender_Annotations_PhotoMissing" xml:space="preserve"><value>{0}: fotografia {1} nu a fost găsită.</value></data>
+  <data name="Blender_Annotations_PhotoRefused" xml:space="preserve"><value>{0}: fotografia {1} nu poate fi folosită: {2}.</value></data>
+  <data name="Blender_UI_Subtitle" xml:space="preserve"><value>Subtitlu</value></data>
+  <data name="Blender_UI_Subtitle_Tip" xml:space="preserve"><value>O linie mai mică sub titlu; gol pentru niciuna. Nu se arată fără titlu.</value></data>
+  <data name="Blender_UI_ScaleBar" xml:space="preserve"><value>Scară grafică</value></data>
+  <data name="Blender_UI_ScaleBar_Tip" xml:space="preserve"><value>O lungime rotundă (50 m, 2 km) în colțul din stânga jos, la distanța la care privește camera.</value></data>
+  <data name="Blender_UI_NorthArrow" xml:space="preserve"><value>Săgeata nordului</value></data>
+  <data name="Blender_UI_NorthArrow_Tip" xml:space="preserve"><value>O săgeată în colțul din dreapta sus, care se rotește odată cu camera, cu N la vârf.</value></data>
+  <data name="Blender_UI_DepthLegend" xml:space="preserve"><value>Legenda adâncimii</value></data>
+  <data name="Blender_UI_DepthLegend_Tip" xml:space="preserve"><value>Culorile nuanței de adâncime de-a lungul marginii din dreapta a imaginii, partea de sus a peșterii întâi.</value></data>
+  <data name="Blender_UI_FadeFromBlack" xml:space="preserve"><value>Ieșire din negru (secunde)</value></data>
+  <data name="Blender_UI_FadeToBlack" xml:space="preserve"><value>Intrare în negru (secunde)</value></data>
+  <data name="Blender_UI_Fade_Tip" xml:space="preserve"><value>Cât durează ca filmul să iasă din negru la început și să intre în negru la sfârșit. 0 înseamnă fără trecere.</value></data>
+  <data name="Blender_UI_Export_Tip" xml:space="preserve"><value>Scrie în folderul de export scena pe care ar arăta-o Randează, pentru a fi randată cu Blender pe orice calculator: planul scenei, playerul, rețelele de poligoane și imaginile, cu un README și scripturi care pornesc Blender. Cu Script autonom bifat, este un singur fișier. Constructorul de scenă spune cine face scena: generatorul de scripturi scrie în schimb un script al lui.</value></data>
+  <data name="Blender_UI_OpenInBlender_Tip" xml:space="preserve"><value>Deschide scena pe care ar arăta-o Randează în fereastra Blender, văzută prin camera ei, pentru a o privi sau a o modifica manual. Nu se randează nimic.</value></data>
+  <data name="Blender_OpenInBlender_TextsNote" xml:space="preserve"><value>Textele de peste imagine nu apar în fereastra Blender: playerul le scrie peste cadrele terminate, după ce scena este randată.</value></data>
+  <data name="Blender_Blocker_HdriKind" xml:space="preserve"><value>Imaginea HDRI trebuie să fie un fișier Radiance .hdr sau OpenEXR .exr.</value></data>
+  <data name="Blender_Blocker_FileNotFound" xml:space="preserve"><value>Fișierul nu a fost găsit: {0}</value></data>
+  <data name="Blender_Pick_HdriImages" xml:space="preserve"><value>Imagini HDRI (.hdr, .exr)</value></data>
+  <data name="Blender_Pick_Models" xml:space="preserve"><value>Modele de peșteră (.3d, .lox)</value></data>
+  <data name="Blender_Pick_Annotations" xml:space="preserve"><value>Adnotări (.json)</value></data>
   <data name="Count_Warnings_One" xml:space="preserve"><value>{0} avertisment</value></data>
   <data name="Count_Warnings_Few" xml:space="preserve"><value>{0} avertismente</value></data>
   <data name="Count_Warnings_Many" xml:space="preserve"><value>{0} de avertismente</value></data>

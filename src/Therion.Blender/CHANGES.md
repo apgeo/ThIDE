@@ -1,5 +1,105 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-25 — an export is the scene a render shows; the panel's light, reveal, annotations and texts
+
+The plan stays **version 1**. The player calls itself **1.8**: started in Blender's window with
+`--build-only`, it leaves the scene seen through its camera. Nothing a plan says has changed, and
+a player 1.7 plays every plan of today. A render that was stopped under a player 1.7 starts its
+frames again (the note kept with them names the player); writing the output again from frames
+that were kept (`--stage compose`) is not affected.
+
+### Breaking changes
+- None in this library's API. What changes for a user of **ThIDE** is below ("The panel"): "Export
+  script…", "Open in Blender…" and the MCP tool `export_render_script` now write the player's
+  scene where they wrote a generated script. Migration: choose the script generator ("Scene
+  builder (advanced)" → *Generator*; `builder: "generator"`) for the export as it was.
+- `therion-cli blender --export` is **unchanged**: it is the script generator's export, and
+  `--bundle <folder>` is the player's.
+
+### Additive API: an export by either builder
+- **`IBlenderRenderService.ExportAsync(spec, source, outputDir, ExportOptions, …)`** returns a
+  `RenderExport`. `ExportOptions.Builder` chooses who builds the scene when the export is run,
+  as `RenderOptions.Builder` does for a render: `Auto` and `Player` the player, `Generator` the
+  script generator (`ExportScriptAsync`, which stays as it was).
+  - **The player's export is the folder of a render bundle** (`RenderBundleWriter.WriteFolder`):
+    `scene-plan.json`, `render.py`, `thide_player/`, the meshes and images at their plan paths
+    (`photos/`, `hdri/`), `README.txt` (`ExportOptions.Language`: "en" or "ro"), `render.sh`,
+    `render.cmd`, `LICENSE`, `NOTICE`, and the captions as `out/<base name>.srt` and `.vtt`. Its
+    plan is the plan a render of the same spec plays, but for the output directory, which is
+    `out` beside the plan: the folder can be moved.
+  - **`ExportOptions.SingleFile`** writes one `render.py` instead (`PlayerWriter.SingleFile`),
+    with every file the plan names inside it. For the script generator it turns on
+    `SourceSpec.SelfContained` and `EmbedMesh`.
+  - **`ExportOptions.Interactive`** writes the job folder a render plays, for Blender's window:
+    start `RenderExport.ScriptPath` without `-b` and with `RenderExport.ScriptArguments`
+    (`--build-only`) after `--`. Its output directory is the spec's, or `out` in the folder.
+  - `RenderExport` says what was written (`Files`), by which builder, how many frames the scene
+    has, what the script generator leaves out (`LeftOut`), what the scene shows less of than was
+    asked for (`Notices`), and `TextsInSecondStage`: the scene has texts, which the player writes
+    over the finished frames and Blender's window therefore does not show.
+- **The interface method has a default implementation**, so an implementation of
+  `IBlenderRenderService` written before today still compiles: it exports the generated script
+  through `ExportScriptAsync` and says `Builder = Generator`. `BlenderRenderService` overrides it.
+- A spec the player cannot plan (a station an annotation names that the model does not have, an
+  HDRI image that is neither `.hdr` nor `.exr`) throws `ArgumentException` from `ExportAsync`;
+  an export to render has then written nothing.
+
+### The player
+- **`--build-only` in Blender's window** (Blender started without `-b`) sets every 3-D view to
+  look through the scene's camera once the scene is built. In the background nothing changes.
+
+### The MCP tools
+- **`start_render`** takes `hdri` (an image in the workspace, a `.hdr` or an `.exr`),
+  `hdriStrength` and `hdriRotation` (degrees). The image is held to the workspace, as a photo
+  is; the strength and the turn alone go with a preset that is lit by an image already, and are
+  refused otherwise. A user preset's own image is left as the user saved it.
+- **`export_render_script`** exports through `ExportAsync`: by default the player's folder,
+  with `oneFile: true` one script, with `builder: "generator"` the generated script. It takes
+  what `start_render` takes for the scene (`title`, `credits`, `endCard`, `endCardSeconds`,
+  `captions`, `annotations`, `reveal`, `revealFrom`, `revealDates`, `hdri`, `hdriStrength`,
+  `hdriRotation`), and its answer has `builder`, `oneFile`, `leftOut` and `warnings` beside
+  what it had. What the exported scene renders goes to `out/` beside the script (a generated
+  script's outputs land beside it, as before).
+
+### The panel (ThIDE)
+- **Light**: the light rig, its strength, and for the rig of an image (*HdriFile*) the image
+  (typed, or picked with "Browse…", which also chooses the rig) and its rotation.
+- **Reveal**: off, or by distance, order or date; the station to measure from, the file with the
+  dates, when it starts, whether it ends with the clip or at a second of its own, its edge and
+  its glow. A preset's glow color and counter are kept while the reveal is changed, and while
+  it is off.
+- **Annotations**: a JSON file is loaded in place of the scene's annotations, or they are
+  cleared; a line says how many there are and of which kinds, and what is wrong with them is
+  listed (what the validator says, a photo that is missing or is not an image a plan carries).
+  A file that is not a list of annotations leaves the scene's as they are.
+- **Texts over the picture**: Subtitle, Scale bar, North arrow, Depth legend, Fade in, Fade out.
+- All of these are the spec's fields, so "Save preset" keeps them and a preset brings them back.
+  A file the scene names that is not there (the image, the dates, a photo) is listed under "Fix
+  before rendering" instead of failing the render.
+- **"Export script…"** exports through `ExportAsync` with the builder of "Scene builder
+  (advanced)": the player's folder, one file with "Self-contained script (one file)", the
+  generated script with *Generator*. "Embed the meshes in the script" can be ticked only for
+  the script generator.
+- **"Open in Blender…"** opens the player's scene (`ExportOptions.Interactive`), and says that
+  the texts over the picture are not in Blender's window when the scene has any.
+
+### Verified
+- Without Blender: the exported folder's files; its plan equal to the plan the render service
+  gives Blender for the same spec, but for the output directory (a spec with texts,
+  annotations with a photo, a reveal and a turned HDRI image); one file with every file inside;
+  the export to look at equal to a render's job folder to the last key; the script generator's
+  export and what it leaves out; a refused image; the MCP tools' new parameters and refusals;
+  the panel's view model (every new field to the spec and back from a preset, the annotations
+  file, the blockers, what the two commands ask the service for).
+- In Blender 4.2.23, 4.5.16 and 5.0.1: the exported folder and the exported single script
+  render, started as the README says, frame for frame the picture a render of the same spec
+  gives; the export to look at builds the scene with its annotations and without its texts;
+  and, in a window on a display of its own, every 3-D view of it looks through the camera.
+- The panel, driven as a user drives it (the UI tests, with a stand-in for Blender): the light,
+  the reveal, the annotations and the texts set in the panel are in the plan that is rendered;
+  an export's folder and single file hold that plan; "Open in Blender…" starts Blender on it
+  with `--build-only`.
+
 ## 2026-11-25 — texts in presets: the cave's name by a placeholder, and built-in presets that write it
 
 Nothing here changes the plan or the player (still version 1 and 1.7): a plan holds the texts

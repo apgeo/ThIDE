@@ -18,19 +18,32 @@ public enum RenderOutput
     Still,
 }
 
-/// <param name="Script">The Blender Python script, workspace-relative. Run it with <c>blender -b --python</c>.</param>
-/// <param name="Directory">The folder it was written to, beside the model mesh and scene data it reads.</param>
+/// <param name="Script">The Blender Python script, workspace-relative. Run it with
+/// <c>blender -b --factory-startup --python</c>.</param>
+/// <param name="Directory">The folder it was written to, beside what it reads: the scene plan, the player and
+/// the meshes and images, or the mesh and scene data of a generated script. Nothing beside it when it is one
+/// file.</param>
 /// <param name="Model">The model file converted: workspace-relative, or absolute outside the workspace.</param>
 /// <param name="ModelKind">workspaceArtifact, externalFile, or reExported, as in render_status.</param>
 /// <param name="StaleModel">Why the model may be out of date, when it is older than the sources.</param>
 /// <param name="Frames">How many frames the script renders.</param>
+/// <param name="Builder">What builds the scene when the script runs: player or generator.</param>
+/// <param name="OneFile">True when the script carries everything it needs.</param>
+/// <param name="LeftOut">The settings of the scene the script does not show: what the script generator does
+/// not draw. Empty for the player.</param>
+/// <param name="Warnings">What the scene shows less of than was asked for: labels thinned out, a terrain the
+/// model does not have.</param>
 public sealed record RenderScriptExport(
     string Script,
     string Directory,
     string Model,
     string ModelKind,
     string? StaleModel,
-    int Frames);
+    int Frames,
+    string? Builder = null,
+    bool OneFile = false,
+    IReadOnlyList<string>? LeftOut = null,
+    IReadOnlyList<string>? Warnings = null);
 
 /// <summary>
 /// Rendering the cave model in Blender. Registered only on a host that can render (the running IDE),
@@ -40,7 +53,7 @@ public sealed record RenderScriptExport(
 /// <remarks>
 /// Neither Therion nor Blender gets anything from the project to run as a command: a re-export runs
 /// Therion on a copy of the thconfig without its <c>system</c> lines, and Blender runs the script this
-/// tool generated, with factory settings.
+/// tool generated, or the player with the scene plan this tool wrote, with factory settings.
 /// </remarks>
 [McpServerToolType]
 public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost blender, BlenderRenderJobs jobs)
@@ -62,7 +75,8 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                + "long render. title, credits, endCard and captions are written over the picture; a movie "
                + "with captions also gets them as .srt and .vtt subtitles. annotations names a JSON file of "
                + "labels, callouts, markers and photos that stand in the scene. reveal shows the cave part "
-               + "by part while the clip runs: by survey date, survey order or distance from an entrance.")]
+               + "by part while the clip runs: by survey date, survey order or distance from an entrance. "
+               + "hdri lights the scene by an image all round it, which is also its background.")]
     public async Task<ToolResult<RenderJobStatus>> StartRender(
         [Description("Preset name from list_render_presets. Defaults to \"Orbit showcase\".")]
         string preset = DefaultPreset,
@@ -125,6 +139,12 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                    + "for a model that has none: a .lox has the walls and no dates. Without it a .3d of the same "
                    + "name beside the model is used.")]
         string? revealDates = null,
+        [Description(HdriHelp)]
+        string? hdri = null,
+        [Description(HdriStrengthHelp)]
+        double? hdriStrength = null,
+        [Description(HdriRotationHelp)]
+        double? hdriRotation = null,
         CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
@@ -133,7 +153,7 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         var (plan, refused) = Plan(snapshot!.Root, preset, model, outputKind, width, height, durationSeconds,
             samples, outputDirectory, baseName, reExport, needsDirectory: false,
             new RenderTexts(title, credits, endCard, endCardSeconds, captions), annotations,
-            new RenderReveal(reveal, revealFrom, revealDates));
+            new RenderReveal(reveal, revealFrom, revealDates), new RenderLight(hdri, hdriStrength, hdriRotation));
         if (refused is not null) return ToolResult<RenderJobStatus>.Failure(refused);
 
         // Which builder, and whether it can build this scene, before a job is started for it.
@@ -209,12 +229,17 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
     // writes over an earlier export in the same folder.
     [McpServerTool(Name = "export_render_script", Title = "Export a Blender script",
         ReadOnly = false, Destructive = true, Idempotent = true)]
-    [Description("Writes the Blender Python script a render would run, with the model mesh and scene data "
-               + "it reads, into a workspace folder — without running Blender. Read the script, or hand it "
-               + "to someone to run with `blender -b --python render.py`. Takes the same preset, model and "
-               + "overrides as start_render; the outputs of running it land beside the script.")]
+    [Description("Writes the scene a render would show into a workspace folder, for someone to render with "
+               + "Blender themselves — without running Blender. It is the scene start_render renders, made "
+               + "by the same builder: by default the player's folder (scene-plan.json, the player in "
+               + "thide_player/, the meshes and images, a README and render.sh / render.cmd, which start "
+               + "Blender), or with oneFile one render.py that carries all of it. Run it with "
+               + "`blender -b --factory-startup --python render.py`; what it renders goes to out/ beside "
+               + "the script. builder: generator writes the earlier generated script instead (render.py, "
+               + "model.ply, scene-meta.json; its outputs land beside it), which leaves out what leftOut "
+               + "names. Takes the same preset, model, texts, annotations, reveal and hdri as start_render.")]
     public async Task<ToolResult<RenderScriptExport>> ExportRenderScript(
-        [Description("Workspace-relative folder to write render.py, model.ply and scene-meta.json into; created when missing.")]
+        [Description("Workspace-relative folder to write into; created when missing. Files of the same names are replaced.")]
         string outputDirectory,
         [Description("Preset name from list_render_presets. Defaults to \"Orbit showcase\".")]
         string preset = DefaultPreset,
@@ -234,6 +259,37 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         string? baseName = null,
         [Description("Export the project's model with Therion first when its build output is missing or out of date. Defaults to true.")]
         bool reExport = true,
+        [Description("What builds the scene when the script runs: auto or player (the default: the scene a "
+                   + "render shows), or generator (the earlier generated script).")]
+        string? builder = null,
+        [Description("True writes one render.py that carries everything it needs (the scene, the player, the "
+                   + "meshes and the images) instead of a folder: larger, and it renders anywhere.")]
+        bool oneFile = false,
+        [Description("A title written over the picture, as for start_render: {cave} stands for the cave's name; "
+                   + "omitted, the preset's is kept; an empty text writes none.")]
+        string? title = null,
+        [Description("A small line that stays in a corner of the picture: who surveyed, a licence.")]
+        string? credits = null,
+        [Description("The text of a card the movie ends on, over a black picture.")]
+        string? endCard = null,
+        [Description("How long the end card stays, in seconds. 0 keeps the default (4).")]
+        double endCardSeconds = 0,
+        [Description("Captions, each as \"<start>-<end>:<text>\" with the times in seconds, as for start_render.")]
+        string[]? captions = null,
+        [Description("Workspace-relative JSON file of annotations (labels, callouts, markers, photos), as for start_render.")]
+        string? annotations = null,
+        [Description("Shows the cave part by part: date, order or distance, as for start_render.")]
+        string? reveal = null,
+        [Description("With reveal: distance, the station the distances are measured from.")]
+        string? revealFrom = null,
+        [Description("With reveal: date, a workspace-relative .3d file of the same cave that has the survey dates.")]
+        string? revealDates = null,
+        [Description(HdriHelp)]
+        string? hdri = null,
+        [Description(HdriStrengthHelp)]
+        double? hdriStrength = null,
+        [Description(HdriRotationHelp)]
+        double? hdriRotation = null,
         IProgress<ProgressNotificationValue>? progress = null,
         CancellationToken ct = default)
     {
@@ -242,8 +298,16 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         var root = snapshot!.Root;
 
         var (plan, refused) = Plan(root, preset, model, outputKind, width, height, durationSeconds,
-            samples, outputDirectory, baseName, reExport, needsDirectory: true);
+            samples, outputDirectory, baseName, reExport, needsDirectory: true,
+            new RenderTexts(title, credits, endCard, endCardSeconds, captions), annotations,
+            new RenderReveal(reveal, revealFrom, revealDates), new RenderLight(hdri, hdriStrength, hdriRotation));
         if (refused is not null) return ToolResult<RenderScriptExport>.Failure(refused);
+
+        var chosen = SceneBuilder.Auto;
+        if (!string.IsNullOrWhiteSpace(builder) && !ToolEnums.TryParse(builder, out chosen))
+            return ToolResult<RenderScriptExport>.Failure(ToolErrorCodes.InvalidArgument,
+                $"Unknown builder '{builder}'. Use one of: {ToolEnums.Names<SceneBuilder>()}.");
+        var options = new ExportOptions { Builder = chosen, SingleFile = oneFile };
 
         int reported = 0;
         var relay = new InlineProgress<RenderProgress>(p => progress?.Report(new ProgressNotificationValue
@@ -255,15 +319,19 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         try
         {
             var source = await blender.AcquireAsync(plan!.Request, ct).ConfigureAwait(false);
-            var script = await blender.Renderer.ExportScriptAsync(plan.Spec, source, plan.Spec.Output.OutputDirectory, relay, ct)
+            var export = await blender.Renderer.ExportAsync(plan.Spec, source, plan.Spec.Output.OutputDirectory, options, relay, ct)
                 .ConfigureAwait(false);
             return ToolResult<RenderScriptExport>.Success(new RenderScriptExport(
-                Script: BlenderRenderJob.Display(root, script),
+                Script: BlenderRenderJob.Display(root, export.ScriptPath),
                 Directory: BlenderRenderJob.Display(root, plan.Spec.Output.OutputDirectory),
                 Model: BlenderRenderJob.Display(root, source.Model.Path),
                 ModelKind: BlenderRenderJob.Camel(source.Model.Kind.ToString()),
                 StaleModel: source.Model.StalenessReason,
-                Frames: SceneSpecValidator.FrameCount(plan.Spec)));
+                Frames: export.FrameCount,
+                Builder: BlenderRenderJob.Camel(export.Builder.ToString()),
+                OneFile: export.SingleFile,
+                LeftOut: export.LeftOut,
+                Warnings: export.Notices));
         }
         catch (OperationCanceledException)
         {
@@ -298,6 +366,20 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
     /// <summary>The reveal a caller asks for, over the preset's.</summary>
     private sealed record RenderReveal(string? By, string? From, string? Dates);
 
+    /// <summary>The image a caller lights the scene by, over the preset's lighting.</summary>
+    private sealed record RenderLight(string? Image, double? Strength, double? Rotation);
+
+    private const string HdriHelp =
+        "Workspace-relative image the scene is lit by, laid all round it and seen behind the cave (an HDRI): a "
+        + "Radiance .hdr or an OpenEXR .exr file. Omit to keep the preset's lighting.";
+
+    private const string HdriStrengthHelp =
+        "With an hdri image: how brightly it shines; 1 is the image as it is. Omit to keep the preset's.";
+
+    private const string HdriRotationHelp =
+        "With an hdri image: how far it is turned about the vertical, in degrees, anticlockwise seen from above. "
+        + "Omit to keep the preset's.";
+
     /// <summary>
     /// The scene and model request for a render or export, or the error to answer with. Every path is
     /// held to the workspace; the output folder may not be the project's config folder.
@@ -305,7 +387,8 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
     private (RenderPlan? Plan, ToolError? Error) Plan(
         string root, string preset, string? model, string? outputKind, int width, int height,
         double durationSeconds, int samples, string? outputDirectory, string? baseName, bool reExport,
-        bool needsDirectory, RenderTexts? texts = null, string? annotations = null, RenderReveal? reveal = null)
+        bool needsDirectory, RenderTexts? texts = null, string? annotations = null, RenderReveal? reveal = null,
+        RenderLight? light = null)
     {
         static (RenderPlan?, ToolError?) Refuse(string code, string message) => (null, new ToolError(code, message));
 
@@ -432,6 +515,32 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                 asked = asked with { DatesPath = dates };
             }
             spec = spec with { Reveal = asked };
+        }
+
+        // The image a scene is lit by is read from the workspace, like a photo: an agent names no file
+        // outside it. One that a user preset carries stays the user's own choice.
+        if (light is not null && (!string.IsNullOrWhiteSpace(light.Image) || light.Strength is not null || light.Rotation is not null))
+        {
+            var lighting = spec.Lighting;
+            if (!string.IsNullOrWhiteSpace(light.Image))
+            {
+                if (!WorkspacePaths.TryResolve(root, light.Image, out var image, out var reason))
+                    return Refuse(ToolErrorCodes.PathOutsideWorkspace, reason);
+                if (!File.Exists(image))
+                    return Refuse(ToolErrorCodes.FileNotFound, $"No such file: {light.Image}");
+                if (!Therion.Blender.Plan.PlanEnvironmentImage.HasExtension(image))
+                    return Refuse(ToolErrorCodes.InvalidArgument,
+                        $"'{light.Image}' is not an image a scene is lit by: name a Radiance .hdr or an OpenEXR .exr file.");
+                lighting = lighting with { Rig = LightingRig.HdriFile, HdriPath = image };
+            }
+            else if (lighting.Rig != LightingRig.HdriFile)
+            {
+                return Refuse(ToolErrorCodes.InvalidArgument,
+                    "hdriStrength and hdriRotation go with an image the scene is lit by: name it (hdri).");
+            }
+            if (light.Strength is { } strength) lighting = lighting with { Strength = strength };
+            if (light.Rotation is { } rotation) lighting = lighting with { HdriRotation = rotation };
+            spec = spec with { Lighting = lighting };
         }
 
         // Always replaced: a user preset may carry the folder it was saved with, which is no business of
