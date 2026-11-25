@@ -88,7 +88,13 @@ public static class BlenderVerb
                 return 2;
             }
             var model = new ResolvedModelSource { Path = Path.GetFullPath(source), Format = format, Kind = ModelSourceKind.ExternalFile };
-            return await BundleAsync(model, spec, bundle, draft, plans, Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
+            string language = Option(args, "--readme-language") ?? "en";
+            if (!RenderBundleWriter.ReadmeLanguages.Contains(language, StringComparer.Ordinal))
+            {
+                stderr.WriteLine($"error: --readme-language takes one of: {string.Join(", ", RenderBundleWriter.ReadmeLanguages)}.");
+                return 2;
+            }
+            return await BundleAsync(model, spec, bundle, draft, language, plans, Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
                 .ConfigureAwait(false);
         }
 
@@ -210,7 +216,7 @@ public static class BlenderVerb
     /// folder first, and what they write is moved to <paramref name="outDir"/>, or beside the
     /// zip.</summary>
     private static async Task<int> BundleAsync(
-        ResolvedModelSource model, SceneSpec spec, string bundle, bool draft, RenderPlans plans, string? outDir,
+        ResolvedModelSource model, SceneSpec spec, string bundle, bool draft, string language, RenderPlans plans, string? outDir,
         string? blenderOverride, TextWriter stdout, TextWriter stderr)
     {
         bool zip = bundle.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
@@ -219,7 +225,7 @@ public static class BlenderVerb
         try
         {
             stderr.WriteLine($"[{RenderPhase.ConvertingGeometry}] Converting model");
-            content = RenderBundleWriter.FromModel(model, spec, work, draft);
+            content = RenderBundleWriter.FromModel(model, spec, work, draft) with { Language = language };
             if (zip) RenderBundleWriter.WriteZip(content, bundle);
             else RenderBundleWriter.WriteFolder(content, bundle);
         }

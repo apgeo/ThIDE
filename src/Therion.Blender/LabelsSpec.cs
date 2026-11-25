@@ -118,7 +118,8 @@ public sealed record LeadMarkerSpec
 
 /// <summary>The card a movie ends on: its text over a dark picture, for
 /// <see cref="Seconds"/> seconds after the last frame of the scene, which stands still under it.
-/// A still has no end card.</summary>
+/// <see cref="Backdrop"/> lets that frame show through, and <see cref="OverScene"/> brings the
+/// card over the end of the scene itself. A still has no end card.</summary>
 public sealed record EndCardSpec
 {
     /// <summary>What the card says; line breaks are kept.</summary>
@@ -129,6 +130,15 @@ public sealed record EndCardSpec
 
     /// <summary>How long the card stays, in seconds; the movie is that much longer.</summary>
     public double Seconds { get; init; } = 4.0;
+
+    /// <summary>How dark the card is under its text, from 0 to 1. 1 is a black card; 0 is no
+    /// card at all, the text standing over the picture on a dark box of its own; between the two
+    /// the picture shows through, dimmed.</summary>
+    public double Backdrop { get; init; } = 1.0;
+
+    /// <summary>True brings the card over the last <see cref="Seconds"/> of the scene, which
+    /// goes on under it: the movie is no longer for it. False holds the last frame for the card.</summary>
+    public bool OverScene { get; init; }
 }
 
 /// <summary>A line of text shown at the bottom of the picture from <see cref="Start"/> to

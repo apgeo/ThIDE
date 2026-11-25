@@ -1,6 +1,7 @@
-// SceneSpec overlays → the plan's texts: what is written over the picture, laid out. The player
-// draws these in two dimensions over the rendered frames, so nothing in the scene can hide them
-// and changing one does not render the scene again.
+// Overlays → the plan's texts: what is written over the picture, laid out. The player draws
+// these in two dimensions over the rendered frames, so nothing in the scene can hide them and
+// changing one does not render the scene again. The overlays are those of a SceneSpec, or, for
+// whoever writes plans without one, an OverlaySpec beside a plan that is there already.
 //
 // Everything is worked out here, as the camera's poses are: where each text stands and how large
 // it is (shares of the picture, inside a margin of 5 % on every side), how long the scale bar is,
@@ -60,19 +61,56 @@ public static class ScreenTextPlanner
     {
         ArgumentNullException.ThrowIfNull(spec);
         ArgumentNullException.ThrowIfNull(camera);
-        var overlays = spec.Labels.Overlays;
+        return Lay(spec.Labels.Overlays, spec.Output.Kind == OutputKind.Still, spec.Animation.Fps,
+            spec.Output.Width, spec.Output.Height, camera, frames => Headings(camera, frames));
+    }
+
+    /// <summary>
+    /// The texts of <paramref name="overlays"/> for a plan that is there already, laid out as
+    /// those of a <see cref="SceneSpec"/> are: for whoever makes plans without one. The north
+    /// arrow follows the plan's camera, by the orientations of its poses where it has them, and
+    /// the scale bar is measured through its poses. Null when nothing is written over the
+    /// picture. <see cref="ScenePlanBuilder.WithTexts"/> puts the result into the plan.
+    /// </summary>
+    /// <param name="plan">Gives the camera's poses, the length of the clip, the picture's size
+    /// and whether the output is a still. Its own texts are not read.</param>
+    public static PlanScreenTexts? Plan(OverlaySpec overlays, ScenePlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(overlays);
+        ArgumentNullException.ThrowIfNull(plan);
+        int fps = plan.Timeline.Fps;
+        var camera = new CameraPlan
+        {
+            FrameCount = plan.Timeline.FrameCount,
+            Interpolation = plan.Camera.Interpolation switch
+            {
+                PlanInterpolation.Bezier => KeyInterpolation.Bezier,
+                PlanInterpolation.Constant => KeyInterpolation.Constant,
+                _ => KeyInterpolation.Linear,
+            },
+            FocalLength = plan.Camera.Lens,
+            KeyframeFocal = plan.Camera.Track.Any(k => k.Lens is not null),
+            Keyframes = plan.Camera.Track
+                .Select(k => new CameraKeyframe(ScenePlanValidator.FrameAt(k.T, fps), k.Eye, k.Target, k.Lens))
+                .ToList(),
+        };
+        return Lay(overlays, plan.Output.Kind == PlanOutputKind.Still, fps, plan.Look.Width, plan.Look.Height, camera,
+            frames => Headings(plan.Camera, fps, frames));
+    }
+
+    private static PlanScreenTexts? Lay(
+        OverlaySpec overlays, bool still, int fps, int width, int height, CameraPlan camera, Func<int, IReadOnlyList<double>> headings)
+    {
         if (!overlays.Any) return null;
 
-        bool still = spec.Output.Kind == OutputKind.Still;
-        int fps = spec.Animation.Fps;
         int frames = still ? 1 : camera.FrameCount;
         double duration = frames / (double)fps;
-        double aspect = spec.Output.Width / (double)spec.Output.Height;
+        double aspect = width / (double)height;
         var items = new List<PlanScreenItem>();
 
         if (overlays.DepthLegend) AddDepthLegend(items, aspect);
         if (overlays.ScaleBar) AddScaleBars(items, camera, frames, fps);
-        if (overlays.NorthArrow) AddNorthArrow(items, camera, frames, fps, aspect);
+        if (overlays.NorthArrow) AddNorthArrow(items, headings(frames), fps, aspect);
 
         if (!string.IsNullOrWhiteSpace(overlays.Corner))
             items.Add(Text("corner", CornerRole, overlays.Corner, Margin, 1 - Margin, CornerSize) with
@@ -106,7 +144,7 @@ public static class ScreenTextPlanner
         double hold = 0;
         if (overlays.EndCard is { } card && !still)
         {
-            hold = card.Seconds;
+            hold = card.OverScene ? 0 : card.Seconds;
             AddEndCard(items, card, duration);
         }
 
@@ -148,24 +186,31 @@ public static class ScreenTextPlanner
             });
     }
 
-    /// <summary>A black card over everything from the end of the scene, with its text.</summary>
+    /// <summary>A card over everything with its text: black or letting the picture through, from
+    /// the end of the scene or over its last seconds. With no card at all the text stands on a
+    /// dark box of its own.</summary>
     private static void AddEndCard(List<PlanScreenItem> items, EndCardSpec card, double duration)
     {
-        double start = Rounded(duration), fade = Rounded(Math.Min(CardFade, card.Seconds / 2));
+        double start = Rounded(card.OverScene ? Math.Max(0, duration - card.Seconds) : duration);
+        double fade = Rounded(Math.Min(CardFade, card.Seconds / 2));
+        double? from = start > 0 ? start : null;
         string? subtitle = string.IsNullOrWhiteSpace(card.Subtitle) ? null : card.Subtitle;
-        items.Add(new PlanScreenItem
-        {
-            Id = "end-card", Role = EndCardRole, Kind = PlanScreenItemKind.Box, At = new PlanPoint(0.5, 0.5),
-            Width = 1, Height = 1, Color = new ColorRgb(0, 0, 0), Start = start, FadeIn = fade,
-        });
+        bool bare = !(card.Backdrop > 0);
+        if (!bare)
+            items.Add(new PlanScreenItem
+            {
+                Id = "end-card", Role = EndCardRole, Kind = PlanScreenItemKind.Box, At = new PlanPoint(0.5, 0.5),
+                Width = 1, Height = 1, Color = new ColorRgb(0, 0, 0), Opacity = card.Backdrop < 1 ? Rounded(card.Backdrop) : null,
+                Start = from, FadeIn = fade,
+            });
         items.Add(Text("end-card-text", EndCardRole, card.Text, 0.5, subtitle is null ? 0.5 : 0.53, EndCardSize) with
         {
-            AlignY = subtitle is null ? PlanAlignY.Center : PlanAlignY.Bottom, Wrap = 0.8, Start = start, FadeIn = fade,
+            AlignY = subtitle is null ? PlanAlignY.Center : PlanAlignY.Bottom, Wrap = 0.8, Start = from, FadeIn = fade, Backing = bare,
         });
         if (subtitle is not null)
             items.Add(Text("end-card-subtitle", EndCardRole, subtitle, 0.5, 0.49, EndCardSubtitleSize) with
             {
-                AlignY = PlanAlignY.Top, Wrap = 0.8, Start = start, FadeIn = fade,
+                AlignY = PlanAlignY.Top, Wrap = 0.8, Start = from, FadeIn = fade, Backing = bare,
             });
     }
 
@@ -278,14 +323,14 @@ public static class ScreenTextPlanner
 
     // ---- north arrow ----
 
-    private static void AddNorthArrow(List<PlanScreenItem> items, CameraPlan camera, int frames, int fps, double aspect)
+    private static void AddNorthArrow(List<PlanScreenItem> items, IReadOnlyList<double> headings, int fps, double aspect)
     {
         double room = ArrowSize / 2 + ArrowLetterRoom;
         items.Add(new PlanScreenItem
         {
             Id = "north-arrow", Role = NorthArrowRole, Kind = PlanScreenItemKind.Arrow,
             At = new PlanPoint(Rounded(1 - Margin - Math.Min(0.4, room / aspect)), Rounded(1 - Margin - room)),
-            Size = ArrowSize, Text = "N", Turn = Turns(Headings(camera, frames), fps),
+            Size = ArrowSize, Text = "N", Turn = Turns(headings, fps),
         });
     }
 
@@ -313,10 +358,102 @@ public static class ScreenTextPlanner
         return headings;
     }
 
-    /// <summary>The headings as an arrow's turns: one for every frame at which the angle does
-    /// not lie on the line between the turns around it.</summary>
-    internal static IReadOnlyList<PlanTurn> Turns(IReadOnlyList<double> headings, int fps)
+    /// <summary>
+    /// The way the camera of a plan looks over the ground at every frame, as
+    /// <see cref="Headings(CameraPlan, int)"/> gives it for a planned camera. Poses with an
+    /// orientation are taken by it, moved between the poses as the player moves them: a camera
+    /// that looks straight down, or up, then has the heading that the top of its picture gives
+    /// it, which is the one it comes out of the tilt with.
+    /// </summary>
+    /// <param name="fps">The plan's frames per second: a pose's time falls on frame
+    /// 1 + round(t · fps).</param>
+    public static IReadOnlyList<double> Headings(PlanCamera camera, int fps, int frames)
     {
+        ArgumentNullException.ThrowIfNull(camera);
+        var track = camera.Track;
+        if (track.Count == 0 || track.Any(k => k.Orientation is null))
+        {
+            var planned = new CameraPlan
+            {
+                FrameCount = frames,
+                Interpolation = camera.Interpolation switch
+                {
+                    PlanInterpolation.Bezier => KeyInterpolation.Bezier,
+                    PlanInterpolation.Constant => KeyInterpolation.Constant,
+                    _ => KeyInterpolation.Linear,
+                },
+                Keyframes = track.Select(k => new CameraKeyframe(ScenePlanValidator.FrameAt(k.T, fps), k.Eye, k.Target, null)).ToList(),
+            };
+            return Headings(planned, frames);
+        }
+
+        // The four numbers of the orientation, each on a curve of its own, as Blender has them:
+        // of the two quaternions of a turn, the one nearer the pose before.
+        double[] at = track.Select(k => (double)ScenePlanValidator.FrameAt(k.T, fps)).ToArray();
+        var values = new double[4][];
+        for (int c = 0; c < 4; c++) values[c] = new double[track.Count];
+        for (int i = 0; i < track.Count; i++)
+        {
+            var q = track[i].Orientation!.Value;
+            double[] now = [q.W, q.X, q.Y, q.Z];
+            bool flip = i > 0 && Enumerable.Range(0, 4).Sum(c => now[c] * values[c][i - 1]) < 0;
+            for (int c = 0; c < 4; c++) values[c][i] = flip ? -now[c] : now[c];
+        }
+        double[][]? slopes = camera.Interpolation == PlanInterpolation.Bezier
+            ? values.Select(channel => EasedSlopes(at, channel)).ToArray()
+            : null;
+
+        var headings = new double[Math.Max(frames, 0)];
+        double last = 0;
+        for (int frame = 1; frame <= frames; frame++)
+        {
+            var q = new double[4];
+            int next = 0;
+            while (next < at.Length && at[next] <= frame) next++;
+            for (int c = 0; c < 4; c++)
+            {
+                if (next == 0) q[c] = values[c][0];
+                else if (next == at.Length || camera.Interpolation == PlanInterpolation.Constant || at[next - 1] == frame) q[c] = values[c][next - 1];
+                else
+                {
+                    double span = at[next] - at[next - 1], u = (frame - at[next - 1]) / span;
+                    if (slopes is null) q[c] = values[c][next - 1] + (values[c][next] - values[c][next - 1]) * u;
+                    else
+                    {
+                        double u2 = u * u, u3 = u2 * u;
+                        q[c] = (2 * u3 - 3 * u2 + 1) * values[c][next - 1] + (u3 - 2 * u2 + u) * span * slopes[c][next - 1]
+                               + (-2 * u3 + 3 * u2) * values[c][next] + (u3 - u2) * span * slopes[c][next];
+                    }
+                }
+            }
+            var turn = new PlanQuaternion(q[0], q[1], q[2], q[3]);
+            double length = turn.Length;
+            double heading = last;
+            if (length > 1e-9)
+            {
+                turn = new PlanQuaternion(q[0] / length, q[1] / length, q[2] / length, q[3] / length);
+                var look = turn.Forward;
+                if (Math.Sqrt(look.X * look.X + look.Y * look.Y) > 1e-6)
+                    heading = Math.Atan2(look.X, look.Y) * 180.0 / Math.PI;
+                else
+                {
+                    // Straight down the top of the picture is the way ahead; straight up, the way back.
+                    var top = turn.Up * (look.Z < 0 ? 1 : -1);
+                    heading = Math.Atan2(top.X, top.Y) * 180.0 / Math.PI;
+                }
+            }
+            if (frame > 1) heading = last + Math.IEEERemainder(heading - last, 360.0);
+            headings[frame - 1] = last = heading;
+        }
+        return headings;
+    }
+
+    /// <summary>The headings as an arrow's turns: one for every frame at which the angle does
+    /// not lie on the line between the turns around it. The headings are one a frame, in degrees
+    /// clockwise from north and without jumps (<see cref="Headings(CameraPlan, int)"/>).</summary>
+    public static IReadOnlyList<PlanTurn> Turns(IReadOnlyList<double> headings, int fps)
+    {
+        ArgumentNullException.ThrowIfNull(headings);
         var turns = new List<PlanTurn>();
         if (headings.Count == 0) return turns;
         void Keep(int index) => turns.Add(new PlanTurn(Rounded(index / (double)fps), Math.Round(headings[index], 3)));
