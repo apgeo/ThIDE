@@ -1,5 +1,151 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-25 — lights, the world's strength and a model's place change; lines; more for whoever writes plans
+
+The plan stays **version 1** and everything here is additive to it. The player calls itself
+**1.4**: a player 1.3 refuses the new keys by their path (`changes[0].energy is not known to
+player 1.3`) and the new module by its name, and an earlier build of this library refuses them on
+reading, so neither plays a newer plan as less than it says.
+
+### Breaking changes
+- **`ScenePlan.PlayerFeatures` has one more entry**, `lines`, after `models`. Migration: none for
+  code that looks a module up by name; code that counted on positions in the list counts again.
+- **`PlanVisibleKey` has a fourth value, `Easing`** (default `Linear`). Code that builds one is
+  unchanged; code that takes one apart into three values (`var (t, value, fade) = key`) names
+  the fourth.
+- **A change's target also finds lights.** `{ "role": "light" }` is every light of the look, and
+  an `id` that a light shares with a model, a text or a marker now names both. A plan that
+  relied on such a shared id naming only the model gets the validator's message for the first
+  property a light cannot take. Migration: give the light an id of its own.
+- **The ids of models and lines are one set.** A plan cannot have a line with the id of a model.
+- **Keys of a change after the clip's last frame, and two keys on one frame, are no longer
+  errors** (see below). Code that leaned on the validator to refuse them checks for itself.
+- The player's own `place` function moved from the module `models` to `api.place`, where a module
+  from elsewhere can use it. Migration for such a module: `api.place(obj, item, where)`.
+- The player's one draft warning has new words (see "Behaviour changes"); whoever matched its
+  text matches the new one.
+
+### Additive API: what a plan can say
+
+- **Lights change** (`PlanChange.Energy`, JSON `energy`; `PlanNumberKey`). A change whose target
+  is a light of `look.lights` — by its `id`, or all of them by the role `light` — keys how
+  strong it is, as `PlanLight.Energy` has it: 0 puts it out. `Visible` shows and hides a light
+  too, at once: a light has no material, so a key with a `Fade` is refused, and so are `Opacity`,
+  `Tint`, `Scale` and `Offset` of a light. This is what puts a sun out when the camera goes
+  underground.
+- **The world's strength changes** (`PlanChange.WorldStrength`, JSON `worldStrength`), in a change
+  without a target, as `WorldColor` does. It needs a world, of either kind: a sky has a strength
+  too. The draft's background follows the colour times the strength at every frame.
+- **A model is moved** (`PlanChange.Offset`, JSON `offset`; `PlanVectorKey`): metres along the
+  frame's axes, added to where `PlanModel.Translation` puts the model. Models and lines only. An
+  offset by role moves every model of the role by the same amount, which is what a relief that
+  lifts every cave needs; `[0, 0, 0]` is the model's own place.
+- **A key may lie after the clip's last frame.** The clip then ends on the way to it: a change
+  that ends two seconds after the clip is two keys, not one for every frame up to the end.
+- **Two keys of one property may fall on one frame** (not of `Visible`): the first is where the
+  value was going, the second — its easing is `Constant` — the value it has from that frame on.
+  The frame before shows the move at the place it has reached, not the end it never shows:
+
+  ```json
+  "tint": [
+    { "t": 0, "color": [1, 0, 0], "strength": 0 },
+    { "t": 2, "color": [1, 0, 0], "strength": 1, "easing": "smooth" },
+    { "t": 2, "color": [0, 0, 1], "strength": 1, "easing": "constant" },
+    { "t": 3, "color": [0, 0, 1], "strength": 0 }
+  ]
+  ```
+
+  A third key on the frame, or a second one that is not `constant`, is refused.
+- **A `Visible` fade has an easing** (`PlanVisibleKey.Easing`, JSON `easing`): `Linear` (the
+  default) or `Smooth`. `Constant` is refused: without a fade the change is a cut already.
+- **A colour is mixed as light or as a screen mixes** (`PlanTintKey.Mix`, `PlanColorKey.Mix`, JSON
+  `mix`; `PlanColorMix`): `Linear` (the default, and not written) goes straight through the
+  plan's linear RGB, `Srgb` straight through sRGB, which is what a browser or a picture editor
+  shows between two colours. Half-way from red to green is `[0.5, 0.5, 0]` as light and
+  `[0.214, 0.214, 0]` as a screen. The player keys an `Srgb` move frame by frame, exactly, with
+  the key's easing. It is the colour's way between two keys; how a tint lies over the target's
+  own colour by its `Strength` is a mix of light as before.
+- **A ramp over height in the model's own space** (`PlanMaterial.Space`, JSON `space`;
+  `PlanRampSpace`): `Scene` (the default) measures `Low` and `High` in the plan's frame, `Model`
+  in the model's own coordinates, as its file has them, before its scale, rotation and
+  translation. A colour then stays with the rock it is on while the model is stretched (a relief
+  that grows) or moved. Only a `HeightRamp` has a space. The draft colours follow it.
+- **A camera pose has a clip range of its own** (`PlanCameraKey.ClipStart`, `ClipEnd`, JSON
+  `clipStart`, `clipEnd` in `camera.track[n]`). A pose without one has the camera's. Between
+  poses the range moves as the camera does, so a flight from far away to a metre from a wall
+  keeps its depth exact at both ends (it matters for EEVEE and the draft; Cycles needs no depth
+  buffer).
+- **Lines** (`ScenePlan.Lines`, JSON `lines`, played by the new module `lines`;
+  `ScenePlan.LinesFeature`; `PlanLine`, `PlanLineStrip`). A line is drawn through given points as
+  a thin six-sided tube `Width` metres thick, which the player builds: the legs of a survey, a
+  route, an outline, without anybody writing a mesh. Its `Strips` are runs of two points or
+  more; a strip may give each point a colour, which the tube blends from point to point (either
+  every strip of a line has colours or none has). In everything else **a line is a model**: it
+  has `Translation`, `Rotation` and `Scale`, it wears the material of `look.materials` it names
+  (`Flat` for one colour, `VertexColor` for the colours of its points, a ramp over height), and
+  what changes of a model changes of it. Its role is `line` unless it says another. The module
+  runs before `look`. A strip takes one line of the JSON.
+
+### Additive API: for whoever writes plans without a `SceneSpec`
+
+- **`ScreenTextPlanner.Plan(OverlaySpec, ScenePlan)`** lays the overlays out for a plan that is
+  there already — title, captions, credits, scale bar, north arrow, end card, fades — the way
+  those of a spec are laid out; `ScenePlanBuilder.WithTexts(plan, texts)` puts the result into
+  the plan and lists the module. The north arrow follows the plan's own camera:
+  **`ScreenTextPlanner.Headings(PlanCamera, fps, frames)`** takes poses with an orientation by
+  the way they are turned, so a camera that looks straight down keeps the heading the top of its
+  picture gives it. `ScreenTextPlanner.Turns(headings, fps)` is public for headings that come
+  from elsewhere.
+- **`ScenePlanBuilder.Material(MaterialsSpec, bounds, id)`** and
+  **`ScenePlanBuilder.Lighting(LightingSpec)`** give the rock and the lights (and the world) that
+  `FromSpec` gives a scene, without a scene to lower: the lamp on the camera is `Headlamp`, the
+  sun under a sky `Sun`, the three suns `Key`, `Fill` and `Rim`.
+- **`ScenePlanBuilder.WithNeededFeatures(plan)`** lists, at its place in the running order, every
+  module of the player that a section of the plan needs and its features do not name yet.
+- **An end card over the scene** (`EndCardSpec.Backdrop`, `OverScene`; JSON `backdrop`,
+  `overScene` under `labels.overlays.endCard`). `Backdrop` is how dark the card is: 1 (the
+  default) is the black card, 0 no card at all — the text stands over the last frame on a dark
+  box of its own — and anything between dims the frame. `OverScene` brings the card over the
+  last seconds of the scene, which goes on under it, instead of holding the last frame: the
+  movie is no longer for it. Both are written only when they are not the defaults, so a spec
+  without them is the same JSON as before. The script generator draws no end card either way.
+- **A bundle's files may be streams** (`RenderBundleContent.Streams`: plan path → what opens the
+  content). A mesh that was just made goes into the zip without a file on disk:
+  `["walls.ply"] = () => new MemoryStream(PlyWriter.Write(mesh))`. Each is opened once for every
+  time the bundle is written. A path is in `Files` or in `Streams`.
+- **A bundle's README in Romanian** (`RenderBundleContent.Language`: `"en"`, the default, or
+  `"ro"`; `RenderBundleWriter.ReadmeLanguages`). A culture name is taken by its language
+  (`ro-RO`); any other language gives the English text. `therion-cli blender … --bundle …
+  --readme-language ro` asks for it.
+- **A bundle's README with an opening and sections of its maker's**
+  (`RenderBundleContent.ReadmeIntro`, `ReadmeSections` of `RenderBundleReadmeSection(Title,
+  Text)`). The intro stands in place of the two lines that say the folder needs nothing of ThIDE;
+  the sections come after the README's own and before "NOT IN THIS SCENE". Both are written as
+  they are, in whatever language they are in.
+
+### Behaviour changes
+- **A draft shows more of the changes.** Blender's solid view draws no material, so until now a
+  fade was a cut and an opacity or a tint was not shown. Now a model (or a line) in the draft's
+  colours **takes its tint** there, exactly, and **shows how much of it is there** by that share
+  of its faces: at fade × opacity 0.5 half of them are drawn, the same ones on every frame. A
+  modifier does both from the numbers on the object; nothing runs but Blender's own nodes, so a
+  saved draft scene plays it too. Of a text or a marker a fade is still a cut and an opacity or
+  a tint is not shown, and the player says so: "the draft shows a fade of a text or a marker as
+  a cut, and no change of its opacity or tint". A model without colours for the solid view (a
+  GLB with its own material) is named in a warning of its own.
+- `NotCarried` is as it was: a plan still does not carry the HDRI light rig.
+- The README of a bundle that asks for nothing new is the same text as before, byte for byte.
+
+### What the player refuses, by name
+- an `energy` of anything but a light; an `offset` of a text or a marker; an `opacity`, a `tint`,
+  a `scale` or an `offset` of a light, and a `visible` key of a light with a `fade`;
+- a `worldStrength` without a world; two changes of it;
+- three keys on one frame, a second key on a frame that is not `constant`, keys out of order, a
+  `constant` fade, a `mix` that is not `linear` or `srgb`;
+- a pose whose clip range is not a range;
+- a line without a positive `width`, without strips, a strip of fewer than two points, colours
+  that are not one to a point or that only some strips have.
+
 ## 2026-11-24 — timed changes in the plan: things appear, go, fade, take a tint, are stretched
 
 ### Breaking changes
