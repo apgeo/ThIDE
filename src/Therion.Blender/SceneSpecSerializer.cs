@@ -113,7 +113,9 @@ public static class SceneSpecSerializer
         }
         catch (JsonException ex)
         {
-            throw new SceneSpecFormatException($"Malformed render spec JSON: {ex.Message}");
+            // The text is JSON (ProbeVersion read it): what is wrong is its shape, which the
+            // reader names by a key or a kind of value, in a line.
+            throw new SceneSpecFormatException($"Malformed render spec JSON: {JsonFault.OfShape(ex)}");
         }
     }
 
@@ -143,7 +145,9 @@ public static class SceneSpecSerializer
         }
         catch (JsonException ex)
         {
-            throw new SceneSpecFormatException($"Malformed render spec JSON: {ex.Message}");
+            // Where, and not the parser's own words: it quotes what it could not read, whatever
+            // file it was that somebody took for a spec.
+            throw new SceneSpecFormatException($"Malformed render spec JSON: {JsonFault.NotJson(ex)}");
         }
     }
 }

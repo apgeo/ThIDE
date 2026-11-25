@@ -108,7 +108,9 @@ public static class ScenePlanSerializer
         }
         catch (JsonException ex)
         {
-            throw new ScenePlanFormatException($"Malformed scene plan JSON: {ex.Message}");
+            // The text is JSON (ProbeVersion read it): what is wrong is its shape, which the
+            // reader names by a key or a kind of value, in a line.
+            throw new ScenePlanFormatException($"Malformed scene plan JSON: {JsonFault.OfShape(ex)}");
         }
     }
 
@@ -132,7 +134,7 @@ public static class ScenePlanSerializer
         }
         catch (JsonException ex)
         {
-            throw new ScenePlanFormatException($"Malformed scene plan JSON: {ex.Message}");
+            throw new ScenePlanFormatException($"Malformed scene plan JSON: {JsonFault.NotJson(ex)}");
         }
     }
 
