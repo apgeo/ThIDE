@@ -168,6 +168,68 @@ Playerul face etichetele să apară **treptat**: devin din ce în ce mai opace, 
 opace, mărește etichetele pornind de la nimic.) O previzualizare arată apariția treptată ca pe o
 tăietură: etichetele sunt pur și simplu prezente începând cu `showFrame`.
 
+## Adnotări: etichete, note cu linie, marcaje și fotografii
+
+Pe lângă etichetele pe care ThIDE le face din model (stațiile, pistele), o scenă poate avea
+**adnotări** proprii: lucruri care arată ceva, fiecare la o stație sau într-un punct.
+
+| Fel | Ce este |
+|---|---|
+| `label` | o etichetă: un text pe stația lui, întors spre cameră |
+| `callout` | o notă cu linie: un text așezat la distanță de stație, cu o linie de la stație până la el |
+| `marker` | un marcaj: o bilă luminoasă |
+| `photo` | o fotografie dintr-un fișier PNG sau JPEG, pe stația ei sau deasupra, cu o linie până la ea |
+
+Se scriu ca o listă JSON, într-un fișier al lor:
+
+```json
+[
+  { "kind": "callout", "station": "main.0", "text": "Intrarea" },
+  { "kind": "label", "station": "main.14", "text": "Sala Mare", "from": 4, "to": 9 },
+  { "kind": "photo", "station": "main.14", "image": "photos/hall.jpg", "size": 6,
+    "offset": [0, 0, 5], "framed": true, "within": 40 },
+  { "kind": "marker", "at": [512040.5, 5120010.2, 1180], "color": [1, 0.8, 0] }
+]
+```
+
+| Cheie | Înțeles |
+|---|---|
+| `kind` | `label`, `callout`, `marker` sau `photo` |
+| `station` *sau* `at` | unde: numele unei stații, așa cum îl are modelul, sau un punct `[est, nord, sus]` în coordonatele modelului |
+| `text` | ce spune o etichetă sau o notă |
+| `image` | fișierul unei fotografii, `.png` sau `.jpg`, numit față de locul în care se află fișierul de adnotări |
+| `size` | în metri: înălțimea literelor unui text, raza unui marcaj, lățimea unei fotografii. Dacă lipsește, se potrivește cu peștera: un text cât o etichetă de stație, o fotografie cât o zecime din întinderea peșterii |
+| `offset` | `[est, nord, sus]` în metri: unde stă textul unei note sau o fotografie față de stație. O notă fără el stă la patru înălțimi de literă deasupra; o fotografie fără el este pe stația ei, iar cu el are o linie până la ea |
+| `color` | `[roșu, verde, albastru]`, fiecare între 0 și 1, pentru un text sau un marcaj |
+| `framed` | `true` pune un chenar în jurul unei fotografii |
+| `facing`, `normal` | `"facing": "fixed"` face dintr-o fotografie un panou care privește de-a lungul lui `normal` (`[est, nord, sus]`) și rămâne așa; fără el, fotografia stă cu fața spre cameră |
+| `from`, `to` | când este prezentă, în secunde de la începutul filmului; fără ele, tot timpul |
+| `within` | este prezentă doar cât timp camera se află la cel mult atâția metri de stația ei: o fotografie care apare când un zbor prin peșteră ajunge la locul ei |
+| `fade` | în cât timp apare și dispare, în secunde (0,5 dacă nu spuneți altfel; 0 este o tăietură) |
+| `id`, `role` | numele ei în scenă și numele unui grup, pentru `changes` dintr-un plan de scenă |
+
+O fotografie care stă cu fața spre cameră rămâne paralelă cu imaginea și dreaptă în ea, așa că se
+vede mereu ca dreptunghiul care este. Își arată imaginea așa cum ar arăta-o un ecran, oricare ar fi
+lumina din peșteră, și nu luminează nimic. Un text și un marcaj strălucesc, ca etichetele.
+
+**Fotografii.** O fotografie este un PNG sau un JPEG de cel mult 32 MiB, 16 384 de pixeli pe o
+latură și 64 de milioane de pixeli; orice altceva este respins înainte ca Blender să pornească. O
+imagine lată de 2 000 de pixeli este mai mult decât arată un film: fișierele mai mici dau pachete
+mai mici și randări mai rapide. Fișierele rămân unde sunt; ThIDE le copiază pentru randare și
+într-un pachet (în dosarul lui `photos`).
+
+**De unde vin.** În linia de comandă, `--annotations note.json` (o dată pentru fiecare fișier);
+prin uneltele MCP, `annotations` numește un astfel de fișier din spațiul de lucru; într-o
+specificație de randare, aceeași listă stă la `annotations`. Panoul nu are încă un câmp pentru ele.
+
+- O stație pe care modelul nu o are oprește randarea, cu numele ei.
+- O adnotare care nu este arătată niciodată (timpul ei este după sfârșitul filmului, camera nu
+  ajunge atât de aproape) este raportată ca avertisment.
+- **Doar playerul desenează adnotările.** O scenă construită de generatorul de scripturi le
+  omite, iar rezultatul spune acest lucru.
+- O previzualizare arată o fotografie ca pe un mozaic al culorilor ei (vizualizarea solidă a
+  Blender nu desenează imagini), iar o apariție treptată ca pe o tăietură.
+
 ## Doi constructori de scenă
 
 ThIDE are două moduri de a construi scena în Blender, iar **Constructor de scenă (avansat)** alege
@@ -183,7 +245,8 @@ ThIDE are două moduri de a construi scena în Blender, iar **Constructor de sce
 - **Generator** — constructorul mai vechi, păstrat așa cum era, pentru comparație și pentru ce nu
   face încă playerul. Scrie câte un script Python pentru fiecare scenă. Desenează titlul, scara
   grafică, săgeata nordului și legenda adâncimii ca obiecte în scenă (unde un perete le poate
-  ascunde) și nu desenează linia de credite, subtitrările, cadrul de final sau trecerile.
+  ascunde) și nu desenează linia de credite, subtitrările, cadrul de final, trecerile sau
+  [adnotările](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii).
 
 O previzualizare este mereu a playerului, orice s-ar alege aici. **Exportă scriptul…** și
 **Deschide în Blender…** folosesc generatorul de scripturi.
@@ -216,7 +279,7 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--draft] [--builder auto|player|generator] \
                     [--keep-frames] [--compose-only] [--frames <dir>] \
                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] \
-                    [--caption "<start>-<end>:<text>"]...
+                    [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]...
 ```
 
 `--export` scrie scriptul și resursele fără a rula Blender; altfel randează. Căile fișierelor
@@ -231,6 +294,11 @@ randării, `2` la o eroare de utilizare sau de specificație.
   cele ale presetării sau ale specificației. O subtitrare este un singur argument, cu timpii în
   secunde de la începutul filmului: `--caption "2.5-6:Sala Mare"`; dați opțiunea o dată pentru
   fiecare subtitrare.
+- `--annotations note.json` adaugă etichetele, notele cu linie, marcajele și fotografiile dintr-un
+  fișier la cele ale presetării sau ale specificației: vezi
+  [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii). Merge și cu `--bundle`. Un
+  script scris cu `--export` este al generatorului de scripturi și le omite, așa cum omite
+  subtitrările; comanda spune acest lucru.
 - **O randare care a fost oprită continuă.** O randare cu texte își ține cadrele în
   `<out>/<nume>-frames` cât timp rulează. Rulați din nou aceeași comandă după ce a fost oprită (sau
   după ce a fost oprit calculatorul): cadrele care există sunt păstrate și se randează doar cele
@@ -259,7 +327,8 @@ mai nou, fără ThIDE:
 ```
 therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
                     --bundle cave-bundle.zip [--draft] [--render [--render-plan full|draft|both]] \
-                    [--out <dir>] [--blender <path>] [--readme-language en|ro]
+                    [--out <dir>] [--blender <path>] [--readme-language en|ro] \
+                    [--annotations <file.json>]...
 ```
 
 Pachetul conține planul scenei (`scene-plan.json`: mișcarea camerei, aspectul și ieșirea, ca JSON
@@ -275,7 +344,8 @@ Windows); variabila de mediu `BLENDER` indică altă instalare, de exemplu
 `BLENDER=/opt/blender-4.5/blender sh render.sh`.
 
 Un pachet conține suprafața terenului și imaginea ei atunci când scena le desenează (`surface.ply`,
-`surface.png`) și textele de peste imagine, la `texts` în plan. O scenă cu texte se randează și
+`surface.png`), adnotările cu fotografiile lor (`photos/`) și textele de peste imagine, la `texts`
+în plan. O scenă cu texte se randează și
 acolo în două etape, în dosarul `frames` al pachetului și apoi în `out`; pornită din nou după ce a
 fost oprită, continuă. `sh render.sh --keep-frames` păstrează cadrele, iar
 `sh render.sh --compose` (sau `render.cmd --compose`) scrie filmul din nou din ele după ce un text
@@ -314,6 +384,10 @@ scenele făcute de ThIDE:
   și intensitatea (`worldColor`, `worldStrength`). O cheie poate sta după sfârșitul clipului,
   două chei pe același cadru înseamnă o mișcare care se termină cu un salt, iar o culoare poate
   trece de la o cheie la alta așa cum amestecă un ecran culorile (`"mix": "srgb"`).
+- La `annotations`, etichetele, notele cu linie, marcajele și fotografiile, fiecare cu locul și
+  mărimea ei în metri. O adnotare poate ține de un model (`"model"`): merge atunci acolo unde merge
+  punctul ei din model, cât timp modelul este întins sau mutat. Când este prezentă se spune
+  printr-o schimbare a ei, după `id`: cheile ei `visible`, cu un `fade`.
 - La `lines`, linii prin puncte date, desenate ca tuburi subțiri: vizele unei ridicări, un traseu.
 - O rampă de culori pe înălțime poate fi măsurată în modelul însuși (`"space": "model"`), așa că
   culorile rămân pe rocă atunci când un model este întins sau mutat.
@@ -321,7 +395,8 @@ scenele făcute de ThIDE:
   pentru un zbor care vine de departe până aproape.
 
 O previzualizare arată nuanța unui model, iar cât dintr-un model care se estompează mai este acolo
-se vede după partea din fețele lui pe care le desenează. Schema care descrie fiecare câmp se află
+se vede după partea din fețele lui pe care le desenează; o fotografie este acolo un mozaic al
+culorilor ei. Schema care descrie fiecare câmp se află
 în depozitul ThIDE (`src/Therion.Blender/Plan/scene-plan.schema.json`).
 
 ## Cerințe și sfaturi

@@ -155,6 +155,67 @@ lead marker goes on pulsing while it does. Hiding is at once. (The script genera
 on the same frames, but instead of a fade it grows the labels from nothing.) A preview shows the
 fade as a cut: the labels are simply there from `showFrame` on.
 
+## Annotations: labels, callouts, markers and photos
+
+Beside the labels ThIDE makes from the model (its stations, its leads), a scene can have
+**annotations** of your own: things that point something out, each at a station or at a point.
+
+| Kind | What it is |
+|---|---|
+| `label` | a text on its station, turned to the camera |
+| `callout` | a text that stands away from its station, with a line from the station to it |
+| `marker` | a glowing ball |
+| `photo` | a picture from a PNG or JPEG file, on its station or above it with a line to it |
+
+They are written as a JSON list, in a file of their own:
+
+```json
+[
+  { "kind": "callout", "station": "main.0", "text": "Intrarea" },
+  { "kind": "label", "station": "main.14", "text": "Sala Mare", "from": 4, "to": 9 },
+  { "kind": "photo", "station": "main.14", "image": "photos/hall.jpg", "size": 6,
+    "offset": [0, 0, 5], "framed": true, "within": 40 },
+  { "kind": "marker", "at": [512040.5, 5120010.2, 1180], "color": [1, 0.8, 0] }
+]
+```
+
+| Key | Meaning |
+|---|---|
+| `kind` | `label`, `callout`, `marker` or `photo` |
+| `station` *or* `at` | where: the name of a station, as the model has it, or a point `[east, north, up]` in the model's own coordinates |
+| `text` | what a label or a callout says |
+| `image` | a photo's file, a `.png` or a `.jpg`, named from where the annotations file lies |
+| `size` | in metres: the height of a text's letters, the radius of a marker, the width of a photo. Left out, it suits the cave: a text as large as a station label, a photo a tenth of the cave's extent |
+| `offset` | `[east, north, up]` in metres: where a callout's text or a photo stands from its station. A callout without one stands four letter heights above; a photo without one is on its station, and with one it has a line to it |
+| `color` | `[red, green, blue]`, each 0 to 1, of a text or a marker |
+| `framed` | `true` puts a border about a photo |
+| `facing`, `normal` | `"facing": "fixed"` makes a photo a card that faces along `normal` (`[east, north, up]`) and stays so; without it a photo faces the camera |
+| `from`, `to` | when it is there, in seconds from the start of the movie; without them, throughout |
+| `within` | it is there only while the camera is within this many metres of its station: a photo that appears as a flythrough comes to its place |
+| `fade` | how long it takes to appear and to go, in seconds (0.5 unless you say; 0 is a cut) |
+| `id`, `role` | its name in the scene, and a group name, for a scene plan's `changes` |
+
+A photo that faces the camera stays parallel to the picture and upright in it, so it is always
+seen as the rectangle it is. It shows its image as a screen would, whatever the light in the cave,
+and lights nothing itself. A text and a marker glow, like the labels.
+
+**Photos.** A photo is a PNG or a JPEG of at most 32 MiB, 16,384 pixels a side and 64 million
+pixels; anything else is refused before Blender starts. A picture 2,000 pixels wide is more than
+a movie shows: smaller files make smaller bundles and faster renders. The files stay where they
+are; ThIDE copies them for the render, and into a bundle (its `photos` folder).
+
+**Where they come from.** On the command line, `--annotations notes.json` (once for each file);
+through the MCP tools, `annotations` names such a file in the workspace; in a render spec, the same
+list stands under `annotations`. The panel has no field for them yet.
+
+- A station the model does not have stops the render, with its name.
+- An annotation that is never shown (its time lies after the movie, the camera never comes that
+  near) is reported as a warning.
+- **Only the player draws annotations.** A scene the script generator builds leaves them out, and
+  the result says so.
+- A preview shows a photo as a mosaic of its colours (Blender's solid view draws no image), and a
+  fade as a cut.
+
 ## Two scene builders
 
 ThIDE has two ways of building the scene in Blender, and **Scene builder (advanced)** chooses
@@ -169,7 +230,8 @@ between them:
 - **Generator** — the earlier builder, kept as it was for comparison and for what the player does
   not do yet. It writes one Python script per scene. It draws the title, the scale bar, the north
   arrow and the depth legend as objects in the scene (where a wall can hide them) and does not
-  draw the credits line, captions, the end card or the fades.
+  draw the credits line, captions, the end card, the fades or the
+  [annotations](#annotations-labels-callouts-markers-and-photos).
 
 A preview is always the player's, whatever is chosen here. **Export script…** and **Open in
 Blender…** use the script generator.
@@ -200,7 +262,7 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--draft] [--builder auto|player|generator] \
                     [--keep-frames] [--compose-only] [--frames <dir>] \
                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] \
-                    [--caption "<start>-<end>:<text>"]...
+                    [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]...
 ```
 
 `--export` writes the script and assets without running Blender; otherwise it renders. Produced
@@ -213,6 +275,11 @@ failure, `2` on a usage or spec error.
 - `--title`, `--credits`, `--end-card` (with `--end-card-seconds`) and `--caption` add texts to the
   preset's or the spec's. A caption is one argument, its times in seconds from the start of the
   movie: `--caption "2.5-6:Sala Mare"`; give the option once for each caption.
+- `--annotations notes.json` adds the labels, callouts, markers and photos of a file to the
+  preset's or the spec's: see
+  [Annotations](#annotations-labels-callouts-markers-and-photos). It goes with `--bundle` too. A
+  script written with `--export` is the script generator's and leaves them out, as it leaves out
+  captions; the command says so.
 - **A render that was stopped goes on.** A render with texts keeps its frames in
   `<out>/<name>-frames` while it runs. Run the same command again after it was stopped (or after
   the computer was): the frames that are there are kept and only the missing ones are rendered.
@@ -240,7 +307,8 @@ end in `.zip`), for rendering on any computer with Blender 4.2 or newer and with
 ```
 therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
                     --bundle cave-bundle.zip [--draft] [--render [--render-plan full|draft|both]] \
-                    [--out <dir>] [--blender <path>] [--readme-language en|ro]
+                    [--out <dir>] [--blender <path>] [--readme-language en|ro] \
+                    [--annotations <file.json>]...
 ```
 
 The bundle holds the scene plan (`scene-plan.json`: the camera move, the look and the output, as
@@ -256,7 +324,8 @@ Windows); the `BLENDER` environment variable names another one, for example
 `BLENDER=/opt/blender-4.5/blender sh render.sh`.
 
 A bundle carries the terrain surface and its image when the scene draws them (`surface.ply`,
-`surface.png`), and the texts over the picture, in the plan's `texts`. A scene with texts renders
+`surface.png`), the annotations with their photos (`photos/`), and the texts over the picture, in
+the plan's `texts`. A scene with texts renders
 in two stages there too, into the bundle's `frames` folder and then `out`; started again after it
 was stopped, it goes on. `sh render.sh --keep-frames` keeps the frames, and
 `sh render.sh --compose` (or `render.cmd --compose`) writes the movie again from them after a
@@ -289,6 +358,10 @@ any program can write, and it can say more than the scenes ThIDE makes use of:
   (`worldColor`, `worldStrength`). A key may lie after the end of the clip, two keys on one frame
   are a move that ends in a jump, and a colour can go from key to key as a screen mixes colours
   (`"mix": "srgb"`).
+- Under `annotations`, the labels, callouts, markers and photos, each with its place and its size
+  in metres. An annotation can belong to a model (`"model"`): it then goes where its point of the
+  model goes while the model is stretched or moved. When one is there is a change of it, by its
+  `id`: its `visible` keys, with a `fade`.
 - Under `lines`, lines through given points, drawn as thin tubes: the legs of a survey, a route.
 - A ramp of colours over height can be measured in the model itself (`"space": "model"`), so the
   colours stay with the rock while a model is stretched or moved.
@@ -296,7 +369,7 @@ any program can write, and it can say more than the scenes ThIDE makes use of:
   away to close by.
 
 A draft shows a model's tint, and how much of a fading model is there by the share of its faces
-it draws. The schema that describes every field is in the ThIDE repository
+it draws; a photo is a mosaic of its colours there. The schema that describes every field is in the ThIDE repository
 (`src/Therion.Blender/Plan/scene-plan.schema.json`).
 
 ## Requirements & tips
