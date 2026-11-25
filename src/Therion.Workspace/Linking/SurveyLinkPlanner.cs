@@ -344,8 +344,64 @@ public static class SurveyLinkPlanner
     }
 
     /// <summary>A Therion <c>input</c> path: relative to the referring file's folder, forward slashes.</summary>
-    public static string RelativePath(string fromDirectory, string target) =>
-        Path.GetRelativePath(fromDirectory, target).Replace(Path.DirectorySeparatorChar, '/').Replace('\\', '/');
+    /// <remarks>A folder that is reached through a symbolic link has two spellings, the one that
+    /// was typed and the one the link leads to (on macOS the temp folder is such a link). When the
+    /// two paths are spelt differently, the path between them as they are written climbs out of
+    /// the project and back in by the other spelling. So when the written path climbs, the path
+    /// between the two with their links followed is taken instead, if it climbs less. A path
+    /// that does not climb is kept as it is: a project with a linked sub-folder names its files
+    /// through that link.</remarks>
+    public static string RelativePath(string fromDirectory, string target)
+    {
+        string written = Path.GetRelativePath(fromDirectory, target);
+        if (Climbs(written) > 0)
+        {
+            string followed = Path.GetRelativePath(RealPath(fromDirectory), RealPath(target));
+            if (Climbs(followed) < Climbs(written)) written = followed;
+        }
+        return written.Replace(Path.DirectorySeparatorChar, '/').Replace('\\', '/');
+    }
+
+    /// <summary>How far a relative path climbs: its leading <c>..</c> steps, and more than any
+    /// number of them for a path that is not relative at all (another drive).</summary>
+    private static int Climbs(string relative)
+    {
+        if (Path.IsPathRooted(relative)) return int.MaxValue;
+        int steps = 0;
+        foreach (string part in relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (part != "..") break;
+            steps++;
+        }
+        return steps;
+    }
+
+    /// <summary><paramref name="path"/> with every symbolic link in it followed, as far as it
+    /// exists; what does not exist yet (a file that is about to be written) is kept as written.</summary>
+    internal static string RealPath(string path)
+    {
+        string full = Path.GetFullPath(path);
+        string real = Path.GetPathRoot(full) ?? "";
+        string[] parts = full[real.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < parts.Length; i++)
+        {
+            real = Path.Combine(real, parts[i]);
+            try
+            {
+                FileSystemInfo? target = Directory.Exists(real) ? Directory.ResolveLinkTarget(real, returnFinalTarget: true)
+                    : File.Exists(real) ? File.ResolveLinkTarget(real, returnFinalTarget: true)
+                    : null;
+                if (target is not null) real = RealPath(target.FullName); // the target's own path may go through links too
+                else if (!Directory.Exists(real) && !File.Exists(real))
+                    return Path.Combine([real, .. parts[(i + 1)..]]);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return Path.Combine([real, .. parts[(i + 1)..]]);
+            }
+        }
+        return real;
+    }
 
     private static bool SamePath(string a, string b) => FilePaths.Same(a, b);
 }
