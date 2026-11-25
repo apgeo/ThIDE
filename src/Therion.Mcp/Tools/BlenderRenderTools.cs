@@ -60,7 +60,8 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                + "outputDirectory in the workspace, or to a temporary folder that render_status names. "
                + "draft: true renders a quick preview first (seconds, not minutes): look at it before the "
                + "long render. title, credits, endCard and captions are written over the picture; a movie "
-               + "with captions also gets them as .srt and .vtt subtitles.")]
+               + "with captions also gets them as .srt and .vtt subtitles. annotations names a JSON file of "
+               + "labels, callouts, markers and photos that stand in the scene.")]
     public async Task<ToolResult<RenderJobStatus>> StartRender(
         [Description("Preset name from list_render_presets. Defaults to \"Orbit showcase\".")]
         string preset = DefaultPreset,
@@ -102,6 +103,12 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         [Description("Captions shown at the bottom of the picture, each as \"<start>-<end>:<text>\" with the times in "
                    + "seconds from the start of the movie, e.g. \"2.5-6:Sala Mare\". One is shown at a time.")]
         string[]? captions = null,
+        [Description("Workspace-relative JSON file of things that point something out in the scene: a list of "
+                   + "{ \"kind\": \"label\" | \"callout\" | \"marker\" | \"photo\", \"station\": \"<name>\" or \"at\": [x, y, z] "
+                   + "in the model's coordinates, \"text\", \"image\" (a .png or .jpg, relative to the file, inside the "
+                   + "workspace), \"size\" in metres, and when it is there: \"from\" and \"to\" in seconds, or \"within\" "
+                   + "metres of the camera, with \"fade\" }. Only the player draws them.")]
+        string? annotations = null,
         CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
@@ -109,7 +116,7 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
 
         var (plan, refused) = Plan(snapshot!.Root, preset, model, outputKind, width, height, durationSeconds,
             samples, outputDirectory, baseName, reExport, needsDirectory: false,
-            new RenderTexts(title, credits, endCard, endCardSeconds, captions));
+            new RenderTexts(title, credits, endCard, endCardSeconds, captions), annotations);
         if (refused is not null) return ToolResult<RenderJobStatus>.Failure(refused);
 
         // Which builder, and whether it can build this scene, before a job is started for it.
@@ -278,7 +285,7 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
     private (RenderPlan? Plan, ToolError? Error) Plan(
         string root, string preset, string? model, string? outputKind, int width, int height,
         double durationSeconds, int samples, string? outputDirectory, string? baseName, bool reExport,
-        bool needsDirectory, RenderTexts? texts = null)
+        bool needsDirectory, RenderTexts? texts = null, string? annotations = null)
     {
         static (RenderPlan?, ToolError?) Refuse(string code, string message) => (null, new ToolError(code, message));
 
@@ -330,6 +337,42 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
             }
             if (captions.Count > 0) overlays = overlays with { Captions = [.. overlays.Captions, .. captions] };
             spec = spec with { Labels = spec.Labels with { Overlays = overlays } };
+        }
+
+        if (!string.IsNullOrWhiteSpace(annotations))
+        {
+            if (!WorkspacePaths.TryResolve(root, annotations, out var file, out var reason))
+                return Refuse(ToolErrorCodes.PathOutsideWorkspace, reason);
+            if (!File.Exists(file))
+                return Refuse(ToolErrorCodes.FileNotFound, $"No such file: {annotations}");
+            IReadOnlyList<AnnotationSpec> read;
+            try { read = AnnotationsFile.ReadFile(file); }
+            catch (SceneSpecFormatException ex)
+            {
+                return Refuse(ToolErrorCodes.InvalidArgument, $"'{annotations}' is not a list of annotations: {ex.Message}");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return Refuse(ToolErrorCodes.ReadFailed, ex.Message);
+            }
+            // A photo is read from the workspace, like everything else an agent names.
+            var held = new List<AnnotationSpec>(read.Count);
+            foreach (var annotation in read)
+            {
+                if (string.IsNullOrWhiteSpace(annotation.Image))
+                {
+                    held.Add(annotation);
+                    continue;
+                }
+                if (!WorkspacePaths.TryResolve(root, annotation.Image, out var photo, out _))
+                    return Refuse(ToolErrorCodes.PathOutsideWorkspace,
+                        $"The photo '{Path.GetFileName(annotation.Image)}' of '{annotations}' lies outside the workspace.");
+                if (!File.Exists(photo))
+                    return Refuse(ToolErrorCodes.FileNotFound,
+                        $"No such file: {WorkspacePaths.ToRelative(root, photo)} (a photo of '{annotations}').");
+                held.Add(annotation with { Image = photo });
+            }
+            spec = spec with { Annotations = [.. spec.Annotations, .. held] };
         }
 
         // Always replaced: a user preset may carry the folder it was saved with, which is no business of

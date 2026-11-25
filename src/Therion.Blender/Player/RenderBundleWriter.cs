@@ -177,16 +177,18 @@ public static class RenderBundleWriter
         };
         var plan = ScenePlanBuilder.FromSpec(placed, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
         // What the plan names of what the conversion wrote: the mesh, and the terrain with its
-        // image when the plan draws them.
+        // image when the plan draws them; and the photos, where the spec has them.
         var written = new[] { manifest.ModelPath, manifest.SurfacePath, manifest.SurfaceImagePath }.OfType<string>();
-        var files = PlayerWriter.FilesOf(plan).ToDictionary(f => f.Path, f => written.First(w => Path.GetFileName(w) == f.Path));
+        var photos = ScenePlanBuilder.AnnotationFiles(spec);
+        var files = PlayerWriter.FilesOf(plan).ToDictionary(
+            f => f.Path, f => photos.TryGetValue(f.Path, out string? photo) ? photo : written.First(w => Path.GetFileName(w) == f.Path));
         return new RenderBundleContent
         {
             Plan = plan,
             Draft = draft ? ScenePlanBuilder.Draft(plan) : null,
             Files = files,
             NotCarried = ScenePlanBuilder.NotCarried(spec),
-            Notices = ScenePlanBuilder.Notices(placed, conversion.Meta),
+            Notices = ScenePlanBuilder.Notices(placed, conversion.Meta, CameraFraming.FromGeometry(conversion.Geometry)),
             Captions = plan.Output.Kind == PlanOutputKind.Still ? [] : Subtitles.OneAtATime(spec.Labels.Overlays.Captions),
         };
     }

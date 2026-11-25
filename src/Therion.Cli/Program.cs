@@ -63,10 +63,13 @@ static void PrintHelp()
     Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] [--out <dir>] [--export <dir>] [--blender <path>]");
     Console.WriteLine("                     [--draft] [--builder auto|player|generator] [--keep-frames] [--compose-only] [--frames <dir>]");
     Console.WriteLine("                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] [--caption \"<start>-<end>:<text>\"]…");
+    Console.WriteLine("                     [--annotations <file.json>]…");
     Console.WriteLine("                                         Render (or --export) a Blender presentation of a 3D model, headless. --draft renders a quick");
     Console.WriteLine("                                         preview instead. A render with texts over the picture takes two stages: its frames, then the");
     Console.WriteLine("                                         movie; run again after it was stopped, it goes on. --compose-only writes the movie again from");
     Console.WriteLine("                                         the frames (kept with --keep-frames) after a text changed.");
+    Console.WriteLine("                                         --annotations adds labels, callouts, markers and photos from a JSON list, each at a station");
+    Console.WriteLine("                                         or a point, for a time or while the camera is near; it goes with --bundle too.");
     Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] --bundle <file.zip|folder> [--draft]");
     Console.WriteLine("                     [--render [--render-plan full|draft|both]] [--out <dir>] [--blender <path>] [--readme-language en|ro]");
     Console.WriteLine("                                         Write a render bundle (scene plan, mesh, player, run scripts) to render with any Blender 4.2+;");

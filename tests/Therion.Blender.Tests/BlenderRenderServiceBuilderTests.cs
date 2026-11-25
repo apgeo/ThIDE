@@ -64,6 +64,10 @@ public class BlenderRenderServiceBuilderTests : IDisposable
             string planPath = Path.Combine(cwd, "scene-plan.json");
             var plan = File.Exists(planPath) ? ScenePlanSerializer.ReadFile(planPath) : null;
             var files = Directory.EnumerateFileSystemEntries(cwd).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToList();
+            // The photos of the annotations lie in a folder of their own.
+            string photos = Path.Combine(cwd, AnnotationPlanner.PhotosFolder);
+            if (Directory.Exists(photos))
+                files.AddRange(Directory.EnumerateFiles(photos).Select(f => AnnotationPlanner.PhotosFolder + "/" + Path.GetFileName(f)).Order(StringComparer.Ordinal));
             Starts.Add(new Start(own, script, files!, plan));
 
             string stage = Value(own, "--stage") ?? "all";
@@ -214,7 +218,104 @@ public class BlenderRenderServiceBuilderTests : IDisposable
         Assert.Equal(SceneBuilder.Player, SceneBuilders.Choose(Orbit(), new RenderOptions { KeepFrames = true }).Builder);
     }
 
+    [Fact]
+    public void Choose_AnnotationsAreThePlayers_AndAGeneratedScriptSaysItLeavesThemOut()
+    {
+        var annotated = Orbit() with { Annotations = [new AnnotationSpec { Kind = AnnotationKind.Marker, Station = "main3" }] };
+
+        // The player carries them: nothing is lost, and nothing sends the spec to the generator.
+        var auto = SceneBuilders.Choose(annotated);
+        Assert.Equal((SceneBuilder.Player, null), (auto.Builder, auto.Refusal));
+        Assert.Empty(auto.NotCarried);
+        Assert.Empty(auto.LeftOut);
+        Assert.Empty(ScenePlanBuilder.NotCarried(annotated));
+        Assert.Null(SceneBuilders.Choose(annotated, new RenderOptions { Builder = SceneBuilder.Player }).Refusal);
+        Assert.Empty(SceneBuilders.Choose(annotated, new RenderOptions { Draft = true }).LeftOut);
+
+        // A generated script draws none of them, asked for or fallen back to, and says so.
+        var asked = SceneBuilders.Choose(annotated, new RenderOptions { Builder = SceneBuilder.Generator });
+        Assert.Equal((SceneBuilder.Generator, null), (asked.Builder, asked.Refusal));
+        Assert.Equal(["annotations"], asked.LeftOut);
+        var fallen = SceneBuilders.Choose(WithHdri(annotated));
+        Assert.Equal(SceneBuilder.Generator, fallen.Builder);
+        Assert.Equal(["lighting.hdriPath"], fallen.NotCarried);
+        Assert.Equal(["annotations"], fallen.LeftOut);
+        Assert.Empty(SceneBuilders.NotDrawnByTheGenerator(Orbit()));
+    }
+
     // ---- the service ----
+
+    [Fact]
+    public async Task ASpecWithAnnotations_IsPlayed_WithItsPhotosBesideThePlan_AndTheirCopiesAreRemovedAfterwards()
+    {
+        string picture = Player.TestImages.Write(Path.Combine(_root, "trip"), "hall view.png", Player.TestImages.FlagPng());
+        var spec = Orbit() with
+        {
+            Annotations =
+            [
+                new AnnotationSpec { Id = "view", Kind = AnnotationKind.Photo, Station = "main6", Image = picture, From = 0.25, To = 0.75, Fade = 0 },
+                new AnnotationSpec { Kind = AnnotationKind.Callout, Station = "main0", Text = "Intrarea" },
+                new AnnotationSpec { Id = "close-up", Kind = AnnotationKind.Marker, Station = "side2", Within = 0.01 },
+            ],
+        };
+        var blender = new FakeBlender();
+
+        var result = await Service(blender).RenderAsync(spec, Cave());
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.Equal(SceneBuilder.Player, result.Builder);
+        Assert.Empty(result.LeftOut);
+        var start = Assert.Single(blender.Starts);
+        Assert.Equal(
+            ["model.ply", "photos", "render.py", "scene-meta.json", "scene-plan.json", "thide_player", "photos/hall_view.png"], start.JobFiles);
+        Assert.Equal(["view", "annotation-2", "close-up"], start.Plan!.Annotations!.Select(a => a.Id));
+        Assert.Equal("photos/hall_view.png", start.Plan.Annotations![0].Image);
+        Assert.Contains(ScenePlan.AnnotationsFeature, start.Plan.Features);
+        // Shown from the second frame to the third; the marker the camera never reaches, never.
+        var shown = start.Plan.Changes!.ToDictionary(c => c.Target!.Id!, c => c.Visible!);
+        Assert.Equal([new PlanVisibleKey(0.25, true), new PlanVisibleKey(0.75, false)], shown["view"]);
+        Assert.Equal([new PlanVisibleKey(0, false)], shown["close-up"]);
+        Assert.Equal(["the camera never comes within 0.01 m of the annotation 'close-up'; it is not shown"], result.Warnings);
+        // The picture itself stays where it was, and nothing is left of the job.
+        Assert.True(File.Exists(picture));
+        Assert.Empty(Directory.GetDirectories(JobRoot));
+    }
+
+    [Fact]
+    public async Task APhotoThatIsNoImage_OrIsNotThere_StopsTheRenderBeforeBlenderStarts_AndLeavesNoCopies()
+    {
+        string notAPicture = Player.TestImages.Write(Path.Combine(_root, "trip"), "notes.png", "These are notes, not a picture."u8.ToArray());
+        SceneSpec With(string image) => Orbit() with
+        {
+            Annotations = [new AnnotationSpec { Id = "view", Kind = AnnotationKind.Photo, Station = "main6", Image = image }],
+        };
+        var blender = new FakeBlender();
+
+        var refused = await Assert.ThrowsAsync<ArgumentException>(() => Service(blender).RenderAsync(With(notAPicture), Cave()));
+        Assert.StartsWith("The file of photo 'view' (photos/notes.png) cannot travel with the plan: the file is neither a PNG nor a JPEG image.", refused.Message);
+        await Assert.ThrowsAsync<FileNotFoundException>(() => Service(blender).RenderAsync(With(Path.Combine(_root, "trip", "gone.jpg")), Cave()));
+        var unknown = await Assert.ThrowsAsync<ArgumentException>(() => Service(blender).RenderAsync(
+            Orbit() with { Annotations = [new AnnotationSpec { Kind = AnnotationKind.Marker, Station = "no.such" }] }, Cave()));
+        Assert.Contains("annotations[0].station: the model has no station 'no.such'.", unknown.Message);
+
+        Assert.Empty(blender.Starts);
+        Assert.All(Directory.GetDirectories(JobRoot), job => Assert.False(Directory.Exists(Path.Combine(job, AnnotationPlanner.PhotosFolder))));
+    }
+
+    [Fact]
+    public async Task ASpecWithAnnotations_ThatAGeneratedScriptBuilds_IsRenderedWithoutThem_AndTheResultSaysSo()
+    {
+        var blender = new FakeBlender();
+        var spec = WithHdri(Orbit()) with { Annotations = [new AnnotationSpec { Kind = AnnotationKind.Marker, Station = "main3" }] };
+
+        var result = await Service(blender).RenderAsync(spec, Cave());
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.Equal(SceneBuilder.Generator, result.Builder);
+        Assert.Equal(["lighting.hdriPath"], result.NotCarried);
+        Assert.Equal(["annotations"], result.LeftOut);
+        Assert.Null(Assert.Single(blender.Starts).Plan);
+    }
 
     [Fact]
     public async Task ASpecThePlayerCarries_IsPlayed_FromAPlanInTheJobFolder_InOneStage()

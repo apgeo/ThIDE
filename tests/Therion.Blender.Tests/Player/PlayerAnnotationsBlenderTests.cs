@@ -1,9 +1,9 @@
 // Annotations in a real Blender, on invented caves and invented images: each kind stands where
 // the plan puts it and shows in the picture when a change says so; a picture that faces the
-// camera faces it all the way round an orbit; a line reaches its anchor; an annotation of a model
-// goes where the model goes; a draft shows a photo as a mosaic; a saved scene and a single file
-// keep their photos; and what an annotation cannot be is refused by name. Opt-in like the other
-// Blender tests
+// camera faces it all the way round an orbit; a line reaches its anchor; what is to be there
+// while the camera is near is there on exactly those frames; an annotation of a model goes where
+// the model goes; a draft shows a photo as a mosaic; a saved scene keeps its photos; and what an
+// annotation cannot be is refused by name. Opt-in like the other Blender tests
 // (THIDE_BLENDER_SMOKE=1; THIDE_BLENDER_PATH picks the Blender).
 
 using System.Text.Json;
@@ -467,6 +467,123 @@ public class PlayerAnnotationsBlenderTests
         Assert.Equal(12, plan.Timeline.FrameCount);
     }
 
+    // ---- while the camera is near ----
+
+    /// <summary>A camera that flies a straight, level line through the cave's middle, a hundred
+    /// metres in four seconds, looking ahead; forty-one frames.</summary>
+    private static ScenePlan FlyingPast(ScenePlan plan)
+    {
+        var from = new CaveVector3(-50, 0, 2);
+        var to = new CaveVector3(50, 0, 2);
+        return plan with
+        {
+            Timeline = new PlanTimeline { Fps = 10, FrameCount = 41 },
+            Camera = plan.Camera with
+            {
+                ClipStart = 0.1, ClipEnd = 1000, Interpolation = PlanInterpolation.Linear,
+                Track = [new PlanCameraKey(0, from, from + new CaveVector3(100, 0, 0)), new PlanCameraKey(4, to, to + new CaveVector3(100, 0, 0))],
+            },
+        };
+    }
+
+    [BlenderFact]
+    public async Task WhatIsThereWhileTheCameraIsNear_IsThereOnExactlyThoseFrames_AndFadesInAndOut()
+    {
+        var anchor = new CaveVector3(3, 30, 2);
+        var (plan, job) = PlayerRunner.WriteJob("annotations-near", Small.Value, Still() with { Output = Still().Output with { Kind = OutputKind.Video } }, p =>
+        {
+            p = FlyingPast(p);
+            // The same annotations as a spec has them, lowered for this camera.
+            var lowered = AnnotationPlanner.Plan(
+            [
+                new AnnotationSpec { Id = "near", Kind = AnnotationKind.Marker, At = anchor, Size = 1, Within = 45, Fade = 0.5 },
+                new AnnotationSpec { Id = "nearer", Kind = AnnotationKind.Photo, At = anchor, Image = Path.Combine(Small.Value.Directory, "photos", "flag.png"), Size = 4, Within = 35, Fade = 0 },
+                new AnnotationSpec { Id = "never", Kind = AnnotationKind.Label, At = anchor, Text = "far", Within = 5 },
+                new AnnotationSpec { Id = "always", Kind = AnnotationKind.Label, At = anchor, Text = "here", Within = 500 },
+            ], meta: null, Small.Value.Framing.LocalBounds, p.Camera, p.Timeline);
+            Assert.Equal(["the camera never comes within 5 m of the annotation 'never'; it is not shown"], lowered.Notices);
+            return With(p, lowered.Annotations, [.. lowered.Changes]);
+        });
+        Assert.Empty(ScenePlanValidator.Validate(plan));
+        Assert.Equal(["near", "nearer", "never"], plan.Changes!.Select(c => c.Target!.Id));
+
+        int[] frames = [.. Enumerable.Range(1, 41)];
+        var report = await Parts(job, frames);
+
+        var shown = new Dictionary<string, List<int>> { ["near"] = [], ["nearer"] = [] };
+        foreach (int f in frames)
+        {
+            var at = report.Frame(f);
+            // The distance is the one Blender has for its own camera on this frame.
+            double distance = (V(at.Camera.Location) - anchor).Length;
+            foreach (var (id, within) in new[] { ("near", 45.0), ("nearer", 35.0) })
+            {
+                var part = at.Part(id);
+                Assert.True(part.Hidden == distance > within, $"frame {f}: '{id}' is {(part.Hidden ? "hidden" : "shown")} with the camera {distance:F2} m away");
+                if (!part.Hidden) shown[id].Add(f);
+            }
+            Assert.True(at.Part("never").Hidden, $"frame {f}: 'never' is shown");
+            Assert.False(at.Part("always").Hidden, $"frame {f}: 'always' is hidden");
+        }
+        // The camera moves 2.5 m a frame, and is within 45 m of the anchor where it is within
+        // √(45² − 30²) = 33.5 m of the anchor's foot on its path: from x = −30 to x = 35.
+        Assert.Equal((9, 35), (shown["near"][0], shown["near"][^1]));
+        Assert.Equal((15, 29), (shown["nearer"][0], shown["nearer"][^1]));
+        Assert.Equal(27, shown["near"].Count);
+
+        // Half a second to appear from the frame it comes near, and half a second to have gone by
+        // the frame it is far again: five frames each.
+        double Fade(int f) => report.Frame(f).Part("near").Fade!.Value;
+        Assert.Equal([0, 0.2, 0.4, 0.6, 0.8, 1], new[] { 9, 10, 11, 12, 13, 14 }.Select(f => Math.Round(Fade(f), 4)));
+        Assert.All(Enumerable.Range(14, 18), f => Near(1, Fade(f), $"frame {f}: how much of 'near' is there"));
+        Assert.Equal([1, 0.8, 0.6, 0.4, 0.2], new[] { 31, 32, 33, 34, 35 }.Select(f => Math.Round(Fade(f), 4)));
+        // One that does not fade has no such number: it is cut in and out.
+        Assert.Null(report.Frame(20).Part("nearer").Fade);
+    }
+
+    [BlenderFact]
+    public async Task ASpecsAnnotationOfAStation_ShownWhileAnOrbitingCameraIsNear_IsThereWhenBlendersCameraIs()
+    {
+        var spec = PlanFixtures.Preset("Orbit showcase") with
+        {
+            Engine = new EngineSpec { Kind = RenderEngineKind.Cycles, Samples = 1, Denoise = false, Gpu = GpuMode.CpuOnly },
+            Animation = new AnimationSpec { Fps = 10, DurationSeconds = 3 },
+            Output = new OutputSpec { Kind = OutputKind.Video, Width = 320, Height = 180 },
+            Labels = new LabelsSpec(),
+        };
+        // The entrance lies off the cave's middle: an orbiting camera is nearer to it on one side.
+        var station = Small.Value.Conversion.Meta.Stations.Single(s => s.Name == "main0");
+        var at = new CaveVector3(station.Position.X, station.Position.Y, station.Position.Z);
+        var orbit = PlayerRunner.PlanFor(Small.Value, spec);
+        var distances = Enumerable.Range(1, 30).Select(f => (AnnotationPlanner.EyeAt(orbit.Camera, f, 10) - at).Length).ToList();
+        double within = Math.Round((distances.Min() + distances.Max()) / 2, 1);
+        Assert.True(distances.Max() - distances.Min() > 20, $"the camera keeps {distances.Min():F0} to {distances.Max():F0} m from the entrance");
+
+        var annotated = spec with
+        {
+            Annotations = [new AnnotationSpec { Id = "way-in", Kind = AnnotationKind.Callout, Station = "main0", Text = "Intrarea", Within = within, Fade = 0.3 }],
+        };
+        var (plan, job) = PlayerRunner.WriteJob("annotations-station", Small.Value, annotated);
+        Assert.Equal(["models", "camera_track", "look", "annotations", "changes", "output"], plan.Features);
+        Near(at, [plan.Annotations![0].At.X, plan.Annotations[0].At.Y, plan.Annotations[0].At.Z], "the station's place in the plan", 1e-5);
+
+        int[] frames = [.. Enumerable.Range(1, 30)];
+        var report = await Parts(job, frames);
+
+        int seen = 0, unseen = 0;
+        foreach (int f in frames)
+        {
+            var frame = report.Frame(f);
+            double distance = (V(frame.Camera.Location) - at).Length;
+            var text = frame.Part("way-in");
+            Assert.True(text.Hidden == distance > within, $"frame {f}: the callout is {(text.Hidden ? "hidden" : "shown")} with the camera {distance:F2} m away, of {within}");
+            Assert.Equal(text.Hidden, frame.Part("way-in.line").Hidden);
+            Near(at, frame.Part("way-in.line").Ends![0], $"frame {f}: where the line starts");
+            if (text.Hidden) unseen++; else seen++;
+        }
+        Assert.True(seen >= 5 && unseen >= 5, $"the callout is shown on {seen} frames and hidden on {unseen}");
+    }
+
     // ---- an annotation of a model ----
 
     [BlenderFact]
@@ -553,7 +670,43 @@ public class PlayerAnnotationsBlenderTests
         Assert.Equal("MWM", report.Object("note").Text);
     }
 
-    // ---- in one file ----
+    // ---- in a bundle ----
+
+    [BlenderFact]
+    public async Task ABundlesPhoto_TravelsWithIt_AndIsInThePictureItRenders()
+    {
+        string root = PlayerRunner.NewCase("annotations-bundle");
+        string work = Path.Combine(root, "work");
+        Directory.CreateDirectory(work);
+        string lox = Path.Combine(work, "cave.lox");
+        Therion.Cave3D.Parsing.LoxWriter.WriteFile(InventedCave.Build(InventedCaveSize.Small), lox);
+        string picture = TestImages.Write(Path.Combine(work, "trip"), "flag.jpg", TestImages.FlagJpeg());
+        var spec = Still() with
+        {
+            Name = "Invented Small Cave",
+            Annotations =
+            [
+                new AnnotationSpec { Id = "flag", Kind = AnnotationKind.Photo, Station = "main6", Image = picture, Size = 40, Offset = new CaveVector3(0, 0, 25), Framed = true },
+            ],
+        };
+        var content = RenderBundleWriter.FromModel(
+            new Therion.Blender.Sources.ResolvedModelSource { Path = lox, Format = CaveSourceFormat.Lox, Kind = Therion.Blender.Sources.ModelSourceKind.ExternalFile },
+            spec, work);
+        string folder = Path.Combine(root, "bundle");
+        var written = RenderBundleWriter.WriteFolder(content, folder);
+        // Where it came from is gone before the bundle is used.
+        Directory.Delete(work, recursive: true);
+        Assert.Contains("photos/flag.jpg", written);
+
+        var (exitCode, log) = await PlayerRunner.RunAsync(Path.Combine(folder, PlayerFiles.EntryFileName));
+
+        Assert.True(exitCode == 0, $"exit code {exitCode}: {PlayerRunner.Reported(log, "error").FirstOrDefault()}\n  logs: {folder}");
+        Assert.Empty(PlayerRunner.Reported(log, "warning"));
+        var frame = Picture.Read(Path.Combine(folder, "out", "f_0001.png"));
+        var (red, blue, green) = (frame.Of(Red), frame.Of(Blue), frame.Of(Green));
+        Assert.True(red.Count > 100 && blue.Count > 100 && green.Count > 50, $"the flag's colours are {red}, {blue}, {green}");
+        Assert.True(red.X < blue.X && green.Y < red.Y, $"the flag is not the right way round: {red}, {blue}, {green}");
+    }
 
     [BlenderFact]
     public async Task ASingleFile_CarriesItsPhoto_AndShowsItWithNothingBesideIt()

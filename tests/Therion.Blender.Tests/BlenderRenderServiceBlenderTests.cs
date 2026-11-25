@@ -100,6 +100,62 @@ public class BlenderRenderServiceBlenderTests : IDisposable
     }
 
     [BlenderFact]
+    public async Task ASpecWithAnnotations_IsRenderedByThePlayer_WithItsPhotoInTheFramesItIsThereFor_AndInADraft()
+    {
+        string picture = Player.TestImages.Write(Path.Combine(_root, "trip"), "the flag.png", Player.TestImages.FlagPng());
+        var spec = Orbit(new OverlaySpec()) with
+        {
+            Engine = new EngineSpec { Kind = RenderEngineKind.Cycles, Samples = 4, Denoise = false, Gpu = GpuMode.CpuOnly },
+            // A grey cave: the only red and blue in the picture are the flag's.
+            Materials = new MaterialsSpec { Rock = RockMaterial.Flat, BaseColor = new ColorRgb(0.5, 0.5, 0.5) },
+            Output = new OutputSpec { Kind = OutputKind.FrameSequence, Width = 160, Height = 90, BaseName = "clip", OutputDirectory = OutDir },
+            Annotations =
+            [
+                // A large picture above the middle of the passage, from the third frame to the sixth.
+                new AnnotationSpec
+                {
+                    Id = "flag", Kind = AnnotationKind.Photo, Station = "main6", Image = picture, Size = 40, Offset = new CaveVector3(0, 0, 25),
+                    Framed = true, From = 0.25, To = 0.75, Fade = 0,
+                },
+                new AnnotationSpec { Kind = AnnotationKind.Callout, Station = "main0", Text = "Intrarea" },
+                // (White, not a marker's own orange-red: the flag's red is what is counted below.)
+                new AnnotationSpec { Id = "end", Kind = AnnotationKind.Marker, Station = "main12", Within = 5000, Color = new ColorRgb(1, 1, 1) },
+            ],
+        };
+
+        var result = await Service().RenderAsync(spec, Cave(), new RenderOptions());
+
+        Assert.True(result.Succeeded, $"{result.FailureKind}: {result.ErrorMessage}\n  log: {result.JobLogPath}");
+        Assert.Equal((SceneBuilder.Player, 8), (result.Builder, result.FrameCount));
+        Assert.Empty(result.Warnings);
+        Assert.Empty(result.LeftOut);
+        Assert.Equal(8, result.OutputPaths.Length);
+        var red = new ColorRgb(1, 0, 0);
+        var blue = new ColorRgb(0, 0, 1);
+        for (int f = 1; f <= 8; f++)
+        {
+            var frame = Player.RenderedPicture.Read(result.OutputPaths[f - 1]);
+            var (reds, blues) = (frame.Of(red), frame.Of(blue));
+            // Two eighths of a second in, and gone at six eighths: frames 3 to 6.
+            if (f is >= 3 and <= 6)
+                Assert.True(reds.Count > 60 && blues.Count > 60 && reds.X < blues.X, $"frame {f}: the flag's red is {reds} and its blue {blues}");
+            else
+                Assert.True(reds.Count + blues.Count == 0, $"frame {f}: the flag is there: {reds}, {blues}");
+        }
+        // The copies of the photo went with the job's folder; the picture itself stays.
+        Assert.Empty(Directory.GetDirectories(Path.Combine(_root, "jobs")));
+        Assert.True(File.Exists(picture));
+
+        // A draft has it too, as a mosaic, and says so.
+        var draft = await Service().RenderAsync(spec, Cave(), new RenderOptions { Draft = true });
+        Assert.True(draft.Succeeded, $"{draft.FailureKind}: {draft.ErrorMessage}\n  log: {draft.JobLogPath}");
+        Assert.Equal(["the draft shows a photo as a mosaic of its colours, 48 tiles along its longer side"], draft.Warnings);
+        var drafted = Player.RenderedPicture.Read(draft.OutputPaths[3]);
+        Assert.True(drafted.Of(red).Count > 15 && drafted.Of(blue).Count > 15, $"the draft's flag is {drafted.Of(red)} and {drafted.Of(blue)}");
+        Assert.Equal(0, Player.RenderedPicture.Read(draft.OutputPaths[0]).Of(red).Count);
+    }
+
+    [BlenderFact]
     public async Task ADraft_IsTheQuickLook_AndTheScriptGeneratorStillRendersWhenAskedFor()
     {
         var spec = Orbit(new OverlaySpec { Title = "Invented Cave" });

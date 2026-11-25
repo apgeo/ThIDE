@@ -34,6 +34,7 @@ public static class SceneSpecValidator
     public const double MaxProceduralScale = 10_000;
     public const double MaxBumpStrength = 10;
     public const double MaxEndCardSeconds = 600;
+    public const int MaxAnnotations = 2_000;
 
     /// <summary>All problems with <paramref name="spec"/>; empty means valid.</summary>
     public static IReadOnlyList<SpecError> Validate(SceneSpec spec)
@@ -86,6 +87,9 @@ public static class SceneSpecValidator
 
         // ---- labels ----
         ValidateLabels(spec, Bad);
+
+        // ---- annotations ----
+        ValidateAnnotations(spec.Annotations, Bad);
 
         // ---- animation (only consumed by animated outputs, but keep it always sane
         //      so switching output kind never resurrects an invalid value) ----
@@ -186,6 +190,97 @@ public static class SceneSpecValidator
                 bad($"labels.events[{i}].fadeSeconds", "Fade seconds must be non-negative.");
         }
     }
+
+    private static void ValidateAnnotations(IReadOnlyList<AnnotationSpec> annotations, Action<string, string> bad)
+    {
+        static bool Finite(Therion.Cave3D.CaveVector3 v) => double.IsFinite(v.X) && double.IsFinite(v.Y) && double.IsFinite(v.Z);
+
+        if (annotations.Count > MaxAnnotations)
+            bad("annotations", $"A scene has at most {MaxAnnotations} annotations.");
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < annotations.Count; i++)
+        {
+            var a = annotations[i];
+            string path = $"annotations[{i}]";
+            if (a is null)
+            {
+                bad(path, "An annotation is missing.");
+                continue;
+            }
+            if (!ids.Add(a.IdAt(i)))
+                bad(path + ".id", $"The id '{a.IdAt(i)}' is used twice.");
+            if (a.Role is not null && !System.Text.RegularExpressions.Regex.IsMatch(a.Role, "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"))
+                bad(path + ".role", "A role is lower-case letters and digits, in words joined by '-'.");
+            if (!Enum.IsDefined(a.Kind))
+            {
+                bad(path + ".kind", "An annotation is a label, a callout, a marker or a photo.");
+                continue;
+            }
+
+            // ---- where ----
+            bool station = !string.IsNullOrWhiteSpace(a.Station);
+            if (station == a.At is not null)
+                bad(path + (station ? ".at" : ".station"), "An annotation is about a station or a point ('at'), one of the two.");
+            else if (a.At is { } at && !Finite(at))
+                bad(path + ".at", "The point must be finite.");
+
+            // ---- what ----
+            string kind = a.Kind.ToString().ToLowerInvariant();
+            bool text = a.Kind is AnnotationKind.Label or AnnotationKind.Callout, photo = a.Kind == AnnotationKind.Photo;
+            if (text && string.IsNullOrWhiteSpace(a.Text))
+                bad(path + ".text", $"A {kind} needs its text.");
+            if (!text && a.Text is not null)
+                bad(path + ".text", $"A {kind} has no text.");
+            if (photo)
+            {
+                if (string.IsNullOrWhiteSpace(a.Image))
+                    bad(path + ".image", "A photo needs its image file.");
+                else if (!IsImageName(a.Image))
+                    bad(path + ".image", "A photo's image is a .png or a .jpg file.");
+            }
+            else
+            {
+                if (a.Image is not null) bad(path + ".image", $"A {kind} has no image.");
+                if (a.Framed) bad(path + ".framed", "Only a photo has a frame.");
+                if (a.Facing != PhotoFacing.Camera) bad(path + ".facing", "Only a photo faces one way; a text turns to the camera.");
+            }
+            if (photo && a.Color is not null)
+                bad(path + ".color", "A photo has the colours of its image.");
+            if (a.Color is { } color && !IsUnitColor(color))
+                bad(path + ".color", "Colour channels must be within 0–1.");
+            if (a.Size is { } size && !(size > 0 && double.IsFinite(size)))
+                bad(path + ".size", "The size must be positive.");
+            if (a.Offset is { } offset)
+            {
+                if (a.Kind is AnnotationKind.Label or AnnotationKind.Marker)
+                    bad(path + ".offset", $"A {kind} stands on its anchor; a callout stands away from it.");
+                else if (!Finite(offset))
+                    bad(path + ".offset", "The offset must be finite.");
+                else if (a.Kind == AnnotationKind.Callout && offset.Length < 1e-9)
+                    bad(path + ".offset", "A callout's text stands away from its anchor: its offset is not zero.");
+            }
+            if (!Enum.IsDefined(a.Facing))
+                bad(path + ".facing", "A photo faces the camera or is fixed.");
+            else if (a.Facing == PhotoFacing.Fixed && photo && !(a.Normal is { } normal && Finite(normal) && normal.Length > 1e-9))
+                bad(path + ".normal", "A fixed photo needs the direction it faces.");
+            else if (a.Facing == PhotoFacing.Camera && a.Normal is not null)
+                bad(path + ".normal", "Only a fixed photo has a direction of its own.");
+
+            // ---- when ----
+            if (a.From is { } from && !(from >= 0 && double.IsFinite(from)))
+                bad(path + ".from", "A time is in seconds from the start, not negative.");
+            if (a.To is { } to && !(to > (a.From ?? 0.0) && double.IsFinite(to)))
+                bad(path + ".to", "An annotation goes after it appears.");
+            if (a.Within is { } within && !(within > 0 && double.IsFinite(within)))
+                bad(path + ".within", "The distance must be positive.");
+            if (!(a.Fade >= 0 && a.Fade <= MaxEndCardSeconds))
+                bad(path + ".fade", $"A fade takes from 0 to {MaxEndCardSeconds} seconds.");
+        }
+    }
+
+    private static bool IsImageName(string path)
+        => path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+           || path.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsUnitColor(ColorRgb c)
     {

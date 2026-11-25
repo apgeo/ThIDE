@@ -109,9 +109,9 @@ public static class SceneBuilders
         }
     }
 
-    /// <summary>The overlays of <paramref name="spec"/> a generated script does not draw, as
-    /// field paths: everything that was added after the script generator was last changed, which
-    /// only the player's second stage draws.</summary>
+    /// <summary>What of <paramref name="spec"/> a generated script does not draw, as field
+    /// paths: everything that was added after the script generator was last changed, which only
+    /// the player draws: the later overlays, and the annotations.</summary>
     public static IReadOnlyList<string> NotDrawnByTheGenerator(SceneSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
@@ -127,6 +127,7 @@ public static class SceneBuilders
         if (overlays.EndCard is not null) lost.Add("labels.overlays.endCard");
         if (overlays.FadeFromBlack > 0) lost.Add("labels.overlays.fadeFromBlack");
         if (overlays.FadeToBlack > 0) lost.Add("labels.overlays.fadeToBlack");
+        if (spec.Annotations.Count > 0) lost.Add("annotations");
         return lost;
     }
 }

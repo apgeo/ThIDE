@@ -393,6 +393,105 @@ public class RenderBundleTests : IDisposable
             Assert.True(File.GetUnixFileMode(Path.Combine(folder, "render.sh")).HasFlag(UnixFileMode.UserExecute));
     }
 
+    // ---- photos ----
+
+    private SceneSpec Annotated(string image) => Orbit with
+    {
+        Annotations =
+        [
+            new AnnotationSpec { Id = "view", Kind = AnnotationKind.Photo, Station = "main6", Image = image, Framed = true },
+            new AnnotationSpec { Kind = AnnotationKind.Label, Station = "main0", Text = "Intrarea", From = 1, To = 3 },
+        ],
+    };
+
+    [Fact]
+    public void ABundleOfASceneWithAnnotations_CarriesTheirPhotos_InBothPlans_AndItsReadmeNamesThem()
+    {
+        string picture = TestImages.Write(Path.Combine(_dir, "trip"), "the view.jpg", TestImages.FlagJpeg());
+        var content = Content(Annotated(picture));
+
+        Assert.Equal(picture, content.Files["photos/the_view.jpg"]);
+        Assert.Empty(content.NotCarried);
+        foreach (var plan in new[] { content.Plan, content.Draft! })
+        {
+            Assert.Empty(ScenePlanValidator.Validate(plan));
+            Assert.Equal(["view", "annotation-2"], plan.Annotations!.Select(a => a.Id));
+            Assert.Equal("photos/the_view.jpg", plan.Annotations![0].Image);
+        }
+
+        string zipPath = Path.Combine(_dir, "annotated.zip");
+        RenderBundleWriter.WriteZip(content, zipPath);
+        var entries = Read(zipPath);
+        Assert.Equal(TestImages.FlagJpeg(), entries["photos/the_view.jpg"]);
+        Assert.Contains("thide_player/modules/annotations.py", entries.Keys);
+        string readme = Text(entries, "README.txt");
+        Assert.Contains("  photos/the_view.jpg ", readme);
+        Assert.Contains("a photo shown in the scene", readme);
+        string romanian = RenderBundleWriter.Readme(content with { Language = "ro" });
+        Assert.Contains("o fotografie afișată în scenă", romanian);
+
+        // In a folder it lies where the plan names it.
+        string folder = Path.Combine(_dir, "annotated");
+        RenderBundleWriter.WriteFolder(content, folder);
+        Assert.Equal(TestImages.FlagJpeg(), File.ReadAllBytes(Path.Combine(folder, "photos", "the_view.jpg")));
+    }
+
+    [Fact]
+    public void APhotoThatIsNoImage_OrIsTooLarge_OrIsMissing_IsRefused_WhereverItComesFrom()
+    {
+        string picture = TestImages.Write(Path.Combine(_dir, "trip"), "view.png", TestImages.FlagPng());
+        var good = Content(Annotated(picture));
+        string zipPath = Path.Combine(_dir, "refused.zip");
+
+        // From a file.
+        string notes = TestImages.Write(Path.Combine(_dir, "trip"), "notes.png", "no picture at all"u8.ToArray());
+        var ex = Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(Content(Annotated(notes), work: "work2"), zipPath));
+        Assert.StartsWith("The file of photo 'view' (photos/notes.png) cannot travel with the plan: the file is neither a PNG nor a JPEG image.", ex.Message);
+        Assert.False(File.Exists(zipPath));
+
+        // From whoever makes the bundle, as a stream: a picture of a size no render can use.
+        var files = good.Files.Where(f => f.Key != "photos/view.png").ToDictionary(f => f.Key, f => f.Value);
+        byte[] vast = TestImages.FlagPng(8, 8);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(vast.AsSpan(16), 20_000);
+        int opened = 0;
+        var streamed = good with
+        {
+            Files = files,
+            Streams = new Dictionary<string, Func<Stream>> { ["photos/view.png"] = () => { opened++; return new MemoryStream(vast); } },
+        };
+        ex = Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(streamed, new MemoryStream(), "refused"));
+        Assert.Contains("the image is 20000 x 8 pixels; a side is at most 16384", ex.Message);
+        Assert.Equal(1, opened);   // the draft names the same file: it is checked once
+
+        // A good one from a stream is opened to be checked and again to be written.
+        opened = 0;
+        byte[] flag = TestImages.FlagPng();
+        var fine = streamed with { Streams = new Dictionary<string, Func<Stream>> { ["photos/view.png"] = () => { opened++; return new MemoryStream(flag); } } };
+        var written = new MemoryStream();
+        Assert.Contains("fine/photos/view.png", RenderBundleWriter.WriteZip(fine, written, "fine"));
+        Assert.Equal(2, opened);
+
+        // Not among the files at all.
+        ex = Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(good with { Files = files }, new MemoryStream(), "refused"));
+        Assert.Contains("The file of photo 'view' (photos/view.png) is not among the bundle's files.", ex.Message);
+    }
+
+    [Fact]
+    public void ASingleFile_CarriesAPhoto_AfterTheSameCheck()
+    {
+        var plan = Content(Annotated(TestImages.Write(Path.Combine(_dir, "trip"), "view.png", TestImages.FlagPng())), draft: false).Plan;
+        byte[] mesh = File.ReadAllBytes(Path.Combine(_dir, "work", "model.ply"));
+
+        string script = PlayerWriter.SingleFile(plan, new Dictionary<string, byte[]> { ["model.ply"] = mesh, ["photos/view.png"] = TestImages.FlagPng() });
+
+        Assert.Contains("\"photos/view.png\": \"" + Convert.ToBase64String(TestImages.FlagPng()) + "\"", script);
+        var ex = Assert.Throws<ArgumentException>(() => PlayerWriter.SingleFile(plan, new Dictionary<string, byte[]> { ["photos/view.png"] = [1, 2, 3] }));
+        Assert.Contains("(photos/view.png) cannot travel with the plan", ex.Message);
+        // A file the plan does not name is still refused, with the photos among what it could be.
+        ex = Assert.Throws<ArgumentException>(() => PlayerWriter.SingleFile(plan, new Dictionary<string, byte[]> { ["photos/other.png"] = TestImages.FlagPng() }));
+        Assert.Contains("No model, material or photo of the plan has the path 'photos/other.png'.", ex.Message);
+    }
+
     // ---- the README and what the plan leaves out ----
 
     [Fact]
