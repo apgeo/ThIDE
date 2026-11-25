@@ -8,7 +8,9 @@
 //
 // Which builder builds a scene is SceneBuilders.Choose's answer. The player renders a scene with
 // texts over the picture in two stages, each a Blender of its own: the frames, then the output
-// from them. Exporting a script is the script generator's, as before.
+// from them. An export writes the scene of the same builder for someone to run themselves: the
+// player's folder as a render bundle holds it, or one script; the script generator's script when
+// that builder is asked for.
 
 using System.Text;
 using Therion.Blender.Emit;
@@ -140,19 +142,8 @@ public sealed class BlenderRenderService : IBlenderRenderService
         SceneSpec spec, RenderSource source, RenderOptions options, BlenderInstallation blender, string jobDir, string outputDir,
         IProgress<RenderProgress>? progress, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
-        progress?.Report(new RenderProgress(RenderPhase.ConvertingGeometry, "Converting model"));
-        var (conversion, placed) = await ConvertAsync(spec, source, jobDir, outputDir, ct).ConfigureAwait(false);
-
-        ct.ThrowIfCancellationRequested();
-        progress?.Report(new RenderProgress(RenderPhase.GeneratingScript, "Planning the scene"));
-        var plan = ScenePlanBuilder.FromSpec(placed, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
-        if (options.Draft) plan = ScenePlanBuilder.Draft(plan);
-        // What a generated script would print about the scene, a plan cannot: say it here.
-        var notices = ScenePlanBuilder.Notices(placed, conversion.Meta, CameraFraming.FromGeometry(conversion.Geometry));
-        // The photos of the annotations and the image of an HDRI light rig go beside the plan,
-        // from wherever the spec has them.
-        var playerJob = PlayerWriter.WriteJob(plan, jobDir, ScenePlanBuilder.Files(placed));
+        var (plan, playerJob, notices, placed) = await WritePlayerJobAsync(spec, source, options.Draft, jobDir, outputDir, progress, ct)
+            .ConfigureAwait(false);
         var output = PlanOutputs.SpecOf(plan, outputDir);
 
         bool twoStages = plan.HasTexts || options.KeepFrames || options.ComposeOnly;
@@ -224,6 +215,32 @@ public sealed class BlenderRenderService : IBlenderRenderService
             Warnings = [.. notices, .. result.Warnings],
             FramesDirectory = framesDir,
         };
+    }
+
+    /// <summary>
+    /// Converts the model into <paramref name="jobDir"/>, lowers the spec to a scene plan and
+    /// writes the plan and the player there: the job folder a render plays, and an export to
+    /// look at opens in Blender's window. Returns the plan, the job, what the render will show
+    /// less of than the spec asks for, and the spec as it was planned.
+    /// </summary>
+    private async Task<(ScenePlan Plan, PlayerJob Job, IReadOnlyList<string> Notices, SceneSpec Placed)> WritePlayerJobAsync(
+        SceneSpec spec, RenderSource source, bool draft, string jobDir, string outputDir,
+        IProgress<RenderProgress>? progress, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        progress?.Report(new RenderProgress(RenderPhase.ConvertingGeometry, "Converting model"));
+        var (conversion, placed) = await ConvertAsync(spec, source, jobDir, outputDir, ct).ConfigureAwait(false);
+
+        ct.ThrowIfCancellationRequested();
+        progress?.Report(new RenderProgress(RenderPhase.GeneratingScript, "Planning the scene"));
+        var plan = ScenePlanBuilder.FromSpec(placed, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
+        if (draft) plan = ScenePlanBuilder.Draft(plan);
+        // What a generated script would print about the scene, a plan cannot: say it here.
+        var notices = ScenePlanBuilder.Notices(placed, conversion.Meta, CameraFraming.FromGeometry(conversion.Geometry));
+        // The photos of the annotations and the image of an HDRI light rig go beside the plan,
+        // from wherever the spec has them.
+        var playerJob = PlayerWriter.WriteJob(plan, jobDir, ScenePlanBuilder.Files(placed));
+        return (plan, playerJob, notices, placed);
     }
 
     /// <summary>The two stages of one render as one result: the second's verdict and outputs,
@@ -313,6 +330,123 @@ public sealed class BlenderRenderService : IBlenderRenderService
         progress?.Report(new RenderProgress(RenderPhase.Done, "Script exported", 1.0));
         return scriptPath;
     }
+
+    /// <summary>The name of the one script of an export in one file, and of a generated script.</summary>
+    public const string ExportScriptName = "render.py";
+
+    public async Task<RenderExport> ExportAsync(
+        SceneSpec spec, RenderSource source, string outputDir, ExportOptions options,
+        IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputDir);
+        outputDir = Path.GetFullPath(outputDir);
+
+        if (options.Builder == SceneBuilder.Generator)
+        {
+            // The script generator's export, as it was. One file is its self-contained script
+            // with the meshes inside.
+            var generated = options.SingleFile && !options.Interactive
+                ? spec with { Source = spec.Source with { SelfContained = true, EmbedMesh = true } }
+                : spec;
+            string script = await ExportScriptAsync(generated, source, outputDir, progress, ct, options.Interactive).ConfigureAwait(false);
+            return new RenderExport
+            {
+                ScriptPath = script,
+                Directory = outputDir,
+                Builder = SceneBuilder.Generator,
+                SingleFile = generated.Source is { SelfContained: true, EmbedMesh: true },
+                FrameCount = SceneSpecValidator.FrameCount(spec),
+                LeftOut = SceneBuilders.NotDrawnByTheGenerator(spec),
+            };
+        }
+
+        // The player refuses a spec it does not carry, as it does for a render.
+        if (SceneBuilders.Choose(spec, new RenderOptions { Builder = SceneBuilder.Player }).Refusal is { } refusal)
+            throw new ArgumentException(refusal, nameof(spec));
+
+        Directory.CreateDirectory(outputDir);
+        RenderExport export;
+        if (options.Interactive)
+        {
+            // The job folder of a render, for Blender's window: what a render of the scene from
+            // there writes goes where the spec says, or stays in the folder.
+            string renders = string.IsNullOrWhiteSpace(spec.Output.OutputDirectory)
+                ? Path.Combine(outputDir, RenderBundleWriter.OutputDirectory)
+                : Path.GetFullPath(spec.Output.OutputDirectory);
+            var (plan, job, notices, _) = await WritePlayerJobAsync(spec, source, draft: false, outputDir, renders, progress, ct)
+                .ConfigureAwait(false);
+            export = new RenderExport
+            {
+                ScriptPath = job.ScriptPath,
+                Directory = outputDir,
+                ScriptArguments = ["--build-only"],
+                Files = FilesUnder(outputDir),
+                FrameCount = plan.OutputFrameCount,
+                TextsInSecondStage = plan.HasTexts,
+                Notices = notices,
+            };
+        }
+        else
+        {
+            export = await Task.Run(() => ExportPlayer(spec, source, outputDir, options, progress, ct), ct).ConfigureAwait(false);
+        }
+        progress?.Report(new RenderProgress(RenderPhase.Done, "Scene exported", 1.0));
+        return export;
+    }
+
+    /// <summary>The player's export to render: the folder of a render bundle, or one script
+    /// that carries what the folder holds. The model is converted into a scratch folder first,
+    /// so the export's folder gets nothing but the export.</summary>
+    private RenderExport ExportPlayer(
+        SceneSpec spec, RenderSource source, string outputDir, ExportOptions options, IProgress<RenderProgress>? progress, CancellationToken ct)
+    {
+        string work = CreateJobDirectory();
+        try
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new RenderProgress(RenderPhase.ConvertingGeometry, "Converting model"));
+            var content = RenderBundleWriter.FromModel(source.Model, spec, work, draft: false, _geometry, source.Leads) with
+            {
+                Language = options.Language,
+            };
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new RenderProgress(RenderPhase.GeneratingScript, "Writing the scene"));
+            IReadOnlyList<string> files;
+            if (options.SingleFile)
+            {
+                var carried = content.Files.ToDictionary(f => f.Key, f => File.ReadAllBytes(f.Value), StringComparer.Ordinal);
+                File.WriteAllText(Path.Combine(outputDir, ExportScriptName), PlayerWriter.SingleFile(content.Plan, carried), Utf8NoBom);
+                files = [ExportScriptName];
+            }
+            else
+            {
+                files = RenderBundleWriter.WriteFolder(content, outputDir);
+            }
+            return new RenderExport
+            {
+                ScriptPath = Path.Combine(outputDir, options.SingleFile ? ExportScriptName : PlayerFiles.EntryFileName),
+                Directory = outputDir,
+                SingleFile = options.SingleFile,
+                Files = files,
+                FrameCount = content.Plan.OutputFrameCount,
+                TextsInSecondStage = content.Plan.HasTexts,
+                Notices = content.Notices,
+            };
+        }
+        finally
+        {
+            TryDeleteDirectory(work);
+        }
+    }
+
+    private static IReadOnlyList<string> FilesUnder(string folder)
+        => Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(folder, f).Replace(Path.DirectorySeparatorChar, '/'))
+            .Order(StringComparer.Ordinal)
+            .ToList();
 
     /// <summary>Convert into <paramref name="assetDir"/>, build camera framing, generate the
     /// script, and write <c>render.py</c> there. Returns its path, the frame count, and the

@@ -17,7 +17,8 @@ rendered from the same scene.
 Options, after "--" on Blender's command line:
     --plan PATH       the plan to play (default: scene-plan.json beside the script)
     --modules DIR     an extra module folder; may be given more than once
-    --build-only      build the scene and stop before rendering
+    --build-only      build the scene and stop before rendering; in Blender's window (started
+                      without -b) the scene is left open, seen through its camera
     --stage STAGE     frames: the first stage only; compose: the second stage only, from the
                       frames that are there (a text was changed, the scene was not);
                       all (the default): everything the plan needs
@@ -119,6 +120,8 @@ def play(plan_dir, plan_text=None, files=None, script=None):
             if hasattr(module, "build"):
                 run(name, module.build, ctx, section_of(plan, module))
         if args.build_only:
+            if not bpy.app.background:
+                look_through_the_camera()
             api.report("built", "1")
             return
         for name, module in zip(plan["features"], modules):
@@ -134,6 +137,19 @@ def play(plan_dir, plan_text=None, files=None, script=None):
     else:
         compose(plan, plan_dir, modules, files, frames_dir, args.keep_frames)
     api.report("done", "1")
+
+
+def look_through_the_camera():
+    """In Blender's window, every 3-D view looks through the scene's camera, so that a scene that
+    was built to be looked at opens the way the render frames it. The window may not be there yet
+    when a start-up script runs: then the views stay as they are."""
+    try:
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == "VIEW_3D":
+                    area.spaces.active.region_3d.view_perspective = "CAMERA"
+    except Exception:
+        pass
 
 
 def compose(plan, plan_dir, modules, files, frames_dir, keep_frames):
