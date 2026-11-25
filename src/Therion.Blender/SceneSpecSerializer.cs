@@ -80,7 +80,7 @@ public static class SceneSpecSerializer
         {
             foreach (var property in type.Properties)
             {
-                if (property.Name == "subtitle") property.ShouldSerialize = (_, value) => value is not null;
+                if (property.Name is "subtitle" or "fade") property.ShouldSerialize = (_, value) => value is not null;
                 else if (property.Name == "backdrop") property.ShouldSerialize = (_, value) => value is not 1.0;
                 else if (property.Name == "overScene") property.ShouldSerialize = (_, value) => value is true;
             }
@@ -88,7 +88,7 @@ public static class SceneSpecSerializer
         if (type.Type != typeof(OverlaySpec)) return;
         foreach (var property in type.Properties)
         {
-            if (property.Name is "credits" or "endCard" or "subtitle" or "titleSeconds" or "corner")
+            if (property.Name is "credits" or "endCard" or "subtitle" or "titleSeconds" or "titleFade" or "corner")
                 property.ShouldSerialize = (_, value) => value is not null;
             else if (property.Name is "captions" or "cornerCaptions")
                 property.ShouldSerialize = (_, value) => value is IReadOnlyList<CaptionSpec> { Count: > 0 };

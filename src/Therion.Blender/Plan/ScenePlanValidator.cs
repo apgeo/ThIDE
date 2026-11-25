@@ -324,6 +324,8 @@ public static partial class ScenePlanValidator
                 bad(path + ".scale", $"Noise scale must be within (0, {SceneSpecValidator.MaxProceduralScale}].");
             if (material.Bump is { } bump && !(bump >= 0 && bump <= SceneSpecValidator.MaxBumpStrength))
                 bad(path + ".bump", $"Bump strength must be within 0–{SceneSpecValidator.MaxBumpStrength}.");
+            if (material.Banded && !ramp)
+                bad(path + ".banded", "Only a ramp is in bands.");
             if (material.Strength is { } shown)
             {
                 if (!material.Unlit) bad(path + ".strength", "Only an unlit material has a strength; a lit one is as bright as its light.");
@@ -351,6 +353,8 @@ public static partial class ScenePlanValidator
         {
             if (!(world.Strength >= 0) || !double.IsFinite(world.Strength))
                 bad("look.world.strength", "The world's strength is not negative.");
+            if (world.Backdrop is { } backdrop && (!(backdrop >= 0) || !double.IsFinite(backdrop)))
+                bad("look.world.backdrop", "How bright the world is seen is not negative.");
             if (!Enum.IsDefined(world.Kind))
                 bad("look.world.kind", "A world is a colour, a sky or an image.");
             if (world.Kind == PlanWorldKind.Color && !(world.Color is { } color && IsUnitColor(color)))
@@ -667,7 +671,7 @@ public static partial class ScenePlanValidator
                 continue;
             }
             bool ofATarget = change is not { Visible: null, Opacity: null, Tint: null, Scale: null, Offset: null, Energy: null, Reveal: null };
-            if (!ofATarget && change is { WorldColor: null, WorldStrength: null })
+            if (!ofATarget && change is { WorldColor: null, WorldStrength: null, WorldBackdrop: null, WorldRotation: null })
                 bad(path, "A change needs the keys of at least one property.");
 
             // ---- the target ----
@@ -696,6 +700,10 @@ public static partial class ScenePlanValidator
                     bad(path + ".worldColor", "The world's colour is a change without a target.");
                 if (change.WorldStrength is not null)
                     bad(path + ".worldStrength", "The world's strength is a change without a target.");
+                if (change.WorldBackdrop is not null)
+                    bad(path + ".worldBackdrop", "How bright the world is seen is a change without a target.");
+                if (change.WorldRotation is not null)
+                    bad(path + ".worldRotation", "The turn of the world's image is a change without a target.");
             }
 
             void Once(string property)
@@ -852,6 +860,26 @@ public static partial class ScenePlanValidator
                         bad($"{path}.worldColor[{k}].mix", "A colour is mixed as 'linear' or as 'srgb'.");
                 }
             }
+            if (change.WorldBackdrop is { } backdrop)
+            {
+                OneOfTheWorld("worldBackdrop", "backdrop");
+                if (plan.Look.World is null)
+                    bad(path + ".worldBackdrop", "How bright the world is seen changes only when the look has a world.");
+                Times(backdrop.Select(k => (k.T, k.Easing)).ToList(), path + ".worldBackdrop");
+                for (int k = 0; k < backdrop.Count; k++)
+                    if (!(backdrop[k].Value >= 0) || !double.IsFinite(backdrop[k].Value))
+                        bad($"{path}.worldBackdrop[{k}].value", "How bright the world is seen is not negative.");
+            }
+            if (change.WorldRotation is { } turned)
+            {
+                OneOfTheWorld("worldRotation", "rotation");
+                if (plan.Look.World is not { Kind: PlanWorldKind.Image })
+                    bad(path + ".worldRotation", "The world's image turns only when look.world is of the kind 'image'.");
+                Times(turned.Select(k => (k.T, k.Easing)).ToList(), path + ".worldRotation");
+                for (int k = 0; k < turned.Count; k++)
+                    if (!double.IsFinite(turned[k].Value))
+                        bad($"{path}.worldRotation[{k}].value", "The turn of the world's image is a number of degrees.");
+            }
             if (change.WorldStrength is { } strength)
             {
                 OneOfTheWorld("worldStrength", "strength");
@@ -865,8 +893,9 @@ public static partial class ScenePlanValidator
         }
 
         // The keys of one property: at least one, in rising order of time. A key may lie after
-        // the clip: the clip then ends on the way to it. Two may fall on one frame, a move's end
-        // and the jump that follows it; of a property that is only switched, one.
+        // the clip (the clip then ends on the way to it) and before it (the clip then begins on
+        // the way from it). Three may fall on one frame: a move's end, the jump that follows it
+        // and where the way on starts from; of a property that is only switched, one.
         void Times(IReadOnlyList<(double T, PlanEasing Easing)> keys, string path, bool oneToAFrame = false)
         {
             if (keys.Count == 0)
@@ -874,13 +903,13 @@ public static partial class ScenePlanValidator
                 bad(path, "At least one key is needed.");
                 return;
             }
-            int last = 0, onLast = 0;
+            int last = int.MinValue, onLast = 0;
             for (int k = 0; k < keys.Count; k++)
             {
                 double t = keys[k].T;
-                if (!(t >= 0) || !double.IsFinite(t))
+                if (!double.IsFinite(t))
                 {
-                    bad($"{path}[{k}].t", "A time is in seconds from the start, not negative.");
+                    bad($"{path}[{k}].t", "A time is in seconds from the start of the clip; one before it is negative.");
                     continue;
                 }
                 if (!Enum.IsDefined(keys[k].Easing))
@@ -892,10 +921,10 @@ public static partial class ScenePlanValidator
                     onLast = 1;
                 else if (oneToAFrame)
                     bad($"{path}[{k}].t", $"Keys are in rising order of time, each on a frame of its own ({plan.Timeline.Fps} fps).");
-                else if (++onLast > 2)
-                    bad($"{path}[{k}].t", $"No more than two keys fall on one frame ({plan.Timeline.Fps} fps).");
+                else if (++onLast > 3)
+                    bad($"{path}[{k}].t", $"No more than three keys fall on one frame ({plan.Timeline.Fps} fps).");
                 else if (keys[k].Easing != PlanEasing.Constant)
-                    bad($"{path}[{k}].easing", "The second key on a frame is a jump: its easing is 'constant'.");
+                    bad($"{path}[{k}].easing", "A later key on a frame is a jump: its easing is 'constant'.");
                 last = Math.Max(last, frame);
             }
         }
@@ -949,10 +978,19 @@ public static partial class ScenePlanValidator
                 case PlanScreenItemKind.Arrow:
                     if (!IsShare(item.Size)) bad(path + ".size", "The length of an arrow is a share of the picture's height, above 0 and at most 1.");
                     break;
+                case PlanScreenItemKind.Image:
+                    if (string.IsNullOrWhiteSpace(item.Image)) bad(path + ".image", "An image needs its file.");
+                    else if (!IsPathBesideThePlan(item.Image)) bad(path + ".image", "An image file is named relative to the plan and lies beside it.");
+                    else if (!HasImageExtension(item.Image)) bad(path + ".image", "An image is a .png or a .jpg file.");
+                    if (!IsShare(item.Width)) bad(path + ".width", "The width of an image is a share of the picture's width, above 0 and at most 1.");
+                    if (item.Height is not null && !IsShare(item.Height)) bad(path + ".height", "The height of an image is a share of the picture's height, above 0 and at most 1.");
+                    break;
                 default:
-                    bad(path + ".kind", "An item is a text, a box or an arrow.");
+                    bad(path + ".kind", "An item is a text, a box, an arrow or an image.");
                     break;
             }
+            if (item.Image is not null && item.Kind != PlanScreenItemKind.Image)
+                bad(path + ".image", "Only an image has an image file.");
             if (item.Turn is { } turns)
             {
                 if (item.Kind != PlanScreenItemKind.Arrow)

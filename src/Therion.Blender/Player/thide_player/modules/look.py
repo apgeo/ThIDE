@@ -18,7 +18,9 @@ material as a colour attribute, which that engine does show.
 The world is one colour, a sky, or an image all round (an HDRI): a Radiance .hdr or an OpenEXR
 .exr picture by longitude and latitude, which is the background and lights the scene. Its
 strength is the Strength of the world's Background node, whatever the kind, so a change of the
-scene keys it the same way for all three ("changes": worldStrength).
+scene keys it the same way for all three ("changes": worldStrength). With a "backdrop" the world
+is set apart: "strength" is then how strongly it lights the scene and "backdrop" how bright the
+camera sees it, two numbers that a light path tells apart ("changes": worldBackdrop).
 """
 
 import math
@@ -35,10 +37,10 @@ KEYS = {
     "materials": [{
         "id": None, "kind": None, "color": None, "roughness": None,
         "stops": [{"at": None, "color": None}], "low": None, "high": None, "space": None, "scale": None,
-        "bump": None, "unlit": None, "strength": None,
+        "bump": None, "unlit": None, "strength": None, "banded": None,
     }],
     "lights": [{"id": None, "kind": None, "energy": None, "direction": None, "size": None}],
-    "world": {"kind": None, "color": None, "strength": None, "image": None, "rotation": None},
+    "world": {"kind": None, "color": None, "strength": None, "backdrop": None, "image": None, "rotation": None},
 }
 
 GPU_BACKENDS = {"optix": "OPTIX", "cuda": "CUDA", "hip": "HIP", "oneapi": "ONEAPI", "metal": "METAL"}
@@ -183,7 +185,7 @@ def show_in_draft(obj, spec):
         colours = []
         for vertex in mesh.vertices:
             height = vertex.co.z if own else (obj.matrix_world @ vertex.co).z
-            colours.extend(rgba(ramp_colour(spec["stops"], (height - low) / span if span > 0.0 else 0.0)))
+            colours.extend(rgba(ramp_colour(spec["stops"], (height - low) / span if span > 0.0 else 0.0, spec.get("banded"))))
     else:
         colours = rgba(spec["color"]) * len(mesh.vertices)
     attribute = mesh.color_attributes.new(DRAFT_COLOURS, "FLOAT_COLOR", "POINT")
@@ -191,11 +193,14 @@ def show_in_draft(obj, spec):
     mesh.color_attributes.active_color = attribute
 
 
-def ramp_colour(stops, at):
+def ramp_colour(stops, at, banded=False):
     """The colour of a ramp at a place between 0 and 1: straight from stop to stop, as the
-    ramp of the material mixes them."""
+    ramp of the material mixes them, or, of a banded ramp, that of the last stop the place has
+    reached."""
     if at <= stops[0]["at"]:
         return stops[0]["color"]
+    if banded:
+        return [stop for stop in stops if stop["at"] <= at][-1]["color"]
     for low, high in zip(stops, stops[1:]):
         if at <= high["at"]:
             span = high["at"] - low["at"]
@@ -247,7 +252,7 @@ def make_material(spec, plain):
         span.inputs["From Min"].default_value = spec["low"]
         span.inputs["From Max"].default_value = spec["high"]
         tree.links.new(separate.outputs["Z"], span.inputs["Value"])
-        ramp = make_ramp(tree, spec["stops"])
+        ramp = make_ramp(tree, spec["stops"], spec.get("banded"))
         tree.links.new(span.outputs["Result"], ramp.inputs["Fac"])
         tree.links.new(ramp.outputs["Color"], colour)
     elif kind == "noiseRamp":
@@ -256,7 +261,7 @@ def make_material(spec, plain):
         noise = tree.nodes.new("ShaderNodeTexNoise")
         noise.inputs["Scale"].default_value = spec.get("scale", 8.0)
         tree.links.new(coordinates.outputs["Object"], noise.inputs["Vector"])
-        ramp = make_ramp(tree, spec["stops"])
+        ramp = make_ramp(tree, spec["stops"], spec.get("banded"))
         tree.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
         tree.links.new(ramp.outputs["Color"], colour)
         bump = tree.nodes.new("ShaderNodeBump")
@@ -293,11 +298,14 @@ def make_unlit(tree, shader, strength):
     tree.nodes.remove(shader)
 
 
-def make_ramp(tree, stops):
-    """A colour ramp with the plan's stops. A new ramp has two; the rest are added."""
+def make_ramp(tree, stops, banded=False):
+    """A colour ramp with the plan's stops. A new ramp has two; the rest are added. A banded
+    ramp does not blend: each stop's colour holds from the stop up to the next one."""
     if len(stops) < 2:
         raise api.PlanError("look.materials: a ramp needs at least two stops")
     node = tree.nodes.new("ShaderNodeValToRGB")
+    if banded:
+        node.color_ramp.interpolation = "CONSTANT"
     elements = node.color_ramp.elements
     for index, stop in enumerate(stops):
         element = elements[index] if index < 2 else elements.new(stop["at"])
@@ -375,6 +383,53 @@ def set_world(ctx, spec):
         tree.links.new(environment.outputs["Color"], background.inputs["Color"])
     else:
         raise api.PlanError('look.world.kind: unknown world "%s"' % kind)
+    if spec.get("backdrop") is not None:
+        seen = api.amount(spec["backdrop"], "look.world.backdrop")
+        set_apart(world)
+        strength_of(world, WORLD_SEEN).default_value = seen
+        if kind == "color":
+            world.color = [min(1.0, channel * seen) for channel in spec["color"]]
+        else:
+            world.color = [min(1.0, channel * seen / strength) if strength > 0.0 else 0.0 for channel in world.color]
+
+
+# The two numbers of a world whose light and whose look are set apart, by the names of their nodes.
+WORLD_LIGHT = "ThideWorldLight"
+WORLD_SEEN = "ThideWorldSeen"
+
+
+def is_set_apart(world):
+    return world.node_tree is not None and WORLD_SEEN in world.node_tree.nodes
+
+
+def strength_of(world, name):
+    """One of the two numbers of a world that is set apart, as the socket that holds it."""
+    return world.node_tree.nodes[name].outputs[0]
+
+
+def set_apart(world):
+    """Sets how strongly the world lights the scene apart from how bright the camera sees it:
+    two numbers in the place of the one strength, the second for the rays that come from the
+    camera. Both start as the strength the world has. A world is set apart once."""
+    tree = world.node_tree
+    if is_set_apart(world):
+        return
+    background = next(node for node in tree.nodes if node.type == "BACKGROUND")
+    strength = background.inputs["Strength"].default_value
+    light = tree.nodes.new("ShaderNodeValue")
+    light.name = WORLD_LIGHT
+    seen = tree.nodes.new("ShaderNodeValue")
+    seen.name = WORLD_SEEN
+    light.outputs[0].default_value = seen.outputs[0].default_value = strength
+    path = tree.nodes.new("ShaderNodeLightPath")
+    pick = tree.nodes.new("ShaderNodeMix")
+    pick.data_type = "FLOAT"
+    pick.clamp_factor = True
+    sockets = {socket.identifier: socket for socket in pick.inputs}
+    tree.links.new(path.outputs["Is Camera Ray"], sockets["Factor_Float"])
+    tree.links.new(light.outputs[0], sockets["A_Float"])
+    tree.links.new(seen.outputs[0], sockets["B_Float"])
+    tree.links.new(next(socket for socket in pick.outputs if socket.identifier == "Result_Float"), background.inputs["Strength"])
 
 
 ENVIRONMENT_HEADS = (b"#?", b"\x76\x2f\x31\x01")  # Radiance HDR, OpenEXR

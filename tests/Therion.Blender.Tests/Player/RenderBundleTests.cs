@@ -489,7 +489,7 @@ public class RenderBundleTests : IDisposable
         Assert.Contains("(photos/view.png) cannot travel with the plan", ex.Message);
         // A file the plan does not name is still refused, with the photos among what it could be.
         ex = Assert.Throws<ArgumentException>(() => PlayerWriter.SingleFile(plan, new Dictionary<string, byte[]> { ["photos/other.png"] = TestImages.FlagPng() }));
-        Assert.Contains("No model, material, photo or world of the plan has the path 'photos/other.png'.", ex.Message);
+        Assert.Contains("No model, material, photo, image or world of the plan has the path 'photos/other.png'.", ex.Message);
     }
 
     // ---- the README and what the plan leaves out ----

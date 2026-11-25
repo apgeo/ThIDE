@@ -171,6 +171,10 @@ public static class SceneSpecValidator
             if (!(card.Backdrop >= 0 && card.Backdrop <= 1))
                 bad("labels.overlays.endCard.backdrop", "An end card's backdrop must be within 0–1.");
         }
+        if (overlays.EndCard is { Fade: { } cardFade } faded && !(cardFade >= 0 && cardFade <= faded.Seconds))
+            bad("labels.overlays.endCard.fade", "An end card takes from 0 seconds to its own time to appear.");
+        if (overlays.TitleFade is { } titleFade && !(titleFade >= 0 && titleFade <= MaxEndCardSeconds))
+            bad("labels.overlays.titleFade", $"A fade takes from 0 to {MaxEndCardSeconds} seconds.");
         if (overlays.TitleSeconds is { } titleSeconds && !(titleSeconds > 0 && titleSeconds <= MaxDurationSeconds))
             bad("labels.overlays.titleSeconds", "A title card stays for more than 0 seconds.");
         if (!(overlays.FadeFromBlack >= 0 && overlays.FadeFromBlack <= MaxEndCardSeconds))

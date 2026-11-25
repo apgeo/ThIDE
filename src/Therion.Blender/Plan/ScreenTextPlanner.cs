@@ -167,6 +167,50 @@ public static class ScreenTextPlanner
         return texts.Items.Count == 0 && texts.Hold == 0 && texts.FromBlack == 0 && texts.ToBlack == 0 ? null : texts;
     }
 
+    // ---- a photo over the picture ----
+
+    /// <summary>The role of the items made by <see cref="PhotoInset"/>.</summary>
+    public const string PhotoRole = "photo";
+
+    /// <summary>
+    /// A photo laid over the picture in the second stage, as an item of a plan's texts: in the
+    /// lower right corner (above the credits line), or over the whole picture inside the margin.
+    /// It keeps its shape and is as large as its room lets it be: three tenths of the picture's
+    /// width and a good third of its height in the corner. Nothing in the scene hides it, and
+    /// where a PNG is clear the picture shows through.
+    /// </summary>
+    /// <param name="image">The image file's plan path: a PNG or a JPEG beside the plan.</param>
+    /// <param name="imageInfo">The image's size in pixels (<see cref="PlanImage.Check(string)"/>).</param>
+    /// <param name="start">When it appears, in seconds; null is from the start.</param>
+    /// <param name="end">When it is gone; null is never.</param>
+    /// <param name="fade">How long it takes to appear and to go, in seconds.</param>
+    public static PlanScreenItem PhotoInset(
+        string id, string image, PlanImageInfo imageInfo, int pictureWidth, int pictureHeight, bool wholePicture = false,
+        double? start = null, double? end = null, double fade = 0.3)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(image);
+        ArgumentNullException.ThrowIfNull(imageInfo);
+        if (imageInfo.Width < 1 || imageInfo.Height < 1 || pictureWidth < 1 || pictureHeight < 1)
+            throw new ArgumentException("An image and a picture have a width and a height.", nameof(imageInfo));
+        // The widest it can be for its room, and the widest its shape lets it be for the room's height.
+        double shape = imageInfo.Width / (double)imageInfo.Height * pictureHeight / pictureWidth;
+        double room = wholePicture ? 1 - 2 * Margin : InsetWidth, high = wholePicture ? 1 - 2 * Margin : InsetHeight;
+        double? fades = fade > 0 ? Rounded(fade) : null;
+        return new PlanScreenItem
+        {
+            Id = id, Role = PhotoRole, Kind = PlanScreenItemKind.Image, Image = image,
+            At = wholePicture ? new PlanPoint(0.5, 0.5) : new PlanPoint(Rounded(1 - Margin), Rounded(Margin + InsetLift)),
+            AlignX = wholePicture ? PlanAlignX.Center : PlanAlignX.Right,
+            AlignY = wholePicture ? PlanAlignY.Center : PlanAlignY.Bottom,
+            Width = Rounded(Math.Min(room, high * shape)),
+            Start = start is > 0 ? Rounded(start.Value) : null, End = end is { } stop ? Rounded(stop) : null,
+            FadeIn = fades, FadeOut = end is null ? null : fades,
+        };
+    }
+
+    private const double InsetWidth = 0.3, InsetHeight = 0.35, InsetLift = 0.06;
+
     // ---- title, end card ----
 
     /// <summary>How much smaller the title and the north arrow are in a picture that is higher
@@ -197,7 +241,11 @@ public static class ScreenTextPlanner
         if (overlays.TitleSeconds is { } seconds)
         {
             // A card: in the middle of the picture for its time, then it fades.
-            PlanScreenItem Card(PlanScreenItem item) => item with { End = Rounded(seconds + TitleFadeSeconds), FadeOut = TitleFadeSeconds };
+            double goes = Rounded(overlays.TitleFade ?? TitleFadeSeconds);
+            PlanScreenItem Card(PlanScreenItem item) => item with
+            {
+                End = Rounded(seconds + goes), FadeOut = goes > 0 ? goes : null, FadeIn = overlays.TitleFade is > 0 ? goes : null,
+            };
             items.Add(Card(Text("title", TitleRole, title, 0.5, subtitle is null ? 0.5 : 0.53, CardTitleSize * narrow) with
             {
                 AlignY = subtitle is null ? PlanAlignY.Center : PlanAlignY.Bottom, Wrap = 0.8,
@@ -207,11 +255,12 @@ public static class ScreenTextPlanner
             return;
         }
         double wrap = TitleWrapBeside(overlays.NorthArrow, aspect, narrow);
-        items.Add(Text("title", TitleRole, title, 0.5, 1 - Margin, TitleSize * narrow) with { AlignY = PlanAlignY.Top, Wrap = wrap });
+        double? appears = overlays.TitleFade is > 0 ? Rounded(overlays.TitleFade.Value) : null;
+        items.Add(Text("title", TitleRole, title, 0.5, 1 - Margin, TitleSize * narrow) with { AlignY = PlanAlignY.Top, Wrap = wrap, FadeIn = appears });
         if (subtitle is not null)
             items.Add(Text("subtitle", SubtitleRole, subtitle, 0.5, 1 - Margin - TitleSize * narrow * 1.35, SubtitleSize * narrow) with
             {
-                AlignY = PlanAlignY.Top, Wrap = wrap,
+                AlignY = PlanAlignY.Top, Wrap = wrap, FadeIn = appears,
             });
     }
 
@@ -221,7 +270,7 @@ public static class ScreenTextPlanner
     private static void AddEndCard(List<PlanScreenItem> items, EndCardSpec card, double duration)
     {
         double start = Rounded(card.OverScene ? Math.Max(0, duration - card.Seconds) : duration);
-        double fade = Rounded(Math.Min(CardFade, card.Seconds / 2));
+        double fade = Rounded(card.Fade is { } own ? Math.Min(own, card.Seconds) : Math.Min(CardFade, card.Seconds / 2));
         double? from = start > 0 ? start : null;
         string? subtitle = string.IsNullOrWhiteSpace(card.Subtitle) ? null : card.Subtitle;
         bool bare = !(card.Backdrop > 0);

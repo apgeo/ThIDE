@@ -131,6 +131,7 @@ public static class SceneBuilders
         bool titled = !string.IsNullOrWhiteSpace(overlays.Title);
         if (titled && !string.IsNullOrWhiteSpace(overlays.Subtitle)) lost.Add("labels.overlays.subtitle");
         if (titled && overlays.TitleSeconds is not null) lost.Add("labels.overlays.titleSeconds");
+        if (titled && overlays.TitleFade is not null) lost.Add("labels.overlays.titleFade");
         if (!string.IsNullOrWhiteSpace(overlays.Credits)) lost.Add("labels.overlays.credits");
         if (!string.IsNullOrWhiteSpace(overlays.Corner)) lost.Add("labels.overlays.corner");
         if (overlays.CornerCaptions.Count > 0) lost.Add("labels.overlays.cornerCaptions");

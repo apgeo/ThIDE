@@ -400,6 +400,42 @@ public class ScreenTextPlannerTests
         Assert.Empty(ScenePlanValidator.Validate(plan));
     }
 
+    [Fact]
+    public void TheTitleAndTheEndCard_FadeForAsLongAsTheSpecSays()
+    {
+        // As it always was: a title is there at once, a card goes in 0.8 s, an end card comes in half a second.
+        var plain = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", TitleSeconds = 2, EndCard = new EndCardSpec { Text = "The end", Seconds = 3 } }));
+        Assert.Equal((null, 0.8, 2.8), (Item(plain, "title").FadeIn, Item(plain, "title").FadeOut, Item(plain, "title").End));
+        Assert.Equal(0.5, Item(plain, "end-card-text").FadeIn);
+
+        var slow = Texts(Orbit(new OverlaySpec
+        {
+            Title = "Invented Cave", Subtitle = "a survey", TitleSeconds = 2, TitleFade = 1.5,
+            EndCard = new EndCardSpec { Text = "The end", Subtitle = "thanks", Seconds = 3, Fade = 2.5 },
+        }));
+        Assert.All(new[] { "title", "subtitle" }, id => Assert.Equal((1.5, 1.5, 3.5), (Item(slow, id).FadeIn, Item(slow, id).FadeOut, Item(slow, id).End)));
+        Assert.All(new[] { "end-card", "end-card-text", "end-card-subtitle" }, id => Assert.Equal(2.5, Item(slow, id).FadeIn));
+
+        // No fade at all is a cut; a title that stays fades in and never out.
+        var cut = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", TitleSeconds = 2, TitleFade = 0, EndCard = new EndCardSpec { Text = "The end", Fade = 0 } }));
+        Assert.Equal((null, null, 2.0), (Item(cut, "title").FadeIn, Item(cut, "title").FadeOut, Item(cut, "title").End));
+        Assert.Equal(0.0, Item(cut, "end-card-text").FadeIn);
+        var staying = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", TitleFade = 1 }));
+        Assert.Equal((1.0, null, null), (Item(staying, "title").FadeIn, Item(staying, "title").FadeOut, Item(staying, "title").End));
+
+        // The spec says them only when they are set, and is held to what a card can do.
+        var spec = Orbit(new OverlaySpec { Title = "T", TitleFade = 1, EndCard = new EndCardSpec { Text = "E", Seconds = 3, Fade = 2 } });
+        string json = SceneSpecSerializer.Write(spec);
+        Assert.Contains("\"titleFade\": 1", json);
+        Assert.Contains("\"fade\": 2", json);
+        Assert.Equal((1.0, 2.0), (SceneSpecSerializer.Read(json).Labels.Overlays.TitleFade, SceneSpecSerializer.Read(json).Labels.Overlays.EndCard!.Fade));
+        Assert.DoesNotContain("titleFade", SceneSpecSerializer.Write(Orbit(new OverlaySpec { Title = "T", EndCard = new EndCardSpec { Text = "E" } })));
+        Assert.DoesNotContain("\"fade\"", SceneSpecSerializer.Write(Orbit(new OverlaySpec { Title = "T", EndCard = new EndCardSpec { Text = "E" } })));
+        var errors = SceneSpecValidator.Validate(PlanFixtures.WithPaths(Orbit(new OverlaySpec { Title = "T", TitleFade = -1, EndCard = new EndCardSpec { Text = "E", Seconds = 3, Fade = 4 } })));
+        Assert.Equal(["labels.overlays.endCard.fade", "labels.overlays.titleFade"], errors.Select(e => e.Path).Order());
+        Assert.Contains("labels.overlays.titleFade", SceneBuilders.NotDrawnByTheGenerator(spec));
+    }
+
     // ---- a picture that is higher than wide ----
 
     /// <summary>The columns an item takes, as shares of the picture's width: a title at most

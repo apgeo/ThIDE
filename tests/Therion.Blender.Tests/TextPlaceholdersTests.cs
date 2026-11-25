@@ -49,7 +49,33 @@ public class TextPlaceholdersTests : IDisposable
         Assert.True(TextPlaceholders.HasAny("Explorarea din {cave}"));
         Assert.False(TextPlaceholders.HasAny("Explorarea din {peșteră}"));
         Assert.False(TextPlaceholders.HasAny(null));
-        Assert.Equal(["{cave}"], TextPlaceholders.Known);
+        Assert.Equal(["{cave}", "{length}", "{depth}"], TextPlaceholders.Known);
+    }
+
+    [Fact]
+    public void TheLengthAndTheDepth_AreTheModelsOwnNumbers_InWholeMetres()
+    {
+        var meta = Player.PlanFixtures.MediumMeta;
+        var model = SceneProbe.InventedCave.Build(SceneProbe.InventedCaveSize.Medium);
+        double legs = model.Shots.Sum(shot => (shot.ToPosition - shot.FromPosition).Length);
+        double range = model.Stations.Max(s => s.Position.Z) - model.Stations.Min(s => s.Position.Z);
+        Assert.True(legs > 100 && range > 10);
+        Assert.Equal(legs, meta.CenterlineLength!.Value, 2);
+
+        var values = TextPlaceholders.ValuesOf(meta);
+        Assert.Equal(Math.Round(legs).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " m", values["length"]);
+        Assert.Equal(Math.Round(range).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " m", values["depth"]);
+        Assert.Equal($"Invented Medium Cave · {values["length"]} · {values["depth"]}", TextPlaceholders.Fill("{cave} · {length} · {depth}", values));
+
+        // A model that gives no number leaves the text out, as one without a name does.
+        Assert.Equal("", TextPlaceholders.ValuesOf(null)["length"]);
+        Assert.Equal("", TextPlaceholders.ValuesOf(meta with { CenterlineLength = null })["length"]);
+        var spec = new SceneSpec { Labels = new LabelsSpec { Overlays = new OverlaySpec { Title = "{cave}", Subtitle = "{length}", Credits = "{depth} deep" } } };
+        var filled = TextPlaceholders.Resolve(spec, meta with { CenterlineLength = null }).Labels.Overlays;
+        Assert.Null(filled.Subtitle);
+        Assert.Equal(values["depth"] + " deep", filled.Credits);
+        // Written with the rest of the metadata, and read back.
+        Assert.Contains("\"centerlineLength\":", Writers.SceneMetaWriter.Write(meta));
     }
 
     [Fact]

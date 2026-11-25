@@ -95,7 +95,6 @@ public class ScenePlanRevealTests
     [InlineData("\"reveal\": [2003, 2003.8]", "\"reveal\": [2003]", "$.lines[0].strips[1].reveal: fewer than 2 items")]
     [InlineData("\"reveal\": [2003, 2003.8]", "\"reveal\": [2003, \"late\"]", "$.lines[0].strips[1].reveal[1]: expected number, found String")]
     [InlineData("{ \"t\": 0.4, \"value\": 1987.5 },", "{ \"t\": 0.4 },", "$.changes[5].reveal[0]: 'value' is missing")]
-    [InlineData("{ \"t\": 0.4, \"value\": 1987.5 },", "{ \"t\": -1, \"value\": 1987.5 },", "$.changes[5].reveal[0].t: below 0")]
     [InlineData("\"edge\": 0.5,", "\"edge\": -1,", "$.changes[5].revealFront.edge: below 0")]
     [InlineData("\"edge\": 0.5,", "\"edge\": 0.5, \"blur\": 2,", "$.changes[5].revealFront: 'blur' is not a known property")]
     [InlineData("\"attribute\": \"reveal\",", "\"attribute\": \"\",", "$.changes[5].revealFront.attribute: shorter than 1")]

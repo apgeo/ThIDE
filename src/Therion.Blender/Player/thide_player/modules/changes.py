@@ -11,8 +11,9 @@ and gives each property that changes its keys: at "t" seconds the property has t
 Between two keys it moves as the later key's "easing" says: evenly ("linear", the default), eased
 in and out ("smooth": 3x² − 2x³) or not at all until the key's time ("constant"). Before its
 first key a property has that key's value, and after its last one it keeps it. A key may lie
-after the clip's last frame: the clip then ends on the way to it. A change without a target is of
-the scene itself.
+after the clip's last frame: the clip then ends on the way to it. A key may also lie before the
+clip's first frame ("t" below 0): the clip then begins on the way from it, part of the way through
+a move or a fade. A change without a target is of the scene itself.
 
     visible        true or false at "t". "fade" is how long, from "t" on, the target takes to
                    appear or to go, evenly or eased ("easing": "smooth"). Before the first key the
@@ -33,11 +34,21 @@ the scene itself.
                    "glow" makes what has just appeared shine in a "color", by "strength", over
                    "width". Edge and width are in the units of the values.
     worldColor     the colour of the world (no target)
-    worldStrength  the strength of the world (no target)
+    worldStrength  the strength of the world (no target): how strongly it lights the scene, and
+                   how bright the camera sees it, unless the two are set apart
+    worldBackdrop  how bright the camera sees the world, set apart from how strongly it lights
+                   the scene (no target): a sky that stays behind a cave while its light goes
+                   out, or one that lights a scene and is not seen. The look's world says the
+                   same for the whole clip ("backdrop")
+    worldRotation  how far the world's image is turned about the vertical, in degrees, as
+                   "rotation" of the look's world has it (no target; a world of the kind "image")
 
 Two keys of a property may fall on one frame: the first is where the value was going, the second
 (its easing is "constant") the value it has from that frame on. So a move can end in a jump
-without the frame before it showing anything but the move.
+without the frame before it showing anything but the move. A third key on the frame (its easing
+"constant" too) is the value the move to the next key starts from, which no frame shows: the
+frame has the second key's value, and the frame after it is one frame along a move that began at
+the third's.
 
 A colour moves from key to key as light mixes (straight in the plan's linear RGB), or, for a key
 with "mix": "srgb", as a screen mixes two colours (straight in sRGB): half-way from red to green
@@ -63,6 +74,8 @@ faces; a reveal is a cut along the faces of the mesh, without its soft edge or i
 text, a marker or a photo a fade is a cut, and an opacity or a tint is not shown.
 """
 
+import math
+
 import bpy
 
 from thide_player import api
@@ -78,13 +91,15 @@ KEYS = [{
     "energy": [{"t": None, "value": None, "easing": None}],
     "worldColor": [{"t": None, "value": None, "easing": None, "mix": None}],
     "worldStrength": [{"t": None, "value": None, "easing": None}],
+    "worldBackdrop": [{"t": None, "value": None, "easing": None}],
+    "worldRotation": [{"t": None, "value": None, "easing": None}],
     "reveal": [{"t": None, "value": None, "easing": None}],
     "revealFront": {"attribute": None, "edge": None, "glow": {"color": None, "strength": None, "width": None}},
 }]
 
 # What a target can change, and what the scene itself can.
 OF_A_TARGET = ("visible", "opacity", "tint", "scale", "offset", "energy", "reveal")
-OF_THE_SCENE = ("worldColor", "worldStrength")
+OF_THE_SCENE = ("worldColor", "worldStrength", "worldBackdrop", "worldRotation")
 
 EASINGS = ("linear", "smooth", "constant")
 FADE_EASINGS = ("linear", "smooth")
@@ -338,12 +353,13 @@ def custom(name):
 def points_of(ctx, keys, where, value_of, mixed=False):
     """The keys of a track as points: the frame each falls on, its value (value_of gives it,
     checked), how the value is reached from the point before and, for a colour, how it is mixed
-    on the way. Two points may share a frame: the second one is a jump."""
+    on the way. Up to three points may share a frame: the second one is a jump, and the third
+    the value the way on starts from. A point may lie before the clip's first frame."""
     points = []
     for index, key in enumerate(keys):
         at = "%s[%d]" % (where, index)
-        frame = ctx.frame_at(number(key.get("t"), at + ".t"))
-        if frame < 1 or (points and frame < points[-1][0]):
+        frame = ctx.frame_at(finite(key.get("t"), at + ".t"))
+        if points and frame < points[-1][0]:
             raise api.PlanError("%s.t: keys are in rising order of time" % at)
         easing = key.get("easing", "linear")
         if easing not in EASINGS:
@@ -352,11 +368,11 @@ def points_of(ctx, keys, where, value_of, mixed=False):
         if mix not in MIXES:
             raise api.PlanError('%s.mix: unknown mix "%s"' % (at, mix))
         if points and frame == points[-1][0]:
-            if len(points) > 1 and points[-2][0] == frame:
-                raise api.PlanError("%s.t: no more than two keys fall on one frame" % at)
+            if len(points) > 2 and points[-3][0] == frame:
+                raise api.PlanError("%s.t: no more than three keys fall on one frame" % at)
             if easing != "constant":
                 raise api.PlanError(
-                    '%s.easing: the second key on a frame is a jump; its easing is "constant"' % at)
+                    '%s.easing: a later key on a frame is a jump; its easing is "constant"' % at)
         points.append((frame, value_of(key, at), easing, mix))
     return points
 
@@ -376,9 +392,11 @@ def curve_of(points, last_frame):
     the moves between them.
 
     Of two points on one frame the first is only where the value was going: its move is cut one
-    frame short, at the value it has there, and the second point is the key of the frame. A
-    colour that is mixed as a screen mixes gets a key on every frame of its way, up to
-    last_frame, the last frame anyone sees."""
+    frame short, at the value it has there, and the second point is the key of the frame. A third
+    point on the frame is where the way on starts from: the frame keeps the second's value, and
+    the move to the next key gets a key of its own on the frame after, one frame along the way.
+    A colour that is mixed as a screen mixes gets a key on every frame of its way that is seen,
+    from the first frame up to last_frame."""
     keys, moves = [], []
 
     def add(frame, value, move):
@@ -386,33 +404,67 @@ def curve_of(points, last_frame):
             moves.append(move)
         keys.append((frame, value))
 
+    start = origin = None  # where the way on starts: its frame, and the value it starts from
     index = 0
     while index < len(points):
         frame, value, easing, mix = points[index]
-        jump = points[index + 1] if index + 1 < len(points) and points[index + 1][0] == frame else None
-        index += 2 if jump else 1
+        group = [points[index]]
+        while index + len(group) < len(points) and points[index + len(group)][0] == frame:
+            group.append(points[index + len(group)])
+        index += len(group)
+        jump = len(group) > 1
+        shown = group[1][1] if jump else value
         if not keys:
             if jump and frame > 1:
                 add(frame - 1, value, HELD)
         else:
-            start, origin = keys[-1]
+            # The frames that show the way here: from the one after a frame whose own value is
+            # not where the way starts, and up to the one before a jump.
+            first = start + 1 if keys[-1][1] != origin else start
             end = frame - 1 if jump else frame
-            if easing != "constant" and end > start:
-                span = float(frame - start)
+            span = float(frame - start)
+            if easing == "constant":
+                if first > start and first <= end:
+                    add(first, origin, HELD)
+            elif first <= end and end > start:
+                def on_the_way(at):
+                    return (at - start) / span
+
                 if mix == "srgb" and origin != value:
-                    for between in list(range(start + 1, min(end, last_frame + 1))) + [end]:
-                        add(between, mixed_on_screen(origin, value, eased((between - start) / span, easing)), EVEN)
-                elif easing == "smooth":
-                    share = (end - start) / span
-                    add(end, between_values(origin, value, eased(share, easing)),
-                        ("eased", origin, between_values(origin, value, share * share)))
+                    seen = [at for at in range(first, end) if 1 <= at <= last_frame]
+                    for between in ([first] if first > start and first not in seen else []) + seen + [end]:
+                        if between > keys[-1][0]:
+                            add(between, mixed_on_screen(origin, value, eased(on_the_way(between), easing)),
+                                HELD if between == first and first > start else EVEN)
                 else:
-                    add(end, between_values(origin, value, (end - start) / span), EVEN)
+                    if first > start:
+                        add(first, between_values(origin, value, eased(on_the_way(first), easing)), HELD)
+                    if end > first:
+                        low, high = on_the_way(first), on_the_way(end)
+                        if easing != "smooth":
+                            add(end, between_values(origin, value, high), EVEN)
+                        elif low == 0.0:
+                            add(end, between_values(origin, value, eased(high, easing)),
+                                ("eased", origin, between_values(origin, value, high * high)))
+                        else:
+                            # A part of the eased way is a cubic too: its handles lie on its
+                            # slopes at either end.
+                            third = (high - low) / 3.0
+                            add(end, between_values(origin, value, eased(high, easing)),
+                                ("eased",
+                                 between_values(origin, value, eased(low, easing) + slope(low) * third),
+                                 between_values(origin, value, eased(high, easing) - slope(high) * third)))
         if jump:
-            add(frame, jump[1], HELD)
+            add(frame, shown, HELD)
         elif not keys or keys[-1][0] != frame:
             add(frame, value, HELD)
+        start, origin = frame, group[2][1] if len(group) > 2 else shown
     return keys, moves
+
+
+def slope(share):
+    """How fast the eased share of a way grows at a share of its time."""
+    return 6.0 * share * (1.0 - share)
 
 
 def eased(share, easing):
@@ -529,14 +581,17 @@ def change_visibility(ctx, obj, keys, where):
         if easing not in FADE_EASINGS:
             raise api.PlanError('%s.easing: a fade is "linear" or "smooth"; without a fade the change is a cut' % at)
         frame = ctx.frame_at(seconds)
-        if frame < 1 or (frames and frame <= frames[-1][0]):
+        if frames and frame <= frames[-1][0]:
             raise api.PlanError("%s.t: keys are in rising order of time, each on a frame of its own" % at)
         frames.append((frame, ctx.frame_at(seconds + fade), easing))
     # A fade that the next key cuts short ends there.
     ends = [min(end, following[0]) for (_, end, _), following in zip(frames, frames[1:] + [(float("inf"), 0, "")])]
 
-    hidden = {1: keys[0]["value"]}  # before the first key: the other way round
-    fades = [(1, 1.0, "constant")]
+    # Before the first key: the other way round. A first key before the clip's first frame is
+    # a change the clip begins after, or part of the way through.
+    before = min(1, frames[0][0])
+    hidden = {before: keys[0]["value"]}
+    fades = [(before, 1.0, "constant")]
     for key, (frame, _, easing), end in zip(keys, frames, ends):
         if key["value"]:
             hidden[frame] = False
@@ -569,12 +624,24 @@ def change_visibility(ctx, obj, keys, where):
 # ---- the world ----
 
 def change_world(ctx, tracks):
-    """Keys the world's colour and its strength, and the colour the draft shows for the two."""
+    """Keys the world's colour, its strength, how bright it is seen and how far its image is
+    turned, and the colour the draft shows for it."""
+    from thide_player.modules import look
+
     world = ctx.scene.world
     background = None
     if world is not None and world.node_tree is not None:
         background = next((node for node in world.node_tree.nodes if node.type == "BACKGROUND"), None)
-    colours = strengths = None
+
+    def numbers(name, what):
+        keys, where = tracks[name]
+        if background is None:
+            raise api.PlanError(
+                '%s: the scene has no world to change %s of; give the look a world, '
+                'and list "changes" after "look" in "features"' % (where, what))
+        return curve_of(points_of(ctx, keys, where, lambda key, at: amount(key.get("value"), at + ".value")), ctx.frame_count)
+
+    colours = strengths = seen = None
     if "worldColor" in tracks:
         keys, where = tracks["worldColor"]
         if background is None or background.inputs["Color"].is_linked:
@@ -585,35 +652,57 @@ def change_world(ctx, tracks):
             points_of(ctx, keys, where, lambda key, at: colour(key.get("value"), at + ".value"), mixed=True), ctx.frame_count)
         insert(world.node_tree, background.inputs["Color"], "default_value",
                with_each_value(colours, lambda value: value + [1.0]))
+    if "worldBackdrop" in tracks:
+        seen = numbers("worldBackdrop", "the backdrop")
+        look.set_apart(world)  # before the strength is keyed: it is then a number of its own
+    apart = world is not None and look.is_set_apart(world)
     if "worldStrength" in tracks:
-        keys, where = tracks["worldStrength"]
-        if background is None:
+        strengths = numbers("worldStrength", "the strength")
+        if apart:
+            insert(world.node_tree, look.strength_of(world, look.WORLD_LIGHT), "default_value", strengths)
+        else:
+            insert(world.node_tree, background.inputs["Strength"], "default_value", strengths)
+    if seen is not None:
+        insert(world.node_tree, look.strength_of(world, look.WORLD_SEEN), "default_value", seen)
+    if "worldRotation" in tracks:
+        keys, where = tracks["worldRotation"]
+        mapping = None
+        if world is not None and world.node_tree is not None:
+            mapping = next((node for node in world.node_tree.nodes if node.type == "MAPPING"), None)
+        if mapping is None:
             raise api.PlanError(
-                '%s: the scene has no world to change the strength of; give the look a world, '
+                '%s: the world has no image to turn; give look.world the kind "image", '
                 'and list "changes" after "look" in "features"' % where)
-        strengths = curve_of(
-            points_of(ctx, keys, where, lambda key, at: amount(key.get("value"), at + ".value")), ctx.frame_count)
-        insert(world.node_tree, background.inputs["Strength"], "default_value", strengths)
+        turns = curve_of(points_of(ctx, keys, where, lambda key, at: finite(key.get("value"), at + ".value")), ctx.frame_count)
+        # Turning the direction the image is looked up by one way turns the image the other way.
+        insert(world.node_tree, mapping.inputs["Rotation"], "default_value",
+               with_each_value(turns, lambda degrees: [0.0, 0.0, -math.radians(degrees)]))
 
-    # The draft's background, as the "look" module sets it: the colour by the strength.
-    if background.inputs["Color"].is_linked:
-        return  # a sky: the draft shows one colour for it throughout
+    # The draft's background, as the "look" module sets it: the colour by the strength the
+    # camera sees.
+    if background is None or background.inputs["Color"].is_linked:
+        return  # a sky or an image: the draft shows one colour for it throughout
     colour_now = list(background.inputs["Color"].default_value[:3])
-    strength_now = background.inputs["Strength"].default_value
-    if strengths is None:
-        insert(world, world, "color",
-               with_each_value(colours, lambda value: [min(1.0, channel * strength_now) for channel in value]))
+    shown = seen if apart else strengths
+    if apart and seen is None:
+        strength_now = look.strength_of(world, look.WORLD_SEEN).default_value
+    else:
+        strength_now = background.inputs["Strength"].default_value
+    if shown is None:
+        if colours is not None:
+            insert(world, world, "color",
+                   with_each_value(colours, lambda value: [min(1.0, channel * strength_now) for channel in value]))
         return
     # A product of two curves is not a curve of the same kind: it gets a key on every frame
     # that is seen.
-    first = min(curve[0][0][0] for curve in (colours, strengths) if curve)
-    last = max(curve[0][-1][0] for curve in (colours, strengths) if curve)
-    shown = []
-    for frame in range(min(first, ctx.frame_count), min(last, ctx.frame_count) + 1):
-        strength = value_at(strengths, frame)
+    first = min(curve[0][0][0] for curve in (colours, shown) if curve)
+    last = max(curve[0][-1][0] for curve in (colours, shown) if curve)
+    drawn = []
+    for frame in range(max(1, min(first, ctx.frame_count)), max(1, min(last, ctx.frame_count)) + 1):
+        strength = value_at(shown, frame)
         value = value_at(colours, frame) if colours else colour_now
-        shown.append((frame, [min(1.0, channel * strength) for channel in value]))
-    insert(world, world, "color", (shown, [EVEN] * (len(shown) - 1)))
+        drawn.append((frame, [min(1.0, channel * strength) for channel in value]))
+    insert(world, world, "color", (drawn, [EVEN] * (len(drawn) - 1)))
 
 
 # ---- the draft ----
@@ -773,8 +862,10 @@ def make_tinted(material):
     if TINTED in tree.nodes:
         return
     shader = surface.links[0].from_node
-    if shader.name == SEE_THROUGH:
-        shader = shader.inputs[2].links[0].from_node
+    # The colour is that of the material's own shader, behind what lets light through it.
+    for wrapper in (SEE_THROUGH, api.CUT_OUT):
+        if shader.name == wrapper:
+            shader = shader.inputs[2].links[0].from_node
     own = shader.inputs.get("Base Color") or shader.inputs.get("Color")
     if own is None:
         raise api.PlanError('the material "%s" has no colour to tint' % material.name)
