@@ -73,6 +73,40 @@ def check_keys(value, keys, where):
                 check_keys(item, keys[key], where + "." + key)
 
 
+# ---- the values of a plan, checked ----
+
+def number(value, where):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value:
+        raise PlanError("%s: a number is needed" % where)
+    return float(value)
+
+
+def unit(value, where):
+    value = number(value, where)
+    if not 0.0 <= value <= 1.0:
+        raise PlanError("%s: a number from 0 to 1 is needed" % where)
+    return value
+
+
+def amount(value, where):
+    value = number(value, where)
+    if value < 0.0 or value == float("inf"):
+        raise PlanError("%s: a number that is not negative is needed" % where)
+    return value
+
+
+def colour(value, where):
+    if not isinstance(value, list) or len(value) != 3:
+        raise PlanError("%s: a colour is three numbers from 0 to 1" % where)
+    return [unit(channel, where) for channel in value]
+
+
+def vector(value, where):
+    if not isinstance(value, list) or len(value) != 3:
+        raise PlanError("%s: three numbers are needed" % where)
+    return [number(part, where) for part in value]
+
+
 def stamp(obj, role, ident):
     """Marks an object the player made, so that other modules, tests and people can find it."""
     obj["thide_role"] = role
@@ -93,6 +127,132 @@ def place(obj, item, where):
             raise PlanError("%s.rotation.axis: an axis needs a direction" % where)
         turn = mathutils.Quaternion(axis.normalized(), math.radians(rotation["degrees"]))
         obj.rotation_euler = turn.to_euler(obj.rotation_mode)
+
+
+def glowing(name, colour, strength):
+    """A new material that emits its colour (r, g, b, a), so that what wears it reads in a cave
+    no light reaches."""
+    import bpy
+
+    material = bpy.data.materials.new(name)
+    material.diffuse_color = colour  # in Blender's solid view
+    material.use_nodes = True
+    tree = material.node_tree
+    tree.nodes.clear()
+    emission = tree.nodes.new("ShaderNodeEmission")
+    emission.inputs["Color"].default_value = colour
+    emission.inputs["Strength"].default_value = strength
+    output = tree.nodes.new("ShaderNodeOutputMaterial")
+    tree.links.new(emission.outputs["Emission"], output.inputs["Surface"])
+    return material
+
+
+def text_facing(camera, name, body, size, material):
+    """A new text, centred on its own origin, that turns to face the camera. It is not in the
+    scene yet (see stand)."""
+    import bpy
+
+    curve = bpy.data.curves.new(name, type="FONT")
+    curve.body = body
+    curve.size = size
+    curve.align_x = "CENTER"
+    curve.align_y = "CENTER"
+    curve.materials.append(material)
+    obj = bpy.data.objects.new(name, curve)
+    face(obj, camera)
+    return obj
+
+
+def face(obj, camera):
+    """Makes an object turn its own +Z to the camera, with its +Y up the picture."""
+    facing = obj.constraints.new(type="TRACK_TO")
+    facing.target = camera
+    facing.track_axis = "TRACK_Z"
+    facing.up_axis = "UP_Y"
+    return facing
+
+
+def ball(name, radius, material):
+    """A new ball about its own origin. It is not in the scene yet (see stand)."""
+    import bmesh
+    import bpy
+
+    shape = bmesh.new()
+    bmesh.ops.create_icosphere(shape, subdivisions=2, radius=radius)
+    mesh = bpy.data.meshes.new(name)
+    shape.to_mesh(mesh)
+    shape.free()
+    mesh.materials.append(material)
+    return bpy.data.objects.new(name, mesh)
+
+
+def stand(scene, obj, at, colour, role, ident):
+    """Puts a text, a marker or the like into the scene at a point, with its role and its id."""
+    import mathutils
+
+    obj.location = at
+    # Where it stands is known at once, not only when the scene is next worked out: a marker
+    # sized by its distance from the camera measures from its own place the first time already.
+    obj.matrix_world = mathutils.Matrix.Translation(at)
+    # What the solid view and the draft look show: they draw no glow. Which of the object's and
+    # the material's colour they take differs between Blender versions, so both are set.
+    obj.color = colour
+    scene.collection.objects.link(obj)
+    stamp(obj, role, ident)
+
+
+TUBE_SIDES = 6
+
+
+def tube(points, colours, radius, vertices, faces, vertex_colours):
+    """Adds a tube through the points (mathutils vectors) to a mesh being made, as lists of
+    vertices and faces, and returns how many straight pieces it has. A ring of vertices stands
+    about every point, across the way the tube runs there (at a bend: half-way between the way
+    in and the way out), and is carried from point to point without a twist. Points that lie on
+    the point before them are left out. colours, when given, has a colour for every point, which
+    every vertex of its ring gets in vertex_colours."""
+    import mathutils
+
+    kept, kept_colours = [points[0]], [colours[0]] if colours else None
+    for index in range(1, len(points)):
+        if (points[index] - kept[-1]).length > 1e-9:
+            kept.append(points[index])
+            if colours:
+                kept_colours.append(colours[index])
+    if len(kept) < 2:
+        return 0
+    ways = [(b - a).normalized() for a, b in zip(kept, kept[1:])]
+
+    first = len(vertices)
+    along = ways[0]
+    # Any direction across the first piece: the frame's axis the piece runs least along.
+    across = along.cross(mathutils.Vector(min(((1, 0, 0), (0, 1, 0), (0, 0, 1)), key=lambda axis: abs(along.dot(axis)))))
+    across.normalize()
+    for index, point in enumerate(kept):
+        if 0 < index < len(kept) - 1:
+            way = ways[index - 1] + ways[index]
+            way = way.normalized() if way.length > 1e-6 else ways[index].copy()  # it doubles back
+        else:
+            way = ways[min(index, len(ways) - 1)]
+        across = along.rotation_difference(way) @ across
+        along = way
+        side = along.cross(across)
+        for step in range(TUBE_SIDES):
+            angle = 2.0 * math.pi * step / TUBE_SIDES
+            vertices.append(point + radius * (math.cos(angle) * across + math.sin(angle) * side))
+            if colours:
+                vertex_colours.append(kept_colours[index])
+
+    for index in range(len(kept) - 1):
+        ring, following = first + index * TUBE_SIDES, first + (index + 1) * TUBE_SIDES
+        for step in range(TUBE_SIDES):
+            onward = (step + 1) % TUBE_SIDES
+            faces.append((ring + step, ring + onward, following + onward, following + step))
+    # Closed at both ends, each end facing away from the tube.
+    last = first + (len(kept) - 1) * TUBE_SIDES
+    faces.append(tuple(first + step for step in reversed(range(TUBE_SIDES))))
+    faces.append(tuple(last + step for step in range(TUBE_SIDES)))
+    return len(kept) - 1
 
 
 def with_role(scene, role):

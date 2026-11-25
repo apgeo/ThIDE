@@ -3,7 +3,8 @@
 // plan, its mesh, the player and run scripts in one zip) and optionally render that. A render can
 // be a quick draft (--draft), built by either scene builder (--builder), keep its frames
 // (--keep-frames) and be written again from them after a text changed (--compose-only); a
-// render in two stages that is stopped goes on when the same command is run again. Kept in its
+// render in two stages that is stopped goes on when the same command is run again. Labels,
+// callouts, markers and photos come from a JSON file (--annotations). Kept in its
 // own class (not a Program.cs local function) so it is unit-testable with in-memory writers and no
 // real Blender.
 
@@ -114,6 +115,9 @@ public static class BlenderVerb
             if (Option(args, "--export") is { } exportDir)
             {
                 var scriptPath = await service.ExportScriptAsync(spec, renderSource, exportDir, progress).ConfigureAwait(false);
+                // An exported script is the script generator's: what only the player draws is not in it.
+                if (SceneBuilders.NotDrawnByTheGenerator(spec) is { Count: > 0 } notDrawn)
+                    stderr.WriteLine($"warning: the exported script does not show {string.Join(", ", notDrawn)}");
                 stdout.WriteLine(scriptPath);
                 stderr.WriteLine($"exported script + assets to {exportDir}");
                 return 0;
@@ -355,7 +359,38 @@ public static class BlenderVerb
             }
             spec = preset.Spec;
         }
-        return TryAddTexts(args, stderr, ref spec);
+        return TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec);
+    }
+
+    /// <summary>
+    /// The annotations of every <c>--annotations &lt;file.json&gt;</c>, added to the preset's or
+    /// the spec's: labels, callouts, markers and photos, each at a station or a point. A photo's
+    /// image is named relative to the file it is listed in.
+    /// </summary>
+    private static bool TryAddAnnotations(IReadOnlyList<string> args, TextWriter stderr, ref SceneSpec spec)
+    {
+        var added = new List<AnnotationSpec>();
+        foreach (string file in Options(args, "--annotations"))
+        {
+            if (!File.Exists(file))
+            {
+                stderr.WriteLine($"error: annotations file not found: {file}");
+                return false;
+            }
+            try { added.AddRange(AnnotationsFile.ReadFile(file)); }
+            catch (SceneSpecFormatException ex)
+            {
+                stderr.WriteLine($"error: bad annotations file '{file}': {ex.Message}");
+                return false;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                stderr.WriteLine($"error: {ex.Message}");
+                return false;
+            }
+        }
+        if (added.Count > 0) spec = spec with { Annotations = [.. spec.Annotations, .. added] };
+        return true;
     }
 
     /// <summary>

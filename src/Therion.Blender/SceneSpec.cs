@@ -197,6 +197,11 @@ public sealed record SceneSpec
     /// <summary>The terrain surface above the cave (off by default).</summary>
     public SurfaceSpec Surface { get; init; } = new();
 
+    /// <summary>Labels, callouts, markers and photos that point things out in the scene, each
+    /// at a station or a point, for the whole clip, for a time, or while the camera is near.
+    /// Drawn by the player only.</summary>
+    public IReadOnlyList<AnnotationSpec> Annotations { get; init; } = [];
+
     public AnimationSpec Animation { get; init; } = new();
 
     public OutputSpec Output { get; init; } = new();

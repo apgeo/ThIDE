@@ -162,6 +162,104 @@ public class BlenderBundleVerbTests : IDisposable
         Assert.Contains("out/cave-render.srt and cave-render.vtt", readme);
     }
 
+    // ---- annotations ----
+
+    /// <summary>A picture of one white pixel: the smallest PNG there is.</summary>
+    private static readonly byte[] OnePixelPng = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+
+    private string Annotations(string json, string name = "notes.json")
+    {
+        string folder = Path.Combine(_dir, "trip");
+        Directory.CreateDirectory(Path.Combine(folder, "pictures"));
+        File.WriteAllBytes(Path.Combine(folder, "pictures", "the hall.png"), OnePixelPng);
+        File.WriteAllText(Path.Combine(folder, "pictures", "notes.png"), "not a picture");
+        string file = Path.Combine(folder, name);
+        File.WriteAllText(file, json);
+        return file;
+    }
+
+    [Fact]
+    public async Task Bundle_WithAnnotations_HasThemInItsPlan_AndTheirPhotosBesideIt()
+    {
+        string file = Annotations("""
+            [
+              { "id": "way-in", "kind": "callout", "station": "main0", "text": "Intrarea" },
+              { "kind": "photo", "station": "main6", "image": "pictures/the hall.png", "size": 4, "from": 2, "to": 6 },
+              { "kind": "marker", "station": "side3", "within": 0.001 }
+            ]
+            """);
+        string zip = Path.Combine(_dir, "annotated.zip");
+
+        var (code, _, stderr) = await Run("blender", _lox, "--bundle", zip, "--draft", "--annotations", file);
+
+        Assert.True(code == 0, stderr);
+        var entries = Entries(zip);
+        Assert.Contains("photos/the_hall.png", entries);
+        Assert.Contains("thide_player/modules/annotations.py", entries);
+        using var archive = ZipFile.OpenRead(zip);
+        string Text(string path)
+        {
+            using var reader = new StreamReader(archive.GetEntry("annotated/" + path)!.Open());
+            return reader.ReadToEnd();
+        }
+        foreach (string planFile in new[] { "scene-plan.json", "scene-plan.draft.json" })
+        {
+            var plan = Therion.Blender.Plan.ScenePlanSerializer.Read(Text(planFile));
+            Assert.Equal(["way-in", "annotation-2", "annotation-3"], plan.Annotations!.Select(a => a.Id));
+            Assert.Equal("photos/the_hall.png", plan.Annotations![1].Image);
+            Assert.Contains("annotations", plan.Features);
+            // The photo is there from two seconds to six, with the half second it takes to appear and to go.
+            var shown = plan.Changes!.Single(c => c.Target?.Id == "annotation-2").Visible!;
+            Assert.Equal([(2, true, 0.5), (5.5, false, 0.5)], shown.Select(k => (k.T, k.Value, k.Fade)));
+        }
+        Assert.Contains("photos/the_hall.png", Text("README.txt"));
+        Assert.Contains("a photo shown in the scene", Text("README.txt"));
+        Assert.Contains("warning: the camera never comes within 0.001 m of the annotation 'annotation-3'; it is not shown", stderr);
+    }
+
+    [Theory]
+    [InlineData("""[{ "kind": "marker", "station": "no.such" }]""", 2, "the model has no station 'no.such'")]
+    [InlineData("""[{ "kind": "marker", "staton": "main0" }]""", 2, "bad annotations file")]
+    [InlineData("""[{ "kind": "marker" }]""", 2, "annotations[0].station")]
+    [InlineData("""{ "kind": "marker" }""", 2, "a list of annotations")]
+    [InlineData("""[{ "kind": "photo", "station": "main0", "image": "pictures/notes.png" }]""", 2, "neither a PNG nor a JPEG")]
+    [InlineData("""[{ "kind": "photo", "station": "main0", "image": "pictures/gone.png" }]""", 1, "gone.png")]
+    public async Task AnnotationsThatCannotBeUsed_AreAnError_AndWriteNoBundle(string json, int exitCode, string said)
+    {
+        string zip = Path.Combine(_dir, "refused.zip");
+
+        var (code, _, stderr) = await Run("blender", _lox, "--bundle", zip, "--annotations", Annotations(json));
+
+        Assert.Equal(exitCode, code);
+        Assert.Contains(said, stderr);
+        Assert.False(File.Exists(zip));
+    }
+
+    [Fact]
+    public async Task AnExportedScript_IsTheGenerators_AndSaysItLeavesAnnotationsOut()
+    {
+        string folder = Path.Combine(_dir, "exported");
+        string file = Annotations("""[{ "kind": "marker", "station": "main0" }]""");
+
+        var (code, stdout, stderr) = await Run("blender", _lox, "--export", folder, "--annotations", file, "--caption", "1-2:Sala Mare");
+
+        Assert.True(code == 0, stderr);
+        Assert.Equal(Path.Combine(folder, "render.py"), stdout.Trim());
+        Assert.Contains("warning: the exported script does not show labels.overlays.captions, annotations", stderr);
+        // Without anything only the player draws, an export says nothing of the kind.
+        Assert.DoesNotContain("warning", (await Run("blender", _lox, "--export", folder)).Err);
+    }
+
+    [Fact]
+    public async Task AnAnnotationsFileThatIsNotThere_IsAUsageError()
+    {
+        var (code, _, stderr) = await Run("blender", _lox, "--bundle", Path.Combine(_dir, "none.zip"), "--annotations", Path.Combine(_dir, "nowhere.json"));
+
+        Assert.Equal(2, code);
+        Assert.Contains("annotations file not found", stderr);
+    }
+
     [Theory]
     [InlineData("--caption", "Sala Mare")]
     [InlineData("--caption", "5-2:ends before it starts")]

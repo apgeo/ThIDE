@@ -42,6 +42,26 @@ public static class SceneSpecSerializer
     /// the same hash, as before they existed.</summary>
     private static void WriteLaterTextsOnlyWhenSet(JsonTypeInfo type)
     {
+        // The annotations came later still, and are written under the same rule.
+        if (type.Type == typeof(SceneSpec))
+        {
+            foreach (var property in type.Properties)
+                if (property.Name == "annotations")
+                    property.ShouldSerialize = (_, value) => value is IReadOnlyList<AnnotationSpec> { Count: > 0 };
+        }
+        if (type.Type == typeof(AnnotationSpec))
+        {
+            // An annotation says what it has; what it leaves to the defaults is not written.
+            foreach (var property in type.Properties)
+                property.ShouldSerialize = property.Name switch
+                {
+                    "kind" => null,
+                    "facing" => (_, value) => value is PhotoFacing.Fixed,
+                    "framed" => (_, value) => value is true,
+                    "fade" => (_, value) => value is not 0.5,
+                    _ => (_, value) => value is not null,
+                };
+        }
         if (type.Type == typeof(EndCardSpec))
         {
             foreach (var property in type.Properties)

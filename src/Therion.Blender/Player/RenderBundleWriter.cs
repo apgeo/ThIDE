@@ -13,7 +13,8 @@
 //   scene-plan.draft.json   the same plan with a fast look (optional)
 //   thide_player/...        the player
 //   model.ply ...           the meshes, the images and any other file the plan names, at their
-//                           plan paths (surface.ply and surface.png are a terrain and its image)
+//                           plan paths (surface.ply and surface.png are a terrain and its image,
+//                           photos/ holds the photos of the annotations)
 //
 // The files come from disk or from whoever makes the bundle, as streams. The README is in English
 // or in Romanian, and whoever makes the bundle may give it an opening and sections of their own.
@@ -44,13 +45,15 @@ public sealed record RenderBundleContent
     public ScenePlan? Draft { get; init; }
 
     /// <summary>The files the plans name, as plan path → the file on disk: every model's mesh,
-    /// every material's image, and the modules of the plan's module folders.</summary>
+    /// every material's image, every photo, and the modules of the plan's module folders. A
+    /// photo is checked when the bundle is written: a PNG or a JPEG, no larger than
+    /// <see cref="PlanImage"/> allows.</summary>
     public IReadOnlyDictionary<string, string> Files { get; init; } = new Dictionary<string, string>();
 
     /// <summary>More files the plans name, as plan path → what opens the file's content, for
     /// content that is not on disk: a mesh that was just made, a module. Each is opened once
-    /// for every time the bundle is written, read to its end and closed. A path is in
-    /// <see cref="Files"/> or here, not in both.</summary>
+    /// for every time the bundle is written, read to its end and closed; a photo is opened a
+    /// second time, to be checked. A path is in <see cref="Files"/> or here, not in both.</summary>
     public IReadOnlyDictionary<string, Func<Stream>> Streams { get; init; } = new Dictionary<string, Func<Stream>>();
 
     /// <summary>The language the README is written in: "en" or "ro"
@@ -174,16 +177,18 @@ public static class RenderBundleWriter
         };
         var plan = ScenePlanBuilder.FromSpec(placed, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
         // What the plan names of what the conversion wrote: the mesh, and the terrain with its
-        // image when the plan draws them.
+        // image when the plan draws them; and the photos, where the spec has them.
         var written = new[] { manifest.ModelPath, manifest.SurfacePath, manifest.SurfaceImagePath }.OfType<string>();
-        var files = PlayerWriter.FilesOf(plan).ToDictionary(f => f.Path, f => written.First(w => Path.GetFileName(w) == f.Path));
+        var photos = ScenePlanBuilder.AnnotationFiles(spec);
+        var files = PlayerWriter.FilesOf(plan).ToDictionary(
+            f => f.Path, f => photos.TryGetValue(f.Path, out string? photo) ? photo : written.First(w => Path.GetFileName(w) == f.Path));
         return new RenderBundleContent
         {
             Plan = plan,
             Draft = draft ? ScenePlanBuilder.Draft(plan) : null,
             Files = files,
             NotCarried = ScenePlanBuilder.NotCarried(spec),
-            Notices = ScenePlanBuilder.Notices(placed, conversion.Meta),
+            Notices = ScenePlanBuilder.Notices(placed, conversion.Meta, CameraFraming.FromGeometry(conversion.Geometry)),
             Captions = plan.Output.Kind == PlanOutputKind.Still ? [] : Subtitles.OneAtATime(spec.Labels.Overlays.Captions),
         };
     }
@@ -220,7 +225,7 @@ public static class RenderBundleWriter
     /// <exception cref="ArgumentException">A plan is invalid; its output directory does not lie
     /// beside it; a path of <see cref="RenderBundleContent.Files"/> is not a path inside the
     /// bundle or is one the bundle uses itself; a model's file or a module folder is not among
-    /// the files.</exception>
+    /// the files; a photo's file is not an image a plan carries.</exception>
     /// <exception cref="FileNotFoundException">A file of
     /// <see cref="RenderBundleContent.Files"/> does not exist.</exception>
     public static IReadOnlyList<string> WriteZip(RenderBundleContent content, Stream destination, string name)
@@ -416,7 +421,9 @@ public static class RenderBundleWriter
             files.Add((path, plan.Models.Any(m => Normalized(m.Path) == path) ? T("a model's mesh", "rețeaua de poligoane a unui model")
                 : (plan.TexturedMaterials ?? []).Any(m => m.Image is { } image && Normalized(image) == path)
                     ? T("the image of a material", "imaginea unui material")
-                    : T("a file the plan names", "un fișier numit de plan")));
+                    : (plan.Annotations ?? []).Any(a => a.Image is { } image && Normalized(image) == path)
+                        ? T("a photo shown in the scene", "o fotografie afișată în scenă")
+                        : T("a file the plan names", "un fișier numit de plan")));
         int width = files.Max(f => f.Item1.Length) + 2;
         foreach (var (path, what) in files)
             Line("  " + path.PadRight(width) + what);
@@ -543,11 +550,16 @@ public static class RenderBundleWriter
                 throw new ArgumentException($"'{planPath}' has nothing to open it.", nameof(content));
             Add(planPath, () => open() ?? throw new InvalidOperationException($"What opens '{planPath}' gave no stream."));
         }
+        var checkedPhotos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var plan in new[] { content.Plan, content.Draft }.OfType<ScenePlan>())
         {
+            var photos = PlayerWriter.PhotosOf(plan);
             foreach (var (path, what) in PlayerWriter.FilesOf(plan))
-                if (!files.ContainsKey(Normalized(path)))
+            {
+                if (!files.TryGetValue(Normalized(path), out var open))
                     throw new ArgumentException($"The file of {what} ({path}) is not among the bundle's files.", nameof(content));
+                if (photos.Contains(path) && checkedPhotos.Add(Normalized(path))) PlayerWriter.CheckPhoto(path, what, open);
+            }
             foreach (string folder in plan.ModuleFolders)
                 if (!files.Keys.Any(f => f.StartsWith(Normalized(folder) + "/", StringComparison.OrdinalIgnoreCase)))
                     throw new ArgumentException($"The module folder '{folder}' has no files in the bundle.", nameof(content));

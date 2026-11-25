@@ -264,7 +264,7 @@ public class ScenePlanValidatorTests
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "scene.blend1" } }, "blend.path");
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "" } }, "blend.path");
         AssertBad(Full with { Features = ScenePlan.BasicFeatures }, "blend");
-        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Lines = null, Labels = null, Changes = null, Texts = null, TexturedMaterials = null, Features = ScenePlan.BasicFeatures }));
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Lines = null, Labels = null, Annotations = null, Changes = null, Texts = null, TexturedMaterials = null, Features = ScenePlan.BasicFeatures }));
         Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = new PlanBlendFile { Path = "Scene.BLEND" }, Output = Full.Output with { Render = false } }));
     }
 

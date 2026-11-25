@@ -139,6 +139,31 @@ internal static class PlanFixtures
                 ],
             },
         },
+        Annotations =
+        [
+            new PlanAnnotation
+            {
+                Id = "hall", Role = "place-name", Kind = PlanAnnotationKind.Label, At = new CaveVector3(12, -3, 1.5), Model = "CaveModel",
+                Text = "Sala \"Mare\"", Size = 1.4, Color = new ColorRgb(0.9, 0.95, 1), Strength = 2.5,
+            },
+            new PlanAnnotation
+            {
+                Id = "sump", Kind = PlanAnnotationKind.Callout, At = new CaveVector3(40, -8, -12), Text = "two\nlines", Size = 0.8,
+                Offset = new CaveVector3(2, 0, 6), LineWidth = 0.05,
+            },
+            new PlanAnnotation { Id = "dig", Kind = PlanAnnotationKind.Marker, At = new CaveVector3(-4, 0, 0.25), Radius = 0.6, Color = new ColorRgb(1, 0.8, 0) },
+            new PlanAnnotation
+            {
+                Id = "photo-hall", Kind = PlanAnnotationKind.Photo, At = new CaveVector3(12, -3, 1.5), Image = "photos/hall.jpg",
+                Width = 6, Height = 4, Offset = new CaveVector3(0, 0, 5), LineWidth = 0.06, Strength = 1.2,
+                Frame = new PlanPhotoFrame { Width = 0.12, Color = new ColorRgb(1, 1, 1) },
+            },
+            new PlanAnnotation
+            {
+                Id = "notice", Role = "notice-board", Kind = PlanAnnotationKind.Photo, At = new CaveVector3(1.5, 2, 3), Image = "photos/notice.png",
+                Width = 2, Facing = PlanFacing.Fixed, Normal = new CaveVector3(0, -1, 0.2), Up = new CaveVector3(0, 0, 1),
+            },
+        ],
         Changes =
         [
             new PlanChange
@@ -188,6 +213,13 @@ internal static class PlanFixtures
             new PlanChange
             {
                 WorldStrength = [new PlanNumberKey(0, 0.5), new PlanNumberKey(1.2, 0.05)],
+            },
+            // A photo that is there from one time to another, and takes a while to appear and to go.
+            new PlanChange
+            {
+                Target = new PlanChangeTarget { Id = "photo-hall" },
+                Visible = [new PlanVisibleKey(0.4, true, 0.2), new PlanVisibleKey(1.4, false, 0.2, PlanEasing.Smooth)],
+                Opacity = [new PlanNumberKey(0, 0.9)],
             },
         ],
         Texts = new PlanScreenTexts

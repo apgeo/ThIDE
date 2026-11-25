@@ -421,6 +421,50 @@ public sealed class BlenderRenderToolsTests : IDisposable
             overlays.Captions);
     }
 
+    [Fact]
+    public async Task Annotations_come_from_a_file_of_the_workspace_with_their_photos_named_from_where_it_lies()
+    {
+        Directory.CreateDirectory(_fixture.PathTo("trip", "pictures"));
+        File.WriteAllBytes(_fixture.PathTo("trip", "pictures", "hall.png"), [1, 2, 3]);
+        File.WriteAllText(_fixture.PathTo("trip", "notes.json"), """
+            [
+              { "id": "way-in", "kind": "callout", "station": "a0", "text": "Intrarea", "from": 1, "to": 4 },
+              { "kind": "photo", "at": [10, 20, -5], "image": "pictures/hall.png", "within": 30 }
+            ]
+            """);
+        var (render, status) = await ToolsAsync();
+
+        var started = await render.StartRender(model: "out/cave.3d", annotations: "trip/notes.json");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+
+        var annotations = _blender.Renderer.LastSpec!.Annotations;
+        Assert.Equal(new AnnotationSpec { Id = "way-in", Kind = AnnotationKind.Callout, Station = "a0", Text = "Intrarea", From = 1, To = 4 }, annotations[0]);
+        Assert.Equal((AnnotationKind.Photo, new CaveVector3(10, 20, -5), 30.0), (annotations[1].Kind, annotations[1].At!.Value, annotations[1].Within!.Value));
+        Assert.Equal(WorkspacePaths.Canonicalize(_fixture.PathTo("trip", "pictures", "hall.png")), annotations[1].Image);
+    }
+
+    [Theory]
+    [InlineData("../outside.json", "[]", ToolErrorCodes.PathOutsideWorkspace, "outside")]
+    [InlineData("trip/none.json", null, ToolErrorCodes.FileNotFound, "No such file: trip/none.json")]
+    [InlineData("trip/notes.json", "{ \"kind\": \"label\" }", ToolErrorCodes.InvalidArgument, "is not a list of annotations")]
+    [InlineData("trip/notes.json", "[{ \"kind\": \"label\", \"staton\": \"a0\" }]", ToolErrorCodes.InvalidArgument, "staton")]
+    [InlineData("trip/notes.json", "[{ \"kind\": \"label\", \"station\": \"a0\" }]", ToolErrorCodes.InvalidArgument, "annotations[0].text")]
+    [InlineData("trip/notes.json", "[{ \"kind\": \"photo\", \"station\": \"a0\", \"image\": \"../../elsewhere/hall.png\" }]", ToolErrorCodes.PathOutsideWorkspace, "lies outside the workspace")]
+    [InlineData("trip/notes.json", "[{ \"kind\": \"photo\", \"station\": \"a0\", \"image\": \"gone.png\" }]", ToolErrorCodes.FileNotFound, "No such file: trip/gone.png")]
+    public async Task Annotations_that_cannot_be_used_are_refused_before_a_job_starts(string file, string? json, string code, string said)
+    {
+        Directory.CreateDirectory(_fixture.PathTo("trip"));
+        if (json is not null && !file.StartsWith("..", StringComparison.Ordinal)) File.WriteAllText(_fixture.PathTo("trip", "notes.json"), json);
+        var (render, _) = await ToolsAsync();
+
+        var refused = await render.StartRender(model: "out/cave.3d", annotations: file);
+
+        Assert.Equal(code, refused.Error!.Code);
+        Assert.Contains(said, refused.Error.Message);
+        Assert.Empty(_blender.Requests);
+    }
+
     [Theory]
     [InlineData("Sala Mare")]
     [InlineData("4-2:backwards")]

@@ -19,8 +19,15 @@ public class PlayerWriterTests : IDisposable
         try { Directory.Delete(_dir, recursive: true); } catch { /* best effort */ }
     }
 
-    /// <summary>The full plan with only its first model, whose file the tests invent.</summary>
-    private static ScenePlan OneModelPlan => PlanFixtures.Full() with { Models = [PlanFixtures.Full().Models[0]], TexturedMaterials = null };
+    /// <summary>The full plan with only its first model, whose file the tests invent, and
+    /// without its photos, whose files they would have to invent too.</summary>
+    private static ScenePlan OneModelPlan => PlanFixtures.Full() with
+    {
+        Models = [PlanFixtures.Full().Models[0]],
+        TexturedMaterials = null,
+        Annotations = [.. PlanFixtures.Full().Annotations!.Where(a => a.Image is null)],
+        Changes = [.. PlanFixtures.Full().Changes!.Where(c => c.Target?.Id != "photo-hall")],
+    };
 
     private string MeshFile(string name = "source.ply")
     {
@@ -41,6 +48,7 @@ public class PlayerWriterTests : IDisposable
                 "thide_player/api.py",
                 "thide_player/core.py",
                 "thide_player/modules/__init__.py",
+                "thide_player/modules/annotations.py",
                 "thide_player/modules/blend_file.py",
                 "thide_player/modules/camera_track.py",
                 "thide_player/modules/changes.py",
@@ -153,13 +161,21 @@ public class PlayerWriterTests : IDisposable
         var missing = Assert.Throws<FileNotFoundException>(() => PlayerWriter.WriteJob(PlanFixtures.Full(), folder, files));
         Assert.Contains("material 'Terrain'", missing.Message);
         files["maps/surface.png"] = MeshFile();
+        // And so is the image of a photo.
+        missing = Assert.Throws<FileNotFoundException>(() => PlayerWriter.WriteJob(PlanFixtures.Full(), folder, files));
+        Assert.Contains("photo 'photo-hall'", missing.Message);
+        string picture = Path.Combine(_dir, "picture.png");
+        File.WriteAllBytes(picture, SceneProbe.Png.EncodeRgb(2, 1, [255, 0, 0, 0, 0, 255]));
+        files["photos/hall.jpg"] = picture;
+        files["photos/notice.png"] = picture;
         PlayerWriter.WriteJob(PlanFixtures.Full(), folder, files);
 
         Assert.Equal([9], File.ReadAllBytes(Path.Combine(folder, "model.ply")));
         Assert.True(File.Exists(Path.Combine(folder, "meshes", "far.glb")));
         Assert.True(File.Exists(Path.Combine(folder, "maps", "surface.png")));
+        Assert.True(File.Exists(Path.Combine(folder, "photos", "notice.png")));
         Assert.Equal(
-            ["model.ply", "meshes/far.glb", "surface.ply", "maps/surface.png"],
+            ["model.ply", "meshes/far.glb", "surface.ply", "maps/surface.png", "photos/hall.jpg", "photos/notice.png"],
             PlayerWriter.FilesOf(PlanFixtures.Full()).Select(f => f.Path));
     }
 

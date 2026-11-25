@@ -67,6 +67,12 @@ public static partial class ScenePlanValidator
         }
 
         // An empty list is what the section's name was reserved with: it needs no module.
+        if (plan.Annotations is { Count: > 0 } annotations)
+        {
+            ValidateAnnotations(plan, annotations, Bad);
+            NeedsFeature(plan, "annotations", ScenePlan.AnnotationsFeature, Bad);
+        }
+
         if (plan.Changes is { Count: > 0 } changes)
         {
             ValidateChanges(plan, changes, Bad);
@@ -447,16 +453,149 @@ public static partial class ScenePlanValidator
         }
     }
 
+    /// <summary>What an annotation of each kind may say beside what every annotation says.</summary>
+    private static readonly Dictionary<PlanAnnotationKind, string[]> AnnotationFields = new()
+    {
+        [PlanAnnotationKind.Label] = ["text", "size", "color", "strength"],
+        [PlanAnnotationKind.Callout] = ["text", "size", "offset", "lineWidth", "color", "strength"],
+        [PlanAnnotationKind.Marker] = ["radius", "color", "strength"],
+        [PlanAnnotationKind.Photo] = ["image", "width", "height", "facing", "normal", "up", "frame", "offset", "lineWidth", "strength"],
+    };
+
+    private static void ValidateAnnotations(ScenePlan plan, IReadOnlyList<PlanAnnotation> annotations, Action<string, string> bad)
+    {
+        // An annotation turns to the camera and may ride a model or a line, and a change finds it
+        // in the scene: it is made after the first three and before the last.
+        var features = plan.Features.ToList();
+        int made = features.IndexOf(ScenePlan.AnnotationsFeature);
+        if (made >= 0)
+        {
+            var ridden = annotations.Where(a => a?.Model is not null).Select(a => a.Model!).ToHashSet(StringComparer.Ordinal);
+            var before = new List<string> { "camera_track" };
+            if (plan.Models.Any(m => ridden.Contains(m.Id))) before.Add("models");
+            if ((plan.Lines ?? []).Any(l => l is not null && ridden.Contains(l.Id))) before.Add(ScenePlan.LinesFeature);
+            foreach (string maker in before)
+                if (features.IndexOf(maker) > made)
+                    bad("features", $"'{ScenePlan.AnnotationsFeature}' is listed before '{maker}', which makes what an annotation turns to or rides on; list it after.");
+            int changed = features.IndexOf(ScenePlan.ChangesFeature);
+            if (changed >= 0 && changed < made)
+                bad("features", $"'{ScenePlan.AnnotationsFeature}' is listed after '{ScenePlan.ChangesFeature}', which changes what it makes; list it before.");
+        }
+
+        var models = plan.Models.Select(m => m.Id).Concat((plan.Lines ?? []).Where(l => l is not null).Select(l => l.Id))
+            .ToHashSet(StringComparer.Ordinal);
+        // Everything the plan names in the scene: an annotation is found by its id among them.
+        var taken = new HashSet<string>(models, StringComparer.Ordinal);
+        taken.UnionWith((plan.Labels?.Texts?.Items ?? []).Select(t => t.Id));
+        taken.UnionWith((plan.Labels?.Markers?.Items ?? []).Select(m => m.Id));
+        taken.UnionWith(plan.Look.Lights.Select(l => l.Id));
+
+        for (int i = 0; i < annotations.Count; i++)
+        {
+            var a = annotations[i];
+            string path = $"annotations[{i}]";
+            if (a is null)
+            {
+                bad(path, "An annotation is missing.");
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(a.Id))
+                bad(path + ".id", "An annotation needs an id.");
+            else if (!taken.Add(a.Id))
+                bad(path + ".id", $"The id '{a.Id}' is used twice among the plan's models, lines, labels, lights and annotations.");
+            if (a.Role is not null && !RoleName().IsMatch(a.Role))
+                bad(path + ".role", "A role is lower-case letters and digits, in words joined by '-'.");
+            if (!IsFinite(a.At))
+                bad(path + ".at", "The anchor must be finite.");
+            if (a.Model is not null && !models.Contains(a.Model))
+                bad(path + ".model", $"The plan has no model or line '{a.Model}'.");
+            if (!AnnotationFields.TryGetValue(a.Kind, out var fields))
+            {
+                bad(path + ".kind", "An annotation is a label, a callout, a marker or a photo.");
+                continue;
+            }
+
+            // A key of another kind would be left out without a word.
+            string kind = PlanAnnotation.DefaultRole(a.Kind);
+            foreach (var (name, set) in new (string, bool)[]
+                     {
+                         ("text", a.Text is not null), ("size", a.Size is not null), ("radius", a.Radius is not null),
+                         ("offset", a.Offset is not null), ("lineWidth", a.LineWidth is not null), ("color", a.Color is not null),
+                         ("strength", a.Strength is not null), ("image", a.Image is not null), ("width", a.Width is not null),
+                         ("height", a.Height is not null), ("facing", a.Facing is not null), ("normal", a.Normal is not null),
+                         ("up", a.Up is not null), ("frame", a.Frame is not null),
+                     })
+                if (set && !fields.Contains(name))
+                    bad($"{path}.{name}", $"A {kind} has no '{name}'.");
+
+            static bool Positive(double? value) => value is { } v && v > 0 && double.IsFinite(v);
+            bool offset = a.Offset is { } o && IsFinite(o) && o.Length > 1e-9;
+            if (a.Offset is { } given && !IsFinite(given))
+                bad(path + ".offset", "The offset must be finite.");
+            if (a.LineWidth is not null && !Positive(a.LineWidth))
+                bad(path + ".lineWidth", "The width of the line must be positive.");
+            if (a.Color is { } color && !IsUnitColor(color))
+                bad(path + ".color", "Colour channels must be within 0–1.");
+            if (a.Strength is { } strength && (!(strength >= 0) || !double.IsFinite(strength)))
+                bad(path + ".strength", "The strength of the glow is not negative.");
+
+            switch (a.Kind)
+            {
+                case PlanAnnotationKind.Label:
+                case PlanAnnotationKind.Callout:
+                    if (string.IsNullOrEmpty(a.Text)) bad(path + ".text", $"A {kind} needs its text.");
+                    if (!Positive(a.Size)) bad(path + ".size", "The size of a text must be positive.");
+                    if (a.Kind == PlanAnnotationKind.Callout && !offset && (a.Offset is null || IsFinite(a.Offset.Value)))
+                        bad(path + ".offset", "A callout's text stands away from its anchor: it needs an offset that is not zero.");
+                    break;
+
+                case PlanAnnotationKind.Marker:
+                    if (!Positive(a.Radius)) bad(path + ".radius", "The radius of a marker must be positive.");
+                    break;
+
+                case PlanAnnotationKind.Photo:
+                    if (!IsPathBesideThePlan(a.Image))
+                        bad(path + ".image", "A photo's image file is named relative to the plan and lies beside it.");
+                    else if (!HasImageExtension(a.Image!))
+                        bad(path + ".image", "An image file is a .png or a .jpg.");
+                    if (!Positive(a.Width)) bad(path + ".width", "The width of a photo must be positive.");
+                    if (a.Height is not null && !Positive(a.Height)) bad(path + ".height", "The height of a photo must be positive.");
+                    if (a.Facing is { } facing && !Enum.IsDefined(facing))
+                        bad(path + ".facing", "A photo faces the 'camera' or is 'fixed'.");
+                    else if (a.Facing == PlanFacing.Fixed)
+                    {
+                        if (a.Normal is not { } normal || !IsFinite(normal) || normal.Length < 1e-9)
+                            bad(path + ".normal", "A fixed photo needs the direction it faces.");
+                        else if (a.Up is { } up && (!IsFinite(up) || up.Cross(normal).Length < 1e-9 * Math.Max(1.0, up.Length * normal.Length)))
+                            bad(path + ".up", "The top of a photo points somewhere off the direction it faces.");
+                    }
+                    else
+                    {
+                        if (a.Normal is not null) bad(path + ".normal", "Only a fixed photo has a direction of its own; this one faces the camera.");
+                        if (a.Up is not null) bad(path + ".up", "Only a fixed photo has a top of its own; this one faces the camera.");
+                    }
+                    if (a.Frame is { } frame)
+                    {
+                        if (!Positive(frame.Width)) bad(path + ".frame.width", "The width of a frame must be positive.");
+                        if (!IsUnitColor(frame.Color)) bad(path + ".frame.color", "Colour channels must be within 0–1.");
+                    }
+                    if (a.LineWidth is not null && !offset)
+                        bad(path + ".lineWidth", "A photo has a line to its anchor only when it stands away from it: give it an offset.");
+                    break;
+            }
+        }
+    }
+
     private enum ThingKind
     {
         /// <summary>A model or a line.</summary>
         Model,
-        /// <summary>A text or a marker.</summary>
+        /// <summary>A text, a marker or an annotation.</summary>
         Label,
         Light,
     }
 
-    /// <summary>What a change can name: a model, a line, a text, a marker or a light.</summary>
+    /// <summary>What a change can name: a model, a line, a text, a marker, an annotation or a light.</summary>
     private sealed record Thing(string Id, string Role, ThingKind Kind, bool HasMaterial);
 
     private static void ValidateChanges(ScenePlan plan, IReadOnlyList<PlanChange> changes, Action<string, string> bad)
@@ -476,6 +615,8 @@ public static partial class ScenePlanValidator
             things.Add(new Thing(text.Id, text.Role ?? "label", ThingKind.Label, HasMaterial: true));
         foreach (var marker in plan.Labels?.Markers?.Items ?? [])
             things.Add(new Thing(marker.Id, marker.Role ?? "marker", ThingKind.Label, HasMaterial: true));
+        foreach (var annotation in (plan.Annotations ?? []).Where(a => a is not null))
+            things.Add(new Thing(annotation.Id, annotation.Role ?? PlanAnnotation.DefaultRole(annotation.Kind), ThingKind.Label, HasMaterial: true));
         foreach (var light in plan.Look.Lights)
             things.Add(new Thing(light.Id, "light", ThingKind.Light, HasMaterial: false));
         bool knowsTheScene = plan.Features.All(f => ScenePlan.PlayerFeatures.Contains(f, StringComparer.Ordinal));
@@ -513,8 +654,8 @@ public static partial class ScenePlanValidator
                     targets = things.Where(t => byId ? t.Id == target.Id : t.Role == target.Role).ToList();
                     if (targets.Count == 0 && knowsTheScene)
                         bad(path + (byId ? ".target.id" : ".target.role"),
-                            byId ? $"The plan has no model, line, text, marker or light with the id '{target.Id}'."
-                                 : $"The plan has no model, line, text, marker or light with the role '{target.Role}'.");
+                            byId ? $"The plan has no model, line, text, marker, annotation or light with the id '{target.Id}'."
+                                 : $"The plan has no model, line, text, marker, annotation or light with the role '{target.Role}'.");
                 }
                 if (change.WorldColor is not null)
                     bad(path + ".worldColor", "The world's colour is a change without a target.");

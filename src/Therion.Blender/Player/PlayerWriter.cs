@@ -25,11 +25,13 @@ public static class PlayerWriter
     /// Writes a job folder: <c>scene-plan.json</c>, <c>render.py</c> and the player's package
     /// <c>thide_player/</c>, which replaces one that is already there.
     /// </summary>
-    /// <param name="files">Files to copy in first, as plan path → the file to copy: the meshes
-    /// and the images of the materials, unless they are in the folder already.</param>
-    /// <exception cref="ArgumentException">The plan is invalid, or a path of
-    /// <paramref name="files"/> does not lie in the folder.</exception>
-    /// <exception cref="FileNotFoundException">A file the plan names is not in the folder.</exception>
+    /// <param name="files">Files to copy in first, as plan path → the file to copy: the meshes,
+    /// the images of the materials and the photos, unless they are in the folder already.</param>
+    /// <exception cref="ArgumentException">The plan is invalid, a path of
+    /// <paramref name="files"/> does not lie in the folder, or a photo's file is not an image a
+    /// plan carries (<see cref="PlanImage"/>).</exception>
+    /// <exception cref="FileNotFoundException">A file the plan names is not in the folder, or a
+    /// file to copy is not there.</exception>
     public static PlayerJob WriteJob(ScenePlan plan, string folder, IReadOnlyDictionary<string, string>? files = null)
     {
         ThrowIfInvalid(plan);
@@ -40,15 +42,19 @@ public static class PlayerWriter
         {
             if (!ScenePlanValidator.IsPathBesideThePlan(planPath))
                 throw new ArgumentException($"'{planPath}' is not a path inside the job folder.", nameof(files));
+            if (!File.Exists(source))
+                throw new FileNotFoundException($"The file for '{planPath}' does not exist: {source}", source);
             string target = InFolder(folder, planPath);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(source, target, overwrite: true);
         }
+        var photos = PhotosOf(plan);
         foreach (var (planPath, what) in FilesOf(plan))
         {
             string path = InFolder(folder, planPath);
             if (!File.Exists(path))
                 throw new FileNotFoundException($"The file of {what} is not in the job folder: {path}", path);
+            if (photos.Contains(planPath)) CheckPhoto(planPath, what, () => File.OpenRead(path));
         }
 
         string package = Path.Combine(folder, PlayerFiles.PackageName);
@@ -80,7 +86,11 @@ public static class PlayerWriter
         var named = FilesOf(plan).Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
         foreach (string path in files.Keys)
             if (!named.Contains(path))
-                throw new ArgumentException($"No model or material of the plan has the path '{path}'.", nameof(files));
+                throw new ArgumentException($"No model, material or photo of the plan has the path '{path}'.", nameof(files));
+        var photos = PhotosOf(plan);
+        foreach (var (path, what) in FilesOf(plan))
+            if (photos.Contains(path) && files.TryGetValue(path, out byte[]? content))
+                CheckPhoto(path, what, () => new MemoryStream(content, writable: false));
 
         var text = new StringBuilder();
         text.Append("# A scene plan and the ThIDE player that renders it, in one file.\n");
@@ -116,8 +126,8 @@ public static class PlayerWriter
         return text.ToString();
     }
 
-    /// <summary>The files a plan names, each with what it is the file of: every model's mesh
-    /// and every material's image.</summary>
+    /// <summary>The files a plan names, each with what it is the file of: every model's mesh,
+    /// every material's image and every photo's.</summary>
     public static IReadOnlyList<(string Path, string What)> FilesOf(ScenePlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -125,7 +135,30 @@ public static class PlayerWriter
         foreach (var material in plan.TexturedMaterials ?? [])
             if (material.Image is { } image && !files.Any(f => f.Path == image))
                 files.Add((image, $"material '{material.Id}'"));
+        foreach (var annotation in plan.Annotations ?? [])
+            if (annotation?.Image is { } image && !files.Any(f => f.Path == image))
+                files.Add((image, $"photo '{annotation.Id}'"));
         return files;
+    }
+
+    /// <summary>The plan paths of the images that are photos: the files that are checked
+    /// before they travel with a plan.</summary>
+    internal static HashSet<string> PhotosOf(ScenePlan plan)
+        => (plan.Annotations ?? []).Where(a => a?.Image is not null).Select(a => a.Image!).ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>Checks that a photo's file is an image a plan carries.</summary>
+    /// <exception cref="ArgumentException">It is not; the message names the plan path.</exception>
+    internal static void CheckPhoto(string planPath, string what, Func<Stream> open)
+    {
+        try
+        {
+            using var stream = open();
+            PlanImage.Check(stream);
+        }
+        catch (PlanImageException ex)
+        {
+            throw new ArgumentException($"The file of {what} ({planPath}) cannot travel with the plan: {ex.Message}.", nameof(planPath));
+        }
     }
 
     private static void ThrowIfInvalid(ScenePlan plan)

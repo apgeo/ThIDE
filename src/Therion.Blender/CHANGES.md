@@ -1,5 +1,195 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-25 — annotations: labels, callouts, markers and photos that point things out
+
+The plan stays **version 1** and everything here is additive to it. The player calls itself
+**1.5**: a player 1.4 refuses a plan that lists the module `annotations` by its name ("the plan
+needs the module "annotations", which this player does not have"), so it never plays an annotated
+plan as a bare one. The script generator is as it was: it draws no annotation, and says so.
+
+### Breaking changes
+- **`ScenePlan.PlayerFeatures` has one more entry**, `annotations`, after `labels`. Migration:
+  none for code that looks a module up by name.
+- **`annotations` is a section of the plan now, not a reserved name.** It is
+  `ScenePlan.Annotations`, no longer an entry of `ScenePlan.Sections`. An empty list reads as it
+  did. A consumer that kept something of its own under that name moves it to a name of its own:
+  a list of other things is now refused by the first key an annotation does not have.
+- **A change's target also finds annotations**, by `id` and by `role` (the role an annotation
+  states, or its kind: `label`, `callout`, `marker`, `photo`). `{ "role": "label" }` and
+  `{ "role": "marker" }` are therefore the plain labels and markers of `labels` *and* the
+  annotations of those kinds. Migration: give either a role of its own.
+- **The id of an annotation is unique among everything the plan names in the scene**: models,
+  lines, the texts and markers of `labels`, lights and annotations.
+- `ScenePlanBuilder.Notices` has a third, optional parameter (the framing); source compatible.
+- In the player, what `labels` and `lines` had for themselves is in `api` for any module:
+  `api.glowing`, `api.text_facing`, `api.face`, `api.ball`, `api.stand`, `api.tube`, and the
+  checks of a value `api.number`, `api.unit`, `api.amount`, `api.colour`, `api.vector`. A module
+  from elsewhere that reached into `labels.glowing`, `labels.place` or `lines.add_tube` calls
+  these instead.
+- The draft's warning about fades has new words: "the draft shows a fade of a text, a marker or
+  a photo as a cut, and no change of its opacity or tint".
+
+### Additive API: annotations in a plan
+
+`ScenePlan.Annotations` (JSON `annotations`, played by the new module `annotations`;
+`ScenePlan.AnnotationsFeature`; `PlanAnnotation`, `PlanAnnotationKind`, `PlanFacing`,
+`PlanPhotoFrame`). Each annotation has an `id`, a `kind` and an anchor `at`, the point it is
+about, and everything of it is given: nothing is laid out in Blender.
+
+```json
+"features": ["models", "camera_track", "look", "annotations", "changes", "output"],
+"annotations": [
+  { "id": "hall", "kind": "label", "at": [12, -3, 1.5], "text": "Sala Mare", "size": 1.4 },
+  { "id": "sump", "kind": "callout", "at": [40, -8, -12], "text": "Sifon", "size": 0.8, "offset": [2, 0, 6] },
+  { "id": "dig", "kind": "marker", "at": [-4, 0, 0.25], "radius": 0.6, "color": [1, 0.8, 0] },
+  { "id": "view", "kind": "photo", "at": [12, -3, 1.5], "image": "photos/hall.jpg", "width": 6,
+    "offset": [0, 0, 5], "lineWidth": 0.06, "frame": { "width": 0.12 } },
+  { "id": "notice", "kind": "photo", "at": [1.5, 2, 3], "image": "photos/notice.png", "width": 2,
+    "facing": "fixed", "normal": [0, -1, 0] }
+],
+"changes": [
+  { "target": { "id": "view" },
+    "visible": [ { "t": 4, "value": true, "fade": 0.5 }, { "t": 8.5, "value": false, "fade": 0.5 } ] }
+]
+```
+
+| Kind | What it is | Needs | May have |
+|---|---|---|---|
+| `label` | a text centred on the anchor, turned to the camera as the plan's labels are | `text`, `size` (letter height, m) | `color`, `strength` |
+| `callout` | a text that stands `offset` away from the anchor, with a line from the anchor to it. The text stands on the end of the line: above it when the offset points up, below it otherwise | `text`, `size`, `offset` (not zero) | `lineWidth` (default a twelfth of `size`), `color`, `strength` |
+| `marker` | a glowing ball on the anchor | `radius` | `color`, `strength` |
+| `photo` | a picture from an image file, centred on the anchor, or `offset` away from it with a line to the anchor when `lineWidth` is given | `image` (.png, .jpg), `width` | `height` (default: the image's own shape), `facing`, `normal`, `up`, `frame { width, color }`, `offset`, `lineWidth`, `strength` |
+
+- **A key of another kind is refused**, by the validator and by the player ("a marker has no
+  "text""): it would otherwise be left out without a word.
+- **Colours.** A text glows cream and a marker orange-red unless it has a `color` of its own
+  (one material for each colour and strength in use): this is the per-item colour the `labels`
+  section does not have.
+- **A photo that faces the camera** (`"facing": "camera"`, the default) stays parallel to the
+  picture and upright in it, wherever the camera is and however it is turned, roll included: it
+  is always seen as the rectangle it is. (A text turns to where the camera *stands*, as the
+  plan's labels do.) **A fixed photo** (`"facing": "fixed"`) faces along `normal` with its top
+  towards `up` (default up, or north for one that lies flat) and stays so: a card that stands in
+  the scene, seen from both sides.
+- **A photo shows its image as a screen would**: it emits the image's colours, so it reads in an
+  unlit cave and no lamp changes it, and it lights nothing itself and casts no shadow. Its
+  colours pass through Blender's view transform with the rest of the picture. `strength`
+  (default 1) is how bright it is. The image is drawn whole and solid: the transparency of a PNG
+  is not used.
+- **A frame** is a border about the picture, in its own plane, `width` metres wide, in a colour
+  of its own (default light grey); a line to the anchor has the same colour.
+- **An annotation of a model** (`"model": "<id of a model or a line>"`). `at` is then a point of
+  that model in the model's own coordinates, as its file has them, before its scale, rotation
+  and translation: a station of it. The annotation goes where that point goes, also while a
+  change stretches or moves the model, and is itself neither stretched nor turned. An `offset`
+  stays along the frame's axes.
+- **When an annotation is there** is not part of it: it is there throughout unless a change
+  shows and hides it. A change names it by `id` (every object of it: its text and its line, its
+  picture and its frame) or by `role`. `visible` with a `fade` is its time window; `opacity` and
+  `tint` change it too. `scale` and `offset` are refused: where it stands is its own section's.
+- **Order.** `annotations` runs after `camera_track` and after `models` or `lines` when an
+  annotation names one, and before `changes`. `ScenePlanBuilder.WithNeededFeatures` lists it.
+- **Photos are files of the plan.** `PlayerWriter.FilesOf` lists them ("photo 'view'"), a job
+  folder and a bundle carry them at their plan paths, a single-file script carries them when
+  they are given, a saved `.blend` has them inside, and the frames of a render in two stages are
+  rendered again when one changes.
+- **A photo's file is checked before it travels** (`PlanImage.Check`; `PlanImageInfo`,
+  `PlanImageException`): it is a PNG or a JPEG by what it holds, whatever it is called; its size
+  can be read; it is at most 32 MiB (`PlanImage.MaxBytes`), 16,384 pixels a side (`MaxSide`) and
+  64 million pixels (`MaxPixels`). Only its head is read. `PlayerWriter.WriteJob`,
+  `PlayerWriter.SingleFile` and `RenderBundleWriter` refuse another file with an
+  `ArgumentException` that names the plan path and the reason. The images of
+  `texturedMaterials` are not checked this way; they are as they were.
+
+### Additive API: annotations in a `SceneSpec`
+
+- **`SceneSpec.Annotations`** (`AnnotationSpec`, `AnnotationKind`, `PhotoFacing`): what a person
+  asks for. An annotation is about a **station** of the model, by its name, or a point `At` in
+  the model's own coordinates (those of the model file); it has a `Kind`, a `Text` or an
+  `Image`, and optionally a `Size` (letter height, radius or width, in metres), an `Offset`, a
+  `Color`, `Framed`, `Facing` with a `Normal`, a `Role`, and when it is there: `From` and `To` in
+  seconds, `Within` metres of the camera, and a `Fade` (default 0.5 s). Written with a spec only
+  when there are any, so a spec without them is the same JSON, with the same hash, as before.
+- **`ScenePlanBuilder.FromSpec` lowers them** (`AnnotationPlanner.Plan`): a station becomes its
+  place in the plan's frame; a size that is left open becomes a share of the cave's diagonal (a
+  text as large as a station label, a marker 1 %, a photo 10 %); a callout without an offset
+  stands four letter heights above its anchor; a photo with an offset gets a line; a photo is
+  named `photos/<file name>` (`AnnotationPlanner.PhotosFolder`;
+  `ScenePlanBuilder.AnnotationFiles(spec)` says which file each is, for whoever writes the plan
+  into a folder). A station the model does not have is an `ArgumentException` that names it.
+- **Times and distances become changes.** `From`/`To` and `Within` are worked out against the
+  plan's own camera poses, frame by frame, and written as the `visible` keys of a change of the
+  annotation: nothing is left for Blender to decide, and a test reads from the plan on which
+  frame a thing appears. `Within` is the frames on which the camera is that near; with both a
+  time and a distance, both hold. It takes `Fade` to appear, from the start of its time, and
+  has gone by the end of it; what is there on the first frame does not fade in and what is there
+  on the last does not fade out. An annotation that is never shown is hidden throughout, and
+  `ScenePlanBuilder.Notices(spec, meta, framing)` says so: "the camera never comes within 30 m
+  of the annotation 'view'; it is not shown".
+- **The render service** copies the photos beside the plan and removes the copies with the rest
+  of the job's scratch; **`RenderBundleWriter.FromModel`** puts them into the bundle, and the
+  README lists each as "a photo shown in the scene" (Romanian: "o fotografie afișată în scenă").
+- **The script generator leaves annotations out**: `SceneBuilders.NotDrawnByTheGenerator` names
+  `annotations`, so a render the generator builds (asked for, or because the spec has an HDRI
+  rig) reports it in `RenderResult.LeftOut`. `NotCarried` is as it was: the player carries
+  annotations, and a spec with them is the player's under `Auto`.
+- **A file of annotations** (`AnnotationsFile.Read`, `ReadFile`, `Write`): a JSON list of
+  annotations (or `{ "annotations": [...] }`), keys in camelCase, kinds as words, points and
+  colours as `[x, y, z]` (or `{ "x": …, "y": …, "z": … }`), photos named relative to the file. A
+  key that is not known is refused: it may be a misspelt one.
+  `therion-cli blender … --annotations notes.json` adds such a file's annotations to the
+  preset's or the spec's, for a render and for a bundle; the MCP tool `start_render` takes
+  `annotations`, a workspace-relative file whose photos lie in the workspace.
+
+  ```json
+  [
+    { "kind": "callout", "station": "main.0", "text": "Intrarea" },
+    { "kind": "photo", "station": "main.14", "image": "photos/hall.jpg", "size": 6,
+      "offset": [0, 0, 5], "framed": true, "within": 40 },
+    { "kind": "marker", "at": [512040.5, 5120010.2, 1180], "color": [1, 0.8, 0], "from": 12, "to": 20 }
+  ]
+  ```
+
+### Additive API: for whoever writes plans without a `SceneSpec`
+
+- **`AnnotationPlanner.Near(camera, timeline, point, within)`** gives the times at which a plan's
+  camera is within a distance of a point, as `PlanWindow`s; **`AnnotationPlanner.Shown(id,
+  windows, timeline, fadeIn, fadeOut)`** makes the change that shows a thing in those windows;
+  **`AnnotationPlanner.EyeAt(camera, frame, fps)`** is where the camera stands on a frame. A
+  camera eased by `Bezier` is taken as moving evenly from pose to pose, which it does not quite:
+  with a pose on every frame there is no difference.
+- `AnnotationPlanner.Plan(annotations, meta, bounds, camera, timeline)` lowers `AnnotationSpec`s
+  for a plan that is there already; `AnnotationPlanner.Files` names their photos.
+
+### Behaviour changes
+- **A draft shows a photo as a mosaic of its colours**: Blender's solid view draws no image, so
+  the picture is cut into tiles (48 along its longer side), each in the colour the image has
+  there, and the player says so once. Texts, markers and lines are drawn in their plain colours.
+  A fade of any of them is a cut in a draft, as it is for labels.
+- **Distances are measured where the plan puts things.** `Within` is worked out from the
+  anchor's place as the plan's models stand at the start; it does not follow a model that a
+  change moves.
+- **`therion-cli blender … --export` says what its script leaves out.** An exported script is
+  the script generator's; when the spec has something only the player draws (the later texts,
+  annotations) the command now warns: "the exported script does not show
+  labels.overlays.captions, annotations".
+- A plan without annotations is the plan it was, byte for byte; the golden plan has not changed.
+
+### What the player refuses, by name
+- an unknown `kind`; a key of another kind; a text without `text` or `size`, a callout without an
+  `offset` or with one that is zero, a marker without a `radius`, a photo without `width`;
+- an `id` that something else in the scene has; a `model` the scene does not have;
+- an `image` that is not a `.png` or `.jpg`, that is not there, or that cannot be read as an image;
+- a `facing` it does not know, a `normal` or an `up` of a photo that faces the camera, a fixed
+  photo without a `normal`, an `up` along the `normal`; a `lineWidth` of a photo without an offset;
+- `annotations` listed before `camera_track`.
+
+### Not done
+- A photo over the picture in two dimensions (a corner inset, a full card) in the second stage.
+- A photo's own transparency; a pulse or a size by distance for an annotation's marker (the
+  markers of `labels` have both); a text wrapped to a width.
+- A field for annotations in ThIDE's panel: they come from a spec, a file or an agent.
+
 ## 2026-11-25 — lights, the world's strength and a model's place change; lines; more for whoever writes plans
 
 The plan stays **version 1** and everything here is additive to it. The player calls itself

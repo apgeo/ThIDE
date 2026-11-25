@@ -11,9 +11,11 @@
 // visibility events of the labels become the plan's changes: each group is shown and hidden on
 // the frames the generated scripts show and hide it on, and where a script grows a group in, the
 // plan fades it in over the same frames. The events of the overlays become the times of the
-// texts, which are drawn where no change of the scene reaches. Not carried, because the player
-// has no module for it: the HDRI light rig. NotCarried lists what a given spec loses; Notices
-// says what a render of the plan cannot say for itself.
+// texts, which are drawn where no change of the scene reaches. The annotations of the spec become
+// the plan's, each at the place of its station or its point, and the times it is there become
+// changes that show and hide it (AnnotationPlanner). Not carried, because the player has no
+// module for it: the HDRI light rig. NotCarried lists what a given spec loses; Notices says what
+// a render of the plan cannot say for itself.
 //
 // Positions and colours are rounded to six decimals before they are written. They come through
 // sin, cos and pow, which agree between platforms only to the last bit; a micrometre is far below
@@ -65,7 +67,11 @@ public static class ScenePlanBuilder
     /// labels.</param>
     /// <remarks>The model is named by the file name of <see cref="SourceSpec.PlyPath"/> alone,
     /// and so are the terrain (<see cref="SourceSpec.SurfacePlyPath"/>) and its image: a plan
-    /// lies beside its files. The output directory is taken as it is.</remarks>
+    /// lies beside its files. The photos of the annotations are named in the folder
+    /// <see cref="AnnotationPlanner.PhotosFolder"/> (<see cref="AnnotationFiles"/> says which
+    /// file each is). The output directory is taken as it is.</remarks>
+    /// <exception cref="ArgumentException">Also when an annotation names a station the model
+    /// does not have.</exception>
     public static ScenePlan FromSpec(SceneSpec spec, CameraFraming framing, SceneMeta? meta = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
@@ -81,9 +87,14 @@ public static class ScenePlanBuilder
         var texts = OverlayEvents(ScreenTextPlanner.Plan(spec, camera), spec, camera.FrameCount);
         var changes = Changes(spec, labels, camera.FrameCount);
         var terrain = Terrain(spec);
+        var planCamera = Camera(camera, spec.Animation.Fps);
+        var timeline = new PlanTimeline { Fps = spec.Animation.Fps, FrameCount = camera.FrameCount };
+        var annotations = AnnotationPlanner.Plan(spec.Annotations, meta, framing.LocalBounds, planCamera, timeline);
+        if (annotations.Changes.Count > 0) changes = [.. changes ?? [], .. annotations.Changes];
         var features = ScenePlan.BasicFeatures;
         if (terrain is not null) features = WithFeature(features, ScenePlan.TexturedMaterialsFeature);
         if (labels is not null) features = WithFeature(features, ScenePlan.LabelsFeature);
+        if (annotations.Annotations.Count > 0) features = WithFeature(features, ScenePlan.AnnotationsFeature);
         if (changes is not null) features = WithFeature(features, ScenePlan.ChangesFeature);
         if (texts is not null) features = WithFeature(features, ScenePlan.TextsFeature);
         return new ScenePlan
@@ -95,7 +106,7 @@ public static class ScenePlanBuilder
                 Origin = meta is null ? CaveVector3.Zero : new CaveVector3(meta.Offset.X, meta.Offset.Y, meta.Offset.Z),
                 Crs = meta?.Source.CoordinateSystem,
             },
-            Timeline = new PlanTimeline { Fps = spec.Animation.Fps, FrameCount = camera.FrameCount },
+            Timeline = timeline,
             Models = terrain is null
                 ? [new PlanModel { Id = ModelId, Path = FileName(spec.Source.PlyPath), Material = RockMaterialId }]
                 :
@@ -103,10 +114,11 @@ public static class ScenePlanBuilder
                     new PlanModel { Id = ModelId, Path = FileName(spec.Source.PlyPath), Material = RockMaterialId },
                     new PlanModel { Id = TerrainId, Role = TerrainRole, Path = FileName(spec.Source.SurfacePlyPath!) },
                 ],
-            Camera = Camera(camera, spec.Animation.Fps),
+            Camera = planCamera,
             Look = Look(spec, framing.LocalBounds),
             TexturedMaterials = terrain is null ? null : [terrain],
             Labels = labels,
+            Annotations = annotations.Annotations.Count == 0 ? null : annotations.Annotations,
             Changes = changes,
             Texts = texts,
             Output = new PlanOutput
@@ -200,6 +212,7 @@ public static class ScenePlanBuilder
         if (plan.Lines is not null) features = WithFeature(features, ScenePlan.LinesFeature);
         if (plan.TexturedMaterials is not null) features = WithFeature(features, ScenePlan.TexturedMaterialsFeature);
         if (plan.Labels is not null) features = WithFeature(features, ScenePlan.LabelsFeature);
+        if (plan.Annotations is { Count: > 0 }) features = WithFeature(features, ScenePlan.AnnotationsFeature);
         if (plan.Changes is { Count: > 0 }) features = WithFeature(features, ScenePlan.ChangesFeature);
         if (plan.Texts is not null) features = WithFeature(features, ScenePlan.TextsFeature);
         if (plan.Blend is not null) features = WithFeature(features, ScenePlan.BlendFileFeature);
@@ -278,10 +291,20 @@ public static class ScenePlanBuilder
     /// prints the same sentences; whoever plays the plan passes them on.
     /// </summary>
     /// <param name="meta">As for <see cref="FromSpec"/>: without it there are no labels.</param>
-    public static IReadOnlyList<string> Notices(SceneSpec spec, SceneMeta? meta = null)
+    /// <param name="framing">As for <see cref="FromSpec"/>. With it the annotations that are
+    /// never shown are named too: one the camera never comes near, one whose time lies after
+    /// the clip.</param>
+    public static IReadOnlyList<string> Notices(SceneSpec spec, SceneMeta? meta = null, CameraFraming? framing = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
         var notices = new List<string>();
+        if (framing is not null && spec.Annotations.Any(a => a is { From: not null } or { To: not null } or { Within: not null }))
+        {
+            var camera = CameraPlanner.PlanPoses(spec, framing);
+            notices.AddRange(AnnotationPlanner.Plan(
+                spec.Annotations, meta, framing.LocalBounds, Camera(camera, spec.Animation.Fps),
+                new PlanTimeline { Fps = spec.Animation.Fps, FrameCount = camera.FrameCount }).Notices);
+        }
         if (spec.Surface.Mode != SurfaceMode.Off)
         {
             if (string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath))
@@ -292,6 +315,17 @@ public static class ScenePlanBuilder
         if (meta is not null && LabelPlanner.Plan(spec, meta) is { StationsCapped: true } labels)
             notices.Add($"showing {labels.Stations.Count} of {labels.StationMatchCount} station labels");
         return notices;
+    }
+
+    /// <summary>
+    /// The image files of the photos among the annotations of <paramref name="spec"/>, as plan
+    /// path → the file the spec names: what whoever writes the plan of <see cref="FromSpec"/>
+    /// into a folder or a bundle puts beside it.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> AnnotationFiles(SceneSpec spec)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        return AnnotationPlanner.Files(spec.Annotations);
     }
 
     /// <summary>The terrain's material, as the generated scripts make it: see-through from above
