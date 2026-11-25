@@ -192,7 +192,9 @@ public static class RenderBundleWriter
             Files = files,
             NotCarried = ScenePlanBuilder.NotCarried(spec),
             Notices = ScenePlanBuilder.Notices(placed, conversion.Meta, CameraFraming.FromGeometry(conversion.Geometry)),
-            Captions = plan.Output.Kind == PlanOutputKind.Still ? [] : Subtitles.OneAtATime(spec.Labels.Overlays.Captions),
+            Captions = plan.Output.Kind == PlanOutputKind.Still
+                ? []
+                : Subtitles.OneAtATime(TextPlaceholders.Resolve(spec, conversion.Meta).Labels.Overlays.Captions),
         };
     }
 

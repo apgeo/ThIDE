@@ -422,6 +422,33 @@ public sealed class BlenderRenderToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task The_presets_title_is_kept_when_none_is_given_and_an_empty_one_takes_it_away()
+    {
+        var (render, status) = await ToolsAsync();
+
+        // The built-in presets write the cave's name, by its placeholder.
+        var started = await render.StartRender(model: "out/cave.3d");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        Assert.Equal(TextPlaceholders.Cave, _blender.Renderer.LastSpec!.Labels.Overlays.Title);
+
+        started = await render.StartRender(model: "out/cave.3d", title: "", credits: "echipa {cave}");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        var overlays = _blender.Renderer.LastSpec!.Labels.Overlays;
+        Assert.Null(overlays.Title);
+        // The placeholder may stand in any of the texts; the render fills it in.
+        Assert.Equal("echipa {cave}", overlays.Credits);
+
+        // A card the preset opens on stays a card under another title.
+        started = await render.StartRender(model: "out/cave.3d", preset: "Helix descent", title: "Avenul Inventat");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        overlays = _blender.Renderer.LastSpec!.Labels.Overlays;
+        Assert.Equal(("Avenul Inventat", BuiltInPresets.TitleCardSeconds), (overlays.Title, overlays.TitleSeconds));
+    }
+
+    [Fact]
     public async Task A_reveal_is_added_to_the_presets_or_changes_the_kind_of_the_presets_own()
     {
         File.WriteAllBytes(_fixture.PathTo("out", "dates.3d"), [1, 2, 3]);

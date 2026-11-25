@@ -93,10 +93,12 @@ public sealed class McpBlenderRenderTests : IDisposable
         var presets = await CallAsync(client, "list_render_presets");
         Assert.Contains(presets.GetProperty("presets").EnumerateArray(), p => p.GetProperty("name").GetString() == "Orbit showcase");
 
+        // (An empty title: over a model with a name, the preset would write it over the still, in
+        // a second stage.)
         var started = await CallAsync(client, "start_render", new()
         {
             ["model"] = "cave.3d", ["outputKind"] = "still", ["width"] = 64, ["height"] = 48, ["samples"] = 1,
-            ["outputDirectory"] = "renders",
+            ["outputDirectory"] = "renders", ["title"] = "",
         });
         var done = await FinishedAsync(client, started.GetProperty("jobId").GetString()!);
 
@@ -125,6 +127,7 @@ public sealed class McpBlenderRenderTests : IDisposable
         var still = new Dictionary<string, object?>
         {
             ["model"] = "cave.3d", ["outputKind"] = "still", ["width"] = 64, ["height"] = 48, ["samples"] = 1, ["outputDirectory"] = "renders",
+            ["title"] = "",
         };
 
         // A draft: the player's, under its own name beside where the render goes.
@@ -149,6 +152,16 @@ public sealed class McpBlenderRenderTests : IDisposable
         Assert.Equal(4, launcher.Runs.Count);
         Assert.Equal(["--stage", "frames"], launcher.Runs[2].SkipWhile(a => a != "--").Skip(1).Take(2));
         Assert.Equal(["--stage", "compose"], launcher.Runs[3].SkipWhile(a => a != "--").Skip(1).Take(2));
+
+        // No title given: the preset writes the cave's name where the model has one. This model's
+        // title is only its file's name ("cave" of cave.3d), which is no name: nothing is written,
+        // and the still is made in one stage.
+        still.Remove("title");
+        started = await CallAsync(client, "start_render", new(still));
+        var unnamed = await FinishedAsync(client, started.GetProperty("jobId").GetString()!);
+        Assert.Equal("succeeded", unnamed.GetProperty("state").GetString());
+        Assert.Equal(5, launcher.Runs.Count);
+        Assert.DoesNotContain("--stage", launcher.Runs[4]);
     }
 
     [Fact]

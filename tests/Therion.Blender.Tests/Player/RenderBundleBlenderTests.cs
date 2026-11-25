@@ -55,7 +55,9 @@ public class RenderBundleBlenderTests
         var (code, log) = await RunScript(folder);
         Assert.True(code == 0, $"render.sh failed (exit code {code}): {Failure(log)}\n  logs: {root}");
         Assert.Equal(["1"], PlayerRunner.Reported(log, "done"));
-        Assert.Equal(SceneProbeRunner.Blender.Version.ToString(), PlayerRunner.Reported(log, "blender").Single());
+        // The preset opens on a card with the cave's name: two stages, each a Blender of its own.
+        Assert.Equal(["scene", "import", "engine", "render", "compose"], PlayerRunner.Reported(log, "phase"));
+        Assert.Equal([SceneProbeRunner.Blender.Version.ToString()], PlayerRunner.Reported(log, "blender").Distinct());
         var movie = await SceneProbeRunner.ReadMovieAsync(Path.Combine(folder, "out", "clip.mp4"));
         Assert.Equal([96, 64], movie.Size);
         Assert.Equal(4, movie.Frames);

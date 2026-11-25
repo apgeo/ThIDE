@@ -1,6 +1,12 @@
 // The built-in preset gallery (BA-B9, FR-12). Five presentation templates covering the
 // module's headline shots; each is a presentation-only SceneSpec (source + output location
 // filled in by RenderPreset.ToRenderSpec). Every preset validates once grafted onto a job.
+//
+// Each has texts of its own, written over the picture. A preset is made before anyone knows
+// which cave it will show, so its texts name the cave by a placeholder (TextPlaceholders.Cave),
+// which is filled in from the model when the spec is lowered; over a model without a name they
+// are left out. They say nothing in any one language. The script generator draws a title in the
+// scene; a title card (TitleSeconds) and everything else here is the player's.
 
 namespace Therion.Blender.Presets;
 
@@ -13,6 +19,16 @@ public static class BuiltInPresets
     {
         Kind = OutputKind.Video, Container = VideoContainer.Mp4, Width = 1920, Height = 1080,
     };
+
+    /// <summary>How long the card with the cave's name stands at the start of a clip that
+    /// opens on one, in seconds.</summary>
+    public const double TitleCardSeconds = 3.0;
+
+    /// <summary>The cave's name at the top of the picture throughout.</summary>
+    private static readonly OverlaySpec NamedAtTheTop = new() { Title = TextPlaceholders.Cave };
+
+    /// <summary>The cave's name as a card the clip opens on.</summary>
+    private static readonly OverlaySpec NamedOnACard = new() { Title = TextPlaceholders.Cave, TitleSeconds = TitleCardSeconds };
 
     /// <summary>All built-in presets, in gallery order.</summary>
     public static IReadOnlyList<RenderPreset> All { get; } =
@@ -44,7 +60,11 @@ public static class BuiltInPresets
                 Template = CameraTemplate.Orbit,
                 Orbit = new OrbitParams { Revolutions = 1, ElevationDegrees = 25 },
             },
-            Labels = new LabelsSpec { Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Entrances } },
+            Labels = new LabelsSpec
+            {
+                Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Entrances },
+                Overlays = NamedAtTheTop,
+            },
             Animation = new AnimationSpec { Fps = 30, DurationSeconds = 12 },
             Output = Video1080,
         },
@@ -66,6 +86,7 @@ public static class BuiltInPresets
                 Template = CameraTemplate.Helix,
                 Helix = new HelixParams { Turns = 3, StartHeightFraction = 1, EndHeightFraction = 0, EndRadiusScale = 0.7 },
             },
+            Labels = new LabelsSpec { Overlays = NamedOnACard },
             Animation = new AnimationSpec { Fps = 30, DurationSeconds = 15 },
             Output = Video1080,
         },
@@ -87,7 +108,7 @@ public static class BuiltInPresets
                 Template = CameraTemplate.Flythrough,
                 Flythrough = new FlythroughParams { LookAheadMeters = 6, ClearanceMeters = 1.5, SmoothingIterations = 2 },
             },
-            Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, Pulse = true } },
+            Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, Pulse = true }, Overlays = NamedOnACard },
             Animation = new AnimationSpec { Fps = 30, DurationSeconds = 20 },
             Output = Video1080,
         },
@@ -96,7 +117,8 @@ public static class BuiltInPresets
     /// <summary>A near-top-down pass during which the cave appears, passage by passage, from
     /// its entrances inwards, with a glow where it grows; its component labels fade in once it is
     /// all there. Revealed by distance, which every model has: by date
-    /// (<see cref="RevealBy.Date"/>) the same pass shows the history of the exploration.</summary>
+    /// (<see cref="RevealBy.Date"/>) the same pass shows the history of the exploration, with
+    /// the year it has got to counted in the picture (<see cref="RevealSpec.Counter"/>).</summary>
     public static RenderPreset MapReveal() => new()
     {
         Name = "Map reveal",
@@ -117,8 +139,10 @@ public static class BuiltInPresets
                 Components = new ComponentLabelSpec { Show = true, MinStationCount = 5 },
                 // The labels come when the cave is there: frame 271 is nine seconds in.
                 Events = [new VisibilityEvent { Target = VisibilityTarget.ComponentLabels, ShowFrame = 271, FadeSeconds = 2 }],
+                Overlays = NamedAtTheTop,
             },
-            Reveal = new RevealSpec { By = RevealBy.Distance, Start = 0.5, End = 9.5 },
+            // Said, not left to the default: revealed by date, this preset counts the years.
+            Reveal = new RevealSpec { By = RevealBy.Distance, Start = 0.5, End = 9.5, Counter = true },
             Animation = new AnimationSpec { Fps = 30, DurationSeconds = 12 },
             Output = Video1080,
         },
@@ -144,6 +168,7 @@ public static class BuiltInPresets
             {
                 Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Entrances },
                 Components = new ComponentLabelSpec { Show = true, MinStationCount = 5 },
+                Overlays = NamedAtTheTop,
             },
             Output = new OutputSpec { Kind = OutputKind.FrameSequence, Width = 2400, Height = 1600 },
         },

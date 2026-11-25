@@ -1,5 +1,97 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-25 — texts in presets: the cave's name by a placeholder, and built-in presets that write it
+
+Nothing here changes the plan or the player (still version 1 and 1.7): a plan holds the texts
+filled in. What changes is what a spec may say and what the built-in presets do say.
+
+### Breaking changes
+- **The built-in presets write the cave's name over the picture.** Each has
+  `labels.overlays.title = "{cave}"`; "Helix descent" and "Full flythrough" also
+  `titleSeconds = 3` (`BuiltInPresets.TitleCardSeconds`), which makes the title a card the clip
+  opens on. So, over a model that has a name:
+  - their plans have `texts` and list the `texts` module, and **a render of one takes two
+    stages** (the frames as PNG, then the output from them) where it took one: more disk while
+    it runs, and `job-frames.log` beside `job.log`;
+  - their spec hashes are other hashes (`SceneSpecSerializer.ComputeHash`). A preset **without
+    its texts** (`Labels.Overlays = new OverlaySpec()`) has the hash it had: verified against
+    the release before, and held by a test with the five hashes written out;
+  - the script generator draws the title in the scene, and for the two presets with a card it
+    reports `labels.overlays.titleSeconds` among what it leaves out.
+  Migration: for a preset as it was, clear the title (`spec with { Labels = spec.Labels with {
+  Overlays = new OverlaySpec() } }`; `--title ""` on the command line; `title: ""` to
+  `start_render`; the panel's Title field). The command line's default spec is "Orbit showcase"
+  and has the title too.
+- **`ScenePlanBuilder.FromSpec` fills in the placeholders** of the overlays' texts from its
+  `meta` (below). A text that holds `{cave}` literally and was meant to is not possible any more;
+  nothing wrote one before.
+- **`start_render`'s `title`**: an empty text now takes the preset's title away (it used to mean
+  "not given"). Omitted, the preset's is kept, as before.
+- `RenderBundleWriter.FromModel` writes a bundle's subtitles from the captions with their
+  placeholders filled in.
+
+### Additive API: `TextPlaceholders`
+- **`{cave}`** (`TextPlaceholders.Cave`) in a text of `OverlaySpec` stands for the cave's name:
+  in `Title`, `Subtitle`, `Credits`, `Corner`, the end card's `Text` and `Subtitle`, and the
+  texts of `Captions` and `CornerCaptions`. It is the only placeholder
+  (`TextPlaceholders.Known`); other braces stay as they are written, and filling in is one pass
+  (what a name holds is not looked at again).
+- **The name** (`TextPlaceholders.CaveName(meta)`) is the model's own title, which a `.3d` file
+  has (`SceneMeta.Source.Title`); else the title of the root of its survey tree, which a `.lox`
+  file has; else, when that root has no title and one survey under it, that survey's title (what
+  Therion writes for a project whose outermost `survey` has a `-title`). **A title that is only
+  a file's name is no name**: one that ends in `.3d` or `.lox`, or equals the name of the file
+  the model was read from, with or without its extension. Therion gives a `.3d` it exports the
+  file's name for a title, and Survex gives one without `*title` the name of its `.svx`.
+- **A text that held a placeholder and is blank once it is filled in is left out**: a title, a
+  line or an end card is then none, a caption is dropped. So a preset whose title is `{cave}`
+  writes nothing over a model without a name, and its render takes one stage, as before.
+- `TextPlaceholders.Resolve(spec, meta)`, `Resolve(overlays, values)` (for whoever has names of
+  their own: the values are by name, without braces), `Fill(text, values)`, `ValuesOf(meta)`,
+  `HasAny(text)`. `Resolve` returns the same object when no text holds a placeholder.
+- **Where it is filled in**: `ScenePlanBuilder.FromSpec` (so every plan, bundle and draft), and
+  the render service once the model is converted, for whichever builder draws the texts (the
+  script generator's title in the scene too) and for the `.srt`/`.vtt` subtitles.
+  `ScreenTextPlanner.Plan(overlays, plan)`, which has no model, fills in nothing: call `Resolve`
+  first.
+- A spec without placeholders is untouched, and **`SceneSpec` has no new field for any of this**:
+  the texts are the `labels.overlays` a spec, and so a preset file, has had. Preset files are as
+  they were, read and written; a file from before the texts existed reads as the preset it was,
+  with its spec's hash.
+
+### The presets
+- `BuiltInPresets`: "Orbit showcase", "Map reveal" and "Documentation stills" have the name at
+  the top of the picture throughout; "Helix descent" and "Full flythrough" open on it. Nothing
+  else is written: no words of any one language.
+- "Map reveal" says `Reveal.Counter = true` itself (it was the default already): revealed by
+  date (`--reveal date`, or `by` in the spec), it counts the years in the picture. A test holds
+  that, on a cave surveyed in three years.
+- A user's preset keeps whatever texts its spec has (`PresetStore`): the panel now has a Title
+  field and rows for captions beside the credits line and the end card, and "Save preset" stores
+  them with the rest.
+
+### The panel (ThIDE)
+- "Texts over the picture": Title, Credits line, End card, and **Captions**: rows of a text and
+  the seconds it is shown from and to, added after the last one and removed one by one, with a
+  strip that shows them along the clip. A row without a text is left out of the spec. The rows
+  are the spec's `labels.overlays.captions`, so they are kept the way every setting of the panel
+  is: in the scene it edits, and in a preset saved from it.
+
+### Verified
+- Without Blender: filling in (known and unknown braces, one pass), the name from a `.3d` title
+  and from a survey tree, file names refused as names, every text of the overlays, texts left
+  out when blank, each built-in preset's texts and their plans with and without a name, the
+  counter of "Map reveal" by date, the five hashes of the presets without their texts and the
+  hash of the default spec as the release before computed them, a preset file written before
+  the texts existed, the render service filling the name in for both builders and for the
+  subtitles; the panel's view model (title, adding, editing and removing rows, the strip,
+  presets saved and chosen, what goes to a render).
+- In Blender 4.2.23, 4.5.16 and 5.0.1: the whole suite, in which the presets as shipped are
+  bundled, rendered in two stages and compared with the generated scripts' scenes.
+- The panel, driven as a user drives it (the UI tests, with a stand-in for Blender): a title
+  and captions typed into it are in the plan of both stages with the cave's name filled in, and
+  beside the movie as subtitles.
+
 ## 2026-11-25 — HDRI in the player: a scene lit by an image all round it
 
 The plan stays **version 1** and everything here is additive to it. The player calls itself

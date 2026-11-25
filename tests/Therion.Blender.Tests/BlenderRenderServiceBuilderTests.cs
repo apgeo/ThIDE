@@ -536,6 +536,44 @@ public class BlenderRenderServiceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task TheCavesName_IsFilledIn_ForWhicheverBuilderDrawsTheTexts_AndInTheSubtitles()
+    {
+        var spec = Orbit(new OverlaySpec
+        {
+            Title = TextPlaceholders.Cave, Captions = [new CaptionSpec { Text = "Intrarea în {cave}", Start = 0.25, End = 0.75 }],
+        });
+
+        // The player: the plan's texts, and the subtitles written beside the movie.
+        var blender = new FakeBlender();
+        var played = await Service(blender).RenderAsync(spec, Cave());
+        Assert.True(played.Succeeded, played.ErrorMessage);
+        Assert.Equal("Invented Small Cave", blender.Starts[0].Plan!.Texts!.Items.Single(i => i.Role == "title").Text);
+        Assert.Equal("Intrarea în Invented Small Cave", blender.Starts[0].Plan!.Texts!.Items.Single(i => i.Role == "caption").Text);
+        Assert.Equal(
+            "1\n00:00:00,250 --> 00:00:00,750\nIntrarea în Invented Small Cave\n\n", await File.ReadAllTextAsync(Path.Combine(OutDir, "clip.srt")));
+
+        // The script generator, which draws the title in the scene: the name, not the placeholder.
+        blender = new FakeBlender();
+        var generated = await Service(blender).RenderAsync(spec, Cave(), new RenderOptions { Builder = SceneBuilder.Generator });
+        Assert.True(generated.Succeeded, generated.ErrorMessage);
+        string script = Assert.Single(blender.Starts).Script;
+        Assert.Contains("\"Invented Small Cave\"", script);
+        Assert.DoesNotContain("{cave}", script);
+
+        // A built-in preset as it is shipped: its title is this cave's name, in two stages.
+        blender = new FakeBlender();
+        var preset = BuiltInPresets.OrbitShowcase().Spec with
+        {
+            Animation = new AnimationSpec { Fps = 4, DurationSeconds = 1 },
+            Output = new OutputSpec { Kind = OutputKind.Video, Width = 64, Height = 64, BaseName = "clip", OutputDirectory = OutDir },
+        };
+        var shipped = await Service(blender).RenderAsync(preset, Cave());
+        Assert.True(shipped.Succeeded, shipped.ErrorMessage);
+        Assert.Equal((SceneBuilder.Player, 2), (shipped.Builder, blender.Starts.Count));
+        Assert.Equal("Invented Small Cave", blender.Starts[0].Plan!.Texts!.Items.Single(i => i.Role == "title").Text);
+    }
+
+    [Fact]
     public async Task WhenTheFirstStageFails_TheSecondIsNotStarted_AndItsLogIsKept()
     {
         var blender = new FakeBlender { FailAt = "frames" };

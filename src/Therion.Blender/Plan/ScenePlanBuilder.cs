@@ -16,7 +16,8 @@
 // changes that show and hide it (AnnotationPlanner). The reveal of the spec becomes one more
 // change, of the cave's model: a threshold that runs over the reveal values the conversion gave
 // the mesh, with a counter of the years for a reveal by date (RevealPlanner). The HDRI light rig
-// becomes a world of an image, which travels with the plan as the photos do (Files).
+// becomes a world of an image, which travels with the plan as the photos do (Files). The texts of
+// the overlays may name the cave by a placeholder, which is filled in here (TextPlaceholders).
 // A plan carries everything a spec says: NotCarried is empty for every spec, and stays for
 // whoever asks. Notices says what a render of the plan cannot say for itself.
 //
@@ -73,7 +74,8 @@ public static class ScenePlanBuilder
     /// lies beside its files. The photos of the annotations are named in the folder
     /// <see cref="AnnotationPlanner.PhotosFolder"/> and the image of an HDRI light rig in the
     /// folder <see cref="EnvironmentFolder"/> (<see cref="Files"/> says which file each is). The
-    /// output directory is taken as it is.</remarks>
+    /// output directory is taken as it is. The placeholders in the texts of the overlays are
+    /// filled in from <paramref name="meta"/> (<see cref="TextPlaceholders"/>).</remarks>
     /// <exception cref="ArgumentException">Also when an annotation names a station the model
     /// does not have, or the image of an HDRI light rig is not a <c>.hdr</c> or an
     /// <c>.exr</c> file by its name.</exception>
@@ -86,6 +88,7 @@ public static class ScenePlanBuilder
             throw new ArgumentException(
                 "The render spec is invalid: " + string.Join("; ", errors.Select(e => $"{e.Path}: {e.Message}")),
                 nameof(spec));
+        spec = TextPlaceholders.Resolve(spec, meta);
 
         var camera = CameraPlanner.PlanPoses(spec, framing);
         var labels = meta is null ? null : Labels(spec, meta);

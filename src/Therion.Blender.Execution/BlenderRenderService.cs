@@ -209,7 +209,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
 
         var outputs = result.OutputPaths;
         if (result.Succeeded && plan.Output.Kind != PlanOutputKind.Still)
-            outputs = outputs.AddRange(WriteSubtitles(spec, outputDir, plan.Output.BaseName));
+            outputs = outputs.AddRange(WriteSubtitles(placed, outputDir, plan.Output.BaseName));
         return new RenderResult
         {
             Succeeded = result.Succeeded,
@@ -341,8 +341,9 @@ public sealed class BlenderRenderService : IBlenderRenderService
     }
 
     /// <summary>Converts the model into <paramref name="assetDir"/> (with its terrain when the
-    /// spec draws one) and returns the spec with its source pointed at what was written and its
-    /// output at <paramref name="outputDirectory"/>.</summary>
+    /// spec draws one) and returns the spec with its source pointed at what was written, its
+    /// output at <paramref name="outputDirectory"/>, and the placeholders of its texts filled in
+    /// from the model (<see cref="TextPlaceholders"/>), for whichever builder draws them.</summary>
     private async Task<(ConversionResult Conversion, SceneSpec Spec)> ConvertAsync(
         SceneSpec spec, RenderSource source, string assetDir, string outputDirectory, CancellationToken ct)
     {
@@ -356,7 +357,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
         };
         var conversion = await Task.Run(
             () => CaveConversionPipeline.ConvertResolvedFull(source.Model, options), ct).ConfigureAwait(false);
-        return (conversion, spec with
+        return (conversion, TextPlaceholders.Resolve(spec, conversion.Meta) with
         {
             Source = spec.Source with
             {

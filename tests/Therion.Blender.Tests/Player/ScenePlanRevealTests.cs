@@ -218,7 +218,12 @@ public class ScenePlanRevealTests
 
     private static readonly RevealSpec ByDistance = new() { By = RevealBy.Distance, Start = 1, End = 6 };
 
-    private static SceneSpec Orbit(RevealSpec? reveal) => PlanFixtures.Preset("Orbit showcase") with { Reveal = reveal };
+    /// <summary>The preset without the cave's name at the top: the only text is the reveal's.</summary>
+    private static SceneSpec Orbit(RevealSpec? reveal) => PlanFixtures.Preset("Orbit showcase") with
+    {
+        Labels = PlanFixtures.Preset("Orbit showcase").Labels with { Overlays = new OverlaySpec() },
+        Reveal = reveal,
+    };
 
     private static GeometryResult Geometry(CaveModel model, SceneSpec spec) => GeometryStage.Build(model, RevealPlanner.GeometryFor(spec));
 

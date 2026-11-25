@@ -595,7 +595,8 @@ public class ScenePlanBuilderTests
         var plan = ScenePlanBuilder.FromSpec(WithSurface(SurfaceMode.Textured), PlanFixtures.MediumFraming, PlanFixtures.MediumMeta);
 
         Assert.Empty(ScenePlanValidator.Validate(plan));
-        Assert.Equal(["models", "camera_track", "look", "textured_materials", "labels", "output"], plan.Features);
+        // (The preset writes the cave's name at the top: the texts are its own module's.)
+        Assert.Equal(["models", "camera_track", "look", "textured_materials", "labels", "texts", "output"], plan.Features);
         Assert.Equal(
             [("CaveModel", null, "model.ply", "CaveRock"), ("Terrain", "terrain", "surface.ply", null)],
             plan.Models.Select(m => (m.Id, m.Role, m.Path, m.Material)));
