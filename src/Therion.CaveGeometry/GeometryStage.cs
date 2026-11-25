@@ -1,9 +1,10 @@
 // The geometry stage (BA-B3): CaveModel → recentered wall mesh + derived geometry.
 //
 // Pipeline: measure world bounds → pick a recenter offset (bbox centre, R-03/D-15) →
-// translate all geometry to the local origin → build the wall mesh (real .lox scraps,
-// or synthesized LRUD tubes for centerline sources) → optional depth-tint colours →
-// centerline graph. Pure and deterministic: same model + options ⇒ identical result.
+// translate all geometry to the local origin → optional reveal values of the legs → build the
+// wall mesh (real .lox scraps, or synthesized LRUD tubes for centerline sources), with those
+// values on its vertices → optional depth-tint colours → centerline graph. Pure and
+// deterministic: same model + options ⇒ identical result.
 
 using Therion.Cave3D;
 
@@ -22,7 +23,8 @@ public static class GeometryStage
         var recentered = offset == CaveVector3.Zero ? model : Translate(model, offset * -1.0);
         var localBounds = originalBounds.IsEmpty ? BoundingBox.Empty : originalBounds.Translate(offset * -1.0);
 
-        var (walls, tubeLegs) = BuildWalls(recentered, options);
+        var reveal = options.Reveal is null ? null : RevealField.Build(recentered, options.Reveal, offset);
+        var (walls, tubeLegs) = BuildWalls(recentered, options, reveal);
         if (options.DepthTint && !walls.IsEmpty)
             walls = walls with { VertexColors = TintByDepth(walls.Vertices) };
 
@@ -30,6 +32,7 @@ public static class GeometryStage
         {
             Walls = walls,
             TubeLegs = tubeLegs,
+            Reveal = reveal,
             Offset = offset,
             OriginalBounds = originalBounds,
             LocalBounds = localBounds,
@@ -38,7 +41,7 @@ public static class GeometryStage
         };
     }
 
-    private static (CaveMesh Walls, IReadOnlyList<TubeLeg> TubeLegs) BuildWalls(CaveModel model, GeometryOptions options)
+    private static (CaveMesh Walls, IReadOnlyList<TubeLeg> TubeLegs) BuildWalls(CaveModel model, GeometryOptions options, RevealField? reveal)
     {
         bool useScraps = options.WallSource switch
         {
@@ -46,9 +49,17 @@ public static class GeometryStage
             WallSource.Tubes => false,
             _ => model.Scraps.Count > 0, // Auto
         };
-        if (useScraps) return (MeshFromScraps(model.Scraps), []);
+        if (useScraps)
+        {
+            var scraps = MeshFromScraps(model.Scraps);
+            return (reveal is null || scraps.IsEmpty ? scraps : reveal.OnWalls(scraps), []);
+        }
         var legs = TubeMesher.Legs(WithPassageLrud(model), options);
-        return (TubeMesher.BuildFromLegs(legs, options), legs);
+        if (reveal is null) return (TubeMesher.BuildFromLegs(legs, options), legs);
+        // The tubes are those of the legs the reveal values are of, in the same order.
+        var triangleLegs = new List<int>();
+        var tubes = TubeMesher.BuildFromLegs(legs, options, triangleLegs);
+        return (tubes.IsEmpty ? tubes : reveal.OnTubes(tubes, triangleLegs), legs);
     }
 
     /// <summary>

@@ -1,5 +1,7 @@
 // Minimal binary glTF (.glb) writer (optional user-facing export, FR-02): a single
-// self-contained buffer with float32 POSITION and uint32 indices, one mesh/node/scene.
+// self-contained buffer with float32 POSITION and uint32 indices, one mesh/node/scene, and the
+// mesh's reveal values, when it has them, as the float32 attribute _REVEAL (a name of the
+// application's own, which glTF spells with an underscore and in capitals).
 // No normals/materials; importers compute normals. glTF is Y up, so the model's (east, north, up)
 // is written as (east, up, south): a rotation, which keeps the triangles' winding.
 
@@ -18,6 +20,9 @@ public static class GlbWriter
     private const uint JsonChunkType = 0x4E4F534A; // "JSON"
     private const uint BinChunkType = 0x004E4942;  // "BIN\0"
 
+    /// <summary>The vertex attribute the reveal values are written as.</summary>
+    public const string RevealAttribute = "_REVEAL";
+
     public static void WriteFile(CaveMesh mesh, string path)
         => File.WriteAllBytes(path, Write(mesh));
 
@@ -28,10 +33,15 @@ public static class GlbWriter
         int vertexCount = mesh.Vertices.Count;
         int indexCount = mesh.Triangles.Count * 3;
 
-        // ---- binary buffer: positions (float32×3) then indices (uint32) ----
+        bool revealed = mesh.HasReveal;
+        if (revealed && mesh.Reveal!.Count != vertexCount)
+            throw new InvalidOperationException("Reveal value count must match vertex count.");
+
+        // ---- binary buffer: positions (float32×3), reveal values (float32), then indices (uint32) ----
         int positionBytes = vertexCount * 12;
+        int revealBytes = revealed ? vertexCount * 4 : 0;
         int indexBytes = indexCount * 4;
-        var bin = new byte[positionBytes + indexBytes];
+        var bin = new byte[positionBytes + revealBytes + indexBytes];
 
         float minX = float.PositiveInfinity, minY = float.PositiveInfinity, minZ = float.PositiveInfinity;
         float maxX = float.NegativeInfinity, maxY = float.NegativeInfinity, maxZ = float.NegativeInfinity;
@@ -52,7 +62,10 @@ public static class GlbWriter
             maxX = maxY = maxZ = 0;
         }
 
-        int offset = positionBytes;
+        for (int i = 0; i < revealBytes / 4; i++)
+            BinaryPrimitives.WriteSingleLittleEndian(bin.AsSpan(positionBytes + i * 4), (float)mesh.Reveal![i]);
+
+        int offset = positionBytes + revealBytes;
         foreach (var t in mesh.Triangles)
         {
             BinaryPrimitives.WriteUInt32LittleEndian(bin.AsSpan(offset), t.A); offset += 4;
@@ -61,6 +74,28 @@ public static class GlbWriter
         }
 
         // ---- glTF JSON ----
+        // Accessor 0 is the positions and 1 the indices; the reveal values, when there, are 2.
+        var attributes = new Dictionary<string, int> { ["POSITION"] = 0 };
+        var bufferViews = new List<object>
+        {
+            new { buffer = 0, byteOffset = 0, byteLength = positionBytes, target = 34962 },                       // ARRAY_BUFFER
+            new { buffer = 0, byteOffset = positionBytes + revealBytes, byteLength = indexBytes, target = 34963 }, // ELEMENT_ARRAY_BUFFER
+        };
+        var accessors = new List<object>
+        {
+            new
+            {
+                bufferView = 0, componentType = 5126 /* FLOAT */, count = vertexCount, type = "VEC3",
+                min = new[] { minX, minY, minZ }, max = new[] { maxX, maxY, maxZ },
+            },
+            new { bufferView = 1, componentType = 5125 /* UNSIGNED_INT */, count = indexCount, type = "SCALAR" },
+        };
+        if (revealed)
+        {
+            attributes[RevealAttribute] = 2;
+            bufferViews.Add(new { buffer = 0, byteOffset = positionBytes, byteLength = revealBytes, target = 34962 });
+            accessors.Add(new { bufferView = 2, componentType = 5126 /* FLOAT */, count = vertexCount, type = "SCALAR" });
+        }
         var gltf = new
         {
             asset = new { version = "2.0", generator = "ThIDE Blender module" },
@@ -69,23 +104,11 @@ public static class GlbWriter
             nodes = new[] { new { mesh = 0 } },
             meshes = new[]
             {
-                new { primitives = new[] { new { attributes = new { POSITION = 0 }, indices = 1 } } },
+                new { primitives = new[] { new { attributes, indices = 1 } } },
             },
             buffers = new[] { new { byteLength = bin.Length } },
-            bufferViews = new[]
-            {
-                new { buffer = 0, byteOffset = 0, byteLength = positionBytes, target = 34962 },        // ARRAY_BUFFER
-                new { buffer = 0, byteOffset = positionBytes, byteLength = indexBytes, target = 34963 }, // ELEMENT_ARRAY_BUFFER
-            },
-            accessors = new object[]
-            {
-                new
-                {
-                    bufferView = 0, componentType = 5126 /* FLOAT */, count = vertexCount, type = "VEC3",
-                    min = new[] { minX, minY, minZ }, max = new[] { maxX, maxY, maxZ },
-                },
-                new { bufferView = 1, componentType = 5125 /* UNSIGNED_INT */, count = indexCount, type = "SCALAR" },
-            },
+            bufferViews,
+            accessors,
         };
 
         var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(gltf);

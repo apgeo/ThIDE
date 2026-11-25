@@ -40,15 +40,13 @@ public static class TubeMesher
         int sides = Math.Max(3, options.TubeSides);
 
         var legs = new List<TubeLeg>(shots.Count);
-        const CaveShotFlags skip = CaveShotFlags.Splay | CaveShotFlags.Surface | CaveShotFlags.Duplicate;
         foreach (var shot in shots)
         {
-            if ((shot.Flags & skip) != 0) continue;
+            if (!IsMeshed(shot)) continue;
             var a = shot.FromPosition;
             var b = shot.ToPosition;
             var axis = b - a;
             double legLength = axis.Length;
-            if (legLength < 1e-3) continue;
 
             var (right, up) = CrossSectionFrame(axis / legLength);
             var from = Resolve(shot.FromLrud, options.DefaultTubeRadius);
@@ -59,6 +57,14 @@ public static class TubeMesher
                 sides));
         }
         return legs;
+    }
+
+    /// <summary>Whether <see cref="Legs"/> gives a shot a tube: a leg of the cave itself (not a
+    /// splay, a surface leg or a duplicate) that is at least a millimetre long.</summary>
+    internal static bool IsMeshed(CaveShot shot)
+    {
+        const CaveShotFlags skip = CaveShotFlags.Splay | CaveShotFlags.Surface | CaveShotFlags.Duplicate;
+        return (shot.Flags & skip) == 0 && (shot.ToPosition - shot.FromPosition).Length >= 1e-3;
     }
 
     /// <summary>
@@ -73,6 +79,11 @@ public static class TubeMesher
     /// the last digit. Triangles are in leg order: a leg's walls, then its caps.
     /// </summary>
     public static CaveMesh BuildFromLegs(IReadOnlyList<TubeLeg> legs, GeometryOptions options)
+        => BuildFromLegs(legs, options, triangleLegs: null);
+
+    /// <summary>As <see cref="BuildFromLegs(IReadOnlyList{TubeLeg}, GeometryOptions)"/>, and says
+    /// in <paramref name="triangleLegs"/>, for every triangle of the mesh, which leg it is of.</summary>
+    internal static CaveMesh BuildFromLegs(IReadOnlyList<TubeLeg> legs, GeometryOptions options, List<int>? triangleLegs)
     {
         ArgumentNullException.ThrowIfNull(legs);
         ArgumentNullException.ThrowIfNull(options);
@@ -154,6 +165,8 @@ public static class TubeMesher
                 if (Closed(2 * i)) AppendCap(vertices, triangles, leg.From, sides, facingForward: false);
                 if (Closed(2 * i + 1)) AppendCap(vertices, triangles, leg.To, sides, facingForward: true);
             }
+            if (triangleLegs is not null)
+                while (triangleLegs.Count < triangles.Count) triangleLegs.Add(i);
         }
 
         return new CaveMesh { Vertices = vertices, Triangles = triangles };

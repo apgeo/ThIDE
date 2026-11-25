@@ -36,6 +36,11 @@ public sealed record GeometryResult
     /// <summary>Centerline connectivity of the (recentered) model.</summary>
     public required CenterlineGraph Centerline { get; init; }
 
+    /// <summary>The reveal values of the cave's legs, which <see cref="Walls"/> carries on its
+    /// vertices; null when none were asked for (<see cref="GeometryOptions.Reveal"/>) or the
+    /// model has nothing to work them out from (no legs; no survey dates).</summary>
+    public RevealField? Reveal { get; init; }
+
     /// <summary>True when <see cref="Walls"/> carries real triangles.</summary>
     public bool HasWalls => !Walls.IsEmpty;
 }
