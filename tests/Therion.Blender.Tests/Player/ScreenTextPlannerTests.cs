@@ -400,6 +400,60 @@ public class ScreenTextPlannerTests
         Assert.Empty(ScenePlanValidator.Validate(plan));
     }
 
+    // ---- a picture that is higher than wide ----
+
+    /// <summary>The columns an item takes, as shares of the picture's width: a title at most
+    /// its widest line about the middle, an arrow its own size and its letter's room.</summary>
+    private static (double Left, double Right) Columns(PlanScreenItem item, double aspect) => item.Kind == PlanScreenItemKind.Arrow
+        ? (item.At.X - (item.Size!.Value / 2 + item.Size.Value * 0.45) / aspect, item.At.X + (item.Size.Value / 2 + item.Size.Value * 0.45) / aspect)
+        : (item.At.X - item.Wrap!.Value / 2, item.At.X + item.Wrap.Value / 2);
+
+    [Theory]
+    [InlineData(360, 640)]
+    [InlineData(480, 640)]
+    [InlineData(640, 640)]
+    public void InANarrowPicture_TheTitleIsSmaller_AndItsLinesEndBeforeTheNorthArrow(int width, int height)
+    {
+        double aspect = width / (double)height;
+        var overlays = new OverlaySpec { Title = "Invented Cave", Subtitle = "a survey of 2024", NorthArrow = true };
+        var texts = Texts(Orbit(overlays) with { Output = new OutputSpec { Kind = OutputKind.Video, Width = width, Height = height } });
+        var title = Item(texts, "title");
+        var subtitle = Item(texts, "subtitle");
+        var arrow = Item(texts, "north-arrow");
+
+        // Smaller by the picture's shape: a letter takes the share of the width it takes in a square.
+        double narrow = Math.Min(1, aspect);
+        Assert.Equal(0.06 * narrow, title.Size!.Value, 6);
+        Assert.Equal(0.034 * narrow, subtitle.Size!.Value, 6);
+        Assert.Equal(0.1 * narrow, arrow.Size!.Value, 6);
+        // "Invented Cave" on one line: thirteen letters, each about 0.6 of its height wide.
+        Assert.True(13 * 0.6 * title.Size.Value / aspect <= title.Wrap!.Value, $"the title wraps at {title.Wrap} of the width");
+
+        // The widest line of the title ends before the arrow begins, and the arrow stays in the margin.
+        Assert.True(Columns(title, aspect).Right < Columns(arrow, aspect).Left, $"{Columns(title, aspect)} against {Columns(arrow, aspect)}");
+        Assert.True(Columns(subtitle, aspect).Right < Columns(arrow, aspect).Left);
+        Assert.True(Columns(arrow, aspect).Right <= 1 - ScreenTextPlanner.Margin + 1e-9);
+        Assert.True(arrow.At.Y + arrow.Size.Value * 0.95 <= 1 - ScreenTextPlanner.Margin + 1e-9);
+        Assert.Equal(title.At.Y - title.Size.Value * 1.35, subtitle.At.Y, 6);
+        Assert.Empty(ScenePlanValidator.Validate(PlanFixtures.PlanOf(Orbit(overlays) with { Output = new OutputSpec { Width = width, Height = height } })));
+    }
+
+    [Fact]
+    public void InAWidePicture_TheTitleAndTheNorthArrowAreAsTheyAlwaysWere_AndATitleAloneHasItsWholeWidth()
+    {
+        var both = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", NorthArrow = true }));
+        Assert.Equal((0.06, 0.6), (Item(both, "title").Size, Item(both, "title").Wrap));
+        Assert.Equal(0.1, Item(both, "north-arrow").Size);
+
+        // Without an arrow nothing stands beside the title: only its letters are smaller.
+        var alone = Texts(Orbit(new OverlaySpec { Title = "Invented Cave" }) with { Output = new OutputSpec { Width = 360, Height = 640 } });
+        Assert.Equal((0.03375, 0.6), (Item(alone, "title").Size, Item(alone, "title").Wrap));
+
+        // A title card is smaller in a narrow picture too.
+        var card = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", TitleSeconds = 2 }) with { Output = new OutputSpec { Width = 360, Height = 640 } });
+        Assert.Equal(0.09 * 0.5625, Item(card, "title").Size!.Value, 6);
+    }
+
     [Fact]
     public void ADraft_WritesWhatThePlanWrites()
     {

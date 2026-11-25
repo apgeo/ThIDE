@@ -19,6 +19,16 @@ public sealed record CameraFraming
     /// <summary>Model bounds in local (recentered) coordinates.</summary>
     public required BoundingBox LocalBounds { get; init; }
 
+    /// <summary>The bounds of the mesh the model is drawn as, in the same coordinates: the
+    /// walls round the stations included, which <see cref="LocalBounds"/> (the model's own
+    /// data: stations, shots and scraps) leaves out. What is measured on the drawn model goes by
+    /// these: where the one pose of the static camera stands, and the heights a depth tint runs
+    /// between. Null when there is no wall mesh; <see cref="DrawnBounds"/> then falls back.</summary>
+    public BoundingBox? MeshBounds { get; init; }
+
+    /// <summary><see cref="MeshBounds"/>, or <see cref="LocalBounds"/> when there is none.</summary>
+    public BoundingBox DrawnBounds => MeshBounds is { IsEmpty: false } mesh ? mesh : LocalBounds;
+
     /// <summary>The flythrough route (longest passage), local coordinates; null when the
     /// model has no usable centerline.</summary>
     public IReadOnlyList<CaveVector3>? CenterlinePath { get; init; }
@@ -45,10 +55,20 @@ public sealed record CameraFraming
         return new CameraFraming
         {
             LocalBounds = geometry.LocalBounds,
+            MeshBounds = BoundsOf(geometry.Walls.Vertices),
             CenterlinePath = hasPath ? path : null,
             RouteTubes = hasPath && geometry.TubeLegs.Count > 0 ? TubesAlong(path, geometry.TubeLegs) : null,
             WallTree = geometry.Walls.Vertices.Count > 0 ? new KdTree(geometry.Walls.Vertices) : null,
         };
+    }
+
+    /// <summary>The box round the vertices of a mesh; null for a mesh without any.</summary>
+    private static BoundingBox? BoundsOf(IReadOnlyList<CaveVector3> vertices)
+    {
+        if (vertices.Count == 0) return null;
+        var box = BoundingBox.Empty;
+        foreach (var vertex in vertices) box = box.Encapsulate(vertex);
+        return box;
     }
 
     /// <summary>The tube of each leg of <paramref name="path"/>, turned to run the way the path
@@ -184,8 +204,9 @@ public static class CameraPlanner
 
     /// <summary>
     /// Plans the camera with every pose worked out. Like <see cref="Plan"/>, except that the one
-    /// pose of the <see cref="CameraTemplate.Static"/> template is computed here, from the
-    /// framing's bounds, the way the generated script computes it from the imported mesh; the
+    /// pose of the <see cref="CameraTemplate.Static"/> template is computed here, from the bounds
+    /// of the drawn mesh (<see cref="CameraFraming.DrawnBounds"/>), the way the generated script
+    /// computes it from the imported mesh; the
     /// result then carries that pose as its only keyframe, with the clip range. For a consumer
     /// that needs the camera as data alone (the scene plan).
     /// </summary>
@@ -195,7 +216,8 @@ public static class CameraPlanner
         var plan = Plan(spec, framing);
         if (!plan.IsStatic) return plan;
 
-        var bounds = framing.LocalBounds;
+        // The generated script measures the mesh it imported, walls included: so does this.
+        var bounds = framing.DrawnBounds;
         double radius = BoundingRadius(bounds);
         var center = bounds.IsEmpty ? CaveVector3.Zero : bounds.Center;
         double distance = FitDistance(radius, spec.Camera.FocalLength, spec.Camera.AutoFramePadding);

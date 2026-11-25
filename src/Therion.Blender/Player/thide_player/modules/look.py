@@ -320,8 +320,13 @@ def set_world(ctx, spec):
     elif kind == "sky":
         world.color = [min(1.0, channel * strength) for channel in (0.35, 0.55, 0.9)]  # a draft has no sky
         sky = tree.nodes.new("ShaderNodeTexSky")
-        # Blender 4 calls the physical sky NISHITA; Blender 5 has the two scattering models instead.
-        api.set_enum(sky, "sky_type", ("NISHITA", "MULTIPLE_SCATTERING", "SINGLE_SCATTERING"))
+        # The same sky in every Blender: Blender 4 calls its physical sky NISHITA, and Blender 5
+        # has the same model as SINGLE_SCATTERING, beside a newer one (MULTIPLE_SCATTERING) that
+        # is bluer and lights a scene about a third more strongly. Blender 5 also starts a sky
+        # 100 m up where Blender 4 starts it on the ground: the height is set, not left.
+        api.set_enum(sky, "sky_type", ("NISHITA", "SINGLE_SCATTERING", "MULTIPLE_SCATTERING"))
+        if hasattr(sky, "altitude"):
+            sky.altitude = 0.0
         tree.links.new(sky.outputs["Color"], background.inputs["Color"])
     elif kind == "image":
         world.color = [min(1.0, 0.5 * strength)] * 3  # a draft shows no image: a grey as strong

@@ -349,6 +349,40 @@ public class PlayerTwoStageBlenderTests
     }
 
     [BlenderFact]
+    public async Task InAPictureHigherThanWide_TheTitleStaysOnOneLine_ClearOfTheNorthArrow()
+    {
+        // A phone's picture, 9 by 16. The title is drawn in red and the arrow in green, to tell them apart.
+        ColorRgb red = new(1, 0, 0), green = new(0, 1, 0);
+        var spec = Orbit(new OverlaySpec { Title = "Invented Cave", NorthArrow = true }, frames: 1, width: 360, height: 640);
+        var (plan, job) = PlayerRunner.WriteJob("stages-portrait", Small.Value, spec, p => Quick(p) with
+        {
+            Texts = p.Texts! with
+            {
+                Items = [.. p.Texts.Items.Select(i => i with { Color = i.Role == ScreenTextPlanner.TitleRole ? red : green })],
+            },
+        });
+        var title = plan.Texts!.Items.Single(i => i.Role == ScreenTextPlanner.TitleRole);
+
+        await Run(job);
+
+        var picture = RenderedPicture.Read(Frame(job, 1));
+        var (titleLeft, titleRight) = picture.BoxOf(red);
+        var (arrowLeft, arrowRight) = picture.BoxOf(green);
+        var rows = Enumerable.Range(0, picture.Height)
+            .Where(y => picture.Part(0, 1, y / (double)picture.Height, (y + 1) / (double)picture.Height).Of(red).Count > 0).ToList();
+        Assert.True(picture.Of(red).Count > 200 && picture.Of(green).Count > 100, $"{picture.Of(red).Count} of title, {picture.Of(green).Count} of arrow");
+
+        // One line: the title is no higher than its letters, with their ascenders and descenders.
+        double letters = title.Size!.Value * picture.Height;
+        Assert.True(rows[^1] - rows[0] + 1 <= letters * 1.4, $"the title is {rows[^1] - rows[0] + 1} rows high; its letters are {letters:F0}");
+        // Clear of the arrow, with room between them, and both inside the picture's margin.
+        Assert.True(titleRight + 4 < arrowLeft, $"the title ends at column {titleRight}, the arrow begins at {arrowLeft}");
+        Assert.True(titleLeft > picture.Width * 0.05 && arrowRight < picture.Width * 0.96, $"title from {titleLeft}, arrow to {arrowRight} of {picture.Width}");
+        // In the middle, as a title is.
+        Assert.InRange((titleLeft + titleRight) / 2.0, picture.Width * 0.45, picture.Width * 0.55);
+    }
+
+    [BlenderFact]
     public async Task TheHeadingsWorkedOutForTheNorthArrow_AreTheOnesBlendersCameraHas_AtEveryFrame()
     {
         // The north arrow is turned by headings worked out before Blender starts. They have to be

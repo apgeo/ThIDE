@@ -77,6 +77,33 @@ public class ScenePlanBuilderTests
     }
 
     [Fact]
+    public void TheStaticCamera_AndTheDepthTint_GoByTheBoundsOfTheDrawnMesh_WallsIncluded()
+    {
+        // The walls stand round the stations: the mesh is larger than the model's own data.
+        var framing = PlanFixtures.MediumFraming;
+        var drawn = framing.DrawnBounds;
+        Assert.Equal(framing.MeshBounds, drawn);
+        Assert.True(drawn.Min.Z < framing.LocalBounds.Min.Z - 0.5 && drawn.Max.Z > framing.LocalBounds.Max.Z + 0.5,
+            $"walls {drawn.Min.Z}…{drawn.Max.Z}, stations {framing.LocalBounds.Min.Z}…{framing.LocalBounds.Max.Z}");
+        var walls = PlanFixtures.Medium.Walls.Vertices;
+        Assert.Equal((walls.Min(v => v.Z), walls.Max(v => v.Z)), (drawn.Min.Z, drawn.Max.Z));
+
+        var spec = Spec(new CameraSpec { Template = CameraTemplate.Static }) with { Materials = new MaterialsSpec { Rock = RockMaterial.DepthGradient } };
+        var plan = ScenePlanBuilder.FromSpec(spec, framing);
+
+        var rock = Assert.Single(plan.Look.Materials);
+        Assert.Equal((Math.Round(drawn.Min.Z, 6), Math.Round(drawn.Max.Z, 6)), (rock.Low, rock.High));
+        var pose = Assert.Single(plan.Camera.Track);
+        Assert.True((pose.Target - drawn.Center).Length < 2e-6);
+        double radius = drawn.Diagonal / 2;
+        Assert.Equal(radius * 1.15 / Math.Tan(Math.Atan(36.0 / (2 * spec.Camera.FocalLength))) + radius, (pose.Eye - pose.Target).Length, 4);
+
+        // A framing that says nothing of a mesh goes by the model's own bounds, as before.
+        Assert.Equal(Box, BoxFraming.DrawnBounds);
+        Assert.Null(BoxFraming.MeshBounds);
+    }
+
+    [Fact]
     public void Viewpoints_KeepTheirLensesTheirEasingAndTheDepthOfField()
     {
         var spec = Spec(new CameraSpec

@@ -196,13 +196,13 @@ public class PlayerBlenderTests
         Assert.Equal(8, view.Model!.CornersInFrame);
         Assert.False(view.Model.BeyondFarClip);
         Assert.False(played.Object("Camera").Animated);
-        // The script frames the mesh it imported and the plan the model's bounds, which also hold
-        // the stations: the two cameras stand within a hundredth of their distance of each other.
+        // The script frames the mesh it imported, and the plan the bounds of that mesh, walls
+        // included: the two cameras stand in one place, to what a mesh file rounds a vertex to.
         var scripted = generated.Frames[0].Camera!;
         double distance = Distance(plan.Camera.Track[0].Target, scripted.Location);
-        Assert.True(Distance(plan.Camera.Track[0].Eye, scripted.Location) < distance / 100,
-            $"{Distance(plan.Camera.Track[0].Eye, scripted.Location):F2} m apart at {distance:F0} m");
-        Assert.True(AngleDegrees(scripted.Forward, view.Camera!.Forward) < 0.5);
+        Assert.True(Distance(plan.Camera.Track[0].Eye, scripted.Location) < distance / 100_000,
+            $"{Distance(plan.Camera.Track[0].Eye, scripted.Location):F4} m apart at {distance:F0} m");
+        Assert.True(AngleDegrees(scripted.Forward, view.Camera!.Forward) < 0.01);
     }
 
     // ---- the same scene as the generated script ----

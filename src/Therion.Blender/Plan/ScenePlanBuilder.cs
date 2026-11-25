@@ -126,7 +126,7 @@ public static class ScenePlanBuilder
                     new PlanModel { Id = TerrainId, Role = TerrainRole, Path = FileName(spec.Source.SurfacePlyPath!) },
                 ],
             Camera = planCamera,
-            Look = Look(spec, framing.LocalBounds),
+            Look = Look(spec, framing.DrawnBounds),
             TexturedMaterials = terrain is null ? null : [terrain],
             Labels = labels,
             Annotations = annotations.Annotations.Count == 0 ? null : annotations.Annotations,
