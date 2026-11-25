@@ -389,7 +389,7 @@ public sealed class BlenderRenderToolsTests : IDisposable
         {
             Name = "Under a sky", Spec = new SceneSpec { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "sky.hdr" } },
         });
-        var (render, _) = await ToolsAsync();
+        var (render, status) = await ToolsAsync();
 
         var unknown = await render.StartRender(builder: "blender");
 
@@ -398,9 +398,14 @@ public sealed class BlenderRenderToolsTests : IDisposable
         Assert.Empty(_blender.Requests);
         // The player carries the image of an HDRI light rig: it refuses no preset, asked for by
         // name, left to be chosen, or for a draft.
-        Assert.True((await render.StartRender(preset: "Under a sky", model: "out/cave.3d", builder: "player")).Ok);
+        var played = await render.StartRender(preset: "Under a sky", model: "out/cave.3d", builder: "player");
+        Assert.True(played.Ok, played.Error?.Message);
+        await FinishedAsync(status, played.Data!.JobId);
         Assert.Equal(SceneBuilder.Player, _blender.Renderer.LastOptions!.Builder);
-        Assert.True((await render.StartRender(preset: "Under a sky", model: "out/cave.3d", draft: true, builder: "player")).Ok);
+        var draft = await render.StartRender(preset: "Under a sky", model: "out/cave.3d", draft: true, builder: "player");
+        Assert.True(draft.Ok, draft.Error?.Message);
+        await FinishedAsync(status, draft.Data!.JobId);
+        Assert.True(_blender.Renderer.LastOptions!.Draft);
     }
 
     [Fact]
