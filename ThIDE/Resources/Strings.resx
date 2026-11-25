@@ -2162,12 +2162,12 @@ This cannot be undone.</value></data>
   <data name="Blender_UI_AddCaption_Tip" xml:space="preserve"><value>Adds a caption after the last one, three seconds long.</value></data>
   <data name="Blender_UI_RemoveCaption" xml:space="preserve"><value>Remove this caption</value></data>
   <data name="Blender_UI_CaptionText" xml:space="preserve"><value>Text</value></data>
-  <data name="Blender_UI_CaptionStart" xml:space="preserve"><value>From (s)</value></data>
-  <data name="Blender_UI_CaptionEnd" xml:space="preserve"><value>To (s)</value></data>
+  <data name="Blender_UI_CaptionStart" xml:space="preserve"><value>From second</value></data>
+  <data name="Blender_UI_CaptionEnd" xml:space="preserve"><value>To second</value></data>
   <data name="Blender_UI_CaptionStart_Tip" xml:space="preserve"><value>When the caption appears, in seconds from the start of the movie.</value></data>
   <data name="Blender_UI_CaptionEnd_Tip" xml:space="preserve"><value>When the caption goes, in seconds from the start of the movie.</value></data>
   <data name="Blender_UI_CaptionStrip" xml:space="preserve"><value>Captions along the clip</value></data>
-  <data name="Blender_UI_CaptionStrip_Tip" xml:space="preserve"><value>The captions along the clip, each where its seconds fall. The grey part is the clip; a caption that reaches past it runs on after the scene has ended.</value></data>
+  <data name="Blender_UI_CaptionStrip_Tip" xml:space="preserve"><value>The captions along the clip, each where its seconds fall. The gray part is the clip; a caption that reaches past it runs on after the scene has ended.</value></data>
   <data name="Blender_Phase_Composing" xml:space="preserve"><value>Composing the movie</value></data>
   <data name="Blender_Status_PreviewDone" xml:space="preserve"><value>Preview complete.</value></data>
   <data name="Blender_Job_Preview" xml:space="preserve"><value>{0} (preview)</value></data>

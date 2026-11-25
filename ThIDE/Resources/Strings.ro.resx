@@ -2162,8 +2162,8 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_UI_AddCaption_Tip" xml:space="preserve"><value>Adaugă o subtitrare după ultima, lungă de trei secunde.</value></data>
   <data name="Blender_UI_RemoveCaption" xml:space="preserve"><value>Șterge această subtitrare</value></data>
   <data name="Blender_UI_CaptionText" xml:space="preserve"><value>Text</value></data>
-  <data name="Blender_UI_CaptionStart" xml:space="preserve"><value>De la (s)</value></data>
-  <data name="Blender_UI_CaptionEnd" xml:space="preserve"><value>Până la (s)</value></data>
+  <data name="Blender_UI_CaptionStart" xml:space="preserve"><value>De la secunda</value></data>
+  <data name="Blender_UI_CaptionEnd" xml:space="preserve"><value>Până la secunda</value></data>
   <data name="Blender_UI_CaptionStart_Tip" xml:space="preserve"><value>Când apare subtitrarea, în secunde de la începutul filmului.</value></data>
   <data name="Blender_UI_CaptionEnd_Tip" xml:space="preserve"><value>Când dispare subtitrarea, în secunde de la începutul filmului.</value></data>
   <data name="Blender_UI_CaptionStrip" xml:space="preserve"><value>Subtitrările de-a lungul clipului</value></data>

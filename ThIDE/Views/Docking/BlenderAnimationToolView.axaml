@@ -133,7 +133,7 @@
                 <Button AutomationProperties.AutomationId="Blender.AddCaption" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_AddCaption}" Command="{Binding Blender.AddCaptionCommand}" ToolTip.Tip="{l:Loc Blender_UI_AddCaption_Tip}" />
                 <TextBlock Text="{l:Loc Blender_UI_Captions}" VerticalAlignment="Center" ToolTip.Tip="{l:Loc Blender_UI_Captions_Tip}" />
             </DockPanel>
-            <Grid ColumnDefinitions="22,*,64,64,30" IsVisible="{Binding Blender.HasCaptions}">
+            <Grid ColumnDefinitions="22,*,96,96,30" IsVisible="{Binding Blender.HasCaptions}">
                 <TextBlock Grid.Column="1" Text="{l:Loc Blender_UI_CaptionText}" FontSize="11" Opacity="0.7" />
                 <TextBlock Grid.Column="2" Text="{l:Loc Blender_UI_CaptionStart}" FontSize="11" Opacity="0.7" Margin="4,0,0,0" />
                 <TextBlock Grid.Column="3" Text="{l:Loc Blender_UI_CaptionEnd}" FontSize="11" Opacity="0.7" Margin="4,0,0,0" />
@@ -141,7 +141,7 @@
             <ItemsControl AutomationProperties.AutomationId="Blender.Captions" AutomationProperties.Name="{l:Loc Blender_UI_Captions}" ItemsSource="{Binding Blender.Captions}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vmm:CaptionRowViewModel">
-                        <Grid ColumnDefinitions="22,*,64,64,30" Margin="0,0,0,4">
+                        <Grid ColumnDefinitions="22,*,96,96,30" Margin="0,0,0,4">
                             <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center" Opacity="0.7" />
                             <TextBox Grid.Column="1" AutomationProperties.AutomationId="{Binding TextId}" AutomationProperties.Name="{l:Loc Blender_UI_CaptionText}"
                                      Watermark="{l:Loc Blender_UI_CaptionText}" Text="{Binding Text}" />
