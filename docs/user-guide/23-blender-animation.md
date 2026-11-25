@@ -127,6 +127,11 @@ The letters are Blender's own font (Romanian diacritics included), white with a 
 sized by the picture's height, so a movie reads the same at any resolution. Everything keeps a
 margin of 5 % from the picture's edges.
 
+In a picture that is **higher than wide** (a phone's 9:16), the title, its subtitle and the north
+arrow are smaller by the picture's shape, and the title's lines end before the arrow begins: a
+title of a few words stays on one line and clear of the arrow. A picture as wide as 3:2 or wider
+is laid out as described above.
+
 ### Texts in the panel
 
 Under **Texts over the picture** the panel has the texts of the table above:
@@ -389,6 +394,36 @@ therion-cli blender cave.lox --hdri skies/evening.hdr --hdri-rotation 90 --hdri-
   on another machine without it.
 - A preview draws no image: its background is a plain grey, as strong as the image is set.
 
+## A cave seen from far away: the lamp's reach
+
+The *Headlamp* rig is a lamp that rides the camera, and its light falls off with the square of
+the distance: it lights a wall three metres away well, one 25 m away to about a twelfth of that,
+and one 140 m away not at all. A flythrough is always near a wall. A camera that stands back from
+the cave (an orbit, a still of the whole cave, a flight that follows from 30–140 m) sees it dark.
+
+**The lamp reaches as far as the camera looks** turns the lamp up by the square of the distance
+from the camera to what it looks at, beyond 3 m, so that the cave is lit from far as it is from
+near. Nearer than 3 m the lamp keeps the strength it has, and **Light strength** still scales it.
+
+- **In the panel**, under **Light**: tick **The lamp reaches as far as the camera looks** (it can
+  be ticked while the rig is *Headlamp*).
+- **In a render spec**: `"lighting": { "rig": "Headlamp", "lampReach": true }`.
+- **On the command line**: `--lamp-reach`, which also chooses the head lamp as the light.
+
+Only the player draws it; a script written by the script generator leaves it out and says so. By
+the numbers of a test render: an invented cave in one still from 148 m is 0.1 of 255 bright by the
+lamp as it is, and 154 with the reach.
+
+Whoever writes scene plans with the library has two more tools for this (see the library's
+`CHANGES.md`): `LampReach`, which keys the lamp's energy from distances of their own, and a
+material that is **unlit** (`"unlit": true`), which shows its colours as a screen shows them
+whatever the light, for survey lines and routes that have to read at any distance.
+
+**The *SunSky* rig is the same in every Blender.** Blender 5 has a newer sky model beside the one
+of Blender 4, bluer and brighter; the player asks for the sky of Blender 4 in both, so a scene
+looks the same in Blender 4.2, 4.5 and 5.0. (Up to ThIDE's player 1.8 a scene under the sun and
+the sky looked very different in Blender 5.)
+
 ## Two scene builders
 
 ThIDE has two ways of building the scene in Blender, and **Scene builder (advanced)** chooses
@@ -459,7 +494,8 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]... \
                     [--reveal date|order|distance [--reveal-from <station>] \
                      [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]] \
-                    [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]]
+                    [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]] \
+                    [--leads <file.json>]... [--lamp-reach]
 ```
 
 `--export` writes the script and assets without running Blender; otherwise it renders. Produced
@@ -477,6 +513,16 @@ failure, `2` on a usage or spec error.
 - `--hdri evening.hdr` lights the scene by an image all round it, which is the background too:
   see [Lighting by an image (HDRI)](#lighting-by-an-image-hdri). `--hdri-rotation 90` turns it
   and `--hdri-strength 1.5` makes it brighter. It goes with `--bundle` too.
+- `--lamp-reach` lights the scene by the lamp on the camera and turns it up with the distance
+  the camera looks over: see
+  [A cave seen from far away](#a-cave-seen-from-far-away-the-lamps-reach). It does not go with
+  `--hdri`.
+- **Lead markers.** A preset or spec that marks leads (*Full flythrough* does) marks the stations
+  the model itself flags as continuations, which a `.lox` file carries (Therion's
+  `station <name> "<comment>" continuation`); a `.3d` file has no such flags. `--leads leads.json`
+  names the stations to mark instead (once for each file): a JSON list whose entries are a
+  station's name, or `{ "station": "main.12", "note": "draughts" }`. A station the model does not
+  have is left out. It goes with `--bundle` too.
 - `--annotations notes.json` adds the labels, callouts, markers and photos of a file to the
   preset's or the spec's: see
   [Annotations](#annotations-labels-callouts-markers-and-photos). It goes with `--bundle` too. A

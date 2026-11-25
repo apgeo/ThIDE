@@ -137,6 +137,11 @@ Literele sunt cele ale fontului propriu al Blender (cu diacriticele românești 
 cu un contur întunecat, și au mărimea dată de înălțimea imaginii, așa că un film se citește la fel
 la orice rezoluție. Totul păstrează o margine de 5 % față de marginile imaginii.
 
+Într-o imagine **mai înaltă decât lată** (9:16, ca pe telefon), titlul, subtitlul și săgeata nordului
+sunt mai mici, după forma imaginii, iar rândurile titlului se termină înainte să înceapă săgeata: un
+titlu de câteva cuvinte rămâne pe un singur rând și nu atinge săgeata. O imagine de 3:2 sau mai
+lată este așezată așa cum este descris mai sus.
+
 ### Textele din panou
 
 La **Texte peste imagine**, panoul are textele din tabelul de mai sus:
@@ -414,6 +419,39 @@ therion-cli blender cave.lox --hdri ceruri/seara.hdr --hdri-rotation 90 --hdri-s
 - O previzualizare nu desenează nicio imagine: fundalul ei este un gri simplu, la fel de puternic
   cum este setată imaginea.
 
+## O peșteră privită de departe: bătaia lămpii
+
+Lumina *Headlamp* este o lampă care stă pe cameră, iar lumina ei scade cu pătratul distanței:
+luminează bine un perete aflat la trei metri, pe unul aflat la 25 m cam a douăsprezecea parte, iar
+pe unul aflat la 140 m deloc. Un zbor prin galerii este mereu aproape de un perete. O cameră care
+stă departe de peșteră (o orbită, o imagine statică a întregii peșteri, un zbor care urmărește de la
+30–140 m) o vede întunecată.
+
+**Lampa bate până unde privește camera** întărește lampa cu pătratul distanței de la cameră până
+la ceea ce privește, dincolo de 3 m, astfel încât peștera este luminată de departe la fel ca de
+aproape. Mai aproape de 3 m lampa își păstrează tăria, iar **Intensitatea luminii** o scalează în
+continuare.
+
+- **În panou**, la **Lumină**: bifați **Lampa bate până unde privește camera** (se poate bifa cât
+  timp lumina este *Headlamp*).
+- **Într-o specificație de randare**: `"lighting": { "rig": "Headlamp", "lampReach": true }`.
+- **În linia de comandă**: `--lamp-reach`, care alege și lampa de pe cameră ca lumină.
+
+Este desenată doar de player; un script scris de generatorul de scripturi o lasă deoparte și spune
+acest lucru. În cifrele unei randări de test: o peșteră inventată, într-o imagine statică de la
+148 m, are luminozitatea 0,1 din 255 cu lampa așa cum este și 154 cu bătaia activă.
+
+Cine scrie planuri de scenă cu biblioteca are încă două unelte pentru aceasta (vedeți `CHANGES.md`
+al bibliotecii): `LampReach`, care pune chei pe energia lămpii după distanțe proprii, și un
+material **neluminat** (`"unlit": true`), care își arată culorile așa cum le arată un ecran,
+oricare ar fi lumina, pentru vize topografice și trasee care trebuie să se citească de la orice
+distanță.
+
+**Lumina *SunSky* este aceeași în orice Blender.** Blender 5 are un model de cer mai nou pe lângă
+cel din Blender 4, mai albastru și mai luminos; playerul cere în ambele cerul din Blender 4, așa că
+o scenă arată la fel în Blender 4.2, 4.5 și 5.0. (Până la playerul 1.8 al ThIDE, o scenă sub soare
+și cer arăta foarte diferit în Blender 5.)
+
 ## Doi constructori de scenă
 
 ThIDE are două moduri de a construi scena în Blender, iar **Constructor de scenă (avansat)** alege
@@ -488,7 +526,8 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--caption "<start>-<end>:<text>"]... [--annotations <file.json>]... \
                     [--reveal date|order|distance [--reveal-from <station>] \
                      [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]] \
-                    [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]]
+                    [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]] \
+                    [--leads <file.json>]... [--lamp-reach]
 ```
 
 `--export` scrie scriptul și resursele fără a rula Blender; altfel randează. Căile fișierelor
@@ -508,6 +547,17 @@ randării, `2` la o eroare de utilizare sau de specificație.
   fundalul: vedeți [Iluminarea cu o imagine (HDRI)](#iluminarea-cu-o-imagine-hdri).
   `--hdri-rotation 90` o rotește, iar `--hdri-strength 1.5` o face mai luminoasă. Merge și cu
   `--bundle`.
+- `--lamp-reach` luminează scena cu lampa de pe cameră și o întărește după distanța la care
+  privește camera: vedeți
+  [O peșteră privită de departe](#o-peșteră-privită-de-departe-bătaia-lămpii). Nu merge împreună
+  cu `--hdri`.
+- **Marcaje pentru continuări.** O presetare sau o specificație care marchează continuările (*Full
+  flythrough* o face) marchează stațiile pe care modelul însuși le are semnalate drept continuări,
+  lucru pe care îl conține un fișier `.lox` (în Therion: `station <nume> "<comentariu>"
+  continuation`); un fișier `.3d` nu are asemenea semnalări. `--leads continuari.json` numește în
+  schimb stațiile de marcat (o dată pentru fiecare fișier): o listă JSON ale cărei elemente sunt
+  numele unei stații sau `{ "station": "main.12", "note": "curent de aer" }`. O stație pe care
+  modelul nu o are este lăsată deoparte. Merge și cu `--bundle`.
 - `--annotations note.json` adaugă etichetele, notele cu linie, marcajele și fotografiile dintr-un
   fișier la cele ale presetării sau ale specificației: vezi
   [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii). Merge și cu `--bundle`. Un

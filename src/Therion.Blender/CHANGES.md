@@ -1,5 +1,109 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-25 — a cave seen from far away: unlit materials, a lamp that reaches, and four findings
+
+The plan stays **version 1**. The player calls itself **1.9**: a material of the look may be
+**unlit**, and the sun and sky rig is the same sky in every Blender. A plan with an unlit material
+needs a player 1.9 (an earlier one refuses the key by name); every plan of yesterday plays as it
+did, but for the sky in Blender 5 (below). A render that was stopped under a player 1.8 starts its
+frames again; writing the output again from kept frames (`--stage compose`) is not affected.
+
+### Breaking changes
+- None in this library's API.
+- **Behaviour: the sun and sky rig in Blender 5.** `look.world.kind: "sky"` picked Blender 5's
+  newer sky model (`MULTIPLE_SCATTERING`) and left the sky's height at Blender 5's default of
+  100 m, so one plan gave two different pictures: Blender 5.0.1 showed the sky above a cave as
+  (79, 90, 104) of 255 where Blender 4.2.23 showed (166, 147, 118). The player now asks for the
+  model both have (`NISHITA` in Blender 4, `SINGLE_SCATTERING` in Blender 5; measured equal to
+  0.1 % in linear light) at height 0. Blender 5.0.1 now gives (162, 143, 114), and 4.2 and 4.5
+  are unchanged. Migration: none; a render of the *SunSky* rig in Blender 5 looks as it does in
+  Blender 4. **The script generator is not changed** (it is frozen): its scripts still pick the
+  newer model in Blender 5, so the two builders differ there under the sun and sky.
+- **Behaviour: the bounds a plan goes by include the walls.** `CameraFraming.FromGeometry` now
+  also gives `MeshBounds`, the box round the wall mesh, and `ScenePlanBuilder.FromSpec` uses it
+  (`DrawnBounds`) for the one pose of the static camera and for the heights of the depth tint,
+  as a generated script uses the mesh it imported. Before, both went by the stations alone: the
+  static camera stood 0.6 % nearer than the generated script's and the depth colours stopped
+  changing over the top and bottom 1.5–1.8 m of the walls. Migration: none; a plan of the same
+  spec differs in that pose and in the ramp's `low`/`high`. The animated templates still go by
+  `LocalBounds`, as the generated scripts do. A `CameraFraming` made by hand without `MeshBounds`
+  behaves as before.
+- **Behaviour: texts in a picture higher than wide.** `ScreenTextPlanner` makes the title, its
+  subtitle and the north arrow smaller by the picture's shape (by `width / height`, not below a
+  half) when the picture is higher than wide, and keeps the title's widest line (`wrap`) inside
+  the room the north arrow leaves. In 9:16 "Invented Cave" took two lines and the arrow touched
+  it; it now takes one, clear of the arrow. A picture of 3:2 or wider is laid out as before
+  (between 1:1 and 3:2 only the title's `wrap` is a little narrower beside an arrow).
+
+### Additive API: an unlit material
+- **`PlanMaterial.Unlit`** (`look.materials[].unlit`, written only when true) makes a material
+  that no light changes: it shows the colours of its kind (flat, the mesh's own, a ramp) as a
+  screen shows them, in a cave no lamp reaches as under the sun. It emits to the camera only, so
+  a line that reads in the dark does not light the walls round it. **`PlanMaterial.Strength`**
+  (`strength`, only with `unlit`) is how brightly: 1 is the colours as they are.
+- A model or a line wears it as it wears any material, and what changes of a material changes
+  of it: a tint, an opacity, a fade, a reveal. The draft shows it in its colours, as it shows
+  every material. Roughness has no part in it.
+- For survey lines, a route, an outline: give the line's material `Unlit = true`. Markers and
+  labels (`labels`, `annotations`) glow already and need nothing.
+- Measured on a line 3 m thick, of 255: lit, under three suns 168; lit, by the 80 W head lamp
+  from 25 m 14 and from 140 m 0; unlit 201.5 in all four.
+
+### Additive API: a lamp that reaches (`LampReach`)
+- **`LampReach.Apply(plan, reference = 3, lightId = null, distances = null)`** keys the energy of
+  the plan's head lamp by the distance the camera looks over: `energy × (distance / reference)²`
+  beyond the reference distance, and the lamp's own energy nearer. It is a change of the lamp's
+  `energy` (`changes[].energy`), so the player needs nothing new for it, and a plan says what it
+  does. A camera that stands still gives the lamp one energy and no keys.
+- The distance is from each pose's `eye` to its `target`, at every frame, straight from pose to
+  pose. **A producer whose targets are only where the camera focuses passes its own distances**
+  (`distances`: seconds and metres, in rising order of time), e.g. to the nearest cave.
+- `LampReach.Keys(distances, energy, reference, tolerance)` gives the keys alone (keys that a
+  straight line between their neighbours stands in for, within 2 %, are left out),
+  `LampReach.Distances(camera, timeline)` the distances of a plan's camera, and
+  `LampReach.Energy(energy, distance, reference)` one value. `DefaultDistance` is 3 m: a wall
+  that far from the 80 W lamp is lit to about the middle of what a picture shows.
+- `Apply` throws `ArgumentException` when a change keys that lamp's energy already.
+- **The spec:** `LightingSpec.LampReach` (`lighting.lampReach`, written only when true), for the
+  `Headlamp` rig. `ScenePlanBuilder.FromSpec` applies it; `SceneBuilders.NotDrawnByTheGenerator`
+  names it (`lighting.lampReach`), and the script generator leaves it out.
+- Measured, of 255: the same line by the lamp without the reach 14 at 25 m and 0.1 at 140 m; with
+  it 176 and 179. An invented cave in one still from 148 m: 0.1 without, 154 with.
+- An exposure keyed over time was the alternative, and is not built: it would also brighten what
+  is unlit, the sky and what the sun lights.
+
+### Additive API: leads without a project (`ModelLeads`)
+- `ModelLeads.FromModel(CaveModel)` gives the stations a model flags as continuations (a `.lox`
+  file's flag) as `SourceLead`s, each named with its surveys before it so that
+  `LeadsEnricher` finds it; `ModelLeads.Read(json)` / `ReadFile(path)` read a leads file (a JSON
+  array of station names, or of `{ "station", "kind", "note" }`), and throw `FormatException`
+  with the entry's place and nothing of the file's contents.
+
+### Command line
+- **`therion-cli blender` passes leads.** It passed none, so the lead markers of a preset never
+  showed from the command line. It now marks the stations the model flags as continuations, or
+  those of `--leads <file.json>` (once for each file), for a render and for `--bundle`.
+- **`--lamp-reach`** lights the scene by the head lamp with `LampReach` on.
+
+### The panel (ThIDE)
+- **Light** has "The lamp reaches as far as the camera looks", for the *Headlamp* rig. It is the
+  spec's `lighting.lampReach`, so "Save preset" keeps it.
+
+### Verified
+- Without Blender: the lamp's energy by distance, its keys within their tolerance, the distances
+  of a camera, `Apply` and its refusals, the spec's field to the plan and to JSON; an unlit
+  material through the serializer, the validator, the schema and the player's known keys; the
+  bounds of the drawn mesh in the static pose and the depth ramp; the title and the arrow in
+  9:16, 3:4 and 1:1; leads from a model's flags and from a file, and their errors; the command
+  line's leads in a bundle's plan.
+- In Blender 4.2.23, 4.5.16 and 5.0.1, by the numbers of the picture: the unlit line and the lit
+  one under three suns and by the lamp from 25 m and 140 m (Cycles), in EEVEE and in a draft; an
+  unlit line beside a wall in the dark, which stays black; a tint over an unlit line; the lamp
+  with and without its reach from both distances and on a whole cave; the sky and its light on a
+  cave within 4 of 255 of one set of numbers in all three versions; the static camera of a plan
+  and of a generated script in one place (to a hundred-thousandth of their distance); a title
+  on one line and clear of the north arrow in a 360 × 640 picture.
+
 ## 2026-11-25 — an export is the scene a render shows; the panel's light, reveal, annotations and texts
 
 The plan stays **version 1**. The player calls itself **1.8**: started in Blender's window with
