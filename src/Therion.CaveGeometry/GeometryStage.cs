@@ -24,7 +24,7 @@ public static class GeometryStage
         var localBounds = originalBounds.IsEmpty ? BoundingBox.Empty : originalBounds.Translate(offset * -1.0);
 
         var reveal = options.Reveal is null ? null : RevealField.Build(recentered, options.Reveal, offset);
-        var (walls, tubeLegs) = BuildWalls(recentered, options, reveal);
+        var (walls, tubeLegs, triangleLegs) = BuildWalls(recentered, options, reveal);
         if (options.DepthTint && !walls.IsEmpty)
             walls = walls with { VertexColors = TintByDepth(walls.Vertices) };
 
@@ -32,6 +32,7 @@ public static class GeometryStage
         {
             Walls = walls,
             TubeLegs = tubeLegs,
+            TriangleLegs = triangleLegs,
             Reveal = reveal,
             Offset = offset,
             OriginalBounds = originalBounds,
@@ -41,7 +42,8 @@ public static class GeometryStage
         };
     }
 
-    private static (CaveMesh Walls, IReadOnlyList<TubeLeg> TubeLegs) BuildWalls(CaveModel model, GeometryOptions options, RevealField? reveal)
+    private static (CaveMesh Walls, IReadOnlyList<TubeLeg> TubeLegs, IReadOnlyList<int> TriangleLegs) BuildWalls(
+        CaveModel model, GeometryOptions options, RevealField? reveal)
     {
         bool useScraps = options.WallSource switch
         {
@@ -52,14 +54,15 @@ public static class GeometryStage
         if (useScraps)
         {
             var scraps = MeshFromScraps(model.Scraps);
-            return (reveal is null || scraps.IsEmpty ? scraps : reveal.OnWalls(scraps), []);
+            return (reveal is null || scraps.IsEmpty ? scraps : reveal.OnWalls(scraps), [], []);
         }
         var legs = TubeMesher.Legs(WithPassageLrud(model), options);
-        if (reveal is null) return (TubeMesher.BuildFromLegs(legs, options), legs);
-        // The tubes are those of the legs the reveal values are of, in the same order.
+        // The tubes are those of the legs the reveal values are of, in the same order; which leg
+        // a triangle is of also says which part of the walls it goes to (WallParts).
         var triangleLegs = new List<int>();
         var tubes = TubeMesher.BuildFromLegs(legs, options, triangleLegs);
-        return (tubes.IsEmpty ? tubes : reveal.OnTubes(tubes, triangleLegs), legs);
+        if (reveal is null) return (tubes, legs, triangleLegs);
+        return (tubes.IsEmpty ? tubes : reveal.OnTubes(tubes, triangleLegs), legs, triangleLegs);
     }
 
     /// <summary>

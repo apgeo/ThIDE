@@ -300,6 +300,10 @@ internal static class AppServices
                 () => BlenderSourceProvider.NewestSource(
                     sp.GetRequiredService<IDocumentService>().Workspace,
                     sp.GetRequiredService<IWorkspaceSession>().ActiveThconfig?.FullPath)));
+        // Renders run one at a time, whoever starts them (the panel, agents through the in-app MCP
+        // server): a second one waits in the queue. The queue keeps its jobs in a small file, so a
+        // render that ThIDE was closed in the middle of (not cancelled) goes on at the next start.
+        services.AddSingleton(_ => new Therion.Blender.Execution.RenderQueue(Path.Combine(BlenderJobRoot(), "render-queue.json")));
         services.AddSingleton<Therion.Blender.IBlenderRenderService>(sp =>
         {
             var service = new Therion.Blender.Execution.BlenderRenderService(
@@ -310,17 +314,18 @@ internal static class AppServices
             // Job folders left by failed or cancelled renders hold only scratch and a log; a week is
             // long enough to read the log.
             _ = System.Threading.Tasks.Task.Run(() => service.PruneJobFolders(TimeSpan.FromDays(7)));
-            return service;
+            var queued = new Therion.Blender.Execution.QueuedRenderService(
+                service, sp.GetRequiredService<Therion.Blender.Execution.RenderQueue>(), Path.Combine(BlenderJobRoot(), "queue"));
+            if (queued.Queue.Interrupted.Count > 0) _ = System.Threading.Tasks.Task.Run(queued.ResumeInterrupted);
+            return queued;
         });
         services.AddSingleton<IBlenderGuiLauncher>(sp =>
             new BlenderGuiLauncher(sp.GetRequiredService<Therion.Blender.Execution.BlenderLocator>(), () => BlenderOverridePath(sp)));
         // The same renderer, sources and presets, lent to the in-app MCP server's render tools.
-        services.AddSingleton<BlenderRenderSlot>();
         services.AddSingleton<Therion.Mcp.IBlenderRenderHost>(sp => new McpBlenderRenderHost(
             sp.GetRequiredService<Therion.Blender.IBlenderRenderService>(),
             sp.GetRequiredService<IBlenderSourceProvider>(),
-            sp.GetRequiredService<Therion.Blender.Presets.PresetStore>(),
-            sp.GetRequiredService<BlenderRenderSlot>()));
+            sp.GetRequiredService<Therion.Blender.Presets.PresetStore>()));
         services.AddSingleton<BlenderAnimationViewModel>();
         services.AddSingleton<ViewModels.Docking.BlenderAnimationToolViewModel>();
 

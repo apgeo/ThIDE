@@ -1025,6 +1025,85 @@ Bine de știut:
 - Storyboardul numește fiecare stație pe lângă care trece camera, deci aparține acestui model:
   după ce ridicarea s-a schimbat, faceți turul din nou, în loc să editați un storyboard vechi.
 
+## Peșteri mari, randări lungi
+
+**Pereții pe părți.** La o peșteră mare (peste o jumătate de milion de triunghiuri de pereți sau
+peste doi kilometri în lățime) pereții sunt scriși pe părți: galeriile, câteva sute de metri pe
+parte (după o rețea de 100 m pentru pereții desenați din scrapuri). Părțile împreună sunt aceeași
+rețea de poligoane, vârf cu vârf, cu aceleași culori de adâncime și aceeași dezvăluire, deci
+imaginea nu se schimbă. Se schimbă doar faptul că o cameră **în interiorul** peșterii (un zbor
+prin galerii, un traseu) arată numai părțile aflate la cel mult 200 m de drumul ei; o cameră din
+afară (o orbită, o imagine statică) le arată pe toate. `--parts on` împarte orice peșteră, `--parts
+off` nu împarte niciuna.
+
+**Etichete lângă traseu.** O cameră din interior etichetează doar stațiile și marchează doar
+continuările aflate la cel mult 200 m de drumul ei; limita de 200 de etichete de stații se aplică
+apoi acestora. Într-un film, fiecare secvență și le alege pe ale ei. O adnotare a cărei stație se
+află într-o parte pe care secvența o lasă deoparte este lăsată deoparte odată cu ea, ca nimic să
+nu plutească acolo unde nu sunt pereți.
+
+**Cât va costa.** Înainte de începerea randării, progresul spune cât va costa: cadrele, timpul
+după secundele presupuse pe cadru (sau măsurate), discul pentru cadre și film și memoria de care
+va avea nevoie Blender. O scenă cu peste 20 de milioane de triunghiuri primește un avertisment (o
+placă grafică s-ar putea să nu o încapă). În timpul randării, progresul spune câte secunde ia un
+cadru și cât timp a mai rămas, după cadrele scrise până atunci. În linia de comandă, `--estimate`
+afișează estimarea și nu randează nimic:
+
+    therion-cli blender pestera.lox --storyboard tur.storyboard.json --estimate
+
+**Un interval de cadre.** `--frame-range 1-600 --frames <dosar>` randează doar cadrele 1–600 ale
+unei scene în dosarul de cadre și nimic altceva. Mai multe randări pot folosi același dosar în
+același timp, fiecare cu intervalul ei; filmul se scrie după ce toate sunt gata:
+
+    therion-cli blender pestera.lox --spec tur.json --frames cadre --frame-range 1-900
+    therion-cli blender pestera.lox --spec tur.json --frames cadre --frame-range 901-1800
+    therion-cli blender pestera.lox --spec tur.json --frames cadre --compose-only
+
+Merită pe un calculator cu **mai multe plăci grafice**: porniți câte o randare pentru fiecare
+placă, fiecare văzând doar placa ei (`CUDA_VISIBLE_DEVICES=0`, `=1`, … la NVIDIA), fiecare cu
+intervalul ei. Pe un singur calculator fără ele se câștigă puțin, pentru că Cycles folosește deja
+toate nucleele. Secvențele unui film se randează oricum una câte una; pentru un interval dintr-o
+secvență, randați doar acea secvență (`--shot`).
+
+**O randare odată.** În ThIDE randările rulează pe rând, oricine le pornește: o randare pornită din
+panou în timp ce randează un agent (sau invers) își așteaptă rândul, iar panoul spune asta. Randarea
+unui agent care s-a terminat apare în istoricul panoului. Dacă ThIDE se oprește în mijlocul unei
+randări (nu când aceasta este anulată), randarea continuă cu cadrele ei la următoarea pornire a
+ThIDE.
+
+## Executorul de randări
+
+`therion-cli render-worker` randează [pachetele de
+randare](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator) care sosesc într-un dosar, pe
+rând, de la cel mai vechi, și lasă rezultatele în alt dosar. Este pentru un calculator cu Blender și
+o placă grafică bună, care nu are nimic altceva din ThIDE; felul în care se umplu dosarele (un
+dosar sincronizat, un SFTP) rămâne la alegerea dumneavoastră.
+
+    therion-cli render-worker --inbox /srv/render/in --outbox /srv/render/out
+
+- Puneți un pachet în dosarul de intrare ca `<lucrare>.zip`. Cât timp se randează,
+  `<lucrare>.status.json` din dosarul de ieșire spune cât a avansat: secvența, cadrul, secundele pe
+  cadru și timpul rămas. La final, dosarul de ieșire conține `<lucrare>.mp4` (sau imaginile),
+  subtitrările și `<lucrare>.log`.
+- Pentru a opri o lucrare, puneți un fișier gol `<lucrare>.cancel` lângă arhiva ei. Cadrele ei sunt
+  păstrate; ștergeți fișierul și lucrarea continuă cu ele. Un executor oprit (Ctrl+C) continuă și
+  el cu cadrele lucrării la următoarea pornire.
+- `--once` se oprește când dosarul de intrare este gol; `--blender` numește Blender-ul;
+  `--max-hours`, `--max-triangles` și `--max-bundle-gb` stabilesc limitele unei lucrări;
+  `--scratch` este locul unde pachetele sunt dezarhivate și cadrele păstrate.
+
+**Securitate.** Un pachet este o colecție de date, iar executorul îl tratează ca atare. Nu rulează
+niciodată `render.py`, `render.sh` sau `thide_player` din pachet: citește planurile, rețelele de
+poligoane și imaginile și le redă cu propriul player. Refuză, înainte să pornească Blender, un pachet
+ale cărui planuri numesc dosare de module sau funcții din afara celor ale playerului, o cale care
+iese din pachet, o legătură simbolică, un plan care nu trece verificările și un pachet peste limite
+(dimensiunea lui, dimensiunea dezarhivată, triunghiurile, cadre × pixeli × eșantioane, timpul).
+Module în plus vin doar dintr-un dosar numit de operator (`--modules`). Blender rulează cu `-b
+--factory-startup` (fără add-on-uri, fără scripturi de pornire) și în dosarul de ieșire ajung doar
+fișierele pe care executorul le numește. Rămâne riscul unui defect în cititoarele de rețele de
+poligoane și imagini ale Blender: rulați executorul ca un utilizator care poate citi și scrie cele
+două dosare și prea puțin altceva.
+
 ## Cerințe și sfaturi
 
 - **Blender 4.2 sau mai nou** — versiunile mai vechi sunt respinse cu un mesaj clar.

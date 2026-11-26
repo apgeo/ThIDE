@@ -92,6 +92,7 @@ def render(ctx, output):
         return
     os.makedirs(os.path.dirname(scene.render.filepath), exist_ok=True)
     api.report("phase", "render")
+    keep_render_data(ctx, output["kind"] != "still" and ctx.frame_count > 1)
     render_reporting(scene, ctx.frame_count, still=output["kind"] == "still")
     api.report("output", scene.render.filepath)
 
@@ -101,24 +102,39 @@ def render_frames(ctx, output):
     there is not rendered again; Blender marks the one it is at with an empty file."""
     scene = ctx.scene
     count = 1 if output["kind"] == "still" else ctx.frame_count
-    there = ctx.frames.begin(count)
+    first, last = ctx.frame_range or (1, count)
+    there = ctx.frames.begin(count, first, last)
+    wanted = last - first + 1
     set_png(scene)
     scene.render.filepath = ctx.frames.pattern
     scene.render.use_file_extension = True
     scene.render.use_overwrite = False
     scene.render.use_placeholder = True
-    scene.frame_start, scene.frame_end = 1, count
+    scene.frame_start, scene.frame_end = first, last
     api.report("phase", "render")
+    if ctx.frame_range:
+        api.report("frame-range", "%d-%d" % (first, last))
     if there:
-        api.report("resumed", "%d/%d" % (there, count))
-    if there < count:
+        api.report("resumed", "%d/%d" % (there, wanted))
+    if there < wanted:
+        keep_render_data(ctx, wanted - there > 1)
         render_reporting(scene, count, still=False)
     else:
         api.report("frames", count)
     missing = ctx.frames.missing()
     if missing:
-        raise api.PlanError("the render stopped with %d of %d frames to go" % (len(missing), count))
+        raise api.PlanError("the render stopped with %d of %d frames to go" % (len(missing), wanted))
     api.report("frames-folder", ctx.frames.folder)
+
+
+def keep_render_data(ctx, several):
+    """Cycles keeps the scene's render data from one frame to the next in a render of several
+    frames (it builds what does not move once); the frames are the same pictures."""
+    scene = ctx.scene
+    keep = several and ctx.persistent_data and scene.render.engine == "CYCLES"
+    scene.render.use_persistent_data = keep
+    if keep:
+        api.report("persistent-data", "1")
 
 
 def render_reporting(scene, total, still):

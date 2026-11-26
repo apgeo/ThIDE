@@ -34,12 +34,14 @@ them, and writes the plan's output. A module takes part in the second stage with
 
 import atexit
 import base64
+import contextlib
 import hashlib
 import json
 import math
 import os
 import shutil
 import tempfile
+import time
 
 from . import PLAYER_VERSION
 
@@ -382,20 +384,28 @@ class Frames:
         except (OSError, ValueError):
             return None
 
-    def begin(self, count):
+    def begin(self, count, first=1, last=None):
         """Makes the folder ready for the first stage to render count frames into, and returns
         how many of them are there already. Frames of another scene are removed, and so is a
-        frame that a render which was stopped left unfinished."""
+        frame that a render which was stopped left unfinished.
+
+        With a range (first to last), only that range is this render's: an unfinished frame
+        outside it may be the one another Blender is rendering into the same folder, and is left
+        alone. Two Blenders that start at once on one folder take turns to read and write the note
+        (frames.lock), so the second finds the note the first wrote and removes nothing."""
+        last = count if last is None else last
         self.count = count
+        self.range = (first, last)
         os.makedirs(self.folder, exist_ok=True)
         wanted = dict(self._describe(), frames=count)
-        if self.note() != wanted:
-            self._remove_frames()
-            with open(os.path.join(self.folder, self.NOTE), "w", encoding="utf-8") as stream:
-                json.dump(wanted, stream, indent=1, sort_keys=True)
-            return 0
+        with self._locked():
+            if self.note() != wanted:
+                self._remove_frames()
+                with open(os.path.join(self.folder, self.NOTE), "w", encoding="utf-8") as stream:
+                    json.dump(wanted, stream, indent=1, sort_keys=True)
+                return 0
         there = 0
-        for number in range(1, count + 1):
+        for number in range(first, last + 1):
             path = self.path(number)
             if not os.path.isfile(path):
                 continue
@@ -426,7 +436,40 @@ class Frames:
                 % (where, len(missing), count, self.folder, os.path.basename(self.path(missing[0]))))
 
     def missing(self):
-        return [number for number in range(1, self.count + 1) if not self._is_whole(self.path(number))]
+        first, last = getattr(self, "range", None) or (1, self.count)
+        return [number for number in range(first, last + 1) if not self._is_whole(self.path(number))]
+
+    LOCK = "frames.lock"
+    # A lock older than this was left by a Blender that was killed while it held it.
+    STALE_LOCK_SECONDS = 120.0
+
+    @contextlib.contextmanager
+    def _locked(self):
+        path = os.path.join(self.folder, self.LOCK)
+        waited = 0.0
+        while True:
+            try:
+                handle = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                break
+            except FileExistsError:
+                try:
+                    if time.time() - os.path.getmtime(path) > self.STALE_LOCK_SECONDS:
+                        os.remove(path)
+                        continue
+                except OSError:
+                    continue
+                if waited > 2 * self.STALE_LOCK_SECONDS:
+                    raise PlanError("%s is locked by another render (%s)" % (self.folder, self.LOCK))
+                time.sleep(0.1)
+                waited += 0.1
+        try:
+            os.close(handle)
+            yield
+        finally:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
     def picture(self):
         """The width and height of the frames, and whether they have an alpha channel: read from
@@ -513,6 +556,10 @@ class Context:
         self.inputs = []  # the plan paths of the files the modules have read
         # The other plans a plan may name (core.OtherPlans): their frames, and their first stage.
         self.others = None
+        # The frames of the first stage this Blender renders, as (first, last); None for all.
+        self.frame_range = None
+        # Whether Cycles keeps the scene's render data from one frame to the next.
+        self.persistent_data = True
 
     def frame_at(self, seconds):
         """The frame a time of the plan falls on. Time 0 is frame 1."""

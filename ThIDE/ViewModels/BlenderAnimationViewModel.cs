@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Blender;
+using Therion.Blender.Execution;
 using Therion.Blender.Plan;
 using Therion.Blender.Presets;
 using Therion.Blender.Sources;
@@ -81,14 +82,14 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         INotificationService? notifications = null,
         IShellOpener? shell = null,
         IBlenderGuiLauncher? gui = null,
-        BlenderRenderSlot? slot = null)
+        RenderQueue? queue = null)
     {
-        _slot = slot;
+        _queue = queue;
         _ui = SynchronizationContext.Current;
-        if (_slot is not null)
+        if (_queue is not null)
         {
-            _slot.Changed += (_, _) => OnUi(OnSlotChanged);
-            _slot.AgentRenderEnded += (_, finished) => OnUi(() => OnAgentRenderEnded(finished));
+            _queue.Changed += (_, _) => OnUi(OnQueueChanged);
+            _queue.JobEnded += (_, job) => { if (job.Request.Owner != PanelHolder) OnUi(() => OnOtherRenderEnded(job)); };
         }
         _renderService = renderService;
         _sources = sources;
@@ -732,13 +733,14 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         ? !string.IsNullOrWhiteSpace(ExternalFilePath)
         : SelectedArtifact is not null;
 
-    private bool CanStart => !IsBusy && !AgentRendering && HasSource && Blockers.Count == 0 && _renderService is not null && _sources is not null;
+    private bool CanStart => !IsBusy && HasSource && Blockers.Count == 0 && _renderService is not null && _sources is not null;
 
-    private readonly BlenderRenderSlot? _slot;
+    private readonly RenderQueue? _queue;
     private readonly SynchronizationContext? _ui;
 
-    /// <summary>An agent's render holds the render slot; the panel cannot start one meanwhile.</summary>
-    public bool AgentRendering => _slot is { Holder: { } holder } && holder != PanelHolder;
+    /// <summary>A render the panel did not start (an agent's) is running: one the panel starts
+    /// meanwhile waits for it in the queue.</summary>
+    public bool AgentRendering => _queue?.Running is { } running && running.Request.Owner != PanelHolder;
 
     private const string PanelHolder = "panel";
 
@@ -748,23 +750,23 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         else _ui.Post(_ => action(), null);
     }
 
-    private void OnSlotChanged()
+    private void OnQueueChanged()
     {
         OnPropertyChanged(nameof(AgentRendering));
         if (AgentRendering && !IsBusy) StatusMessage = Tr.Get("Blender_Status_AgentRendering");
-        RenderCommand.NotifyCanExecuteChanged();
-        PreviewCommand.NotifyCanExecuteChanged();
     }
 
-    private void OnAgentRenderEnded(AgentRenderFinished finished)
+    /// <summary>A render the panel did not start ended (an agent's, or one a restart had cut
+    /// short): it joins the history.</summary>
+    private void OnOtherRenderEnded(RenderJobRecord job)
     {
-        var result = finished.Result;
-        bool ok = result?.Succeeded == true;
+        var result = job.Result;
+        bool ok = job.State == RenderJobState.Succeeded;
         string status = ok ? Tr.Get("Blender_Status_Done")
-            : result is not null ? FailureMessage(result)
-            : finished.Error ?? Tr.Get("Blender_Status_Failed");
-        Jobs.Insert(0, new JobHistoryEntry(finished.Name, ok, status,
-            ok ? [.. result!.OutputPaths] : [], result?.JobLogPath, result?.Duration ?? TimeSpan.Zero));
+            : job.State == RenderJobState.Cancelled ? Tr.Get("Blender_Status_Cancelled")
+            : result?.Error ?? Tr.Get("Blender_Status_Failed");
+        Jobs.Insert(0, new JobHistoryEntry(job.Request.Name, ok, status,
+            ok ? [.. result?.Outputs ?? []] : [], result?.Log, TimeSpan.FromSeconds(result?.Seconds ?? 0)));
         if (!IsBusy) StatusMessage = status;
     }
 
@@ -780,11 +782,6 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     private async Task RunRenderAsync(bool draft)
     {
-        if (_slot is not null && !_slot.TryTake(PanelHolder))
-        {
-            StatusMessage = Tr.Get("Blender_Status_AgentRendering");
-            return;
-        }
         Outputs.Clear();
         Warnings.Clear();
         LastError = null;
@@ -800,7 +797,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             var spec = string.IsNullOrWhiteSpace(RenderDirectory)
                 ? _spec
                 : _spec with { Output = _spec.Output with { OutputDirectory = RenderDirectory.Trim() } };
-            var options = new RenderOptions { Builder = Builder, Draft = draft };
+            var options = new RenderOptions { Builder = Builder, Draft = draft, Owner = PanelHolder };
             var result = await _renderService!.RenderAsync(spec, source, options, progress, _cts.Token).ConfigureAwait(true);
             ApplyResult(result, draft);
         }
@@ -819,7 +816,6 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             IsIndeterminate = false;
             _cts?.Dispose();
             _cts = null;
-            _slot?.Release();
             Revalidate();
         }
     }
@@ -964,6 +960,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         StatusMessage = p is { Frame: int f, FrameCount: int n }
             ? string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0} {1}/{2}",
                 Tr.Get(p.Phase == RenderPhase.Composing ? "Blender_Phase_Composing" : "Blender_Phase_Rendering"), f, n)
+              + (p.SecondsLeft is { } left
+                  ? " · " + string.Format(System.Globalization.CultureInfo.CurrentCulture, Tr.Get("Blender_Status_TimeLeft"),
+                      TimeSpan.FromSeconds(Math.Round(left)).ToString(@"h\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture))
+                  : "")
             : Tr.Get(PhaseKey(p.Phase));
     }
 
@@ -976,6 +976,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         RenderPhase.Composing => "Blender_Phase_Composing",
         RenderPhase.CollectingOutputs => "Blender_Phase_Collecting",
         RenderPhase.Done => "Blender_Phase_Done",
+        RenderPhase.Queued => "Blender_Phase_Queued",
         _ => "Blender_Phase_Working",
     };
 

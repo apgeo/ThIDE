@@ -170,7 +170,7 @@ public static class RenderBundleWriter
     /// model.</exception>
     public static RenderBundleContent FromModel(
         ResolvedModelSource source, SceneSpec spec, string workDirectory, bool draft = false,
-        GeometryOptions? geometry = null, IReadOnlyList<SourceLead>? leads = null)
+        GeometryOptions? geometry = null, IReadOnlyList<SourceLead>? leads = null, bool? parts = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(spec);
@@ -182,6 +182,7 @@ public static class RenderBundleWriter
             Geometry = RevealPlanner.GeometryFor(spec, geometry, source.Path),
             Leads = leads ?? [],
             IncludeSurface = spec.Surface.Mode != SurfaceMode.Off,
+            Parts = parts,
         });
         var manifest = conversion.Manifest;
         var placed = spec with
@@ -189,6 +190,7 @@ public static class RenderBundleWriter
             Source = spec.Source with
             {
                 PlyPath = manifest.ModelPath, SurfacePlyPath = manifest.SurfacePath, SurfaceImagePath = manifest.SurfaceImagePath,
+                Parts = manifest.Parts,
             },
             Output = spec.Output with { OutputDirectory = OutputDirectory },
         };
@@ -196,7 +198,8 @@ public static class RenderBundleWriter
         // What the plan names of what the conversion wrote: the mesh, and the terrain with its
         // image when the plan draws them; and the photos and the world's image, where the spec
         // has them.
-        var written = new[] { manifest.ModelPath, manifest.SurfacePath, manifest.SurfaceImagePath }.OfType<string>();
+        var written = new[] { manifest.ModelPath, manifest.SurfacePath, manifest.SurfaceImagePath }.OfType<string>()
+            .Concat(manifest.Parts.Select(p => p.Path));
         var elsewhere = ScenePlanBuilder.Files(spec);
         var files = PlayerWriter.FilesOf(plan).ToDictionary(
             f => f.Path, f => elsewhere.TryGetValue(f.Path, out string? file) ? file : written.First(w => Path.GetFileName(w) == f.Path));
@@ -226,7 +229,8 @@ public static class RenderBundleWriter
     /// this model.</exception>
     public static RenderBundleContent FromStoryboard(
         ResolvedModelSource source, Storyboard storyboard, string workDirectory, bool draft = false,
-        GeometryOptions? geometry = null, IReadOnlyList<SourceLead>? leads = null, Func<string, Presets.RenderPreset?>? presets = null)
+        GeometryOptions? geometry = null, IReadOnlyList<SourceLead>? leads = null, Func<string, Presets.RenderPreset?>? presets = null,
+        bool? parts = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(storyboard);
@@ -243,13 +247,19 @@ public static class RenderBundleWriter
             Geometry = RevealPlanner.GeometryFor(needs, geometry, source.Path),
             Leads = leads ?? [],
             IncludeSurface = needs.Surface.Mode != SurfaceMode.Off,
+            Parts = parts,
         });
         var manifest = conversion.Manifest;
         var film = StoryboardPlanner.Lower(
             storyboard with { Output = storyboard.Output with { OutputDirectory = OutputDirectory } },
-            new SourceSpec { PlyPath = manifest.ModelPath, SurfacePlyPath = manifest.SurfacePath, SurfaceImagePath = manifest.SurfaceImagePath },
+            new SourceSpec
+            {
+                PlyPath = manifest.ModelPath, SurfacePlyPath = manifest.SurfacePath, SurfaceImagePath = manifest.SurfaceImagePath,
+                Parts = manifest.Parts,
+            },
             CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta, presets);
-        var written = new[] { manifest.ModelPath, manifest.SurfacePath, manifest.SurfaceImagePath }.OfType<string>();
+        var written = new[] { manifest.ModelPath, manifest.SurfacePath, manifest.SurfaceImagePath }.OfType<string>()
+            .Concat(manifest.Parts.Select(p => p.Path));
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (path, _) in film.Segments.SelectMany(PlayerWriter.FilesOf))
             files[path] = film.Files.TryGetValue(path, out string? file) ? file : written.First(w => Path.GetFileName(w) == path);

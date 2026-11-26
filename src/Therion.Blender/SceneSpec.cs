@@ -79,6 +79,14 @@ public sealed record SourceSpec
 
     /// <summary>Path of the surface image draped over the terrain, when the model has one.</summary>
     public string? SurfaceImagePath { get; init; }
+
+    /// <summary>The walls in parts, each a mesh of its own in the frame of
+    /// <see cref="PlyPath"/> (written by the conversion for a large cave). The player then shows
+    /// the parts instead of the one mesh, and an inside camera only those near its path; the
+    /// script generator draws <see cref="PlyPath"/>. Empty for one mesh. Not part of the spec's
+    /// file: the conversion fills it in.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<Sources.WallPartFile> Parts { get; init; } = [];
 }
 
 /// <summary>Engine + device configuration (D-09, FR-07/08).</summary>

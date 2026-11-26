@@ -30,6 +30,12 @@ Options, after "--" on Blender's command line:
     --frames DIR      the frames folder (default: "frames" beside the plan)
     --keep-frames     keep the frames when the output is written; with it a render takes two
                       stages whatever the plan says
+    --frame-range A-B with --stage frames: render frames A to B of the plan's own scene alone, so
+                      that several Blenders (one per GPU) can share one frames folder; the second
+                      stage is started on its own once every range is there
+    --no-persistent-data
+                      do not keep the scene's render data from one frame to the next (Cycles keeps
+                      it by default in a render of several frames: faster, a little more memory)
 """
 
 import argparse
@@ -113,8 +119,14 @@ def play(plan_dir, plan_text=None, files=None, script=None):
         api.report("phase", "scene")
         ctx = api.Context(plan, plan_dir, new_scene(plan), files)
         ctx.others = others
+        ctx.frame_range = frame_range(args, plan)
+        ctx.persistent_data = not args.no_persistent_data
         if staged and not args.build_only:
             ctx.frames = frames_of(plan, modules, ctx, frames_dir, lambda: ctx.inputs)
+            if ctx.frame_range and ctx.frames.from_other_plans:
+                raise api.PlanError(
+                    "--frame-range: this plan's frames are those of other plans; give the range "
+                    "with --plan and the plan of one of them")
         for name, module in zip(plan["features"], modules):
             if hasattr(module, "build"):
                 run(name, module.build, ctx, section_of(plan, module))
@@ -136,6 +148,22 @@ def play(plan_dir, plan_text=None, files=None, script=None):
     else:
         compose(plan, plan_dir, modules, files, frames_dir, args.keep_frames, others)
     api.report("done", "1")
+
+
+def frame_range(args, plan):
+    """The frames --frame-range asks for, as (first, last), or None for all of them."""
+    if args.frame_range is None:
+        return None
+    if args.stage != "frames":
+        raise api.PlanError("--frame-range goes with --stage frames: the output is written once every range is there")
+    try:
+        first, last = (int(part) for part in args.frame_range.split("-"))
+    except ValueError:
+        raise api.PlanError('--frame-range: "%s" is not two frame numbers, such as 1-120' % args.frame_range)
+    count = plan["timeline"]["frameCount"]
+    if not 1 <= first <= last <= count:
+        raise api.PlanError("--frame-range: %d-%d is not a range of frames 1 to %d" % (first, last, count))
+    return first, last
 
 
 def text_of(plan_path):
@@ -261,6 +289,8 @@ def another_blender(script, args, plan_path, stage, frames_dir, keep_frames=Fals
         command += ["--modules", os.path.abspath(folder)]
     if keep_frames:
         command.append("--keep-frames")
+    if getattr(args, "no_persistent_data", False):
+        command.append("--no-persistent-data")
     sys.stdout.flush()
     sys.stderr.flush()
     try:
@@ -313,6 +343,8 @@ def arguments():
     parser.add_argument("--stage", choices=("all", "frames", "compose"), default="all")
     parser.add_argument("--frames")
     parser.add_argument("--keep-frames", action="store_true")
+    parser.add_argument("--frame-range")
+    parser.add_argument("--no-persistent-data", action="store_true")
     # Other scripts of the same Blender run may have options of their own after the "--".
     return parser.parse_known_args(argv)[0]
 

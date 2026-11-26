@@ -49,6 +49,19 @@ public sealed record ConversionOptions
 
     /// <summary>File name of the terrain mesh (binary PLY with texture coordinates).</summary>
     public string SurfaceFileName { get; init; } = "surface.ply";
+
+    /// <summary>Also write the walls in parts (<see cref="WallParts"/>), each a PLY of its own
+    /// (<see cref="WallPartFile.FileName"/>) in the same frame as the transport mesh: true
+    /// always, false never, null when the cave is large (<see cref="WallParts.IsLarge"/>).</summary>
+    public bool? Parts { get; init; } = false;
+}
+
+/// <summary>One part of the walls as the conversion wrote it: its PLY, its bounds (local
+/// coordinates), its triangles and the branches of the reduced centreline graph it holds.</summary>
+public sealed record WallPartFile(int Index, string Path, BoundingBox Bounds, int TriangleCount, IReadOnlyList<int> Branches)
+{
+    /// <summary>The file name of part <paramref name="index"/>: <c>walls.001.ply</c> onwards.</summary>
+    public static string FileName(int index) => $"walls.{index + 1:000}.ply";
 }
 
 /// <summary>What a conversion produced.</summary>
@@ -73,6 +86,9 @@ public sealed record ConversionManifest
     /// <summary>The surface image draped over the terrain, or null when there is none (no
     /// image for the surface, or one whose format or size could not be read).</summary>
     public string? SurfaceImagePath { get; init; }
+    /// <summary>The walls in parts, when they were asked for (<see cref="ConversionOptions.Parts"/>)
+    /// and there are walls; empty otherwise.</summary>
+    public IReadOnlyList<WallPartFile> Parts { get; init; } = [];
 }
 
 /// <summary>A conversion's manifest plus the in-memory geometry and metadata, for callers
@@ -132,6 +148,15 @@ public sealed class CaveConversionPipeline
             meshPaths.Add(path);
         }
 
+        var parts = new List<WallPartFile>();
+        if (options.Parts ?? WallParts.IsLarge(geometry))
+            foreach (var part in WallParts.Split(geometry))
+            {
+                string path = Path.Combine(options.OutputDirectory, WallPartFile.FileName(part.Index));
+                PlyWriter.WriteFile(part.Mesh, path);
+                parts.Add(new WallPartFile(part.Index, path, part.Bounds, part.TriangleCount, part.Branches));
+            }
+
         var (surfacePath, surfaceImagePath) = options.IncludeSurface
             ? WriteSurface(model, geometry.Offset, options)
             : (null, null);
@@ -154,6 +179,7 @@ public sealed class CaveConversionPipeline
             WorldBounds = geometry.OriginalBounds,
             SurfacePath = surfacePath,
             SurfaceImagePath = surfaceImagePath,
+            Parts = parts,
         };
         return new ConversionResult(manifest, geometry, meta);
     }

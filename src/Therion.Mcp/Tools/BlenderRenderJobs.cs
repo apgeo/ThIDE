@@ -1,6 +1,7 @@
 // The Blender renders agents start through the MCP tools. A render can run for minutes or hours, longer
 // than a host waits for one tool call, so start_render answers at once with a job id and render_status /
-// cancel_render follow the job. One render runs at a time: Blender takes every core it is given.
+// cancel_render follow the job. One render runs at a time (Blender takes every core it is given): the
+// host's renderer queues them, and a job that waits for its turn reads "queued".
 
 using System.Diagnostics;
 using System.Globalization;
@@ -13,9 +14,13 @@ namespace Therion.Mcp.Tools;
 /// <param name="Phase">acquiringSource, parsingModel, convertingGeometry, generatingScript, rendering, composing
 /// (the second stage of a render with texts over the picture: the movie from its frames), collectingOutputs, or done.</param>
 /// <param name="Fraction">How much of the whole render is done, 0–1, when Blender says.</param>
-public sealed record RenderProgressDto(string Phase, string Message, double? Fraction, int? Frame, int? FrameCount);
+/// <param name="SecondsPerFrame">How long a frame takes, measured from the frames written so far.</param>
+/// <param name="SecondsLeft">How long the frames still to render will take at that pace.</param>
+public sealed record RenderProgressDto(string Phase, string Message, double? Fraction, int? Frame, int? FrameCount,
+    double? SecondsPerFrame = null, double? SecondsLeft = null);
 
-/// <param name="State">running, succeeded, failed, or cancelled.</param>
+/// <param name="State">queued (waiting for the render before it to end), running, succeeded, failed, or
+/// cancelled.</param>
 /// <param name="Frames">How many frames the render makes (one per still).</param>
 /// <param name="Model">The model file rendered: workspace-relative, or absolute when it is not in the
 /// workspace (a fresh re-export lives in a temporary folder). Null until it has been found.</param>
@@ -76,8 +81,9 @@ public sealed class BlenderRenderJobs : IDisposable
     private bool _disposed;
 
     /// <summary>
-    /// Starts <paramref name="work"/> as <paramref name="job"/>, or returns false with the job that is
-    /// still running.
+    /// Starts <paramref name="work"/> as <paramref name="job"/>. Several jobs may be started: the
+    /// host's renderer runs one at a time and the others wait for their turn. False (with the oldest
+    /// job that has not ended) when <see cref="Kept"/> jobs have not ended yet.
     /// </summary>
     internal bool TryStart(BlenderRenderJob job, Func<BlenderRenderJob, CancellationToken, Task<RenderResult>> work,
         out BlenderRenderJob? running)
@@ -86,10 +92,12 @@ public sealed class BlenderRenderJobs : IDisposable
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             running = _jobs.FirstOrDefault(j => !j.IsFinished);
-            if (running is not null) return false;
+            if (_jobs.Count(j => !j.IsFinished) >= Kept) return false;
             _jobs.Add(job);
-            if (_jobs.Count > Kept) _jobs.RemoveAt(0);
+            // The oldest ended job makes room; one that has not ended is never forgotten.
+            while (_jobs.Count > Kept && _jobs.FindIndex(j => j.IsFinished) is int ended and >= 0) _jobs.RemoveAt(ended);
             job.Run(work);
+            running = null;
             return true;
         }
     }
@@ -217,7 +225,7 @@ internal sealed class BlenderRenderJob
         lock (_lock)
         {
             var result = _result;
-            string state = !_finished ? "running"
+            string state = !_finished ? (_progress?.Phase == RenderPhase.Queued ? "queued" : "running")
                 : result is { Succeeded: true } ? "succeeded"
                 : result?.FailureKind == RenderFailureKind.Cancelled || _failure?.Kind == Camel(nameof(RenderFailureKind.Cancelled)) ? "cancelled"
                 : "failed";
@@ -241,7 +249,8 @@ internal sealed class BlenderRenderJob
                 StartedUtc: _started.UtcDateTime.ToString("o", CultureInfo.InvariantCulture),
                 ElapsedSeconds: Math.Round(_clock.Elapsed.TotalSeconds, 1),
                 Progress: _progress is { } p
-                    ? new RenderProgressDto(Camel(p.Phase.ToString()), p.Message, p.Fraction, p.Frame, p.FrameCount)
+                    ? new RenderProgressDto(Camel(p.Phase.ToString()), p.Message, p.Fraction, p.Frame, p.FrameCount,
+                        p.SecondsPerFrame is { } spf ? Math.Round(spf, 2) : null, p.SecondsLeft is { } left ? Math.Round(left) : null)
                     : null,
                 Outputs: result is null ? [] : result.OutputPaths.Select(o => Display(_root, o)).ToList(),
                 Device: result?.Device ?? _progress?.Device,

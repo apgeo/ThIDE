@@ -67,6 +67,10 @@ public sealed class BlenderRenderService : IBlenderRenderService
         ArgumentNullException.ThrowIfNull(options);
         if (options.ComposeOnly && string.IsNullOrWhiteSpace(options.FramesDirectory))
             throw new ArgumentException("Writing the output from frames needs the folder the frames are in.", nameof(options));
+        if (options.FrameRange is not null && (string.IsNullOrWhiteSpace(options.FramesDirectory) || options.ComposeOnly || options.KeepFrames))
+            throw new ArgumentException(
+                "A range of frames is rendered into a frames folder of its own, and the output is written from it after (compose only).",
+                nameof(options));
 
         // Which builder, before anything else: a refusal costs nothing and needs no Blender.
         var choice = SceneBuilders.Choose(spec, options);
@@ -141,6 +145,8 @@ public sealed class BlenderRenderService : IBlenderRenderService
         ArgumentNullException.ThrowIfNull(options);
         if (options.ComposeOnly && string.IsNullOrWhiteSpace(options.FramesDirectory))
             throw new ArgumentException("Writing the output from frames needs the folder the frames are in.", nameof(options));
+        if (options.FrameRange is not null)
+            throw new ArgumentException("A range of frames is of one scene: render one shot of the film alone.", nameof(options));
         var errors = StoryboardValidator.Validate(storyboard);
         if (errors.Count > 0)
             throw new ArgumentException(
@@ -202,7 +208,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
         ct.ThrowIfCancellationRequested();
         progress?.Report(new RenderProgress(RenderPhase.ConvertingGeometry, "Converting model"));
         var needs = StoryboardPlanner.ConversionSpec(storyboard);
-        var (conversion, placed) = await ConvertAsync(needs, source, jobDir, outputDir, ct).ConfigureAwait(false);
+        var (conversion, placed) = await ConvertAsync(needs, source, jobDir, outputDir, ct, options.Parts).ConfigureAwait(false);
 
         ct.ThrowIfCancellationRequested();
         progress?.Report(new RenderProgress(RenderPhase.GeneratingScript, "Planning the film"));
@@ -213,6 +219,9 @@ public sealed class BlenderRenderService : IBlenderRenderService
         var job = PlayerWriter.WriteJob(film, jobDir, film.Files);
         var movie = film.Movie;
         var output = PlanOutputs.SpecOf(film, outputDir);
+        var estimate = Estimate(film.Segments, movie.OutputFrameCount, jobDir);
+        progress?.Report(new RenderProgress(RenderPhase.GeneratingScript, "Estimate: " + estimate.Describe()));
+        var paced = progress is null ? null : new Paced(progress, movie.Segments.Sum(s => s.FrameCount));
 
         string framesDir = Path.GetFullPath(options.FramesDirectory
             ?? (options.KeepFrames
@@ -227,12 +236,15 @@ public sealed class BlenderRenderService : IBlenderRenderService
                 var segment = movie.Segments[i];
                 string frames = Path.Combine(framesDir, segment.Frames.Replace('/', Path.DirectorySeparatorChar));
                 string shot = $"Shot {i + 1} of {movie.Segments.Count}" + (segment.Name is { } name ? $" ({name})" : "");
-                int done = before;
+                int done = before, index = i;
+                paced?.Starts(done);
                 // Each shot's progress as a part of the whole film's.
-                var part = progress is null ? null : new SyncRelay(tick => progress.Report(tick with
+                var part = paced is null ? null : new SyncRelay(tick => paced.Report(tick with
                 {
                     Message = $"{shot}: {tick.Message}",
                     Fraction = tick is { Frame: { } frame, Phase: RenderPhase.Rendering } ? Math.Clamp((done + frame) / (double)total, 0, 1) : null,
+                    Segment = index + 1,
+                    SegmentCount = movie.Segments.Count,
                 }));
                 var rendered = await _runner.RunAsync(
                     blender,
@@ -285,15 +297,103 @@ public sealed class BlenderRenderService : IBlenderRenderService
             FrameCount = result.FrameCount,
             JobLogPath = result.JobLogPath,
             Duration = stages.Aggregate(TimeSpan.Zero, (sum, s) => sum + s.Duration) + (ReferenceEquals(result, stages.LastOrDefault()) ? TimeSpan.Zero : result.Duration),
-            Warnings = [.. film.Notices, .. stages.Where(s => !ReferenceEquals(s, result)).SelectMany(s => s.Warnings).Distinct(StringComparer.Ordinal), .. result.Warnings],
+            Warnings = [.. film.Notices, .. TriangleWarning(estimate), .. stages.Where(s => !ReferenceEquals(s, result)).SelectMany(s => s.Warnings).Distinct(StringComparer.Ordinal), .. result.Warnings],
             FramesDirectory = kept,
         };
+    }
+
+    /// <summary>
+    /// What a render of <paramref name="spec"/> will cost (<see cref="RenderEstimate"/>), without
+    /// rendering: the model is converted and the scene planned in a job folder that is removed
+    /// after. Needs no Blender.
+    /// </summary>
+    /// <exception cref="ArgumentException">The spec is invalid, or cannot be planned for the model.</exception>
+    public async Task<RenderEstimate> EstimateAsync(SceneSpec spec, RenderSource source, RenderOptions options, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(options);
+        string jobDir = CreateJobDirectory();
+        try
+        {
+            var (plan, _, _, _) = await WritePlayerJobAsync(spec, source, options.Draft, jobDir, jobDir, null, ct, options.Parts).ConfigureAwait(false);
+            return Estimate([plan], plan.OutputFrameCount, jobDir);
+        }
+        finally
+        {
+            TryDeleteDirectory(jobDir);
+        }
+    }
+
+    /// <summary>What a render of the film <paramref name="storyboard"/> will cost, as
+    /// <see cref="EstimateAsync"/> says of a scene.</summary>
+    /// <exception cref="ArgumentException">The storyboard is invalid, or cannot be planned for the model.</exception>
+    public async Task<RenderEstimate> EstimateStoryboardAsync(Storyboard storyboard, RenderSource source, RenderOptions options, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(storyboard);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(options);
+        var errors = StoryboardValidator.Validate(storyboard);
+        if (errors.Count > 0)
+            throw new ArgumentException(
+                "The storyboard is invalid: " + string.Join("; ", errors.Select(e => $"{e.Path}: {e.Message}")), nameof(storyboard));
+        string jobDir = CreateJobDirectory();
+        try
+        {
+            var (conversion, placed) = await ConvertAsync(StoryboardPlanner.ConversionSpec(storyboard), source, jobDir, jobDir, ct, options.Parts)
+                .ConfigureAwait(false);
+            var film = StoryboardPlanner.Lower(storyboard with { Output = storyboard.Output with { OutputDirectory = jobDir } },
+                placed.Source, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
+            if (options.Draft) film = film.Draft();
+            return Estimate(film.Segments, film.Movie.OutputFrameCount, jobDir);
+        }
+        finally
+        {
+            TryDeleteDirectory(jobDir);
+        }
     }
 
     /// <summary>Passes progress on as it comes, on the thread it comes on.</summary>
     private sealed class SyncRelay(Action<RenderProgress> report) : IProgress<RenderProgress>
     {
         public void Report(RenderProgress value) => report(value);
+    }
+
+    /// <summary>Passes progress on with the pace of the frames (<see cref="FrameClock"/>) on
+    /// every frame that is rendered: seconds per frame and the time left, of
+    /// <paramref name="total"/> frames.</summary>
+    internal sealed class Paced(IProgress<RenderProgress> inner, int total) : IProgress<RenderProgress>
+    {
+        private readonly FrameClock _clock = new();
+        private readonly System.Diagnostics.Stopwatch _watch = System.Diagnostics.Stopwatch.StartNew();
+        private int _before;
+
+        /// <summary>The frames of the stages before this one: a segment's frame 1 is frame
+        /// <paramref name="before"/> + 1 of the whole.</summary>
+        public void Starts(int before) => _before = before;
+
+        public void Report(RenderProgress value)
+        {
+            if (value is { Phase: RenderPhase.Rendering, Frame: { } frame })
+            {
+                var (perFrame, left) = _clock.Tick(_before + frame, total, _watch.Elapsed);
+                value = value with { SecondsPerFrame = perFrame, SecondsLeft = left };
+            }
+            inner.Report(value);
+        }
+    }
+
+    /// <summary>The estimate of <paramref name="scenes"/>, whose meshes lie in <paramref name="folder"/>.</summary>
+    private static RenderEstimate Estimate(IReadOnlyList<ScenePlan> scenes, int outputFrames, string folder)
+        => RenderEstimate.Of(scenes, outputFrames, path => RenderEstimate.PlyFaces(Path.Combine(folder, path)));
+
+    /// <summary>The warning a scene with very many triangles gets.</summary>
+    private static IEnumerable<string> TriangleWarning(RenderEstimate estimate)
+    {
+        if (estimate.TooManyTriangles)
+            yield return string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"The scene has {estimate.Triangles / 1e6:0.#} million triangles (more than {RenderEstimate.WarnTriangles / 1e6:0} million): "
+                + $"Blender may need about {estimate.MemoryBytes / 1e9:0.#} GB of memory, and a GPU may not hold it.");
     }
 
     /// <summary>
@@ -305,9 +405,15 @@ public sealed class BlenderRenderService : IBlenderRenderService
         SceneSpec spec, RenderSource source, RenderOptions options, BlenderInstallation blender, string jobDir, string outputDir,
         IProgress<RenderProgress>? progress, CancellationToken ct)
     {
-        var (plan, playerJob, notices, placed) = await WritePlayerJobAsync(spec, source, options.Draft, jobDir, outputDir, progress, ct)
+        var (plan, playerJob, notices, placed) = await WritePlayerJobAsync(spec, source, options.Draft, jobDir, outputDir, progress, ct, options.Parts)
             .ConfigureAwait(false);
         var output = PlanOutputs.SpecOf(plan, outputDir);
+        var estimate = Estimate([plan], plan.OutputFrameCount, jobDir);
+        progress?.Report(new RenderProgress(RenderPhase.GeneratingScript, "Estimate: " + estimate.Describe()));
+        notices = [.. notices, .. TriangleWarning(estimate)];
+        var paced = progress is null ? null : new Paced(progress, options.FrameRange?.Last ?? PlanOutputs.StageFrameCount(plan));
+        if (options.FrameRange is { } range)
+            return await RenderRangeAsync(plan, playerJob, range, options.FramesDirectory!, blender, jobDir, notices, paced, ct).ConfigureAwait(false);
 
         bool twoStages = plan.HasTexts || options.KeepFrames || options.ComposeOnly;
         RenderResult result;
@@ -315,7 +421,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
         if (!twoStages)
         {
             result = await _runner.RunAsync(
-                blender, new RenderJob(playerJob.ScriptPath, jobDir, PlanOutputs.StageFrameCount(plan), output), progress, ct).ConfigureAwait(false);
+                blender, new RenderJob(playerJob.ScriptPath, jobDir, PlanOutputs.StageFrameCount(plan), output), paced, ct).ConfigureAwait(false);
         }
         else
         {
@@ -337,7 +443,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
                         ExtraBytes = outputBytes,
                         LogFileName = FramesLogName,
                     },
-                    progress, ct).ConfigureAwait(false);
+                    paced, ct).ConfigureAwait(false);
             }
 
             if (frames is { Succeeded: false })
@@ -380,6 +486,40 @@ public sealed class BlenderRenderService : IBlenderRenderService
         };
     }
 
+    /// <summary>The first stage of a scene for a range of its frames alone, into
+    /// <paramref name="framesDirectory"/>; no output is written (<see cref="RenderOptions.FrameRange"/>).</summary>
+    private async Task<RenderResult> RenderRangeAsync(
+        ScenePlan plan, PlayerJob playerJob, FrameRange range, string framesDirectory, BlenderInstallation blender, string jobDir,
+        IReadOnlyList<string> notices, IProgress<RenderProgress>? progress, CancellationToken ct)
+    {
+        int count = PlanOutputs.StageFrameCount(plan);
+        if (range.Last > count)
+            throw new ArgumentException($"The scene has {count} frame(s); the range {range} is not a range of them.", "options");
+        string framesDir = Path.GetFullPath(framesDirectory);
+        var frames = await _runner.RunAsync(
+            blender,
+            new RenderJob(playerJob.ScriptPath, jobDir, range.Count, PlanOutputs.FramesOf(plan, framesDir))
+            {
+                ScriptArguments = ["--stage", "frames", "--frames", framesDir, "--frame-range", range.ToString()],
+                LogFileName = FramesLogName,
+            },
+            progress, ct).ConfigureAwait(false);
+        return new RenderResult
+        {
+            Succeeded = frames.Succeeded,
+            FailureKind = frames.FailureKind,
+            ErrorMessage = frames.ErrorMessage,
+            StartFailedPath = frames.StartFailedPath,
+            OutputPaths = frames.OutputPaths,
+            Device = frames.Device,
+            FrameCount = frames.FrameCount,
+            JobLogPath = frames.JobLogPath,
+            Duration = frames.Duration,
+            Warnings = [.. notices, .. frames.Warnings],
+            FramesDirectory = framesDir,
+        };
+    }
+
     /// <summary>
     /// Converts the model into <paramref name="jobDir"/>, lowers the spec to a scene plan and
     /// writes the plan and the player there: the job folder a render plays, and an export to
@@ -388,11 +528,11 @@ public sealed class BlenderRenderService : IBlenderRenderService
     /// </summary>
     private async Task<(ScenePlan Plan, PlayerJob Job, IReadOnlyList<string> Notices, SceneSpec Placed)> WritePlayerJobAsync(
         SceneSpec spec, RenderSource source, bool draft, string jobDir, string outputDir,
-        IProgress<RenderProgress>? progress, CancellationToken ct)
+        IProgress<RenderProgress>? progress, CancellationToken ct, WallPartsMode parts = WallPartsMode.Off)
     {
         ct.ThrowIfCancellationRequested();
         progress?.Report(new RenderProgress(RenderPhase.ConvertingGeometry, "Converting model"));
-        var (conversion, placed) = await ConvertAsync(spec, source, jobDir, outputDir, ct).ConfigureAwait(false);
+        var (conversion, placed) = await ConvertAsync(spec, source, jobDir, outputDir, ct, parts).ConfigureAwait(false);
 
         ct.ThrowIfCancellationRequested();
         progress?.Report(new RenderProgress(RenderPhase.GeneratingScript, "Planning the scene"));
@@ -641,10 +781,12 @@ public sealed class BlenderRenderService : IBlenderRenderService
     /// output at <paramref name="outputDirectory"/>, and the placeholders of its texts filled in
     /// from the model (<see cref="TextPlaceholders"/>), for whichever builder draws them.</summary>
     private async Task<(ConversionResult Conversion, SceneSpec Spec)> ConvertAsync(
-        SceneSpec spec, RenderSource source, string assetDir, string outputDirectory, CancellationToken ct)
+        SceneSpec spec, RenderSource source, string assetDir, string outputDirectory, CancellationToken ct,
+        WallPartsMode parts = WallPartsMode.Off)
     {
         var options = new ConversionOptions
         {
+            Parts = PartsOf(parts),
             OutputDirectory = assetDir,
             // The reveal values of the spec's reveal travel on the vertices of the mesh.
             Geometry = RevealPlanner.GeometryFor(spec, _geometry, source.Model.Path),
@@ -661,10 +803,19 @@ public sealed class BlenderRenderService : IBlenderRenderService
                 SceneMetaPath = conversion.Manifest.SceneMetaPath,
                 SurfacePlyPath = conversion.Manifest.SurfacePath,
                 SurfaceImagePath = conversion.Manifest.SurfaceImagePath,
+                Parts = conversion.Manifest.Parts,
             },
             Output = spec.Output with { OutputDirectory = outputDirectory },
         });
     }
+
+    /// <summary>What the conversion is asked for walls in parts.</summary>
+    public static bool? PartsOf(WallPartsMode mode) => mode switch
+    {
+        WallPartsMode.On => true,
+        WallPartsMode.Off => false,
+        _ => null,
+    };
 
     /// <summary>Self-contained assets (D-14): embed the scene-meta JSON and, when requested,
     /// the PLY with the terrain and its image. Null for the default sidecar mode.</summary>
@@ -690,7 +841,12 @@ public sealed class BlenderRenderService : IBlenderRenderService
     private static void DeleteScratch(string jobDir)
     {
         IEnumerable<string> segmentPlans;
-        try { segmentPlans = Directory.EnumerateFiles(jobDir, SegmentPlanPattern).Select(Path.GetFileName).OfType<string>().ToList(); }
+        try
+        {
+            segmentPlans = Directory.EnumerateFiles(jobDir, SegmentPlanPattern)
+                .Concat(Directory.EnumerateFiles(jobDir, WallPartPattern))
+                .Select(Path.GetFileName).OfType<string>().ToList();
+        }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { segmentPlans = []; }
         foreach (var name in ScratchFileNames.Concat(segmentPlans))
         {
@@ -713,12 +869,16 @@ public sealed class BlenderRenderService : IBlenderRenderService
     /// <summary>The plans of a film's segments in a job folder (<see cref="MoviePlan.SegmentFileName"/>).</summary>
     private const string SegmentPlanPattern = "scene-plan.*.json";
 
+    /// <summary>The walls in parts in a job folder (<see cref="WallPartFile.FileName"/>).</summary>
+    private const string WallPartPattern = "walls.*.ply";
+
     /// <summary>Whether a file of a job folder is scratch or a log: what the folder may hold and
     /// still be deleted by <see cref="PruneJobFolders"/>.</summary>
     private static bool IsDisposable(string name)
         => DisposableFileNames.Contains(name)
            || (name.StartsWith("job-frames.", StringComparison.Ordinal) && name.EndsWith(".log", StringComparison.Ordinal))
-           || (name.StartsWith("scene-plan.", StringComparison.Ordinal) && name.EndsWith(".json", StringComparison.Ordinal));
+           || (name.StartsWith("scene-plan.", StringComparison.Ordinal) && name.EndsWith(".json", StringComparison.Ordinal))
+           || (name.StartsWith("walls.", StringComparison.Ordinal) && name.EndsWith(".ply", StringComparison.Ordinal));
 
     // ConversionOptions' default file names (the terrain and its image too), the script
     // PrepareAsync writes, and the plan the player plays.

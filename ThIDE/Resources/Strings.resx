@@ -398,7 +398,9 @@
   <data name="Blender_Status_Exporting" xml:space="preserve"><value>Exporting script…</value></data>
   <data name="Blender_Status_Exported" xml:space="preserve"><value>Script exported.</value></data>
   <data name="Blender_Status_Done" xml:space="preserve"><value>Render complete.</value></data>
-  <data name="Blender_Status_AgentRendering" xml:space="preserve"><value>An agent is rendering in Blender; renders run one at a time.</value></data>
+  <data name="Blender_Phase_Queued" xml:space="preserve"><value>Waiting for the render before it to end…</value></data>
+  <data name="Blender_Status_TimeLeft" xml:space="preserve"><value>{0} left</value></data>
+  <data name="Blender_Status_AgentRendering" xml:space="preserve"><value>An agent is rendering in Blender; a render started now waits for it.</value></data>
   <data name="Blender_Phase_Acquiring" xml:space="preserve"><value>Acquiring source…</value></data>
   <data name="Blender_Phase_Converting" xml:space="preserve"><value>Converting model…</value></data>
   <data name="Blender_Phase_Generating" xml:space="preserve"><value>Generating script…</value></data>

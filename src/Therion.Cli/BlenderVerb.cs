@@ -99,6 +99,23 @@ public static partial class BlenderVerb
             return 2;
         }
         if (!TryRenderPlans(renderPlan, draft, render, stderr, out var plans)) return 2;
+        if (!TryParts(args, stderr, out var parts)) return 2;
+        FrameRange? range = null;
+        if (Option(args, "--frame-range") is { } rangeText)
+        {
+            range = FrameRange.TryParse(rangeText);
+            if (range is null)
+            {
+                stderr.WriteLine($"error: --frame-range takes two frame numbers from 1, such as 1-120, not '{rangeText}'.");
+                return 2;
+            }
+            if (framesDir is null || composeOnly || keepFrames || bundle is not null || Option(args, "--export") is not null)
+            {
+                stderr.WriteLine("error: --frame-range renders frames into the folder --frames names, and nothing else: "
+                    + "it does not go with --compose-only, --keep-frames, --bundle or --export. Write the output after with --compose-only.");
+                return 2;
+            }
+        }
         if (bundle is not null)
         {
             if (bundle.StartsWith("--", StringComparison.Ordinal) || Option(args, "--export") is not null)
@@ -114,7 +131,7 @@ public static partial class BlenderVerb
                 return 2;
             }
             return await BundleAsync(
-                    work => RenderBundleWriter.FromModel(model, spec, work, draft, leads: leads), bundle, draft, language, plans,
+                    work => RenderBundleWriter.FromModel(model, spec, work, draft, leads: leads, parts: BlenderRenderService.PartsOf(parts)), bundle, draft, language, plans,
                     Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
                 .ConfigureAwait(false);
         }
@@ -152,7 +169,16 @@ public static partial class BlenderVerb
                 KeepFrames = keepFrames,
                 ComposeOnly = composeOnly,
                 FramesDirectory = Path.GetFullPath(framesDir ?? Path.Combine(outDir, spec.Output.BaseName + (draft ? "-draft" : "") + "-frames")),
+                FrameRange = range,
+                Parts = parts,
             };
+            if (Flag(args, "--estimate"))
+            {
+                var estimate = await service.EstimateAsync(spec, renderSource, options).ConfigureAwait(false);
+                stdout.WriteLine(estimate.Describe());
+                if (estimate.TooManyTriangles) stderr.WriteLine($"warning: more than {RenderEstimate.WarnTriangles / 1_000_000} million triangles in one scene");
+                return 0;
+            }
             var result = await service.RenderAsync(spec, renderSource, options, progress).ConfigureAwait(false);
             foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
             if (result.Builder == SceneBuilder.Generator && result.NotCarried.Count > 0)
@@ -163,6 +189,7 @@ public static partial class BlenderVerb
             {
                 foreach (var path in result.OutputPaths) stdout.WriteLine(path);
                 string what = composeOnly ? "wrote" : draft ? "rendered a draft of" : "rendered";
+                if (range is not null) what = $"rendered frames {range} of";
                 stderr.WriteLine($"{what} {result.FrameCount} frame(s){(result.Device is null ? "" : " on " + result.Device)} in {result.Duration.TotalSeconds:0.0}s");
                 if (result.FramesDirectory is not null) stderr.WriteLine($"the frames are in {result.FramesDirectory}");
                 return 0;
@@ -500,6 +527,12 @@ public static partial class BlenderVerb
             stderr.WriteLine("error: --render and --render-plan go with --bundle <file.zip|folder>.");
             return 2;
         }
+        if (Option(args, "--frame-range") is not null)
+        {
+            stderr.WriteLine("error: --frame-range is a range of one scene's frames: render one shot of the storyboard (--shot <n>).");
+            return 2;
+        }
+        if (!TryParts(args, stderr, out var parts)) return 2;
         if (bundle is not null)
         {
             if (keepFrames || composeOnly || framesDir is not null || builderName is not null)
@@ -522,7 +555,7 @@ public static partial class BlenderVerb
             return await BundleAsync(
                     work =>
                     {
-                        var content = RenderBundleWriter.FromStoryboard(model, storyboard, work, draft, leads: leads);
+                        var content = RenderBundleWriter.FromStoryboard(model, storyboard, work, draft, leads: leads, parts: BlenderRenderService.PartsOf(parts));
                         // What a tour chose, left out and cut short is said in the bundle too.
                         return tour is null ? content : content with { ReadmeSections = [.. content.ReadmeSections, TourReadme(tour, language)] };
                     },
@@ -545,9 +578,17 @@ public static partial class BlenderVerb
             // The frames of every shot have a place of their own beside the outputs, so that the
             // same command, run again, goes on with the shot it stopped in.
             FramesDirectory = Path.GetFullPath(framesDir ?? Path.Combine(outDir, storyboard.Output.BaseName + (draft ? "-draft" : "") + "-frames")),
+            Parts = parts,
         };
         try
         {
+            if (Flag(args, "--estimate"))
+            {
+                var estimate = await service.EstimateStoryboardAsync(storyboard, new RenderSource(model, leads), options).ConfigureAwait(false);
+                stdout.WriteLine(estimate.Describe());
+                if (estimate.TooManyTriangles) stderr.WriteLine($"warning: more than {RenderEstimate.WarnTriangles / 1_000_000} million triangles in one scene");
+                return 0;
+            }
             var result = await service.RenderStoryboardAsync(storyboard, new RenderSource(model, leads), options, progress).ConfigureAwait(false);
             foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
             if (result.Succeeded)
@@ -918,6 +959,16 @@ public static partial class BlenderVerb
         for (int i = 1; i < args.Count - 1; i++)
             if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
                 yield return args[i + 1];
+    }
+
+    /// <summary><c>--parts auto|on|off</c>: the walls in parts, for a large cave by default.</summary>
+    private static bool TryParts(IReadOnlyList<string> args, TextWriter stderr, out WallPartsMode parts)
+    {
+        parts = WallPartsMode.Auto;
+        if (Option(args, "--parts") is not { } text) return true;
+        if (Enum.TryParse(text, ignoreCase: true, out parts) && Enum.IsDefined(parts) && !int.TryParse(text, out _)) return true;
+        stderr.WriteLine($"error: --parts takes auto, on or off, not '{text}'.");
+        return false;
     }
 
     private static bool Flag(IReadOnlyList<string> args, string name)

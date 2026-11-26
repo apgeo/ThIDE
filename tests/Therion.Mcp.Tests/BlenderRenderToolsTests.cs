@@ -51,7 +51,7 @@ public sealed class BlenderRenderToolsTests : IDisposable
         {
             var answer = await status.RenderStatus(jobId, waitSeconds: 10);
             Assert.True(answer.Ok, answer.Error?.Message);
-            if (answer.Data!.State != "running") return answer.Data;
+            if (answer.Data!.State is not ("running" or "queued")) return answer.Data;
         }
         throw new TimeoutException("the render did not finish");
     }
@@ -193,19 +193,26 @@ public sealed class BlenderRenderToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task One_render_runs_at_a_time()
+    public async Task A_second_render_waits_for_the_first_and_reads_queued_meanwhile()
     {
         _blender.Renderer.Gate = new TaskCompletionSource();
         var (render, status) = await ToolsAsync();
 
         var first = await render.StartRender(model: "out/cave.3d");
+        await _blender.Renderer.Reached.Task;
         var second = await render.StartRender(model: "out/cave.3d");
 
-        Assert.Equal(ToolErrorCodes.RenderBusy, second.Error!.Code);
-        Assert.Contains(first.Data!.JobId, second.Error.Message);
+        Assert.True(second.Ok, second.Error?.Message);
+        Assert.NotEqual(first.Data!.JobId, second.Data!.JobId);
+        for (int i = 0; i < 100 && (await status.RenderStatus(second.Data.JobId)).Data!.State != "queued"; i++) await Task.Delay(20);
+        var waiting = (await status.RenderStatus(second.Data.JobId)).Data!;
+        Assert.Equal("queued", waiting.State);
+        Assert.Equal("queued", waiting.Progress!.Phase);
+        Assert.Equal("running", (await status.RenderStatus(first.Data.JobId)).Data!.State);
+
         _blender.Renderer.Gate.SetResult();
         Assert.Equal("succeeded", (await FinishedAsync(status, first.Data.JobId)).State);
-        Assert.True((await render.StartRender(model: "out/cave.3d")).Ok, "a finished render frees the slot");
+        Assert.Equal("succeeded", (await FinishedAsync(status, second.Data.JobId)).State);
     }
 
     [Fact]
@@ -369,7 +376,8 @@ public sealed class BlenderRenderToolsTests : IDisposable
         Assert.Null(started.Data.Builder);
         var done = await FinishedAsync(status, started.Data.JobId);
 
-        Assert.Equal(new RenderOptions { Builder = SceneBuilder.Generator, Draft = true }, _blender.Renderer.LastOptions);
+        Assert.Equal(new RenderOptions { Builder = SceneBuilder.Generator, Draft = true, Owner = "agent" }, _blender.Renderer.LastOptions with { JobName = null });
+        Assert.EndsWith($"(agent {started.Data.JobId})", _blender.Renderer.LastOptions!.JobName);
         Assert.Equal(("generator", true), (done.Builder, done.Draft));
         Assert.Equal(["lighting.hdriPath"], done.NotCarried);
         Assert.Equal(["labels.overlays.credits"], done.LeftOut);
@@ -378,7 +386,7 @@ public sealed class BlenderRenderToolsTests : IDisposable
         _blender.Renderer.Outcome = null;
         started = await render.StartRender(model: "out/cave.3d");
         done = await FinishedAsync(status, started.Data!.JobId);
-        Assert.Equal(new RenderOptions(), _blender.Renderer.LastOptions);
+        Assert.Equal(new RenderOptions { Owner = "agent" }, _blender.Renderer.LastOptions with { JobName = null });
         Assert.Equal((null, false, null, null), (done.Builder, done.Draft, done.NotCarried, done.LeftOut));
     }
 
@@ -843,8 +851,23 @@ public sealed class BlenderRenderToolsTests : IDisposable
         public RenderOptions? LastOptions { get; private set; }
         public bool SawCancellation { get; private set; }
 
+        // As the host's queue does: one render at a time, the others wait and say so.
+        private readonly SemaphoreSlim _turn = new(1, 1);
+
         public async Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, RenderOptions options,
             IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+        {
+            if (!_turn.Wait(0))
+            {
+                progress?.Report(new RenderProgress(RenderPhase.Queued, "Waiting for 1 render to end"));
+                await _turn.WaitAsync(ct);
+            }
+            try { return await RenderInTurnAsync(spec, options, progress, ct); }
+            finally { _turn.Release(); }
+        }
+
+        private async Task<RenderResult> RenderInTurnAsync(SceneSpec spec, RenderOptions options,
+            IProgress<RenderProgress>? progress, CancellationToken ct)
         {
             LastSpec = spec;
             LastOptions = options;

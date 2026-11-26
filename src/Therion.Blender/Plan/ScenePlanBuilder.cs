@@ -58,6 +58,17 @@ public static class ScenePlanBuilder
     public const string LeadMarkerRole = "lead-marker";
     public const string LeadTextRole = "lead-text";
 
+    /// <summary>The role of the parts of a cave's walls (<see cref="SourceSpec.Parts"/>): one
+    /// change by this role reaches all of them.</summary>
+    public const string WallsRole = "walls";
+
+    /// <summary>The id of part <paramref name="index"/> (from 0) of the walls: <c>walls:1</c> onwards.</summary>
+    public static string PartId(int index) => $"walls:{index + 1}";
+
+    /// <summary>Whether the camera of <paramref name="spec"/> moves inside the cave: it sees
+    /// only what is near its path, so a plan keeps only that (<see cref="NearPath"/>).</summary>
+    public static bool IsInside(SceneSpec spec) => spec.Camera.Template is CameraTemplate.Flythrough or CameraTemplate.Route;
+
     /// <summary>The frames a lead marker's pulse takes in the generated scripts.</summary>
     private const int PulseFrames = 14;
 
@@ -93,15 +104,21 @@ public static class ScenePlanBuilder
         spec = TextPlaceholders.Resolve(spec, meta);
 
         var camera = CameraPlanner.PlanPoses(spec, framing);
-        var labels = meta is null ? null : Labels(spec, meta);
+        var planCamera = Camera(camera, spec.Animation.Fps);
+        // An inside camera sees what is near its path: the labels, and the parts of the walls.
+        var near = IsInside(spec) ? NearPath.OfCamera(planCamera) : null;
+        var labels = meta is null ? null : Labels(spec, meta, near);
         var texts = OverlayEvents(ScreenTextPlanner.Plan(spec, camera), spec, camera.FrameCount);
         var changes = Changes(spec, labels, camera.FrameCount);
         var terrain = Terrain(spec);
-        var planCamera = Camera(camera, spec.Animation.Fps);
         var timeline = new PlanTimeline { Fps = spec.Animation.Fps, FrameCount = camera.FrameCount };
+        var walls = Walls(spec, near);
         var annotations = AnnotationPlanner.Plan(spec.Annotations, meta, framing.LocalBounds, planCamera, timeline);
+        annotations = WithoutCulledParts(annotations, spec.Source.Parts, walls);
         if (annotations.Changes.Count > 0) changes = [.. changes ?? [], .. annotations.Changes];
         var (reveal, counter) = RevealPlanner.Plan(spec, meta, camera.FrameCount, ModelId);
+        // The reveal values travel with the vertices of every part: one change reveals them all.
+        if (reveal is not null && spec.Source.Parts.Count > 0) reveal = reveal with { Target = new PlanChangeTarget { Role = WallsRole } };
         if (reveal is not null) changes = [.. changes ?? [], reveal];
         if (counter is not null) texts = (texts ?? new PlanScreenTexts()) with { Items = [.. texts?.Items ?? [], counter] };
         var features = ScenePlan.BasicFeatures;
@@ -121,12 +138,8 @@ public static class ScenePlanBuilder
             },
             Timeline = timeline,
             Models = terrain is null
-                ? [new PlanModel { Id = ModelId, Path = FileName(spec.Source.PlyPath), Material = RockMaterialId }]
-                :
-                [
-                    new PlanModel { Id = ModelId, Path = FileName(spec.Source.PlyPath), Material = RockMaterialId },
-                    new PlanModel { Id = TerrainId, Role = TerrainRole, Path = FileName(spec.Source.SurfacePlyPath!) },
-                ],
+                ? walls
+                : [.. walls, new PlanModel { Id = TerrainId, Role = TerrainRole, Path = FileName(spec.Source.SurfacePlyPath!) }],
             Camera = planCamera,
             Look = Look(spec, framing.DrawnBounds),
             TexturedMaterials = terrain is null ? null : [terrain],
@@ -156,6 +169,43 @@ public static class ScenePlanBuilder
         };
         // A head lamp that reaches as far as the camera looks: its energy, keyed by the poses.
         return spec.Lighting is { Rig: LightingRig.Headlamp, LampReach: true } ? Plan.LampReach.Apply(plan) : plan;
+    }
+
+    /// <summary>The cave's walls: its one mesh, or its parts; of those, with an inside camera,
+    /// the parts within <see cref="NearPath.Radius"/> of its path (all of them when none is).</summary>
+    private static IReadOnlyList<PlanModel> Walls(SceneSpec spec, NearPath? near)
+    {
+        var parts = spec.Source.Parts;
+        if (parts.Count == 0) return [new PlanModel { Id = ModelId, Path = FileName(spec.Source.PlyPath), Material = RockMaterialId }];
+        var kept = near is null ? parts : parts.Where(p => near.Touches(p.Bounds)).ToList();
+        if (kept.Count == 0) kept = parts;
+        return kept.Select(p => new PlanModel { Id = PartId(p.Index), Role = WallsRole, Path = FileName(p.Path), Material = RockMaterialId }).ToList();
+    }
+
+    /// <summary>The annotations without those whose anchor lies in a part of the walls the plan
+    /// leaves out and in none it keeps: they would float where there are no walls. Their changes
+    /// go with them. An anchor outside every part (above the cave) stays.</summary>
+    private static AnnotationPlan WithoutCulledParts(AnnotationPlan annotations, IReadOnlyList<Sources.WallPartFile> parts, IReadOnlyList<PlanModel> walls)
+    {
+        if (parts.Count == 0 || walls.Count == parts.Count || annotations.Annotations.Count == 0) return annotations;
+        var keptIds = walls.Select(w => w.Id).ToHashSet(StringComparer.Ordinal);
+        const double margin = 1.0;
+        bool In(Sources.WallPartFile part, CaveVector3 p) =>
+            p.X >= part.Bounds.Min.X - margin && p.X <= part.Bounds.Max.X + margin
+            && p.Y >= part.Bounds.Min.Y - margin && p.Y <= part.Bounds.Max.Y + margin
+            && p.Z >= part.Bounds.Min.Z - margin && p.Z <= part.Bounds.Max.Z + margin;
+        var dropped = annotations.Annotations
+            .Where(a => a.Model is null
+                        && parts.Any(p => !keptIds.Contains(PartId(p.Index)) && In(p, a.At))
+                        && !parts.Any(p => keptIds.Contains(PartId(p.Index)) && In(p, a.At)))
+            .Select(a => a.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        if (dropped.Count == 0) return annotations;
+        return annotations with
+        {
+            Annotations = annotations.Annotations.Where(a => !dropped.Contains(a.Id)).ToList(),
+            Changes = annotations.Changes.Where(c => c.Target?.Id is not { } id || !dropped.Contains(id)).ToList(),
+        };
     }
 
     /// <summary>
@@ -329,7 +379,10 @@ public static class ScenePlanBuilder
             else if (spec.Surface.Mode == SurfaceMode.Textured && string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath))
                 notices.Add("The model has no surface image; drawing the terrain in one colour.");
         }
-        if (meta is not null && LabelPlanner.Plan(spec, meta) is { StationsCapped: true } labels)
+        var near = framing is not null && IsInside(spec)
+            ? NearPath.OfCamera(Camera(CameraPlanner.PlanPoses(spec, framing), spec.Animation.Fps))
+            : null;
+        if (meta is not null && LabelPlanner.Plan(spec, meta, near) is { StationsCapped: true } labels)
             notices.Add($"showing {labels.Stations.Count} of {labels.StationMatchCount} station labels");
         return notices;
     }
@@ -421,9 +474,9 @@ public static class ScenePlanBuilder
     /// <summary>The labels the script generator would make, as data: the planner's stations,
     /// components and leads, under the names the scripts give their objects. Null when the
     /// spec shows none.</summary>
-    private static PlanLabels? Labels(SceneSpec spec, SceneMeta meta)
+    private static PlanLabels? Labels(SceneSpec spec, SceneMeta meta, NearPath? near)
     {
-        var planned = LabelPlanner.Plan(spec, meta);
+        var planned = LabelPlanner.Plan(spec, meta, near);
         if (planned.IsEmpty) return null;
 
         var ids = new HashSet<string>(StringComparer.Ordinal);

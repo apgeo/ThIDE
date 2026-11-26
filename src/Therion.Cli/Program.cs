@@ -30,6 +30,12 @@ switch (args[0])
     case "gis":           return await RequireArgAsync(args, a => Gis(a, args));
     case "structural":    return RequireArg(args, a => Structural(a, args));
     case "blender":       return await Therion.Cli.BlenderVerb.RunAsync(args, Console.Out, Console.Error);
+    case "render-worker":
+    {
+        using var cancel = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancel.Cancel(); };
+        return await Therion.Cli.RenderWorkerVerb.RunAsync(args, Console.Out, Console.Error, cancel.Token);
+    }
     case "new":           return Therion.Cli.NewVerb.Run(args, Console.Out, Console.Error);
     case "import":        return Therion.Cli.ImportVerb.Run(args, Console.Out, Console.Error);
     case "report":        return await Therion.Cli.ReportVerb.RunAsync(args, Console.Out, Console.Error);
@@ -110,6 +116,18 @@ static void PrintHelp()
     Console.WriteLine("                                         it prints), within 180 s for the film and 20 s for each. It is made as a storyboard and");
     Console.WriteLine("                                         rendered, drafted or bundled like one; --write-storyboard keeps the storyboard, and alone");
     Console.WriteLine("                                         writes it without rendering, to edit by hand and render with --storyboard.");
+    Console.WriteLine("  therion-cli blender ... [--parts auto|on|off] [--frame-range <first>-<last> --frames <dir>] [--estimate]");
+    Console.WriteLine("                                         --parts splits a large cave's walls into parts, and a camera inside it shows only those");
+    Console.WriteLine("                                         near its path (auto: for a large cave). --frame-range renders those frames of the scene");
+    Console.WriteLine("                                         alone into the --frames folder (one Blender per GPU, each a range of its own); write the");
+    Console.WriteLine("                                         movie from them after with --compose-only. --estimate prints frames, time, disk and memory");
+    Console.WriteLine("                                         of the render without rendering it.");
+    Console.WriteLine("  therion-cli render-worker --inbox <dir> --outbox <dir> [--scratch <dir>] [--once] [--blender <path>] [--modules <dir>]…");
+    Console.WriteLine("                     [--max-hours <n>] [--max-triangles <n>] [--max-bundle-gb <n>] [--poll <seconds>]");
+    Console.WriteLine("                                         Render the render bundles (.zip) that arrive in the inbox, one at a time, oldest first:");
+    Console.WriteLine("                                         <job>.status.json in the outbox says how far each is; the movie, its subtitles and");
+    Console.WriteLine("                                         <job>.log land there. <job>.cancel in the inbox stops a job; it goes on with its frames");
+    Console.WriteLine("                                         when the cancel file is gone. A bundle's own player and scripts are never run.");
     Console.WriteLine("  therion-cli build <thconfig|folder> [--all] [--therion <path>] [--quiet] [--no-log] [--json] [--stop-on-failure]");
     Console.WriteLine("                                         Compile with Therion and print a summary; exit 0 only if all succeed.");
     Console.WriteLine("  therion-cli new --list                 List project templates (built-in and imported).");

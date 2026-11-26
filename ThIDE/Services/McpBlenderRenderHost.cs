@@ -1,6 +1,8 @@
 // The Blender Animation panel's renderer, model sources and saved presets, lent to the in-app MCP
 // server so an agent renders exactly as the panel does: the same Blender (and its path override), the
-// same workspace model with its open leads, the same re-export, the same job folders.
+// same workspace model with its open leads, the same re-export, the same job folders. The renderer
+// queues the renders (RenderQueue), so an agent's render waits for the panel's and the other way
+// round, and the panel lists an agent's render in its history when it ends.
 
 using System;
 using System.Collections.Generic;
@@ -15,7 +17,7 @@ using Therion.Mcp;
 namespace ThIDE.Services;
 
 public sealed class McpBlenderRenderHost(
-    IBlenderRenderService renderer, IBlenderSourceProvider sources, PresetStore presets, BlenderRenderSlot? slot = null)
+    IBlenderRenderService renderer, IBlenderSourceProvider sources, PresetStore presets)
     : IBlenderRenderHost
 {
     public IBlenderRenderService Renderer => renderer;
@@ -29,10 +31,4 @@ public sealed class McpBlenderRenderHost(
 
     public Task<RenderSource> AcquireAsync(ModelSourceRequest request, CancellationToken ct = default) =>
         sources.AcquireAsync(request, ct);
-
-    /// <summary>The panel and agents share one render slot.</summary>
-    public bool TryBeginRender(string name) => slot?.TryTake(name) ?? true;
-
-    public void EndRender(string name, RenderResult? result, string? error) =>
-        slot?.ReleaseAgent(new AgentRenderFinished(name, result, error));
 }

@@ -47,6 +47,62 @@ public sealed record RenderOptions
     /// again. Null keeps them in the render's scratch folder (or, with <see cref="KeepFrames"/>,
     /// in <c>&lt;base name&gt;-frames</c> beside the output), where nothing is continued.</summary>
     public string? FramesDirectory { get; init; }
+
+    /// <summary>Render only these frames of the scene's first stage into
+    /// <see cref="FramesDirectory"/> (which it needs), and write no output: several renders,
+    /// one per GPU, can share one frames folder, each with a range of its own, and the output is
+    /// written from them after with <see cref="ComposeOnly"/>. A range of frames that are there
+    /// already, from the same scene, renders nothing. Not for a film: a range belongs to one
+    /// scene (render one shot of it alone).</summary>
+    public FrameRange? FrameRange { get; init; }
+
+    /// <summary>Whether the walls are split into parts the render can leave out where the camera
+    /// is far from them (<see cref="WallPartsMode"/>).</summary>
+    public WallPartsMode Parts { get; init; } = WallPartsMode.Auto;
+
+    /// <summary>The name a queue of renders lists this render under; null for the output's base
+    /// name.</summary>
+    public string? JobName { get; init; }
+
+    /// <summary>Who asks for the render, for a queue of renders to say: "panel", "agent", or a
+    /// name of the caller's; null when nobody says.</summary>
+    public string? Owner { get; init; }
+}
+
+/// <summary>Frames <see cref="First"/> to <see cref="Last"/> of a scene, both counted, from 1.</summary>
+public sealed record FrameRange(int First, int Last)
+{
+    /// <summary>How many frames the range holds.</summary>
+    public int Count => Last - First + 1;
+
+    /// <summary>Reads "A-B"; null when the text is not two frame numbers with the first no
+    /// larger than the second, both from 1.</summary>
+    public static FrameRange? TryParse(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var parts = text.Split('-');
+        if (parts.Length != 2
+            || !int.TryParse(parts[0], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int first)
+            || !int.TryParse(parts[1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int last)
+            || first < 1 || last < first)
+            return null;
+        return new FrameRange(first, last);
+    }
+
+    public override string ToString() => $"{First}-{Last}";
+}
+
+/// <summary>Whether a cave's walls are written as one mesh or as parts
+/// (<see cref="Therion.CaveGeometry.WallParts"/>).</summary>
+public enum WallPartsMode
+{
+    /// <summary>Parts for a large cave (<see cref="Therion.CaveGeometry.WallParts.IsLarge"/>),
+    /// one mesh otherwise.</summary>
+    Auto,
+    /// <summary>Always parts.</summary>
+    On,
+    /// <summary>Always one mesh.</summary>
+    Off,
 }
 
 /// <summary>Which builder a spec gets, and why.</summary>
@@ -90,8 +146,9 @@ public static class SceneBuilders
         if (options.Draft)
             return new SceneBuilderChoice(SceneBuilder.Player, [], lost);
 
-        bool staged = options.KeepFrames || options.ComposeOnly;
-        string stagedWhat = options.ComposeOnly ? "Writing the output from the frames that are there" : "Keeping the frames";
+        bool staged = options.KeepFrames || options.ComposeOnly || options.FrameRange is not null;
+        string stagedWhat = options.ComposeOnly ? "Writing the output from the frames that are there"
+            : options.FrameRange is not null ? "Rendering a range of frames" : "Keeping the frames";
         switch (options.Builder)
         {
             case SceneBuilder.Generator:

@@ -1,5 +1,41 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-27 — large caves, frame ranges, a queue of renders and the render worker
+
+### Additive API
+- **Walls in parts.** `RenderOptions.Parts` (`WallPartsMode`: `Auto` for a large cave, `On`,
+  `Off`) is passed to the conversion; the plans then show the parts (see Therion.Blender).
+  `BlenderRenderService.PartsOf(mode)` is what the conversion is asked for. Job folders delete
+  `walls.NNN.ply` with the other scratch.
+- **Estimate.** `RenderEstimate` (`Frames`, `SecondsPerFrame`, `Measured`, `Seconds`, `DiskBytes`,
+  `MemoryBytes`, `Triangles`, `TextObjects`, `TooManyTriangles` above `WarnTriangles` = 20 M,
+  `Describe()`, `Of(scenes, outputFrames, trianglesOf, secondsPerFrame)`, `AssumedSecondsPerFrame`,
+  `PlyFaces`). `BlenderRenderService.EstimateAsync` and `EstimateStoryboardAsync` convert and plan
+  in a job folder that is removed after, and need no Blender. A render reports its estimate as a
+  `GeneratingScript` tick (`Estimate: …`) and warns above 20 M triangles.
+- **Time left.** Rendering ticks carry `SecondsPerFrame` and `SecondsLeft` (`FrameClock`), over the
+  whole film for a storyboard, and `Segment` / `SegmentCount` for a film's shots.
+- **Frame ranges.** `RenderOptions.FrameRange` renders those frames of one scene's first stage into
+  `FramesDirectory` (required) and writes no output; `ComposeOnly` writes it after. Refused with
+  `KeepFrames` or `ComposeOnly`, by the script generator (`BuilderRefused`), and for a storyboard
+  (`ArgumentException`: render one shot).
+- **Queue.** `RenderQueue` (FIFO, one job running; `RunAsync(request, work, progress, ct, id)`,
+  `Cancel(id)`, `Jobs`, `Running`, `Ahead(id)`, `Changed`, `JobEnded`; a waiting job hears
+  `RenderPhase.Queued`). With a state file it keeps its jobs (`RenderJobFile`), and the jobs a
+  restart cut short are `Interrupted`; `Resume(replay)` starts them again in their order.
+  `QueuedRenderService` is an `IBlenderRenderService` whose renders wait in a queue, each with a
+  frames folder of its own under the queue's root (removed when the job ends), and
+  `ResumeInterrupted()` replays the interrupted ones whose model is still there.
+- **Render worker.** `RenderWorker` (`RenderWorkerOptions`: `Inbox`, `Outbox`, `Scratch`, `Limits`,
+  `MaxTime`, `ModuleFolders`, `Poll`; `Pending()`, `RunAsync(once, ct)`, `ProcessAsync(zip, ct)`,
+  `JobId`) renders the bundles of an inbox one at a time with this assembly's player: status in
+  `<job>.status.json`, the movie or stills, the subtitles and `<job>.log` in the outbox under the
+  job's name, `<job>.cancel` stops a job (zip and frames kept), a time-out or a failure in Blender
+  keeps the frames, a refusal (`failureKind: refused`) removes the job.
+
+### Behaviour changes
+- A render's warnings may now include the triangle warning; its progress the estimate tick.
+
 ## 2026-11-26 — `RenderStoryboardAsync`: a film of several shots
 
 ### Additive API
