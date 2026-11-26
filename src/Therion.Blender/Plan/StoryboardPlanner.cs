@@ -14,6 +14,9 @@
 //             in its own time, a shot that holds keeps the value the shot before ended on. Each
 //             segment's plan has the keys of its stretch; the counter is a text of the movie and
 //             counts the same keys, in the movie's time.
+//   a route   a shot whose camera is a route that sets its own time (RouteTiming.Natural) is as
+//             long as the route takes, unless the shot says how long it is: then the route is
+//             fitted to that.
 //   the rest  labels, annotations and timed changes are planned per shot, from its own camera.
 
 using System.Globalization;
@@ -183,8 +186,16 @@ public static class StoryboardPlanner
                 unshown.Add($"{Shot(storyboard, i)}: the shot before it left no reveal to hold; the whole cave is shown.");
 
             ScenePlan plan;
-            try { plan = ScenePlanBuilder.FromSpec(spec, framing, meta); }
-            catch (ArgumentException ex) { throw new ArgumentException($"{Shot(storyboard, i)}: {ex.Message}", nameof(storyboard)); }
+            try
+            {
+                // A route that sets its own time gives the shot its length.
+                spec = CameraRoutes.WithNaturalDuration(spec, framing);
+                plan = ScenePlanBuilder.FromSpec(spec, framing, meta);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ArgumentException($"{Shot(storyboard, i)}: {ex.Message.Split(" (Parameter", 2)[0]}", nameof(storyboard));
+            }
 
             var revealed = plan.Changes?.FirstOrDefault(c => c is { Reveal: not null, Target.Id: ScenePlanBuilder.ModelId });
             var keys = revealed?.Reveal;
@@ -297,6 +308,13 @@ public static class StoryboardPlanner
             },
         };
 
+        // The shots' lengths are known only now, where a route gave one: what joins them is held
+        // to those.
+        var misplaced = MoviePlanValidator.Validate(movie);
+        if (misplaced.Count > 0)
+            throw new ArgumentException(
+                "The storyboard cannot be lowered: " + string.Join("; ", misplaced.Select(e => $"{e.Path}: {e.Message}")), nameof(storyboard));
+
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (spec, i) in specs.Select((s, i) => (s, i)))
             foreach (var (planPath, file) in ScenePlanBuilder.Files(spec))
@@ -330,6 +348,10 @@ public static class StoryboardPlanner
         var defaults = storyboard.Defaults;
         var preset = shot.Preset is { } name ? presets(name)?.Spec : null;
         var labels = shot.Labels ?? preset?.Labels ?? defaults.Labels ?? new LabelsSpec();
+        var camera = shot.Camera ?? preset?.Camera ?? new CameraSpec();
+        // A shot that says how long it is has its route fitted to that, whatever the route says.
+        if (shot.Seconds is not null && camera is { Template: CameraTemplate.Route, Route.Timing: RouteTiming.Natural })
+            camera = camera with { Route = camera.Route with { Timing = RouteTiming.Fit } };
         return new SceneSpec
         {
             Seed = defaults.Seed,
@@ -337,7 +359,7 @@ public static class StoryboardPlanner
             Engine = shot.Engine ?? preset?.Engine ?? defaults.Engine ?? new EngineSpec(),
             Materials = shot.Materials ?? preset?.Materials ?? defaults.Materials ?? new MaterialsSpec(),
             Lighting = shot.Lighting ?? preset?.Lighting ?? defaults.Lighting ?? new LightingSpec(),
-            Camera = shot.Camera ?? preset?.Camera ?? new CameraSpec(),
+            Camera = camera,
             Labels = labels with { Overlays = shot.Texts ?? shot.Labels?.Overlays ?? defaults.Labels?.Overlays ?? new OverlaySpec() },
             Surface = defaults.Surface ?? new SurfaceSpec(),
             Annotations = shot.Annotations ?? defaults.Annotations ?? [],

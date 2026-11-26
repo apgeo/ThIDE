@@ -54,6 +54,11 @@ refuses it by name).
   terrain); `ShotSpec(storyboard, index)` is one shot as a render spec of its own;
   `SegmentId(index)` is `s01` onwards. `StoryboardPlan.Draft()` is a draft of every segment, under
   names of its own.
+- **Routes.** A shot's camera may be a route (`CameraTemplate.Route`). With
+  `RouteTiming.Natural` and no `Seconds` the shot is as long as the route takes
+  (`CameraRoutes.WithNaturalDuration`, called by the lowering); with `Seconds` the route is fitted
+  to them, whatever its timing says. The validator cannot know a natural length before the model
+  is there, so what joins the shots is checked once more when they are lowered.
 - **Time.** A shot has `round(fps × seconds)` frames. It starts on the frame after the last of the
   shot before; a dissolve of `n` frames starts it `n` frames earlier, and both shots have frames
   for that time. A dip has no overlap: its first half lies in the last frames of the one shot, its

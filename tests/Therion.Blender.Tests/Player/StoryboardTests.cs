@@ -135,6 +135,41 @@ public class StoryboardTests
         Assert.Throws<ArgumentOutOfRangeException>(() => StoryboardPlanner.ShotSpec(storyboard, 3));
     }
 
+    // ---- a route ----
+
+    [Fact]
+    public void AShotThatFliesARoute_IsAsLongAsItSays_OrAsTheRouteTakes()
+    {
+        var route = new CameraSpec { Template = CameraTemplate.Route, Route = new RouteParams { From = RouteParams.Entrance, To = RouteParams.Farthest } };
+        var natural = route with { Route = route.Route! with { Timing = RouteTiming.Natural } };
+        var storyboard = Film(
+            new ShotSpec { Name = "Fitted", Seconds = 3, Camera = route },
+            new ShotSpec { Name = "As long as it takes", Camera = natural, In = Dissolve(0.5) },
+            new ShotSpec { Name = "Natural, but told", Seconds = 2, Camera = natural },
+            Shot("After", 1));
+        Assert.Empty(Paths(storyboard));
+
+        var film = Lower(storyboard);
+
+        // The route's own time, and one frame: what the same spec has when it is rendered alone.
+        double seconds = CameraRoutes.Measure(PlanFixtures.MediumFraming, natural.Route!).Seconds;
+        int frames = (int)Math.Round(10 * Math.Round(seconds + 0.1, 3));
+        Assert.True(frames > 30, $"the route takes {seconds:F1} s");
+        Assert.Equal([30, frames, 20, 10], film.Movie.Segments.Select(s => s.FrameCount));
+        Assert.Equal([0, 2.5, Math.Round(2.5 + frames / 10.0, 6), Math.Round(4.5 + frames / 10.0, 6)], film.Movie.Segments.Select(s => s.Start));
+        Assert.Equal(frames, film.Segments[1].Timeline.FrameCount);
+        Assert.All(film.Segments, plan => Assert.Empty(ScenePlanValidator.Validate(plan)));
+        Assert.All(film.Segments.Take(3), plan => Assert.Equal(plan.Timeline.FrameCount, plan.Camera.Track.Count));
+        Assert.Equal(RouteTiming.Fit, StoryboardPlanner.ShotSpec(storyboard, 2).Camera.Route!.Timing);
+        Assert.Equal(RouteTiming.Natural, StoryboardPlanner.ShotSpec(storyboard, 1).Camera.Route!.Timing);
+        PlayerWriter.ThrowIfInvalid(film);
+
+        // A station the cave does not have is named with its shot.
+        var lost = Assert.Throws<ArgumentException>(() => Lower(Film(Shot("Outside", 1), new ShotSpec { Name = "Lost", Seconds = 2, Camera = route with { Route = new RouteParams { From = "no.such", To = RouteParams.Farthest } } })));
+        Assert.StartsWith("Shot 2 (Lost): ", lost.Message);
+        Assert.Contains("no.such", lost.Message);
+    }
+
     // ---- one shot is the scene it was ----
 
     [Fact]

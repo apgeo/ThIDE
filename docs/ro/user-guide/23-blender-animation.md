@@ -830,7 +830,10 @@ presetarea pe care o numește (`preset`) sau din valorile implicite ale storyboa
 etichetele din scenă și dezvăluirea, precum și durata, dacă secvența nu o dă; nu aduce și titlul
 ei, pentru că un film are textele lui. Cuvintele dintr-o listă (`Dissolve`, `Orbit`,
 `DepthGradient`) sunt citite indiferent de majuscule, iar o cheie necunoscută este refuzată cu
-numele ei, așa că o cheie scrisă greșit nu este trecută sub tăcere.
+numele ei, așa că o cheie scrisă greșit nu este trecută sub tăcere. Camera unei secvențe poate
+zbura pe un traseu (vedeți [Zborul pe un traseu între
+stații](#zborul-pe-un-traseu-între-stații)): cu `"timing": "Natural"` și fără `seconds`, secvența
+durează cât îi ia traseului, iar cu `seconds` traseul este potrivit la acea durată.
 
 **Cum începe o secvență** (`in`): cu o tăietură, dacă nu spune nimic; cu o trecere printr-o
 culoare (`Dip`), în care imaginea se duce într-o culoare (`color`, implicit negru) pe ultimele

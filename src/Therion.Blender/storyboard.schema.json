@@ -37,7 +37,7 @@
         "additionalProperties": false,
         "properties": {
           "name": { "type": "string", "description": "Shown in the progress of the render and in its notices." },
-          "seconds": { "type": "number", "exclusiveMinimum": 0, "description": "How long the shot is. Default: the preset's length, or 10." },
+          "seconds": { "type": "number", "exclusiveMinimum": 0, "description": "How long the shot is. Default: the preset's length, or 10; or, for a camera that flies a route with the timing Natural, the time the route takes. Given, such a route is fitted to it." },
           "preset": { "type": "string", "minLength": 1, "description": "The name of a preset the shot starts from: its camera, materials, lighting, engine, labels in the scene and reveal, and its length when 'seconds' is left out. The preset's texts over the picture are not taken. The keys below override it." },
           "camera": { "type": "object", "description": "A render spec's 'camera': any template but the set of stills. Default: the preset's, or a camera that stands still and frames the cave." },
           "materials": { "$ref": "#/$defs/materials" },

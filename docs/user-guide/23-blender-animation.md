@@ -778,7 +778,10 @@ What it leaves out it takes from the `preset` it names, or from the storyboard's
 preset brings its camera move, materials, lighting, engine, labels in the scene and reveal, and
 its length when the shot gives none; it does not bring its title, because a film has its own
 texts. The words of a list (`Dissolve`, `Orbit`, `DepthGradient`) are read in any case, and a key
-that is not known is refused with its name, so a mistyped key is not passed over in silence.
+that is not known is refused with its name, so a mistyped key is not passed over in silence. A
+shot's camera can fly a route (see [Flying a route between
+stations](#flying-a-route-between-stations)): with `"timing": "Natural"` and no `seconds` the shot
+is as long as the route takes, and with `seconds` the route is fitted to them.
 
 **How a shot begins** (`in`): with a cut when it says nothing; with a `Dip`, where the picture
 goes to a colour (`color`, black by default) over the last frames of the shot before and comes

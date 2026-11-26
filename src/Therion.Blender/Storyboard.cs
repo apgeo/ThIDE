@@ -73,7 +73,9 @@ public sealed record ShotSpec
     /// <summary>Shown in the progress of the render and in the notices.</summary>
     public string? Name { get; init; }
 
-    /// <summary>How long the shot is. Null takes the preset's length, or ten seconds.</summary>
+    /// <summary>How long the shot is. Null takes the preset's length, or ten seconds; or, when
+    /// the camera is a route that sets its own time (<see cref="RouteTiming.Natural"/>), the
+    /// time the route takes. Given, a route is fitted to it.</summary>
     public double? Seconds { get; init; }
 
     /// <summary>The name of a preset the shot starts from: its camera, materials, lighting,
@@ -81,7 +83,7 @@ public sealed record ShotSpec
     /// given. The preset's texts over the picture are not taken: a film has its own.</summary>
     public string? Preset { get; init; }
 
-    /// <summary>The camera move, any template but the set of stills.</summary>
+    /// <summary>The camera move, any template but the set of stills: a route among them.</summary>
     public CameraSpec? Camera { get; init; }
 
     public MaterialsSpec? Materials { get; init; }
