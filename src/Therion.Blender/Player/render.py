@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def long_paths_off():
-    """True on a Windows that reads no path of 260 characters or more (the default)."""
+    """True on a Windows that reads no path longer than 260 characters (the default)."""
     if os.name != "nt":
         return False
     try:
@@ -36,9 +36,9 @@ def long_paths_off():
 # folder: deeper than that, Windows finds neither, and Python would only say that it has no
 # thide_player.
 DEEPEST = os.path.join(HERE, "thide_player", "modules", "textured_materials.py")
-if len(DEEPEST) >= 260 and long_paths_off():
+if len(DEEPEST) > 260 and long_paths_off():
     print("THIDE:error=the path of this folder is too long for Windows (%d characters, at most %d): "
-          "move it to a folder with a shorter path, such as C:\\render" % (len(HERE), 259 - len(DEEPEST) + len(HERE)),
+          "move it to a folder with a shorter path, such as C:\\render" % (len(HERE), 260 - len(DEEPEST) + len(HERE)),
           flush=True)
     sys.exit(64)
 
