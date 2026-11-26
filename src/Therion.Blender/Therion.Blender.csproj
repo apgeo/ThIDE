@@ -21,6 +21,7 @@
     <EmbeddedResource Include="Player\thide_player\**\*.py" LogicalName="player/thide_player/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="Plan\scene-plan.schema.json" LogicalName="plan/scene-plan.schema.json" />
     <EmbeddedResource Include="storyboard.schema.json" LogicalName="storyboard/storyboard.schema.json" />
+    <EmbeddedResource Include="render-node.schema.json" LogicalName="render-node/render-node.schema.json" />
     <!-- The run scripts of a render bundle (RenderBundleWriter). -->
     <EmbeddedResource Include="Player\bundle\render.sh" LogicalName="bundle/render.sh" />
     <EmbeddedResource Include="Player\bundle\render.cmd" LogicalName="bundle/render.cmd" />

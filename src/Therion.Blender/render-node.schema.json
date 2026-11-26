@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/apgeo/ThIDE/render-node.schema.json",
+  "title": "ThIDE render node protocol, version 1",
+  "description": "The JSON bodies a render worker (therion-cli render-worker --server) and the server it takes render jobs from exchange. Each message is one of $defs. Properties whose value is absent are left out, never written as null. A receiver ignores properties it does not know.",
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "jobId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "container": { "enum": ["mp4", "mkv", "webm"] },
+    "claim": {
+      "description": "POST claim: the node asks for a job.",
+      "type": "object",
+      "required": ["protocol", "node", "blenderVersions", "containers", "keptJobs", "waitSeconds"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol": { "const": 1 },
+        "node": { "type": "string", "minLength": 1 },
+        "worker": { "type": "string" },
+        "blenderVersions": { "type": "array", "items": { "type": "string" } },
+        "device": { "type": "string" },
+        "freeDiskBytes": { "type": "integer", "minimum": 0 },
+        "containers": { "type": "array", "items": { "$ref": "#/$defs/container" } },
+        "keptJobs": { "type": "array", "items": { "$ref": "#/$defs/jobId" } },
+        "waitSeconds": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "required": ["url", "size", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "minLength": 1, "description": "Absolute, or relative to the server URL. The node token is sent only to the server's own origin." },
+        "size": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxHours": { "type": "number", "exclusiveMinimum": 0 },
+        "maxUnpackedBytes": { "type": "integer", "minimum": 1 },
+        "maxTriangles": { "type": "integer", "minimum": 1 },
+        "maxWork": { "type": "number", "exclusiveMinimum": 0 },
+        "maxResultBytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "job": {
+      "description": "200 to a claim: the job the node now holds. 204 (no body) when there is none.",
+      "type": "object",
+      "required": ["protocol", "jobId", "attempt", "leaseSeconds", "bundle", "plan"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol": { "const": 1 },
+        "jobId": { "$ref": "#/$defs/jobId" },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "leaseSeconds": { "type": "integer", "minimum": 3 },
+        "heartbeatSeconds": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string" },
+        "bundle": { "$ref": "#/$defs/bundle" },
+        "plan": { "enum": ["full", "draft"] },
+        "container": { "$ref": "#/$defs/container" },
+        "limits": { "$ref": "#/$defs/limits" }
+      }
+    },
+    "heartbeat": {
+      "description": "POST jobs/{jobId}/heartbeat: how far the job got; renews the lease.",
+      "type": "object",
+      "required": ["attempt", "phase"],
+      "additionalProperties": false,
+      "properties": {
+        "attempt": { "type": "integer", "minimum": 1 },
+        "phase": { "type": "string", "minLength": 1 },
+        "message": { "type": "string" },
+        "segment": { "type": "integer", "minimum": 1 },
+        "segmentCount": { "type": "integer", "minimum": 1 },
+        "frame": { "type": "integer", "minimum": 0 },
+        "frameCount": { "type": "integer", "minimum": 0 },
+        "secondsPerFrame": { "type": "number", "minimum": 0 },
+        "secondsLeft": { "type": "number", "minimum": 0 }
+      }
+    },
+    "heartbeatReply": {
+      "description": "200 to a heartbeat. 409 (no body needed) when the job is no longer this node's attempt.",
+      "type": "object",
+      "required": ["action"],
+      "additionalProperties": false,
+      "properties": {
+        "action": { "enum": ["continue", "cancel"] },
+        "leaseSeconds": { "type": "integer", "minimum": 3 }
+      }
+    },
+    "file": {
+      "type": "object",
+      "required": ["name", "role", "size", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+        "role": { "enum": ["movie", "still", "subtitles", "log", "status"] },
+        "size": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "complete": {
+      "description": "POST jobs/{jobId}/complete: the job succeeded; every file named was uploaded first.",
+      "type": "object",
+      "required": ["attempt", "files", "seconds", "notices"],
+      "additionalProperties": false,
+      "properties": {
+        "attempt": { "type": "integer", "minimum": 1 },
+        "files": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/file" } },
+        "device": { "type": "string" },
+        "secondsPerFrame": { "type": "number", "minimum": 0 },
+        "seconds": { "type": "number", "minimum": 0 },
+        "frameCount": { "type": "integer", "minimum": 0 },
+        "notices": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "fail": {
+      "description": "POST jobs/{jobId}/fail: the job failed on this node.",
+      "type": "object",
+      "required": ["attempt", "reason", "message", "retryable"],
+      "additionalProperties": false,
+      "properties": {
+        "attempt": { "type": "integer", "minimum": 1 },
+        "reason": {
+          "enum": ["refused", "badJob", "checksum", "download", "upload", "cancelled", "timedOut", "blenderNotFound",
+                   "blenderTooOld", "diskSpace", "scriptError", "crashed", "noOutput", "error"]
+        },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" }
+      }
+    }
+  }
+}

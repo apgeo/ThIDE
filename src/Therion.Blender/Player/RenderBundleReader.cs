@@ -31,6 +31,26 @@ public sealed record RenderBundleLimits
     public double MaxWork { get; init; } = 1e14;
 }
 
+/// <summary>What of a bundle is played: which of its plans, and in which container its movie is
+/// written whatever the plan says.</summary>
+public sealed record RenderBundleChoice
+{
+    /// <summary>The plan that is played: <c>scene-plan.json</c>, or the draft's
+    /// (<see cref="RenderBundleWriter.DraftPlanFileName"/>).</summary>
+    public string Plan { get; init; } = ScenePlanSerializer.FileName;
+
+    /// <summary>The container of the movie, in place of the plan's; null keeps the plan's. A plan
+    /// that writes frames or a still keeps them.</summary>
+    public PlanContainer? Container { get; init; }
+
+    /// <summary>The choice of the draft plan, or of the full one.</summary>
+    public static RenderBundleChoice Of(bool draft, PlanContainer? container = null) => new()
+    {
+        Plan = draft ? RenderBundleWriter.DraftPlanFileName : ScenePlanSerializer.FileName,
+        Container = container,
+    };
+}
+
 /// <summary>A bundle that is refused, with why.</summary>
 public sealed class RenderBundleRefusedException(string message) : Exception(message);
 
@@ -60,13 +80,18 @@ public static class RenderBundleReader
     /// Checks the bundle at <paramref name="zipPath"/> and unpacks its plans and the files they
     /// name into <paramref name="folder"/> (which is emptied first). Nothing else of the bundle
     /// is unpacked: its player, its scripts and anything a plan does not name stay in the zip.
+    /// <paramref name="choice"/> says which plan is played (it is unpacked as
+    /// <c>scene-plan.json</c>) and may set the movie's container.
     /// </summary>
     /// <exception cref="RenderBundleRefusedException">The bundle breaks a rule; the message says which.</exception>
-    public static UnpackedBundle Unpack(string zipPath, string folder, RenderBundleLimits? limits = null)
+    public static UnpackedBundle Unpack(string zipPath, string folder, RenderBundleLimits? limits = null, RenderBundleChoice? choice = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(zipPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(folder);
         limits ??= new RenderBundleLimits();
+        choice ??= new RenderBundleChoice();
+        if (choice.Plan is not (ScenePlanSerializer.FileName or RenderBundleWriter.DraftPlanFileName))
+            throw new RenderBundleRefusedException($"'{choice.Plan}' is not a plan a bundle is played by.");
         var info = new FileInfo(zipPath);
         if (!info.Exists) throw new RenderBundleRefusedException("The bundle is not there.");
         if ((info.Attributes & FileAttributes.ReparsePoint) != 0 || info.LinkTarget is not null)
@@ -94,7 +119,7 @@ public static class RenderBundleReader
             }
 
             // The plans first: the movie's, or the scene's, and then each segment's.
-            string top = Text(ScenePlanSerializer.FileName);
+            string top = WithContainer(Text(choice.Plan), choice.Container);
             var texts = new Dictionary<string, string>(StringComparer.Ordinal) { [ScenePlanSerializer.FileName] = top };
             MoviePlan? movie = null;
             var segments = new List<ScenePlan>();
@@ -206,6 +231,24 @@ public static class RenderBundleReader
                 throw new RenderBundleRefusedException($"The bundle has two entries named '{path}'.");
         }
         return entries;
+    }
+
+    /// <summary>The plan's text with its video output in <paramref name="container"/>; as it is
+    /// when it has no video output or no container is asked for.</summary>
+    private static string WithContainer(string text, PlanContainer? container)
+    {
+        if (container is not { } wanted) return text;
+        try
+        {
+            if (System.Text.Json.Nodes.JsonNode.Parse(text) is not System.Text.Json.Nodes.JsonObject plan
+                || plan["output"] is not System.Text.Json.Nodes.JsonObject output
+                || output["kind"]?.GetValueKind() != System.Text.Json.JsonValueKind.String
+                || (string?)output["kind"] != "video")
+                return text;
+            output["container"] = wanted.ToString().ToLowerInvariant();
+            return plan.ToJsonString();
+        }
+        catch (System.Text.Json.JsonException) { return text; }
     }
 
     private static ScenePlan ReadScene(string text, string where)

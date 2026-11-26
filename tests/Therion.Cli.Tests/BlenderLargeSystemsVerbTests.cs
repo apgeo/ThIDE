@@ -78,4 +78,51 @@ public sealed class BlenderLargeSystemsVerbTests : IDisposable
         Assert.Equal(0, code);
         Assert.Equal("0 job(s)", output.Trim());
     }
+
+    [Theory]
+    [InlineData("render-worker --server https://render.example.org/nodes", "needs both --server <url> and --token-file <file>")]
+    [InlineData("render-worker --server http://render.example.org/nodes --token-file TOKEN", "plain HTTP is allowed to this machine only")]
+    [InlineData("render-worker --server nodes --token-file TOKEN", "not an absolute URL")]
+    [InlineData("render-worker --server https://render.example.org/ --token-file MISSING", "--token-file: the token file is not there")]
+    [InlineData("render-worker --server https://render.example.org/ --token-file TOKEN --poll-seconds -1", "--poll-seconds takes a number above 0")]
+    public async Task TheServerMode_RefusesWhatItCannotRunOn(string args, string message)
+    {
+        string token = Token("t0ken");
+        var (code, _, error) = await Run(args.Replace("TOKEN", token).Replace("MISSING", Path.Combine(_dir, "none")).Split(' '));
+        Assert.Equal(2, code);
+        Assert.Contains(message, error);
+        Assert.DoesNotContain("t0ken", error);
+    }
+
+    [Fact]
+    public async Task TheServerMode_RefusesATokenFileOthersMayRead()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        string token = Token("t0ken");
+        File.SetUnixFileMode(token, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+        var (code, _, error) = await Run("render-worker", "--server", "https://render.example.org/", "--token-file", token);
+        Assert.Equal(2, code);
+        Assert.Contains("others may read the token file", error);
+    }
+
+    [Fact]
+    public async Task TheServerMode_StopsWith3_WhenTheServerRefusesTheToken()
+    {
+        using var server = new Therion.Blender.Tests.FakeRenderServer();
+        var (code, output, error) = await Run("render-worker", "--server", server.Url.ToString(), "--token-file", Token("not-the-servers"),
+            "--scratch", Path.Combine(_dir, "scratch"), "--blender", "/nowhere/blender", "--node-name", "cli-test");
+        Assert.True(code == 3, error);
+        Assert.Equal("0 job(s)", output.Trim());
+        Assert.Contains("refused the node token", error);
+        Assert.DoesNotContain("not-the-servers", error);
+        Assert.Equal(["POST /api/nodes/claim"], server.Requests.Select(r => r.Request));
+    }
+
+    private string Token(string token)
+    {
+        string path = Path.Combine(_dir, "node.token");
+        File.WriteAllText(path, token + "\n");
+        if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        return path;
+    }
 }

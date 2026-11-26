@@ -1078,6 +1078,61 @@ the files the worker names go to the outbox. A fault in Blender's own readers of
 is the risk that remains: run the worker as a user that can read and write the two folders and
 little else.
 
+### Rendering for a server
+
+The same worker can take its jobs from a server that stores render bundles (a render node of a
+server such as SilexGIS) instead of from a folder: it asks the server for a job, downloads the
+bundle, renders it, sends back the movie, its subtitles and Blender's log, and asks for the next.
+The server never reaches the machine; the machine calls the server. The protocol is in
+[`docs/dev/render-worker-protocol.md`](../dev/render-worker-protocol.md).
+
+    therion-cli render-worker --server https://example.org/api/v1/render-nodes/ \
+        --token-file ~/.config/thide-node/token --node-name gpu-1
+
+- `--server` is the address the server's administrator gives; it must be HTTPS (plain HTTP is
+  accepted only to this machine, for tests). `--token-file` is a file whose first line is the
+  node token the administrator gives; it must be readable by you only (`chmod 600`), or the
+  worker refuses to start. The token is never written to the log.
+- `--node-name` is the name the server shows (the computer's name by default); `--scratch` is where
+  bundles are downloaded and frames kept (one folder for each job); `--poll-seconds` (30) is how
+  long it waits for a job before asking again; `--once` makes one request and renders what it
+  brings. `--blender`, `--modules` and the limits are those of the folder worker; a job's own
+  limits can only lower them.
+- The movie is written in the container the job asks for: MP4 (H.264) by default, or WebM, which
+  a server may prefer because H.264 comes with patent pool terms.
+- A job cancelled on the server stops Blender at the next heartbeat (a third of the lease, 40 s
+  for a lease of 2 minutes). A network that fails is retried with waits that grow; if the server
+  cannot be reached for a whole lease, the job is stopped and the server gives it to someone else.
+  Its frames stay: if the same job comes back to this machine it goes on from them. A token the
+  server refuses stops the worker (exit code 3).
+
+**Setting up a GPU machine.**
+
+1. Install Blender 4.2 or newer from [blender.org](https://www.blender.org/download/) (the LTS
+   versions are the tested ones), check the download against the SHA-256 the site lists, and unpack
+   it, for example into `/opt/blender`. Check that it sees the card: in Blender's preferences, or
+   by rendering a draft with the folder worker.
+2. Build `therion-cli` from ThIDE's source with the .NET SDK:
+   `dotnet publish src/Therion.Cli -c Release -o /opt/thide-cli`.
+3. Make a user of its own for the worker (`useradd --system --create-home thide-render`), put the
+   token file in its home with `chmod 600`, and start the worker as that user, for example from a
+   systemd service with `Restart=on-failure`, `--blender /opt/blender/blender` and
+   `--scratch /var/lib/thide-render`.
+
+For a container, write a recipe that downloads Blender while the image is built (from
+blender.org, checking its SHA-256) and build the image on the machine that runs it. Do not publish
+an image with Blender inside: Blender is GPL, and an image that holds it is a redistribution of
+Blender, with what that asks of whoever publishes it. Give the container no network but the
+server's address, and no folder but the scratch folder.
+
+**Security on a node.** Everything said above about a bundle holds for a job from a server: it is
+data, its own scripts never run, it is checked before Blender starts, and only the files the worker
+names are sent back. Besides, the bundle's size and SHA-256 are checked against those the server
+gave before it is read, the token goes only to the server's own address and over HTTPS, and a
+failed job uploads nothing but its reason. Since a fault in Blender's own readers is the risk that
+remains, run Blender as a user that can reach little more than the scratch folder: a user of its
+own, or a container as above.
+
 ## Requirements & tips
 
 - **Blender 4.2 or newer** — older versions are rejected with a clear message.

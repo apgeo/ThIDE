@@ -1,5 +1,27 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-27 — the render node protocol
+
+The plan stays **version 1**; the player does not change.
+
+### Breaking changes
+- None. `RenderBundleReader.Unpack` has one more optional parameter.
+
+### Additive API
+- **`RenderNodeProtocol`** (`Version` = 1; the endpoint paths `ClaimPath`, `HeartbeatPath`,
+  `FilePath`, `CompletePath`, `FailPath`; `Sha256Header`; `Containers`, `TryContainer` — the
+  player's own, `mp4` by default; `IsJobId`, `IsFileName`, `IsSha256`; `IsAllowedAddress` — HTTPS,
+  or plain HTTP to this machine only; `IsSameOrigin`; `Backoff`; `HeartbeatInterval`; `Write`,
+  `Read`; `Schema`) and its messages `RenderNodeClaim`, `RenderNodeJob` (with `RenderNodeBundle`,
+  `RenderNodeLimits`), `RenderNodeHeartbeat`, `RenderNodeHeartbeatReply`, `RenderNodeFile`,
+  `RenderNodeComplete`, `RenderNodeFail`; `RenderNodeFailure` (the reason codes, `IsRetryable`).
+  The schema is `render-node.schema.json` (embedded); the protocol is described in
+  `docs/dev/render-worker-protocol.md`.
+- **`RenderBundleChoice`** (`Plan`: `scene-plan.json` or the draft's; `Container`: the movie's
+  container in place of the plan's; `Of(draft, container)`), taken by
+  `RenderBundleReader.Unpack(zip, folder, limits, choice)`. The plan chosen is unpacked as
+  `scene-plan.json` and checked as the full one is.
+
 ## 2026-11-27 — composite presets
 
 The plan stays **version 1**; the player does not change.

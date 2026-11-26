@@ -1,8 +1,10 @@
 // `therion-cli render-worker` — renders the render bundles that arrive in a folder, one at a time,
 // and leaves what they render in another: for a machine with Blender (a GPU) that has nothing else
-// of ThIDE. How the folders are filled (a synced share, an SFTP drop) is not its business. A bundle
-// is data: its own player and scripts are never run (see RenderWorker).
+// of ThIDE. How the folders are filled (a synced share, an SFTP drop) is not its business. With
+// --server and --token-file it takes its jobs from a server instead (a render node of a server such
+// as SilexGIS; see RenderNodeWorker). A bundle is data: its own player and scripts are never run.
 
+using Therion.Blender;
 using Therion.Blender.Execution;
 using Therion.Blender.Player;
 
@@ -11,9 +13,11 @@ namespace Therion.Cli;
 public static class RenderWorkerVerb
 {
     /// <summary>Runs the verb; <paramref name="args"/> is the full argv (args[0] == "render-worker").
-    /// Returns 0 when it stopped as asked, 2 for a usage error.</summary>
+    /// Returns 0 when it stopped as asked, 2 for a usage error, 3 when the server refused the node token.</summary>
     public static async Task<int> RunAsync(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr, CancellationToken ct = default)
     {
+        if (Option(args, "--server") is not null || Option(args, "--token-file") is not null)
+            return await ServerAsync(args, stdout, stderr, ct).ConfigureAwait(false);
         string? inbox = Option(args, "--inbox"), outbox = Option(args, "--outbox");
         if (inbox is null || outbox is null)
         {
@@ -25,20 +29,10 @@ public static class RenderWorkerVerb
             stderr.WriteLine($"error: the inbox is not a folder: {inbox}");
             return 2;
         }
-        var limits = new RenderBundleLimits();
-        var maxTime = TimeSpan.FromHours(72);
+        if (!Shared(args, stderr, out var limits, out var maxTime, out var modules)) return 2;
         var poll = TimeSpan.FromSeconds(5);
-        if (Number(args, "--max-hours", stderr, out double? hours) is false) return 2;
-        if (hours is { } h) maxTime = TimeSpan.FromHours(h);
-        if (Number(args, "--max-triangles", stderr, out double? triangles) is false) return 2;
-        if (triangles is { } t) limits = limits with { MaxTriangles = (long)t };
-        if (Number(args, "--max-bundle-gb", stderr, out double? gb) is false) return 2;
-        if (gb is { } g) limits = limits with { MaxZipBytes = (long)(g * 1024 * 1024 * 1024) };
         if (Number(args, "--poll", stderr, out double? seconds) is false) return 2;
         if (seconds is { } s) poll = TimeSpan.FromSeconds(s);
-        var modules = new List<string>();
-        for (int i = 1; i < args.Count - 1; i++)
-            if (args[i] == "--modules") modules.Add(Path.GetFullPath(args[i + 1]));
 
         var options = new RenderWorkerOptions
         {
@@ -59,6 +53,66 @@ public static class RenderWorkerVerb
         int taken = await worker.RunAsync(once, ct).ConfigureAwait(false);
         stdout.WriteLine($"{taken} job(s)");
         return 0;
+    }
+
+    /// <summary>The limits, the time limit and the module folders both modes take.</summary>
+    private static bool Shared(IReadOnlyList<string> args, TextWriter stderr, out RenderBundleLimits limits, out TimeSpan maxTime, out List<string> modules)
+    {
+        limits = new RenderBundleLimits();
+        maxTime = TimeSpan.FromHours(72);
+        modules = [];
+        if (Number(args, "--max-hours", stderr, out double? hours) is false) return false;
+        if (hours is { } h) maxTime = TimeSpan.FromHours(h);
+        if (Number(args, "--max-triangles", stderr, out double? triangles) is false) return false;
+        if (triangles is { } t) limits = limits with { MaxTriangles = (long)t };
+        if (Number(args, "--max-bundle-gb", stderr, out double? gb) is false) return false;
+        if (gb is { } g) limits = limits with { MaxZipBytes = (long)(g * 1024 * 1024 * 1024) };
+        for (int i = 1; i < args.Count - 1; i++)
+            if (args[i] == "--modules") modules.Add(Path.GetFullPath(args[i + 1]));
+        return true;
+    }
+
+    /// <summary>The server mode: claims jobs from <c>--server</c> with the token of <c>--token-file</c>.</summary>
+    private static async Task<int> ServerAsync(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr, CancellationToken ct)
+    {
+        string? server = Option(args, "--server"), tokenFile = Option(args, "--token-file");
+        if (server is null || tokenFile is null)
+        {
+            stderr.WriteLine("error: 'render-worker' needs both --server <url> and --token-file <file> to take jobs from a server.");
+            return 2;
+        }
+        string? problem = "it is not an absolute URL";
+        if (!Uri.TryCreate(server, UriKind.Absolute, out var url) || !RenderNodeProtocol.IsAllowedAddress(url, out problem))
+        {
+            stderr.WriteLine($"error: --server cannot be used: {problem}.");
+            return 2;
+        }
+        if (!RenderNodeToken.TryRead(tokenFile, out string token, out string? tokenProblem))
+        {
+            stderr.WriteLine($"error: --token-file: {tokenProblem}.");
+            return 2;
+        }
+        if (!Shared(args, stderr, out var limits, out var maxTime, out var modules)) return 2;
+        if (Number(args, "--poll-seconds", stderr, out double? seconds) is false) return 2;
+        var options = new RenderNodeOptions
+        {
+            Server = url,
+            Token = token,
+            NodeName = Option(args, "--node-name") ?? Environment.MachineName,
+            Scratch = Path.GetFullPath(Option(args, "--scratch") ?? Path.Combine(Path.GetTempPath(), "thide-render-node")),
+            Limits = limits,
+            MaxTime = maxTime,
+            ModuleFolders = modules,
+            Poll = TimeSpan.FromSeconds(seconds ?? 30),
+            WorkerVersion = typeof(RenderWorkerVerb).Assembly.GetName().Version?.ToString(),
+        };
+        string? blender = Option(args, "--blender");
+        using var worker = new RenderNodeWorker(
+            new BlenderLocator(new ProcessBlenderProbe()), new BlenderRunner(new RealBlenderProcessLauncher()), options,
+            () => blender, line => stderr.WriteLine(line));
+        var run = await worker.RunAsync(args.Contains("--once"), ct).ConfigureAwait(false);
+        stdout.WriteLine($"{run.Jobs} job(s)");
+        return run.Unauthorized ? 3 : 0;
     }
 
     private static bool? Number(IReadOnlyList<string> args, string name, TextWriter stderr, out double? value)

@@ -128,6 +128,11 @@ static void PrintHelp()
     Console.WriteLine("                                         <job>.status.json in the outbox says how far each is; the movie, its subtitles and");
     Console.WriteLine("                                         <job>.log land there. <job>.cancel in the inbox stops a job; it goes on with its frames");
     Console.WriteLine("                                         when the cancel file is gone. A bundle's own player and scripts are never run.");
+    Console.WriteLine("  therion-cli render-worker --server <url> --token-file <file> [--node-name <name>] [--scratch <dir>] [--once]");
+    Console.WriteLine("                     [--poll-seconds <n>] [--blender <path>] [--modules <dir>]… [--max-hours <n>] [--max-triangles <n>] [--max-bundle-gb <n>]");
+    Console.WriteLine("                                         Take render jobs from a server (HTTPS; plain HTTP to this machine only): claim one,");
+    Console.WriteLine("                                         download its bundle, render it, upload the movie, its subtitles and log. The token file");
+    Console.WriteLine("                                         must be readable by its owner only. Exit 3 when the server refuses the token.");
     Console.WriteLine("  therion-cli build <thconfig|folder> [--all] [--therion <path>] [--quiet] [--no-log] [--json] [--stop-on-failure]");
     Console.WriteLine("                                         Compile with Therion and print a summary; exit 0 only if all succeed.");
     Console.WriteLine("  therion-cli new --list                 List project templates (built-in and imported).");
