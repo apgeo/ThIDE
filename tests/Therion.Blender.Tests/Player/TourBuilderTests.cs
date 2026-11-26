@@ -394,6 +394,33 @@ public class TourBuilderTests
         Assert.True(Shot(tour, "B4 (2)").In!.Seconds * 8 >= 2);
     }
 
+    // ---- larger invented caves ----
+
+    [Theory]
+    [InlineData(InventedCaveSize.Small, 1)]
+    [InlineData(InventedCaveSize.Medium, 1)]
+    [InlineData(InventedCaveSize.Large, 2)]
+    public void AnInventedCaveOfAnySize_GetsAValidTourWithinItsTime(InventedCaveSize size, int depth)
+    {
+        var geometry = GeometryStage.Build(InventedCave.Build(size));
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var tour = TourBuilder.Build(geometry, new TourSpec { Depth = depth, Mode = depth == 2 ? TourBranchMode.Return : TourBranchMode.Cut });
+        clock.Stop();
+
+        Assert.Empty(StoryboardValidator.Validate(tour.Storyboard).Select(e => $"{e.Path}: {e.Message}"));
+        Assert.True(tour.Seconds <= 180.0, $"{tour.Seconds} s");
+        Assert.True(tour.Rows.Count(r => r.Kind != "trunk" && r.Mode != "skip" && r.Depth == 1) <= 12);
+        Assert.All(tour.Rows.Where(r => r.Kind != "trunk" && r.Mode != "skip"), r => Assert.True(r.Seconds <= 20.0 + 1e-6, $"{r.Id}: {r.Seconds} s"));
+        Assert.Equal(tour.Seconds, tour.Rows.Sum(r => r.Seconds), 1);
+        // Every shot starts where the film is, or goes there through a dip.
+        var film = StoryboardPlanner.Lower(
+            tour.Storyboard with { Output = tour.Storyboard.Output with { OutputDirectory = "out" } },
+            new SourceSpec { PlyPath = "model.ply" }, CameraFraming.FromGeometry(geometry), SceneMeta.Build(geometry));
+        Assert.Equal(tour.Storyboard.Shots.Count, film.Segments.Count);
+        if (size == InventedCaveSize.Large) Assert.Contains(tour.Notices, n => n.StartsWith("The tour stays in the part of the cave it starts in: 1 other part(s)"));
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(60), $"planned in {clock.Elapsed.TotalSeconds:0.0} s");
+    }
+
     // ---- what is refused, and the tour file ----
 
     [Fact]
