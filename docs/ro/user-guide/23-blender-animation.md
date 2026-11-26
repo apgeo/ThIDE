@@ -218,6 +218,11 @@ dispariția lui (fără el, titlul este prezent de la primul cadru, iar un cadru
 "endCard": { "text": "Mulțumim", "seconds": 4, "fade": 2 }
 ```
 
+`"titleFadeIn"` și `"titleFadeOut"` dau celor două timpuri separate: `"titleFadeIn": 0.3,
+"titleFadeOut": 1.5` face ca cadrul să apară repede și să dispară încet. Fiecare, când este dat,
+are întâietate față de `"titleFade"` pentru jumătatea lui; `titleFadeOut` merge cu `titleSeconds`,
+fiindcă numai un cadru de titlu dispare.
+
 **Subtitrările sunt scrise și ca fișiere de subtitrare**: `<nume>.srt` și `<nume>.vtt` lângă film,
 pentru un player video sau o pagină web care le poate afișa, ascunde sau traduce.
 
@@ -299,7 +304,10 @@ pe cele ale presetării):
 - `glow` face să strălucească ce tocmai a apărut (în culoarea `glowColor`, un portocaliu cald
   dacă nu spuneți altceva), până când dezvăluirea a trecut mai departe.
 - `counter` (pentru `date`) scrie deasupra scării grafice anul la care a ajuns dezvăluirea.
-  **Map reveal** îl are pornit: treceți presetarea pe `date` și ea numără anii.
+  **Map reveal** îl are pornit: treceți presetarea pe `date` și ea numără anii. Cu
+  `"counterFormat": "{} m"` și o dezvăluire după `distance` are și ea un contor, al metrilor de la
+  intrare, iar una după `order` numără tronsoanele; `{}` este locul numărului, iar
+  `counterDecimals` (0 până la 6) câte zecimale are.
 - `from` (pentru `distance`) este numele stației de la care se măsoară distanțele.
 - `datesPath` (pentru `date`) numește fișierul care are datele.
 
@@ -335,7 +343,8 @@ Pe lângă etichetele pe care ThIDE le face din model (stațiile, pistele), o sc
 |---|---|
 | `label` | o etichetă: un text pe stația lui, întors spre cameră |
 | `callout` | o notă cu linie: un text așezat la distanță de stație, cu o linie de la stație până la el |
-| `marker` | un marcaj: o bilă luminoasă |
+| `marker` | un marcaj: o bilă luminoasă, sau un ac, un con, un cub, un inel ori o imagine mică |
+| `outline` | un contur: o linie de-a lungul unei liste de puncte, pentru conturul unei galerii sau al unei săli pe suprafața pe care se află |
 | `photo` | o fotografie dintr-un fișier PNG sau JPEG, pe stația ei sau deasupra, cu o linie până la ea |
 
 Se scriu ca o listă JSON, într-un fișier al lor:
@@ -352,13 +361,16 @@ Se scriu ca o listă JSON, într-un fișier al lor:
 
 | Cheie | Înțeles |
 |---|---|
-| `kind` | `label`, `callout`, `marker` sau `photo` |
+| `kind` | `label`, `callout`, `marker`, `photo` sau `outline` |
 | `station` *sau* `at` | unde: numele unei stații, așa cum îl are modelul, sau un punct `[est, nord, sus]` în coordonatele modelului |
 | `text` | ce spune o etichetă sau o notă |
 | `image` | fișierul unei fotografii, `.png` sau `.jpg`, numit față de locul în care se află fișierul de adnotări |
 | `size` | în metri: înălțimea literelor unui text, raza unui marcaj, lățimea unei fotografii. Dacă lipsește, se potrivește cu peștera: un text cât o etichetă de stație, o fotografie cât o zecime din întinderea peșterii |
 | `offset` | `[est, nord, sus]` în metri: unde stă textul unei note sau o fotografie față de stație. O notă fără el stă la patru înălțimi de literă deasupra; o fotografie fără el este pe stația ei, iar cu el are o linie până la ea |
 | `color` | `[roșu, verde, albastru]`, fiecare între 0 și 1, pentru un text sau un marcaj |
+| `symbol` | la un marcaj: `ball` (implicit), `pin`, `cone`, `cube`, `ring` sau `image`. Acul și conul stau cu vârful pe stație; inelul se întoarce spre cameră; `image` este o imagine mică (`image` îi numește fișierul), lată cât dublul lui `size` |
+| `sizeBy`, `sizeFactor`, `minSize`, `maxSize` | la un marcaj: `"sizeBy": "distance"` dă razei `sizeFactor` metri pentru fiecare metru dintre el și cameră, `"screen"` îl face să apară cât `sizeFactor` ori lățimea imaginii, oriunde ar fi camera; amândouă rămân între `minSize` și `maxSize` (un sfert și de patru ori `size`, dacă nu spuneți altceva) |
+| `points` | la un contur: punctele `[est, nord, sus]` prin care trece, în coordonatele proprii ale modelului; grosimea lui este `size`, iar el se află la primul punct, dacă nu dați o `station` sau un `at` |
 | `framed` | `true` pune un chenar în jurul unei fotografii |
 | `facing`, `normal` | `"facing": "fixed"` face dintr-o fotografie un panou care privește de-a lungul lui `normal` (`[est, nord, sus]`) și rămâne așa; fără el, fotografia stă cu fața spre cameră |
 | `from`, `to` | când este prezentă, în secunde de la începutul filmului; fără ele, tot timpul |
