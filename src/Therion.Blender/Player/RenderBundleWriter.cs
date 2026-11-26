@@ -11,6 +11,9 @@
 //   render.py               the player's entry script
 //   scene-plan.json         the plan
 //   scene-plan.draft.json   the same plan with a fast look (optional)
+//   scene-plan.s01.json ... for a film of several scenes: the plan of every shot; scene-plan.json
+//                           is then the plan of the movie that joins them, and the same run
+//                           scripts render it (scene-plan.s01.draft.json ... are the draft's)
 //   thide_player/...        the player
 //   model.ply ...           the meshes, the images and any other file the plan names, at their
 //                           plan paths (surface.ply and surface.png are a terrain and its image,
@@ -44,6 +47,18 @@ public sealed record RenderBundleContent
     /// <summary>A second plan with a fast look (<see cref="ScenePlanBuilder.Draft"/>), written
     /// as <c>scene-plan.draft.json</c>; the run scripts play it with <c>--draft</c>.</summary>
     public ScenePlan? Draft { get; init; }
+
+    /// <summary>A film of several scenes, in place of the one scene of <see cref="Plan"/>: the
+    /// movie's plan is written as <c>scene-plan.json</c> and the plan of every segment beside it
+    /// under the name the movie gives it (<c>scene-plan.s01.json</c> onwards). The run scripts
+    /// render it as they render a scene. <see cref="Plan"/> is then the plan of the film's first
+    /// shot and is not written a second time; <see cref="Draft"/> is not read.</summary>
+    public StoryboardPlan? Film { get; init; }
+
+    /// <summary>The film with a fast look (<see cref="StoryboardPlan.Draft"/>), written as
+    /// <c>scene-plan.draft.json</c> with its segments' plans; the run scripts play it with
+    /// <c>--draft</c>.</summary>
+    public StoryboardPlan? FilmDraft { get; init; }
 
     /// <summary>The files the plans name, as plan path → the file on disk: every model's mesh,
     /// every material's image, every photo, the world's image, and the modules of the plan's
@@ -198,6 +213,65 @@ public static class RenderBundleWriter
         };
     }
 
+    /// <summary>
+    /// Converts a cave model and lowers <paramref name="storyboard"/> to the plans of a film for
+    /// it (<see cref="StoryboardPlanner.Lower"/>): the content of a bundle that holds every
+    /// shot's plan and the movie's, with one mesh that all of them share.
+    /// </summary>
+    /// <param name="storyboard">The film. It is written to <see cref="OutputDirectory"/> inside
+    /// the bundle under the storyboard's base name.</param>
+    /// <param name="draft">Also make a draft of the whole film.</param>
+    /// <param name="presets">Finds the preset a shot names; null knows the built-in ones.</param>
+    /// <exception cref="ArgumentException">The storyboard is invalid or cannot be planned for
+    /// this model.</exception>
+    public static RenderBundleContent FromStoryboard(
+        ResolvedModelSource source, Storyboard storyboard, string workDirectory, bool draft = false,
+        GeometryOptions? geometry = null, IReadOnlyList<SourceLead>? leads = null, Func<string, Presets.RenderPreset?>? presets = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(storyboard);
+        ArgumentException.ThrowIfNullOrWhiteSpace(workDirectory);
+        var errors = StoryboardValidator.Validate(storyboard, presets);
+        if (errors.Count > 0)
+            throw new ArgumentException(
+                "The storyboard is invalid: " + string.Join("; ", errors.Select(e => $"{e.Path}: {e.Message}")), nameof(storyboard));
+
+        var needs = StoryboardPlanner.ConversionSpec(storyboard, presets);
+        var conversion = CaveConversionPipeline.ConvertResolvedFull(source, new ConversionOptions
+        {
+            OutputDirectory = workDirectory,
+            Geometry = RevealPlanner.GeometryFor(needs, geometry, source.Path),
+            Leads = leads ?? [],
+            IncludeSurface = needs.Surface.Mode != SurfaceMode.Off,
+        });
+        var manifest = conversion.Manifest;
+        var film = StoryboardPlanner.Lower(
+            storyboard with { Output = storyboard.Output with { OutputDirectory = OutputDirectory } },
+            new SourceSpec { PlyPath = manifest.ModelPath, SurfacePlyPath = manifest.SurfacePath, SurfaceImagePath = manifest.SurfaceImagePath },
+            CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta, presets);
+        var written = new[] { manifest.ModelPath, manifest.SurfacePath, manifest.SurfaceImagePath }.OfType<string>();
+        var files = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (path, _) in film.Segments.SelectMany(PlayerWriter.FilesOf))
+            files[path] = film.Files.TryGetValue(path, out string? file) ? file : written.First(w => Path.GetFileName(w) == path);
+        return new RenderBundleContent
+        {
+            Plan = film.Segments[0],
+            Film = film,
+            FilmDraft = draft ? film.Draft() : null,
+            Files = files,
+            NotCarried = film.NotCarried,
+            Notices = film.Notices,
+            Captions = film.Captions,
+        };
+    }
+
+    /// <summary>A film as the one scene the README describes: the movie's name, length, texts
+    /// and output, with the look and the files of its first shot.</summary>
+    private static ScenePlan AsOneScene(StoryboardPlan film) => film.Segments[0] with
+    {
+        Name = film.Movie.Name, Timeline = film.Movie.Timeline, Texts = film.Movie.Texts, Output = film.Movie.Output, Blend = null,
+    };
+
     /// <summary>Writes the bundle as a zip file, replacing one that is there. Its one folder is
     /// named after the file (<see cref="FolderName"/>).</summary>
     /// <returns>The paths of the zip's entries, in their order.</returns>
@@ -301,7 +375,8 @@ public static class RenderBundleWriter
     public static string Readme(RenderBundleContent content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        var plan = content.Plan;
+        var plan = content.Film is { } film ? AsOneScene(film) : content.Plan;
+        var draftPlan = content.Film is null ? content.Draft : content.FilmDraft is { } filmDraft ? AsOneScene(filmDraft) : null;
         bool romanian = (content.Language ?? "").Split('-', '_')[0].Equals("ro", StringComparison.OrdinalIgnoreCase);
         string T(string en, string ro) => romanian ? ro : en;
         var text = new StringBuilder();
@@ -334,7 +409,7 @@ public static class RenderBundleWriter
         Line();
         Line("  Linux, macOS:   sh render.sh");
         Line("  Windows:        render.cmd");
-        if (content.Draft is not null)
+        if (draftPlan is not null)
         {
             Line();
             Lines(
@@ -357,15 +432,43 @@ public static class RenderBundleWriter
         Line(T("Or start Blender yourself in this folder:", "Sau porniți chiar dumneavoastră Blender în acest dosar:"));
         Line();
         Line("  blender -b --factory-startup --python render.py");
-        if (content.Draft is not null)
+        if (draftPlan is not null)
             Line($"  blender -b --factory-startup --python render.py -- --plan {DraftPlanFileName}");
         Line();
         Line(T(
             "To look at the scene in Blender's window instead of rendering it:",
             "Pentru a privi scena în fereastra Blender în loc de a o randa:"));
         Line();
-        Line("  blender --factory-startup --python render.py -- --build-only");
-        if (plan.HasTexts)
+        Line(content.Film is { } looked
+            ? $"  blender --factory-startup --python render.py -- --build-only --plan {looked.Movie.Segments[0].Plan}"
+            : "  blender --factory-startup --python render.py -- --build-only");
+        if (content.Film is { } shots)
+        {
+            int count = shots.Segments.Count;
+            string first = shots.Movie.Segments[0].Plan, firstFrames = shots.Movie.Segments[0].Frames;
+            Line();
+            Line(T("A FILM OF SEVERAL SHOTS", "UN FILM DIN MAI MULTE SECVENȚE"));
+            Line();
+            Lines(
+                $"This is a film of {count} shot(s). scene-plan.json is the film: it names the plan of every shot\n({first} onwards) and says how each begins: with a cut, a dip to a colour or a\ndissolve. Every shot is rendered as PNG frames into a folder of its own (\"frames/{firstFrames}\"\nonwards), each in a Blender of its own; then the film is written from those frames, with its\ntexts over them. The frames are removed when the film is written.",
+                $"Acesta este un film din {count} secvențe. scene-plan.json este filmul: numește planul fiecărei\nsecvențe (începând cu {first}) și spune cum începe fiecare: cu o tăietură, cu o\ntrecere printr-o culoare sau cu o suprapunere. Fiecare secvență este randată sub formă de cadre\nPNG într-un dosar propriu (începând cu \"frames/{firstFrames}\"), fiecare într-un Blender propriu;\napoi filmul este scris din acele cadre, cu textele peste ele. Cadrele sunt șterse după ce\nfilmul a fost scris.");
+            Line();
+            Lines(
+                "If the render is stopped, start it again: the shots that are finished are kept and the\nrender goes on in the shot it stopped in. Change one shot's plan and only that shot is\nrendered again. To change a text of the film (\"texts\" in scene-plan.json) or how two shots\nare joined without rendering anything again, keep the frames the first time and compose\nfrom them after:",
+                "Dacă randarea este oprită, porniți-o din nou: secvențele terminate sunt păstrate și randarea\ncontinuă în secvența în care s-a oprit. Dacă schimbați planul unei singure secvențe, doar acea\nsecvență este randată din nou. Pentru a schimba un text al filmului (\"texts\" în\nscene-plan.json) sau felul în care se leagă două secvențe fără a randa nimic din nou, păstrați\ncadrele prima dată și compuneți apoi din ele:");
+            Line();
+            Line(T(
+                "  Linux, macOS:   sh render.sh --keep-frames      then   sh render.sh --compose",
+                "  Linux, macOS:   sh render.sh --keep-frames      apoi   sh render.sh --compose"));
+            Line(T(
+                "  Windows:        render.cmd --keep-frames        then   render.cmd --compose",
+                "  Windows:        render.cmd --keep-frames        apoi   render.cmd --compose"));
+            Line();
+            Line(T("One shot alone, as a clip of its own:", "O singură secvență, ca un clip separat:"));
+            Line();
+            Line($"  blender -b --factory-startup --python render.py -- --plan {first}");
+        }
+        else if (plan.HasTexts)
         {
             Line();
             Line(T("TWO STAGES", "DOUĂ ETAPE"));
@@ -393,7 +496,7 @@ public static class RenderBundleWriter
         Line(T("WHAT IT WRITES", "CE SCRIE"));
         Line();
         foreach (string line in Writes(plan, "", romanian)) Line(line);
-        if (content.Draft is { } draft)
+        if (draftPlan is { } draft)
             foreach (string line in Writes(draft, T("The draft: ", "Previzualizarea: "), romanian)) Line(line);
         if (content.Captions.Count > 0)
         {
@@ -412,12 +515,22 @@ public static class RenderBundleWriter
             (PlayerFiles.EntryFileName, T(
                 "the script Blender runs: it plays scene-plan.json with thide_player",
                 "scriptul rulat de Blender: redă scene-plan.json cu thide_player")),
-            (ScenePlanSerializer.FileName, T(
-                $"the scene: models, camera track, look, output (JSON, plan version {plan.Version})",
-                $"scena: modele, traseul camerei, aspect, ieșire (JSON, versiunea {plan.Version} a planului)")),
+            (ScenePlanSerializer.FileName, content.Film is null
+                ? T(
+                    $"the scene: models, camera track, look, output (JSON, plan version {plan.Version})",
+                    $"scena: modele, traseul camerei, aspect, ieșire (JSON, versiunea {plan.Version} a planului)")
+                : T(
+                    $"the film: its shots, how they are joined, its texts, its output (JSON, plan version {plan.Version})",
+                    $"filmul: secvențele lui, cum sunt legate, textele, ieșirea (JSON, versiunea {plan.Version} a planului)")),
         };
-        if (content.Draft is not null)
-            files.Add((DraftPlanFileName, T("the same scene with a fast look", "aceeași scenă cu un aspect rapid")));
+        if (content.Film is { } parts)
+            files.Add((parts.Movie.Segments.Count == 1 ? parts.Movie.Segments[0].Plan : $"{parts.Movie.Segments[0].Plan} ... {parts.Movie.Segments[^1].Plan}", T(
+                "the scene of every shot: models, camera track, look", "scena fiecărei secvențe: modele, traseul camerei, aspect")));
+        if (draftPlan is not null)
+            files.Add((DraftPlanFileName, content.Film is null
+                ? T("the same scene with a fast look", "aceeași scenă cu un aspect rapid")
+                : T("the same film with a fast look (with the scene-plan.sNN.draft.json of its shots)",
+                    "același film cu un aspect rapid (cu fișierele scene-plan.sNN.draft.json ale secvențelor)")));
         files.Add((PlayerFiles.PackageName + "/", T(
             $"the player (Python), version {PlayerFiles.Version}", $"playerul (Python), versiunea {PlayerFiles.Version}")));
         files.Add(($"{LicenseFileName}, {NoticeFileName}", T(
@@ -526,14 +639,43 @@ public static class RenderBundleWriter
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(content.Plan);
-        Check(content.Plan, "plan");
-        if (content.Draft is { } draft) Check(draft, "draft");
+        // The plans the bundle holds, each under its name: one scene and its draft, or a film's
+        // segments and its draft's.
+        var plans = new List<(string File, ScenePlan Plan)>();
+        var movies = new List<(string File, MoviePlan Movie)>();
+        if (content.Film is null)
+        {
+            Check(content.Plan, "plan");
+            plans.Add((ScenePlanSerializer.FileName, content.Plan));
+            if (content.Draft is { } draft)
+            {
+                Check(draft, "draft");
+                plans.Add((DraftPlanFileName, draft));
+            }
+        }
+        else
+        {
+            foreach (var (film, file, which) in new[] { (content.Film, ScenePlanSerializer.FileName, "film"), (content.FilmDraft, DraftPlanFileName, "film's draft") })
+            {
+                if (film is null) continue;
+                PlayerWriter.ThrowIfInvalid(film);
+                if (!ScenePlanValidator.IsPathBesideThePlan(film.Movie.Output.Directory))
+                    throw new ArgumentException(
+                        $"The {which}'s output directory '{film.Movie.Output.Directory}' does not lie beside it; a bundle renders into its own folder.",
+                        nameof(content));
+                movies.Add((file, film.Movie));
+                for (int i = 0; i < film.Segments.Count; i++) plans.Add((Normalized(film.Movie.Segments[i].Plan), film.Segments[i]));
+            }
+        }
 
         var reserved = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             ScenePlanSerializer.FileName, DraftPlanFileName, ReadmeFileName, ShellScriptName, WindowsScriptName,
             LicenseFileName, NoticeFileName, PlayerFiles.EntryFileName,
         };
+        foreach (var (file, _) in plans)
+            if (!reserved.Add(file) && content.Film is not null)
+                throw new ArgumentException($"Two plans of the film would be written as '{file}'.", nameof(content));
         var files = new Dictionary<string, Func<Stream>>(StringComparer.OrdinalIgnoreCase);
         void Add(string planPath, Func<Stream> open)
         {
@@ -558,7 +700,7 @@ public static class RenderBundleWriter
             Add(planPath, () => open() ?? throw new InvalidOperationException($"What opens '{planPath}' gave no stream."));
         }
         var checkedPhotos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var plan in new[] { content.Plan, content.Draft }.OfType<ScenePlan>())
+        foreach (var (_, plan) in plans)
         {
             var photos = PlayerWriter.PhotosOf(plan);
             foreach (var (path, what) in PlayerWriter.FilesOf(plan))
@@ -575,18 +717,19 @@ public static class RenderBundleWriter
 
         var entries = new List<Entry>
         {
-            Text(ScenePlanSerializer.FileName, ScenePlanSerializer.Write(content.Plan)),
             Text(ReadmeFileName, Readme(content)),
             Text(ShellScriptName, BundleFile(ShellScriptName).ReplaceLineEndings("\n"), executable: true),
             Text(WindowsScriptName, BundleFile(WindowsScriptName).ReplaceLineEndings("\r\n")),
             Text(LicenseFileName, BundleFile(LicenseFileName).ReplaceLineEndings("\n")),
             Text(NoticeFileName, BundleFile(NoticeFileName).ReplaceLineEndings("\n")),
         };
-        if (content.Draft is { } d) entries.Add(Text(DraftPlanFileName, ScenePlanSerializer.Write(d)));
+        entries.AddRange(plans.Select(p => Text(p.File, ScenePlanSerializer.Write(p.Plan))));
+        entries.AddRange(movies.Select(m => Text(m.File, ScenePlanSerializer.Write(m.Movie))));
         if (content.Captions is { Count: > 0 } captions)
         {
-            entries.Add(Text(SubtitlePath(content.Plan, Subtitles.SrtExtension), Subtitles.Srt(captions)));
-            entries.Add(Text(SubtitlePath(content.Plan, Subtitles.VttExtension), Subtitles.Vtt(captions)));
+            var described = content.Film is { } whole ? AsOneScene(whole) : content.Plan;
+            entries.Add(Text(SubtitlePath(described, Subtitles.SrtExtension), Subtitles.Srt(captions)));
+            entries.Add(Text(SubtitlePath(described, Subtitles.VttExtension), Subtitles.Vtt(captions)));
         }
         entries.AddRange(PlayerFiles.JobFiles.Select(f => Text(f.Path, f.Text)));
         entries.AddRange(files.Select(f => new Entry(f.Key, f.Value)));

@@ -14,6 +14,11 @@ frames in the video editor and writes the output. A first stage that was stopped
 stopped when it is started again: the frames that are there are kept, as long as they were
 rendered from the same scene.
 
+A plan may have no scene of its own: a module may put the frames of other plans in place of the
+plan's own (frames(ctx, section, folder); a movie of several scenes does). The first stage of such
+a plan is the first stage of each of those plans, every one in a Blender of its own and with a
+frames folder of its own inside this plan's; its second joins their frames.
+
 Options, after "--" on Blender's command line:
     --plan PATH       the plan to play (default: scene-plan.json beside the script)
     --modules DIR     an extra module folder; may be given more than once
@@ -86,16 +91,8 @@ def play(plan_dir, plan_text=None, files=None, script=None):
     if args.plan or plan_text is None:
         plan_path = os.path.abspath(args.plan or os.path.join(plan_dir, PLAN_FILE))
         plan_dir = os.path.dirname(plan_path)
-        try:
-            with open(plan_path, encoding="utf-8-sig") as stream:
-                plan_text = stream.read()
-        except OSError as error:
-            raise api.PlanError("the plan cannot be read: %s" % error)
-    try:
-        plan = json.loads(plan_text)
-    except ValueError as error:
-        raise api.PlanError("the plan is not valid JSON: %s" % error)
-    check(plan)
+        plan_text = text_of(plan_path)
+    plan = plan_of(plan_text)
     api.report("plan-version", plan["version"])
 
     # Every module is found before anything is built: a plan this player cannot play fails at once.
@@ -105,6 +102,7 @@ def play(plan_dir, plan_text=None, files=None, script=None):
     modules = [registry.load(name) for name in plan["features"]]
     check_sections(plan, modules)
     warn_of_unplayed_sections(plan, modules)
+    others = OtherPlans(script, args, registry)
 
     # Two stages when a module needs the second, or when the caller asks for the frames.
     staged = args.stage != "all" or args.keep_frames or any(
@@ -114,8 +112,9 @@ def play(plan_dir, plan_text=None, files=None, script=None):
     if args.stage != "compose":
         api.report("phase", "scene")
         ctx = api.Context(plan, plan_dir, new_scene(plan), files)
+        ctx.others = others
         if staged and not args.build_only:
-            ctx.frames = api.Frames(frames_dir, lambda: rendered_from(plan, modules, ctx, ctx.inputs))
+            ctx.frames = frames_of(plan, modules, ctx, frames_dir, lambda: ctx.inputs)
         for name, module in zip(plan["features"], modules):
             if hasattr(module, "build"):
                 run(name, module.build, ctx, section_of(plan, module))
@@ -129,14 +128,72 @@ def play(plan_dir, plan_text=None, files=None, script=None):
                 run(name, module.render, ctx, section_of(plan, module))
         if staged and args.stage == "all" and ctx.frames.count is not None:
             if script is None:
-                compose(plan, plan_dir, modules, files, frames_dir, args.keep_frames)
+                compose(plan, plan_dir, modules, files, frames_dir, args.keep_frames, others)
             else:
                 # The second stage reports its own end, or its own error.
                 compose_in_a_blender_of_its_own(script, args, frames_dir)
                 return
     else:
-        compose(plan, plan_dir, modules, files, frames_dir, args.keep_frames)
+        compose(plan, plan_dir, modules, files, frames_dir, args.keep_frames, others)
     api.report("done", "1")
+
+
+def text_of(plan_path):
+    try:
+        with open(plan_path, encoding="utf-8-sig") as stream:
+            return stream.read()
+    except OSError as error:
+        raise api.PlanError("the plan cannot be read: %s" % error)
+
+
+def plan_of(plan_text):
+    """The plan of a text, checked as far as the core relies on it."""
+    try:
+        plan = json.loads(plan_text)
+    except ValueError as error:
+        raise api.PlanError("the plan is not valid JSON: %s" % error)
+    check(plan)
+    return plan
+
+
+def frames_of(plan, modules, ctx, frames_dir, inputs):
+    """The frames of the plan: those of its own scene in the frames folder, or what a module
+    puts in their place (frames(ctx, section, folder)): the frames of other plans."""
+    frames = api.Frames(frames_dir, lambda: rendered_from(plan, modules, ctx, inputs()))
+    for module in modules:
+        if hasattr(module, "frames"):
+            frames = module.frames(ctx, section_of(plan, module), frames_dir)
+    return frames
+
+
+class OtherPlans:
+    """What a module that names other plans needs of the core: the frames folder of such a plan,
+    checked as that plan's own second stage would check it, and its first stage, played in a
+    Blender of its own."""
+
+    def __init__(self, script, args, registry):
+        self._script = script
+        self._args = args
+        self._registry = registry
+
+    def frames(self, plan_path, folder):
+        """The frames of the plan at plan_path in folder (api.Frames), with the plan as .plan."""
+        plan = plan_of(text_of(plan_path))
+        modules = [self._registry.load(name) for name in plan["features"]]
+        ctx = api.Context(plan, os.path.dirname(plan_path), None)
+        ctx.frames = api.Frames(folder, lambda: rendered_from(plan, modules, ctx, None))
+        ctx.frames.plan = plan
+        return ctx.frames
+
+    def render(self, plan_path, folder):
+        """The first stage of the plan at plan_path, with its frames in folder. Frames that are
+        there and belong to the plan are kept. A failure ends this player as it ended that one."""
+        if self._script is None:
+            raise api.PlanError(
+                "a plan that names other plans is played from a folder (render.py), not from one script")
+        code = another_blender(self._script, self._args, plan_path, "frames", folder)
+        if code != 0:
+            sys.exit(code)
 
 
 def look_through_the_camera():
@@ -152,12 +209,13 @@ def look_through_the_camera():
         pass
 
 
-def compose(plan, plan_dir, modules, files, frames_dir, keep_frames):
+def compose(plan, plan_dir, modules, files, frames_dir, keep_frames, others=None):
     """The second stage: an empty scene whose video editor gets the frames of the first stage and
     what the modules lay over them, written as the plan's output."""
     api.report("phase", "compose")
     ctx = api.Context(plan, plan_dir, new_scene(plan), files)
-    ctx.frames = api.Frames(frames_dir, lambda: rendered_from(plan, modules, ctx, None))
+    ctx.others = others
+    ctx.frames = frames_of(plan, modules, ctx, frames_dir, lambda: None)
     scene = ctx.scene
     scene.sequence_editor_create()
     # The frames are pictures already: they pass through as they are, with no view transform
@@ -187,22 +245,28 @@ def compose(plan, plan_dir, modules, files, frames_dir, keep_frames):
 
 
 def compose_in_a_blender_of_its_own(script, args, frames_dir):
+    code = another_blender(script, args, args.plan, "compose", frames_dir, args.keep_frames)
+    if code != 0:
+        sys.exit(code)
+
+
+def another_blender(script, args, plan_path, stage, frames_dir, keep_frames=False):
+    """Plays one stage of a plan in a Blender of its own, started as this one was, and returns
+    its exit code. plan_path None is the plan beside the script."""
     command = [bpy.app.binary_path, "-b", "--factory-startup", "--python-exit-code", str(EXIT_FAILED),
-               "--python", script, "--", "--stage", "compose", "--frames", frames_dir]
-    if args.plan:
-        command += ["--plan", os.path.abspath(args.plan)]
+               "--python", script, "--", "--stage", stage, "--frames", frames_dir]
+    if plan_path:
+        command += ["--plan", os.path.abspath(plan_path)]
     for folder in args.modules:
         command += ["--modules", os.path.abspath(folder)]
-    if args.keep_frames:
+    if keep_frames:
         command.append("--keep-frames")
     sys.stdout.flush()
     sys.stderr.flush()
     try:
-        code = subprocess.call(command)
+        return subprocess.call(command)
     except OSError as error:
-        raise api.PlanError("the second stage could not be started: %s" % error)
-    if code != 0:
-        sys.exit(code)
+        raise api.PlanError("the %s stage could not be started: %s" % ("second" if stage == "compose" else "first", error))
 
 
 def rendered_from(plan, modules, ctx, inputs):

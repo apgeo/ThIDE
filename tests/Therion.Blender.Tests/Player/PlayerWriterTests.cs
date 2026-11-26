@@ -57,6 +57,7 @@ public class PlayerWriterTests : IDisposable
                 "thide_player/modules/look.py",
                 "thide_player/modules/models.py",
                 "thide_player/modules/output.py",
+                "thide_player/modules/segments.py",
                 "thide_player/modules/texts.py",
                 "thide_player/modules/textured_materials.py",
                 "thide_player/registry.py",
@@ -70,6 +71,7 @@ public class PlayerWriterTests : IDisposable
         var modules = PlayerFiles.JobFiles.Select(f => f.Path).ToHashSet();
 
         Assert.All(ScenePlan.PlayerFeatures, feature => Assert.Contains($"thide_player/modules/{feature}.py", modules));
+        Assert.All(MoviePlan.MovieFeatures, feature => Assert.Contains($"thide_player/modules/{feature}.py", modules));
     }
 
     [Fact]
@@ -85,7 +87,7 @@ public class PlayerWriterTests : IDisposable
         string core = PlayerFiles.JobFiles.Single(f => f.Path == "thide_player/core.py").Text;
 
         // It reaches the modules through the registry alone: it neither imports one nor names one.
-        Assert.All(ScenePlan.PlayerFeatures, feature =>
+        Assert.All(ScenePlan.PlayerFeatures.Concat(MoviePlan.MovieFeatures), feature =>
         {
             Assert.DoesNotContain("modules." + feature, core);
             Assert.DoesNotContain("\"" + feature + "\"", core);

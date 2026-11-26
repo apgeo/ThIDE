@@ -775,6 +775,120 @@ se vede după partea din fețele lui pe care le desenează; o dezvăluire este o
 fețelor; o fotografie este acolo un mozaic al culorilor ei. Schema care descrie fiecare câmp se află
 în depozitul ThIDE (`src/Therion.Blender/Plan/scene-plan.schema.json`).
 
+## Un film din mai multe secvențe: storyboardul
+
+O randare este o singură mișcare a camerei, cu un singur aspect. Un **storyboard** este un film
+făcut din mai multe: o listă de **secvențe**, fiecare o mișcare a camerei cu aspectul ei, legate
+prin tăieturi, treceri printr-o culoare și suprapuneri, cu texte peste o secvență sau peste tot
+filmul. Este un fișier JSON (`*.storyboard.json`) pe care îl scrieți sau îl modificați în orice
+editor de text și îl randați din linia de comandă:
+
+```
+therion-cli blender <model.lox|.3d> --storyboard film.storyboard.json [--out <dir>] \
+                    [--draft] [--shot <n>] [--keep-frames] [--compose-only] [--frames <dir>] \
+                    [--bundle film-bundle.zip [--render [--render-plan full|draft|both]]] \
+                    [--blender <path>] [--leads <file.json>]...
+```
+
+Un exemplu inventat, cu patru secvențe:
+
+```json
+{
+  "version": 1,
+  "name": "{cave}: un scurt film",
+  "fps": 30,
+  "defaults": {
+    "materials": { "rock": "DepthGradient" },
+    "labels": { "overlays": { "scaleBar": true, "northArrow": true } }
+  },
+  "texts": {
+    "title": "{cave}", "titleSeconds": 3,
+    "credits": "Topografie: Clubul Speologic Inventat",
+    "endCard": { "text": "{length} cartați, {depth} adâncime", "seconds": 4 },
+    "fadeFromBlack": 1
+  },
+  "shots": [
+    { "name": "Din afară", "preset": "Orbit showcase", "seconds": 12 },
+    { "name": "În josul puțului", "preset": "Helix descent", "seconds": 15,
+      "in": { "kind": "Dissolve", "seconds": 1 },
+      "texts": { "corner": "Puțul de intrare", "northArrow": true } },
+    { "name": "Cum a fost descoperită", "preset": "Map reveal", "seconds": 20,
+      "in": { "kind": "Dip", "seconds": 0.6 } },
+    { "name": "Galeria principală", "preset": "Full flythrough", "seconds": 30,
+      "reveal": "hold" }
+  ],
+  "output": { "kind": "Video", "container": "Mp4", "width": 1920, "height": 1080,
+              "baseName": "film-inventat" }
+}
+```
+
+**Ce spune o secvență.** O secvență (un element din `shots`) are un nume (`name`), durata în
+secunde (`seconds`) și oricare dintre secțiunile unei specificații de randare: `camera`,
+`materials`, `lighting`, `engine`, `labels`, `annotations`, `reveal`. Ce lipsește se ia din
+presetarea pe care o numește (`preset`) sau din valorile implicite ale storyboardului
+(`defaults`). O presetare aduce mișcarea camerei, materialele, lumina, motorul de randare,
+etichetele din scenă și dezvăluirea, precum și durata, dacă secvența nu o dă; nu aduce și titlul
+ei, pentru că un film are textele lui. Cuvintele dintr-o listă (`Dissolve`, `Orbit`,
+`DepthGradient`) sunt citite indiferent de majuscule, iar o cheie necunoscută este refuzată cu
+numele ei, așa că o cheie scrisă greșit nu este trecută sub tăcere. Camera unei secvențe poate
+zbura pe un traseu (vedeți [Zborul pe un traseu între
+stații](#zborul-pe-un-traseu-între-stații)): cu `"timing": "Natural"` și fără `seconds`, secvența
+durează cât îi ia traseului, iar cu `seconds` traseul este potrivit la acea durată.
+
+**Cum începe o secvență** (`in`): cu o tăietură, dacă nu spune nimic; cu o trecere printr-o
+culoare (`Dip`), în care imaginea se duce într-o culoare (`color`, implicit negru) pe ultimele
+cadre ale secvenței dinainte și iese din ea pe primele cadre ale acesteia; sau cu o suprapunere
+(`Dissolve`), în care imaginea trece treptat de la o secvență la cealaltă. O suprapunere de o
+secundă pornește secvența cu o secundă înainte de sfârșitul celeilalte, iar amândouă sunt randate
+pentru acea secundă, așa că filmul este cu atât mai scurt decât secvențele lui adunate. `seconds`
+spune cât durează trecerea (ambele jumătăți) sau suprapunerea; nu poate fi mai lungă decât
+secvențele pe care le leagă. Prima secvență începe filmul; ieșirea din negru este unul dintre
+textele filmului.
+
+**Texte.** Textele storyboardului (`texts`) sunt scrise peste tot filmul, cu timpii socotiți de la
+începutul filmului: un titlu sau un cadru de titlu, credite, un text de colț, subtitrări, cadrul
+de final după ultima secvență, ieșirea din negru și trecerea în negru. Textele unei secvențe
+(`texts`) sunt scrise peste acea secvență, cu timpii socotiți de la începutul ei: un titlu,
+subtitrări, un text de colț, precum și scara grafică și săgeata nordului, care sunt măsurate prin
+camera acelei secvențe și sunt ascunse cât durează o trecere sau o suprapunere. O secvență fără
+`texts` le are pe cele implicite (`defaults.labels.overlays`): în exemplu, prima, a treia și a
+patra secvență au scară grafică și săgeata nordului, iar a doua, care are propriile `texts`, are
+un text de colț și săgeata nordului. Subtitrările filmului și ale secvențelor sunt scrise lângă
+film (`.srt`, `.vtt`).
+
+**Dezvăluirea.** O secvență poate arăta peștera parte cu parte (vedeți [Dezvăluirea peșterii,
+parte cu parte](#dezvăluirea-peșterii-parte-cu-parte)), cu timpii socotiți de la începutul
+secvenței. Secvența următoare spune ce se întâmplă mai departe: `"reveal": "hold"` păstrează
+peștera așa cum a lăsat-o secvența dinainte, `"reveal": "none"` o arată pe toată, iar o dezvăluire
+proprie o ia de la capăt. Contorul numără mai departe de-a lungul filmului. Toate dezvăluirile
+unui storyboard sunt după același lucru (toate după dată, sau toate după distanța de la aceeași
+stație), pentru că secvențele folosesc același model.
+
+**Randarea.** Fiecare secvență este randată într-un dosar propriu (`<out>/<nume>-frames/s01`,
+`s02`, …), fiecare într-un Blender propriu; apoi filmul este scris din acele cadre, într-o ultimă
+trecere, care leagă secvențele și scrie textele.
+
+- Dacă randarea este oprită, rulați din nou aceeași comandă: secvențele terminate sunt păstrate,
+  iar randarea continuă în secvența în care s-a oprit.
+- Cu `--keep-frames`, schimbați o secvență în storyboard și rulați din nou comanda: doar acea
+  secvență este randată din nou. Dacă schimbați un text al filmului sau felul în care se leagă
+  două secvențe, nu se mai randează nimic: filmul este scris din cadrele existente.
+- `--draft` face o previzualizare a fiecărei secvențe (vizualizarea solidă din Blender, la
+  jumătate din mărime): o schiță animată a întregului film, într-o fracțiune din timp, pentru a
+  verifica mișcările, duratele și legăturile înainte de randarea lungă.
+- `--shot 3` randează doar a treia secvență, ca pe orice scenă, cu textele ei; opțiunile care
+  adaugă ceva unei scene (`--title`, `--caption`, `--reveal`, …) merg împreună cu ea.
+- `--bundle` scrie filmul ca [pachet de
+  randare](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator): planul fiecărei secvențe și
+  al filmului, cu o singură copie a rețelei de poligoane pentru toate. `sh render.sh` (sau
+  `render.cmd`) îl randează acolo secvență cu secvență, iar `--draft`, `--keep-frames` și
+  `--compose` fac pentru film ce fac pentru o scenă.
+
+O fotografie, o imagine HDRI și un fișier cu datele ridicărilor sunt numite relativ la fișierul
+storyboardului. Un storyboard este un film: pentru imagini statice sau pentru un fișier Blender al
+scenei, randați o singură secvență (`--shot`) sau folosiți o specificație de randare. Schema care
+descrie fișierul se află în depozitul ThIDE (`src/Therion.Blender/storyboard.schema.json`).
+
 ## Cerințe și sfaturi
 
 - **Blender 4.2 sau mai nou** — versiunile mai vechi sunt respinse cu un mesaj clar.

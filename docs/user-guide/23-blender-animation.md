@@ -725,6 +725,114 @@ A draft shows a model's tint, and how much of a fading model is there by the sha
 it draws; a reveal is a cut along the faces; a photo is a mosaic of its colours there. The schema that describes every field is in the ThIDE repository
 (`src/Therion.Blender/Plan/scene-plan.schema.json`).
 
+## A film of several shots: the storyboard
+
+One render is one camera move with one look. A **storyboard** is a film made of several of them:
+a list of **shots**, each a camera move with a look of its own, joined with cuts, dips to a colour
+and dissolves, with texts over one shot or over the whole film. It is a JSON file
+(`*.storyboard.json`) that you write, or change, in any text editor, and render from the command
+line:
+
+```
+therion-cli blender <model.lox|.3d> --storyboard film.storyboard.json [--out <dir>] \
+                    [--draft] [--shot <n>] [--keep-frames] [--compose-only] [--frames <dir>] \
+                    [--bundle film-bundle.zip [--render [--render-plan full|draft|both]]] \
+                    [--blender <path>] [--leads <file.json>]...
+```
+
+An invented example, of four shots:
+
+```json
+{
+  "version": 1,
+  "name": "{cave}: a short film",
+  "fps": 30,
+  "defaults": {
+    "materials": { "rock": "DepthGradient" },
+    "labels": { "overlays": { "scaleBar": true, "northArrow": true } }
+  },
+  "texts": {
+    "title": "{cave}", "titleSeconds": 3,
+    "credits": "Survey: the Invented Caving Club",
+    "endCard": { "text": "{length} surveyed, {depth} deep", "seconds": 4 },
+    "fadeFromBlack": 1
+  },
+  "shots": [
+    { "name": "From outside", "preset": "Orbit showcase", "seconds": 12 },
+    { "name": "Down the shaft", "preset": "Helix descent", "seconds": 15,
+      "in": { "kind": "Dissolve", "seconds": 1 },
+      "texts": { "corner": "The entrance shaft", "northArrow": true } },
+    { "name": "How it was found", "preset": "Map reveal", "seconds": 20,
+      "in": { "kind": "Dip", "seconds": 0.6 } },
+    { "name": "The main passage", "preset": "Full flythrough", "seconds": 30,
+      "reveal": "hold" }
+  ],
+  "output": { "kind": "Video", "container": "Mp4", "width": 1920, "height": 1080,
+              "baseName": "invented-film" }
+}
+```
+
+**What a shot says.** A shot has a `name`, its length in `seconds`, and any of the sections a
+render spec has: `camera`, `materials`, `lighting`, `engine`, `labels`, `annotations`, `reveal`.
+What it leaves out it takes from the `preset` it names, or from the storyboard's `defaults`. A
+preset brings its camera move, materials, lighting, engine, labels in the scene and reveal, and
+its length when the shot gives none; it does not bring its title, because a film has its own
+texts. The words of a list (`Dissolve`, `Orbit`, `DepthGradient`) are read in any case, and a key
+that is not known is refused with its name, so a mistyped key is not passed over in silence. A
+shot's camera can fly a route (see [Flying a route between
+stations](#flying-a-route-between-stations)): with `"timing": "Natural"` and no `seconds` the shot
+is as long as the route takes, and with `seconds` the route is fitted to them.
+
+**How a shot begins** (`in`): with a cut when it says nothing; with a `Dip`, where the picture
+goes to a colour (`color`, black by default) over the last frames of the shot before and comes
+out of it over the first frames of this one; or with a `Dissolve`, where the picture goes evenly
+from the one shot to the other. A dissolve of one second starts the shot one second before the
+other ends, and both are rendered for that second, so the film is that much shorter than its
+shots together. `seconds` is how long the dip (both halves) or the dissolve takes; it cannot be
+longer than the shots it joins. The first shot begins the film; a fade out of black is one of the
+film's texts.
+
+**Texts.** The storyboard's own `texts` are written over the whole film, with times from the
+film's start: a title or a title card, credits, a corner text, captions, the end card after the
+last shot, the fades out of black and to black. A shot's `texts` are written over that shot, with
+times from the shot's start: a title, captions, a corner text, and the scale bar and the north
+arrow, which are measured through that shot's camera and are hidden while a dip or a dissolve
+runs. A shot without `texts` has those of the defaults (`defaults.labels.overlays`): in the
+example the first, third and fourth shots have a scale bar and a north arrow, and the second,
+which has `texts` of its own, a corner text and a north arrow. The captions of the film and of its
+shots are written beside the film as subtitles (`.srt`, `.vtt`).
+
+**The reveal.** A shot can show the cave part by part (see [Revealing the cave part by
+part](#revealing-the-cave-part-by-part)), with times from the shot's start. The shot after it says
+what becomes of that: `"reveal": "hold"` keeps the cave as the shot before left it, `"reveal":
+"none"` shows all of it, and a reveal of its own starts again. The counter counts on through the
+film. All the reveals of one storyboard are by the same thing (all by date, or all by distance
+from the same station), because the shots share one model.
+
+**Rendering.** Every shot is rendered into a folder of its own (`<out>/<name>-frames/s01`,
+`s02`, …), each in a Blender of its own; then the film is written from those frames in one more
+pass, which joins the shots and writes the texts.
+
+- If the render is stopped, run the same command again: the shots that are finished are kept, and
+  it goes on in the shot it stopped in.
+- With `--keep-frames`, change one shot in the storyboard and run the command again: only that
+  shot is rendered again. Change a text of the film, or how two shots are joined, and nothing is
+  rendered again: the film is written from the frames that are there.
+- `--draft` drafts every shot (Blender's solid view, half the size): an animatic of the whole
+  film in a fraction of the time, to check the moves, the lengths and the joins before the long
+  render.
+- `--shot 3` renders the third shot alone, as any scene is rendered, with the shot's own texts;
+  the options that add to one scene (`--title`, `--caption`, `--reveal`, …) go with it.
+- `--bundle` writes the film as a [render bundle](#a-render-bundle-to-render-on-another-machine):
+  the plan of every shot and of the film, with one copy of the mesh for all of them. `sh
+  render.sh` (or `render.cmd`) renders it shot by shot there, and `--draft`, `--keep-frames` and
+  `--compose` do for the film what they do for one scene.
+
+A photo, an HDRI image and a file of survey dates are named relative to the storyboard's file. A
+storyboard is a film: for stills, or a Blender file of the scene, render one shot (`--shot`) or
+use a render spec. The schema that describes the file is in the ThIDE repository
+(`src/Therion.Blender/storyboard.schema.json`).
+
 ## Requirements & tips
 
 - **Blender 4.2 or newer** — older versions are rejected with a clear message.

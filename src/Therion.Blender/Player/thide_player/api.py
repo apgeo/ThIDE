@@ -27,6 +27,9 @@ them, and writes the plan's output. A module takes part in the second stage with
     def finish(ctx, section)      optional; runs after every module has composed
     IN_FRAMES = False             optional: its section changes nothing in the frames of the first
                                   stage, so a change to it alone does not render them again
+    def frames(ctx, section, folder)
+                                  optional: the frames of the plan, in place of ctx.frames, for a
+                                  plan whose frames are those of other plans (see modules/segments.py)
 """
 
 import atexit
@@ -351,6 +354,12 @@ class Frames:
     NAME = "frame_%04d.png"
     PNG_END = b"\x00\x00\x00\x00IEND\xaeB`\x82"
 
+    # How many channels of the video editor the frames take, from the one they are laid on;
+    # whatever is laid over them goes above.
+    channels = 1
+    # The frames are this plan's own scene: its first stage renders them.
+    from_other_plans = False
+
     def __init__(self, folder, describe):
         self.folder = folder
         self._describe = describe  # what the frames are rendered from, as a dict
@@ -434,6 +443,21 @@ class Frames:
         height = int.from_bytes(header[20:24], "big")
         return width, height, header[25] in (4, 6)
 
+    def lay(self, scene, channel):
+        """Puts the frames into the video editor as one strip, "Frames", from the scene's first
+        frame, as large as they are."""
+        strip = image_strip(scene, "Frames", self.path(1), channel, 1)
+        for number in range(2, self.count + 1):
+            strip.elements.append(os.path.basename(self.path(number)))
+
+    def hold(self, scene):
+        """A scene that goes on after its last frame (a card at the end) shows that frame
+        meanwhile."""
+        strip = strips(scene)["Frames"]
+        last = os.path.basename(self.path(self.count))
+        for _ in range(scene.frame_end - len(strip.elements)):
+            strip.elements.append(last)
+
     def remove(self):
         """Removes the frames and their note, and the folder when nothing else is in it."""
         self._remove_frames()
@@ -487,6 +511,8 @@ class Context:
         self._unpacked = {}
         self._unpack_dir = None
         self.inputs = []  # the plan paths of the files the modules have read
+        # The other plans a plan may name (core.OtherPlans): their frames, and their first stage.
+        self.others = None
 
     def frame_at(self, seconds):
         """The frame a time of the plan falls on. Time 0 is frame 1."""

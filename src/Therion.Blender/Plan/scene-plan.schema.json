@@ -10,7 +10,7 @@
     "generator": { "type": "string", "description": "What wrote the plan." },
     "name": { "type": "string" },
     "features": {
-      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, lines, camera_track, look, textured_materials, labels, annotations, changes, texts, blend_file, output.",
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. A movie of several scenes has segments, texts and output and no other (see 'segments'). The player's own: models, lines, camera_track, look, textured_materials, labels, annotations, changes, texts, blend_file, output.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -542,6 +542,35 @@
         }
       }
     },
+    "segments": {
+      "description": "Played by the module 'segments' (player 1.11): the plan is a movie of several scenes and has no scene of its own. Its features are segments, texts and output; 'timeline' is the movie's, and the times of 'texts' are the movie's. Each segment names the plan of a scene beside this one. The first stage renders every segment's plan into a folder of its own inside the frames folder, each in a Blender of its own, and leaves alone the segments whose frames are there already; the second lays their frames one after the other, joined as each segment's 'in' says, with the texts over them.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "plan", "frames", "start", "frameCount"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "Unique in the plan; the segment's strip in the video editor is 'Frames.<id>'." },
+          "name": { "type": "string", "description": "What the segment is called in the progress of the render." },
+          "plan": { "$ref": "#/$defs/relativePath", "description": "The plan of the segment's scene, relative to this plan. Its timeline has this plan's fps and the segment's frameCount." },
+          "frames": { "$ref": "#/$defs/relativePath", "description": "The folder of the segment's frames, inside the frames folder of the movie." },
+          "start": { "type": "number", "minimum": 0, "description": "When the segment's first frame shows, in seconds of the movie: straight after the last frame of the segment before, or, with a dissolve, that much before it ends." },
+          "frameCount": { "type": "integer", "minimum": 1 },
+          "in": {
+            "description": "How the segment begins. Without it: a cut. The first segment has none.",
+            "type": "object",
+            "required": ["kind"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "enum": ["cut", "dip", "dissolve"], "description": "dip: a colour comes over the last frames of the segment before and goes from the first frames of this one. dissolve: the two segments overlap, and the picture goes evenly from the one to the other." },
+              "seconds": { "type": "number", "exclusiveMinimum": 0, "description": "How long a dip (both halves together) or a dissolve takes: at least one frame, and no longer than the segments it joins." },
+              "color": { "$ref": "#/$defs/color", "description": "The colour of a dip. Default black." }
+            }
+          }
+        }
+      }
+    },
     "output": {
       "description": "Played by the module 'output'.",
       "type": "object",
@@ -661,11 +690,25 @@
               "counter": {
                 "description": "Makes a text a counter: at every frame it shows, in place of the {} in 'text', the number the threshold of a reveal has got to: a year counter over the history of an exploration. The number is cut down to 'decimals' decimals (1987.9 shows as 1987) and kept between 'min' and 'max'; after the clip's last frame it stays as it was there.",
                 "type": "object",
-                "required": ["target"],
                 "additionalProperties": false,
                 "properties": {
+                  "keys": {
+                    "description": "In place of 'target': the threshold itself, as keys in the plan's time, for a plan that has no entry of 'changes' to read it from. The plan of a movie of several scenes is one: the reveal runs in the plans of its segments. Since player 1.11.",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["t", "value"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "t": { "type": "number" },
+                        "value": { "type": "number" },
+                        "easing": { "$ref": "#/$defs/easing" }
+                      }
+                    }
+                  },
                   "target": {
-                    "description": "The target of the entry of 'changes' whose 'reveal' is counted, named as that entry names it.",
+                    "description": "The target of the entry of 'changes' whose 'reveal' is counted, named as that entry names it. A counter has this or 'keys'.",
                     "type": "object",
                     "additionalProperties": false,
                     "minProperties": 1,

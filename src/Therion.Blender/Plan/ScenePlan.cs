@@ -931,6 +931,12 @@ public sealed record PlanCounter
     /// <summary>The target of the change whose reveal is counted, named as that change names it.</summary>
     public PlanChangeTarget Target { get; init; } = new();
 
+    /// <summary>The threshold itself, as keys in the plan's time, in place of a
+    /// <see cref="Target"/>: for a plan that has no change to read it from. The movie of several
+    /// scenes is one (<see cref="MoviePlan"/>): the reveal runs in the scenes' plans, and the
+    /// counter over the movie counts these keys.</summary>
+    public IReadOnlyList<PlanNumberKey>? Keys { get; init; }
+
     public int Decimals { get; init; }
 
     /// <summary>The least the counter shows; null is no limit. A threshold starts below the

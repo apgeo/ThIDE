@@ -104,6 +104,22 @@ public static class ScreenTextPlanner
             frames => Headings(plan.Camera, fps, frames));
     }
 
+    /// <summary>
+    /// The texts over a movie of several scenes, laid out as those of one scene are, in the
+    /// movie's time: a title, credits, captions, an end card after its last frame, the fades.
+    /// Null when nothing is written over the movie.
+    /// </summary>
+    /// <param name="frameCount">The frames of the movie, without those an end card holds.</param>
+    /// <exception cref="ArgumentException">The overlays have a scale bar, a north arrow or a
+    /// depth legend: those are measured through a camera, and a movie has one for every scene.</exception>
+    public static PlanScreenTexts? PlanMovie(OverlaySpec overlays, int fps, int frameCount, int width, int height)
+    {
+        ArgumentNullException.ThrowIfNull(overlays);
+        if (overlays.ScaleBar || overlays.NorthArrow || overlays.DepthLegend)
+            throw new ArgumentException("A scale bar, a north arrow and a depth legend belong to one scene of a movie.", nameof(overlays));
+        return Lay(overlays, still: false, fps, width, height, new CameraPlan { FrameCount = frameCount }, _ => []);
+    }
+
     private static PlanScreenTexts? Lay(
         OverlaySpec overlays, bool still, int fps, int width, int height, CameraPlan camera, Func<int, IReadOnlyList<double>> headings)
     {

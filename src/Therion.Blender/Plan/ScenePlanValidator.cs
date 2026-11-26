@@ -107,6 +107,13 @@ public static partial class ScenePlanValidator
         return errors;
     }
 
+    /// <summary>The problems with the texts of <paramref name="plan"/>, for a plan of another
+    /// kind that has texts as a scene's plan has them (<see cref="MoviePlanValidator"/>).</summary>
+    internal static void ValidateTextsOf(ScenePlan plan, Action<string, string> bad)
+    {
+        if (plan.Texts is { } texts) ValidateTexts(plan, texts, bad);
+    }
+
     /// <summary>A section that no module in the features plays would be left out without a word.</summary>
     private static void NeedsFeature(ScenePlan plan, string section, string feature, Action<string, string> bad)
     {
@@ -1073,7 +1080,26 @@ public static partial class ScenePlanValidator
                 if (counter.Max is { } max && !(double.IsFinite(max) && max >= (counter.Min ?? max)))
                     bad(path + ".counter.max", "The most a counter shows must be finite, and no less than the least.");
                 bool byId = !string.IsNullOrEmpty(counter.Target?.Id), byRole = !string.IsNullOrEmpty(counter.Target?.Role);
-                if (byId == byRole)
+                if (counter.Keys is { } keys)
+                {
+                    // The threshold as keys of the counter's own: there is no change to look for.
+                    if (byId || byRole)
+                        bad(path + ".counter", "A counter has a target or keys of its own, not both.");
+                    if (keys.Count == 0)
+                        bad(path + ".counter.keys", "The keys of a counter are at least one.");
+                    double before = double.NegativeInfinity;
+                    for (int k = 0; k < keys.Count; k++)
+                    {
+                        if (!double.IsFinite(keys[k].T) || !(keys[k].T >= before))
+                            bad($"{path}.counter.keys[{k}].t", "Keys are in rising order of time.");
+                        else if (keys[k].T == before && keys[k].Easing != PlanEasing.Constant)
+                            bad($"{path}.counter.keys[{k}].easing", "A later key at the same time is a jump; its easing is 'constant'.");
+                        if (double.IsFinite(keys[k].T)) before = Math.Max(before, keys[k].T);
+                        if (!double.IsFinite(keys[k].Value))
+                            bad($"{path}.counter.keys[{k}].value", "The threshold must be finite.");
+                    }
+                }
+                else if (byId == byRole)
                     bad(path + ".counter.target", "A target is an id or a role, one of the two.");
                 else if (!(plan.Changes ?? []).Any(c => c is { Reveal: not null, Target: not null }
                                                         && c.Target.Id == counter.Target!.Id && c.Target.Role == counter.Target.Role))

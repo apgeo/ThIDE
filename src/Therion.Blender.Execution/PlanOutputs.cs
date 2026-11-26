@@ -36,6 +36,22 @@ public static class PlanOutputs
         };
     }
 
+    /// <summary>The output of a film as the runner collects it, written into
+    /// <paramref name="directory"/>: the movie's, at the size of its segments.</summary>
+    public static OutputSpec SpecOf(StoryboardPlan film, string directory)
+    {
+        ArgumentNullException.ThrowIfNull(film);
+        return SpecOf(film.Segments[0] with { Output = film.Movie.Output }, directory);
+    }
+
+    /// <summary>A rough upper estimate of the bytes a film's render needs for the frames of all
+    /// its segments, beside its output.</summary>
+    public static long FrameBytes(StoryboardPlan film)
+    {
+        ArgumentNullException.ThrowIfNull(film);
+        return film.Segments.Sum(FrameBytes);
+    }
+
     /// <summary>The frames the first of two stages writes into <paramref name="framesDirectory"/>,
     /// as the runner collects them: <c>frame_0001.png</c> onwards.</summary>
     public static OutputSpec FramesOf(ScenePlan plan, string framesDirectory)

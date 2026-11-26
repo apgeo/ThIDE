@@ -230,7 +230,7 @@ public class BlenderBundleVerbTests : IDisposable
     // ---- annotations ----
 
     /// <summary>A picture of one white pixel: the smallest PNG there is.</summary>
-    private static readonly byte[] OnePixelPng = Convert.FromBase64String(
+    internal static readonly byte[] OnePixelPng = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
     private string Annotations(string json, string name = "notes.json")

@@ -1,5 +1,142 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-26 (later) — storyboards: a film of several shots, joined in the second stage
+
+The plan stays **version 1** and this is player **1.11**. A film is a list of shots; each shot is
+lowered to an ordinary scene plan (a *segment*) and rendered to a frames folder of its own, and one
+second stage joins the folders with cuts, dips and dissolves and lays the film's texts over them.
+Every plan of yesterday plays as it did, and a film of one shot renders the frames its scene
+rendered before. A plan that uses a new key or the new module needs a player 1.11 (an older player
+refuses it by name).
+
+### Breaking changes
+- None in the plan format or in this library's API. `RenderBundleContent` has two more optional
+  members (`Film`, `FilmDraft`); `PlanCounter.Target` is no longer required when a counter has
+  `Keys` (a counter without either is refused by the validator, where the reader refused it
+  before).
+
+### Storyboards (`Storyboard`, `*.storyboard.json`)
+- **`Storyboard`**: `Name` (placeholders are filled in), `Fps`, `Defaults`, `Texts`, `Shots`,
+  `Output`. **`StoryboardDefaults`**: `Seed`, `Engine`, `Materials`, `Lighting`, `Labels`,
+  `Surface`, `Annotations`, `Reveal`, each the record a `SceneSpec` has, null for that record's
+  defaults.
+- **`ShotSpec`**: `Name`, `Seconds`, `Preset`, `Camera`, `Materials`, `Lighting`, `Engine`,
+  `Labels`, `Annotations`, `Reveal`, `Texts`, `In`. What a shot leaves out is its preset's, or the
+  default. A **preset brings** its camera, materials, lighting, engine, labels in the scene and
+  reveal, and its length when `Seconds` is null; it does **not** bring its texts over the picture
+  (a film has its own), its seed, its surface, its annotations or its output.
+- **`TransitionSpec`** (`In`): `Kind` (`Cut`, `Dip`, `Dissolve`), `Seconds`, `Color` (of a dip). A
+  dip's `Seconds` is both halves together. The first shot has none.
+- **`ShotReveal`** (`Reveal`): a `RevealSpec` with times from the shot's start, or `Hold` (the
+  cave stays as the shot before left it), or `None` (the whole cave). In JSON: the object, or the
+  words `"hold"` and `"none"`. Every reveal of a storyboard is by the same thing (`By`, `From`,
+  `DatesPath`): the shots share one mesh and its reveal values.
+- **Whose the texts are.** `Storyboard.Texts` (an `OverlaySpec`) is written over the whole film,
+  in the film's time: title or title card, credits, corner text, captions, the end card, the fades
+  out of black and to black. A scale bar, a north arrow and a depth legend belong to a shot and
+  are refused there. A shot's texts (`ShotSpec.Texts`, or the overlays of its labels, or of the
+  default labels) have times from the shot's start; an end card or a fade in them is refused.
+- **`StoryboardSerializer`** (`Read`, `ReadFile`, `Write`, `WriteFile`,
+  `StoryboardFormatException`): camelCase keys, enum words in any case on read, **every key that is
+  not known refused at every depth**, the version checked first. **`StoryboardValidator.Validate`**
+  names a problem by its path in the file (`shots[2].in.seconds`); `film: false` checks the shots
+  alone, for one shot rendered by itself. **`StoryboardSchema.Text`** is the JSON schema
+  (`storyboard.schema.json`): closed for the storyboard's own objects, and naming the render
+  spec's sections without repeating their keys.
+- Not built: `carriesOn` (a move that flows from one shot into the next); the key is refused.
+
+### Lowering (`StoryboardPlanner`, `StoryboardPlan`)
+- **`StoryboardPlanner.Lower(storyboard, source, framing, meta, presets)`** gives a
+  **`StoryboardPlan`**: `Movie` (the movie's plan), `Segments` (one `ScenePlan` for every shot, in
+  order), `Shots` (the render spec each shot came to), `Notices`, `NotCarried`, `Captions` (the
+  film's subtitles, in its time) and `Files` (what the plans name that lies elsewhere).
+  `ConversionSpec(storyboard)` says what the conversion is to write (the reveal values, the
+  terrain); `ShotSpec(storyboard, index)` is one shot as a render spec of its own;
+  `SegmentId(index)` is `s01` onwards. `StoryboardPlan.Draft()` is a draft of every segment, under
+  names of its own.
+- **Routes.** A shot's camera may be a route (`CameraTemplate.Route`). With
+  `RouteTiming.Natural` and no `Seconds` the shot is as long as the route takes
+  (`CameraRoutes.WithNaturalDuration`, called by the lowering); with `Seconds` the route is fitted
+  to them, whatever its timing says. The validator cannot know a natural length before the model
+  is there, so what joins the shots is checked once more when they are lowered.
+- **Time.** A shot has `round(fps × seconds)` frames. It starts on the frame after the last of the
+  shot before; a dissolve of `n` frames starts it `n` frames earlier, and both shots have frames
+  for that time. A dip has no overlap: its first half lies in the last frames of the one shot, its
+  second in the first frames of the other. What joins two shots must fit inside both, clear of
+  what joined the shot before.
+- **Texts.** Each shot's texts are laid out as a scene's are (`ScreenTextPlanner`), then moved
+  into the movie's plan in the movie's time under the id `sNN.<id>`; the segments' plans carry
+  none, so a changed text costs the second stage alone. A shot's texts show from where the shot
+  begins (half-way through a dissolve) to where the next one does. The scale bar and the north
+  arrow are those of the shot's camera and are hidden while a dip or a dissolve runs.
+  `ScreenTextPlanner.PlanMovie` lays out the film's own texts.
+- **Reveal.** A shot with a reveal runs it in its own time; a shot that holds gets one key with
+  the value the shot before ended on (the value on that shot's last frame, also when its reveal
+  had not ended); `None`, or no reveal, shows the whole cave. The counter is a text of the movie
+  and counts the same keys in the movie's time (`PlanCounter.Keys`).
+- Labels, annotations (with their nearness to the camera) and timed changes are planned per shot,
+  from that shot's camera. Notices name their shot; one that every shot has is said once. The
+  lowering adds its own: a shot that holds when no shot before it left a reveal, and captions of a
+  shot that lie outside the time its texts show for.
+- A film of one shot: its segment is `ScenePlanBuilder.FromSpec` of the same spec but for the
+  texts and the output's name, so its frames have the same digest and are the same pictures.
+
+### The movie's plan (`MoviePlan`)
+- A plan as the player reads one, with the features `segments`, `texts`, `output` and no scene:
+  `Segments` (`PlanSegment`: `Id`, `Name`, `Plan`, `Frames`, `Start`, `FrameCount`, `In`), `Texts`
+  (a scene plan's, in the movie's time), `Output`, and the `Frame` and `Timeline` every plan has.
+  `PlanTransition`: `Kind` (`cut`, `dip`, `dissolve`), `Seconds`, `Color`.
+- `scene-plan.schema.json` describes `segments`; **`ScenePlanSerializer.Write(MoviePlan)`**,
+  **`ReadMovie`** and **`IsMovie`**; **`MoviePlanValidator.Validate`** holds the segments to their
+  places as the player does. In C# the movie is a record of its own and not a `ScenePlan`: a
+  scene plan's validator asks for models, a camera and a look, which a movie has not.
+- **`PlanCounter.Keys`** (`texts.items[].counter.keys`): the threshold a counter counts, as keys
+  in the plan's time, in place of `target`.
+
+### Files
+- In a job folder and in a bundle the movie's plan is **`scene-plan.json`** and the segments' are
+  `scene-plan.s01.json` onwards (`MoviePlan.SegmentFileName`); a draft's are
+  `scene-plan.draft.json` and `scene-plan.s01.draft.json` onwards. The segments share the meshes
+  and every other file. A segment's frames are in `<frames folder>/s01` onwards.
+- **`PlayerWriter.WriteJob(StoryboardPlan, folder, files)`** writes such a folder.
+  **`RenderBundleContent.Film`** and **`FilmDraft`** make a bundle hold a film (`Plan` is then the
+  plan of its first shot and is not written twice); **`RenderBundleWriter.FromStoryboard`** makes
+  the content from a model. The run scripts are unchanged: `render.sh`, `--draft`, `--compose` and
+  `--keep-frames` do for a film what they do for a scene. The README has a section on films, in
+  English and in Romanian.
+
+### The player (1.11)
+- **The module `segments`.** Its first stage is the first stage of every segment's plan, each in a
+  Blender of its own (`THIDE:segment=2/4 <name>` before each); a segment whose frames are there,
+  rendered from the same scene, is passed over, so a film that was stopped goes on with the shot
+  it stopped in and a film of which one shot changed renders that shot alone. Its second stage
+  lays the segments' frames on two channels in turn, joins them (a dissolve keys the opacity of
+  the upper strip; a dip is a colour strip that is the colour alone on the two frames at the cut),
+  and refuses frames that were rendered from another scene, naming the segment. A movie's plan is
+  played from a folder, not from one script.
+- **The module contract** has one more optional name: **`frames(ctx, section, folder)`** returns
+  the frames of the plan in place of `ctx.frames`, for a plan whose frames are those of other
+  plans. `api.Frames` has `lay`, `hold`, `channels` and `from_other_plans`, which the output and
+  the texts ask of whatever frames there are; `ctx.others` (`core.OtherPlans`) gives a module the
+  frames folder of another plan and that plan's first stage.
+- A counter with `keys` counts those keys.
+
+### Command line
+- `therion-cli blender <model> --storyboard <file.json>` renders a film; `--draft` drafts every
+  shot; `--shot <n>` renders one shot alone, as any scene; `--bundle` writes the film as a bundle
+  (`--render` renders it there). The frames are in `<out>/<base name>-frames/s01` onwards, so the
+  same command run again goes on. A photo, an HDRI image and a file of survey dates are named
+  relative to the storyboard's file. The options that say what one scene shows (`--title`,
+  `--reveal`, …) go with `--shot`, not with a whole storyboard.
+
+### Verified
+- Without Blender: the validator, the lowering (times, overlaps, text times, reveal keys per
+  segment, one shot against its scene), both serializers and both schemas, the bundle, the job
+  folder; the player's own checks of a movie's plan on the system Python.
+- In Blender 4.2.23, 4.5.16 and 5.0.1: a film of four shots with a cut, a dissolve and a dip, the
+  pictures at the joins compared with the shots' own frames; a film stopped in a shot and gone on
+  with; a changed shot rendered again alone; a film of one shot against its scene, picture for
+  picture; the counter of a reveal over two shots; the render service; the command line.
 ## 2026-11-26 — camera routes
 
 Nothing changes in the plan (still **version 1**) or the player: a route is a camera track, one

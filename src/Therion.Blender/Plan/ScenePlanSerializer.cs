@@ -128,6 +128,59 @@ public static class ScenePlanSerializer
 
     public static ScenePlan ReadFile(string path) => Read(File.ReadAllText(path));
 
+    // ---- the plan of a movie of several scenes ----
+
+    /// <summary>The plan of a movie as JSON: a plan the player reads, written as a scene's is.</summary>
+    public static string Write(MoviePlan movie)
+    {
+        ArgumentNullException.ThrowIfNull(movie);
+        return JsonSerializer.Serialize(movie, Options).ReplaceLineEndings("\n") + "\n";
+    }
+
+    public static void WriteFile(MoviePlan movie, string path)
+        => File.WriteAllText(path, Write(movie), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+    /// <summary>Whether plan JSON is the plan of a movie of several scenes: its features name
+    /// the module <see cref="MoviePlan.SegmentsFeature"/>. False for anything else, a text that
+    /// is no plan too.</summary>
+    public static bool IsMovie(string json)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                   && doc.RootElement.TryGetProperty("features", out var features) && features.ValueKind == JsonValueKind.Array
+                   && features.EnumerateArray().Any(f => f.ValueKind == JsonValueKind.String && f.GetString() == MoviePlan.SegmentsFeature);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Reads the plan of a movie, as <see cref="Read"/> reads a scene's: the version is
+    /// checked first, and a key that is not known is refused.</summary>
+    public static MoviePlan ReadMovie(string json)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        int version = ProbeVersion(json);
+        if (version > BlenderModule.ScenePlanSchemaVersion)
+            throw new ScenePlanFormatException(
+                $"This plan is version {version}, newer than this build understands ({BlenderModule.ScenePlanSchemaVersion}).");
+        if (version < 1)
+            throw new ScenePlanFormatException($"Invalid scene-plan version {version}.");
+        try
+        {
+            return JsonSerializer.Deserialize<MoviePlan>(json, Options)
+                   ?? throw new ScenePlanFormatException("The plan deserialized to null.");
+        }
+        catch (JsonException ex)
+        {
+            throw new ScenePlanFormatException($"Malformed plan JSON: {JsonFault.OfShape(ex)}");
+        }
+    }
+
     private static int ProbeVersion(string json)
     {
         try
@@ -453,7 +506,8 @@ public static class ScenePlanSerializer
 
     private sealed record CounterJson
     {
-        public required PlanChangeTarget Target { get; init; }
+        public PlanChangeTarget? Target { get; init; }
+        public List<NumberKeyJson>? Keys { get; init; }
         public int Decimals { get; init; }
         public double? Min { get; init; }
         public double? Max { get; init; }
@@ -473,7 +527,11 @@ public static class ScenePlanSerializer
                 FadeIn = item.FadeIn, FadeOut = item.FadeOut, Slot = item.Slot,
                 Turn = item.Turn?.Select(t => new PlanTurn(t.T, t.Degrees)).ToList(),
                 Counter = item.Counter is { } counter
-                    ? new PlanCounter { Target = counter.Target, Decimals = counter.Decimals, Min = counter.Min, Max = counter.Max }
+                    ? new PlanCounter
+                    {
+                        Target = counter.Target ?? new PlanChangeTarget(), Decimals = counter.Decimals, Min = counter.Min, Max = counter.Max,
+                        Keys = counter.Keys?.Select(k => new PlanNumberKey(k.T, k.Value, k.Easing)).ToList(),
+                    }
                     : null,
             };
         }
@@ -511,7 +569,18 @@ public static class ScenePlanSerializer
             }
             if (value.Counter is { } counter)
             {
-                line.Append(", \"counter\": { \"target\": ").Append(Text(counter.Target, options));
+                if (counter.Keys is { } keys)
+                {
+                    line.Append(", \"counter\": { \"keys\": [");
+                    for (int i = 0; i < keys.Count; i++)
+                        line.Append(i == 0 ? "" : ", ").Append("{ \"t\": ").Append(Num(keys[i].T)).Append(", \"value\": ")
+                            .Append(Num(keys[i].Value)).Append(Easing(keys[i].Easing, options)).Append(" }");
+                    line.Append(']');
+                }
+                else
+                {
+                    line.Append(", \"counter\": { \"target\": ").Append(Text(counter.Target, options));
+                }
                 if (counter.Decimals != 0) line.Append(", \"decimals\": ").Append(counter.Decimals.ToString(CultureInfo.InvariantCulture));
                 Number("min", counter.Min);
                 Number("max", counter.Max);

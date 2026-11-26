@@ -8,7 +8,9 @@
 #
 # A scene with texts over the picture is rendered in two stages: its frames first, into "frames"
 # beside this script, then the output from them. A render that was stopped goes on where it
-# stopped when this script is started again.
+# stopped when this script is started again. A film of several shots (scene-plan.json then names
+# the plan of every shot) is rendered shot by shot, each into a folder of its own inside "frames",
+# and goes on with the shot it was stopped in.
 #
 # What it writes goes to the folder the plan names, "out" beside this script. Blender is looked
 # for on the PATH, and in /Applications on a Mac; to use another one, name it in BLENDER:
