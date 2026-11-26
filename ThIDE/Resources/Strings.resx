@@ -2495,4 +2495,38 @@ This cannot be undone.</value></data>
   <data name="Live_NoLegs" xml:space="preserve"><value>No survey legs to preview.</value></data>
   <data name="Meta_Unsaved" xml:space="preserve"><value>Unsaved changes.</value></data>
   <data name="Meta_NoProject" xml:space="preserve"><value>No project open.</value></data>
+  <data name="Blender_UI_TabScene" xml:space="preserve"><value>Scene</value></data>
+  <data name="Blender_UI_TabStoryboard" xml:space="preserve"><value>Storyboard</value></data>
+  <data name="Blender_UI_StoryboardHint" xml:space="preserve"><value>A film of several shots. Add a shot from the preset chosen above, or the shots of a composite preset; select a shot to edit it with the settings below. The output settings are the film's.</value></data>
+  <data name="Blender_UI_AddShot" xml:space="preserve"><value>Add shot</value></data>
+  <data name="Blender_UI_AddShot_Tip" xml:space="preserve"><value>Adds a shot of the chosen preset after the selected shot.</value></data>
+  <data name="Blender_UI_Composite" xml:space="preserve"><value>Composite preset</value></data>
+  <data name="Blender_UI_AddComposite" xml:space="preserve"><value>Add its shots</value></data>
+  <data name="Blender_UI_Shots" xml:space="preserve"><value>Shots</value></data>
+  <data name="Blender_UI_ShotName" xml:space="preserve"><value>Shot name</value></data>
+  <data name="Blender_UI_ShotUp" xml:space="preserve"><value>Move the shot up</value></data>
+  <data name="Blender_UI_ShotDown" xml:space="preserve"><value>Move the shot down</value></data>
+  <data name="Blender_UI_ShotRemove" xml:space="preserve"><value>Remove the shot</value></data>
+  <data name="Blender_UI_ShotStrip" xml:space="preserve"><value>Shots along the film</value></data>
+  <data name="Blender_UI_ShotStrip_Tip" xml:space="preserve"><value>Each shot where it falls in the film; a dissolve overlaps the shot before.</value></data>
+  <data name="Blender_UI_ShotTransition" xml:space="preserve"><value>Begins with</value></data>
+  <data name="Blender_UI_ShotTransitionSeconds" xml:space="preserve"><value>Transition seconds</value></data>
+  <data name="Blender_UI_EditsShot" xml:space="preserve"><value>The settings below edit the selected shot.</value></data>
+  <data name="Blender_UI_DraftAll" xml:space="preserve"><value>Draft all</value></data>
+  <data name="Blender_UI_DraftShot" xml:space="preserve"><value>Draft shot</value></data>
+  <data name="Blender_UI_EstimateFilm" xml:space="preserve"><value>Estimate</value></data>
+  <data name="Blender_UI_RenderFilm" xml:space="preserve"><value>Render film</value></data>
+  <data name="Blender_UI_Queue" xml:space="preserve"><value>Render queue</value></data>
+  <data name="Blender_UI_QueueCancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Blender_Storyboard_Estimate" xml:space="preserve"><value>{0} frames, about {1}; {2:0.##} GB of disk, {3:0.##} GB of memory.</value></data>
+  <data name="Blender_Shot_Tour" xml:space="preserve"><value>tour</value></data>
+  <data name="Blender_Shot_Cut" xml:space="preserve"><value>cut</value></data>
+  <data name="Blender_Shot_Dip" xml:space="preserve"><value>dip {0:0.##} s</value></data>
+  <data name="Blender_Shot_Dissolve" xml:space="preserve"><value>dissolve {0:0.##} s</value></data>
+  <data name="Blender_Queue_OwnerPanel" xml:space="preserve"><value>panel</value></data>
+  <data name="Blender_Queue_OwnerAgent" xml:space="preserve"><value>agent</value></data>
+  <data name="Blender_Queue_OwnerRestart" xml:space="preserve"><value>resumed</value></data>
+  <data name="Blender_Queue_Queued" xml:space="preserve"><value>waiting</value></data>
+  <data name="Blender_Queue_Running" xml:space="preserve"><value>rendering</value></data>
+  <data name="Blender_Status_RestartRendering" xml:space="preserve"><value>A render ThIDE was closed in the middle of goes on; a render started now waits for it.</value></data>
 </root>

@@ -9,7 +9,7 @@ using Therion.Cave3D;
 namespace Therion.Blender.Execution;
 
 /// <summary>An <see cref="IBlenderRenderService"/> that renders one job at a time, in turn.</summary>
-public sealed class QueuedRenderService : IBlenderRenderService
+public sealed class QueuedRenderService : IBlenderRenderService, IRenderEstimator
 {
     private readonly IBlenderRenderService _inner;
     private readonly string? _framesRoot;
@@ -52,6 +52,12 @@ public sealed class QueuedRenderService : IBlenderRenderService
         var request = Request(options, storyboard.Output.BaseName, source, placed) with { Storyboard = StoryboardSerializer.Write(storyboard) };
         return RunAsync(id, request, placed, (p, t) => _inner.RenderStoryboardAsync(storyboard, source, placed, p, t), progress, ct);
     }
+
+    /// <summary>The estimate of the service that renders; it does not wait in the queue.</summary>
+    public Task<RenderEstimate> EstimateStoryboardAsync(Storyboard storyboard, RenderSource source, RenderOptions options, CancellationToken ct = default)
+        => _inner is IRenderEstimator estimator
+            ? estimator.EstimateStoryboardAsync(storyboard, source, options, ct)
+            : throw new NotSupportedException("The render service makes no estimates.");
 
     public Task<string> ExportScriptAsync(
         SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? progress = null, CancellationToken ct = default,

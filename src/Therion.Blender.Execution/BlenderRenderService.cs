@@ -22,7 +22,7 @@ using Therion.CaveGeometry;
 namespace Therion.Blender.Execution;
 
 /// <summary>Orchestrates convert → generate → render for the BLEND module.</summary>
-public sealed class BlenderRenderService : IBlenderRenderService
+public sealed class BlenderRenderService : IBlenderRenderService, IRenderEstimator
 {
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 

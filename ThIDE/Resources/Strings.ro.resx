@@ -2495,4 +2495,38 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Live_NoLegs" xml:space="preserve"><value>Nu există segmente de topografie de previzualizat.</value></data>
   <data name="Meta_Unsaved" xml:space="preserve"><value>Modificări nesalvate.</value></data>
   <data name="Meta_NoProject" xml:space="preserve"><value>Niciun proiect deschis.</value></data>
+  <data name="Blender_UI_TabScene" xml:space="preserve"><value>Scenă</value></data>
+  <data name="Blender_UI_TabStoryboard" xml:space="preserve"><value>Storyboard</value></data>
+  <data name="Blender_UI_StoryboardHint" xml:space="preserve"><value>Un film din mai multe cadre. Adăugați un cadru din presetarea aleasă mai sus sau cadrele unei presetări compuse; selectați un cadru ca să-l editați cu setările de mai jos. Setările de ieșire sunt ale filmului.</value></data>
+  <data name="Blender_UI_AddShot" xml:space="preserve"><value>Adaugă cadru</value></data>
+  <data name="Blender_UI_AddShot_Tip" xml:space="preserve"><value>Adaugă un cadru din presetarea aleasă după cadrul selectat.</value></data>
+  <data name="Blender_UI_Composite" xml:space="preserve"><value>Presetare compusă</value></data>
+  <data name="Blender_UI_AddComposite" xml:space="preserve"><value>Adaugă cadrele</value></data>
+  <data name="Blender_UI_Shots" xml:space="preserve"><value>Cadre</value></data>
+  <data name="Blender_UI_ShotName" xml:space="preserve"><value>Numele cadrului</value></data>
+  <data name="Blender_UI_ShotUp" xml:space="preserve"><value>Mută cadrul mai sus</value></data>
+  <data name="Blender_UI_ShotDown" xml:space="preserve"><value>Mută cadrul mai jos</value></data>
+  <data name="Blender_UI_ShotRemove" xml:space="preserve"><value>Elimină cadrul</value></data>
+  <data name="Blender_UI_ShotStrip" xml:space="preserve"><value>Cadrele de-a lungul filmului</value></data>
+  <data name="Blender_UI_ShotStrip_Tip" xml:space="preserve"><value>Fiecare cadru unde cade în film; o tranziție prin suprapunere acoperă cadrul dinainte.</value></data>
+  <data name="Blender_UI_ShotTransition" xml:space="preserve"><value>Începe cu</value></data>
+  <data name="Blender_UI_ShotTransitionSeconds" xml:space="preserve"><value>Secundele tranziției</value></data>
+  <data name="Blender_UI_EditsShot" xml:space="preserve"><value>Setările de mai jos editează cadrul selectat.</value></data>
+  <data name="Blender_UI_DraftAll" xml:space="preserve"><value>Schiță a tuturor</value></data>
+  <data name="Blender_UI_DraftShot" xml:space="preserve"><value>Schiță a cadrului</value></data>
+  <data name="Blender_UI_EstimateFilm" xml:space="preserve"><value>Estimare</value></data>
+  <data name="Blender_UI_RenderFilm" xml:space="preserve"><value>Randează filmul</value></data>
+  <data name="Blender_UI_Queue" xml:space="preserve"><value>Coada de randare</value></data>
+  <data name="Blender_UI_QueueCancel" xml:space="preserve"><value>Anulează</value></data>
+  <data name="Blender_Storyboard_Estimate" xml:space="preserve"><value>{0} cadre de imagine, cam {1}; {2:0.##} GB pe disc, {3:0.##} GB de memorie.</value></data>
+  <data name="Blender_Shot_Tour" xml:space="preserve"><value>tur</value></data>
+  <data name="Blender_Shot_Cut" xml:space="preserve"><value>tăietură</value></data>
+  <data name="Blender_Shot_Dip" xml:space="preserve"><value>trecere prin negru {0:0.##} s</value></data>
+  <data name="Blender_Shot_Dissolve" xml:space="preserve"><value>suprapunere {0:0.##} s</value></data>
+  <data name="Blender_Queue_OwnerPanel" xml:space="preserve"><value>panou</value></data>
+  <data name="Blender_Queue_OwnerAgent" xml:space="preserve"><value>agent</value></data>
+  <data name="Blender_Queue_OwnerRestart" xml:space="preserve"><value>reluată</value></data>
+  <data name="Blender_Queue_Queued" xml:space="preserve"><value>în așteptare</value></data>
+  <data name="Blender_Queue_Running" xml:space="preserve"><value>se randează</value></data>
+  <data name="Blender_Status_RestartRendering" xml:space="preserve"><value>O randare întreruptă la închiderea ThIDE continuă; o randare pornită acum o așteaptă.</value></data>
 </root>

@@ -100,6 +100,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
         _spec = BuiltInPresets.OrbitShowcase().Spec;
         LoadPresets();
+        LoadComposites();
         ReloadArtifacts();
         // The knobs take the spec's values, one after another; the spec is not rebuilt from the
         // half of them that have theirs.
@@ -596,6 +597,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             Annotations = _annotations,
         };
         if (_spec.Reveal is { } reveal) _revealKept = reveal;
+        WriteSettingsToShot();
         Revalidate();
     }
 
@@ -727,6 +729,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         PreviewCommand.NotifyCanExecuteChanged();
         ExportScriptCommand.NotifyCanExecuteChanged();
         OpenInBlenderGuiCommand.NotifyCanExecuteChanged();
+        RevalidateCommands();
     }
 
     private bool HasSource => UseExternalFile
@@ -740,7 +743,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     /// <summary>A render the panel did not start (an agent's) is running: one the panel starts
     /// meanwhile waits for it in the queue.</summary>
-    public bool AgentRendering => _queue?.Running is { } running && running.Request.Owner != PanelHolder;
+    public bool AgentRendering => _queue?.Running is { } running && running.Request.Owner is not (PanelHolder or RenderQueue.RestartOwner);
 
     private const string PanelHolder = "panel";
 
@@ -753,7 +756,11 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     private void OnQueueChanged()
     {
         OnPropertyChanged(nameof(AgentRendering));
-        if (AgentRendering && !IsBusy) StatusMessage = Tr.Get("Blender_Status_AgentRendering");
+        OnPropertyChanged(nameof(ResumedRendering));
+        RefreshQueueRows();
+        // A render a restart started again is nobody's now: it is not an agent's.
+        if (ResumedRendering && !IsBusy) StatusMessage = Tr.Get("Blender_Status_RestartRendering");
+        else if (AgentRendering && !IsBusy) StatusMessage = Tr.Get("Blender_Status_AgentRendering");
     }
 
     /// <summary>A render the panel did not start ended (an agent's, or one a restart had cut
