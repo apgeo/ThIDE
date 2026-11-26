@@ -55,17 +55,20 @@ public static class LabelPlanner
     private const double StationSizeFraction = 0.012;
     private const double LeadRadiusFraction = 0.01;
 
-    public static LabelPlan Plan(SceneSpec spec, SceneMeta meta)
+    /// <param name="near">Keeps only the stations and the leads near a camera's path (a route
+    /// through a large cave); the cap counts those. Null keeps all of them.</param>
+    public static LabelPlan Plan(SceneSpec spec, SceneMeta meta, Plan.NearPath? near = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
         ArgumentNullException.ThrowIfNull(meta);
         var labels = spec.Labels;
         double diagonal = Diagonal(meta.LocalBounds);
 
-        var stations = PlanStations(labels.Stations, labels.Roof, meta, diagonal, out bool capped, out int matched);
+        var stations = PlanStations(labels.Stations, labels.Roof, meta, diagonal, near, out bool capped, out int matched);
         var components = labels.Components.Show ? PlanComponents(labels.Components, meta, diagonal) : [];
         bool inside = spec.Camera.Template is CameraTemplate.Flythrough or CameraTemplate.Route;
         var leads = labels.Leads.Show ? PlanLeads(labels.Leads, labels.Roof, meta, diagonal, inside) : [];
+        if (near is not null) leads = leads.Where(l => near.Contains(l.Position)).ToList();
         var byDistance = leads.Count > 0 && labels.Leads.Sizing == LeadMarkerSizing.CameraDistance
             ? new LeadDistanceSizing(LeadDistanceFactor * labels.Leads.MarkerScale,
                 MinInsideRadius * labels.Leads.MarkerScale, diagonal * LeadRadiusFraction * labels.Leads.MarkerScale)
@@ -83,7 +86,8 @@ public static class LabelPlanner
     }
 
     private static IReadOnlyList<LabelItem> PlanStations(
-        StationLabelSpec spec, LabelRoofSource roofSource, SceneMeta meta, double diagonal, out bool capped, out int matched)
+        StationLabelSpec spec, LabelRoofSource roofSource, SceneMeta meta, double diagonal, Plan.NearPath? near,
+        out bool capped, out int matched)
     {
         capped = false;
         matched = 0;
@@ -92,7 +96,7 @@ public static class LabelPlanner
         var predicate = FilterPredicate(spec);
         var selected = new List<SceneMetaStation>();
         foreach (var s in meta.Stations)
-            if (predicate(s)) selected.Add(s);
+            if (predicate(s) && (near is null || near.Contains(Vec(s.Position)))) selected.Add(s);
         matched = selected.Count;
 
         if (selected.Count > spec.MaxCount)

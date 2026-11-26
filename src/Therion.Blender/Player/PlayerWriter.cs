@@ -64,6 +64,25 @@ public static class PlayerWriter
         return new PlayerJob(folder, Path.Combine(folder, PlayerFiles.EntryFileName), planFile);
     }
 
+    /// <summary>
+    /// Writes the player (<c>render.py</c> and <c>thide_player/</c>, replacing what is there)
+    /// into a folder that holds <paramref name="plans"/> and the files they name already, and
+    /// leaves the plans' files as they are.
+    /// </summary>
+    /// <exception cref="FileNotFoundException">A file a plan names is not in the folder.</exception>
+    /// <exception cref="ArgumentException">A photo's file is not an image a plan carries, or the
+    /// world's is not one.</exception>
+    public static void WritePlayer(IReadOnlyList<ScenePlan> plans, string folder) => WriteFilesAndPlayer(plans, folder, null);
+
+    /// <summary>Checks a movie and the plans of its segments as a film's job is checked.</summary>
+    /// <exception cref="ArgumentException">They are invalid; the message says each problem.</exception>
+    public static void Check(MoviePlan movie, IReadOnlyList<ScenePlan> segments)
+        => ThrowIfInvalid(new StoryboardPlan { Movie = movie, Segments = segments });
+
+    /// <summary>Checks a scene plan as a job's is checked.</summary>
+    /// <exception cref="ArgumentException">It is invalid.</exception>
+    public static void Check(ScenePlan plan) => ThrowIfInvalid(plan);
+
     private static void WriteFilesAndPlayer(IReadOnlyList<ScenePlan> plans, string folder, IReadOnlyDictionary<string, string>? files)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(folder);

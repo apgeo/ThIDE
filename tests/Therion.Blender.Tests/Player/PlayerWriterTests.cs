@@ -101,7 +101,7 @@ public class PlayerWriterTests : IDisposable
         string[] allowed =
         [
             "argparse", "atexit", "base64", "hashlib", "importlib", "importlib.abc", "importlib.util", "json", "math", "os", "re",
-            "shutil", "struct", "subprocess", "sys", "tempfile", "traceback", "zlib", "bpy", "bmesh", "mathutils", "thide_player",
+            "shutil", "struct", "subprocess", "sys", "tempfile", "traceback", "zlib", "contextlib", "time", "bpy", "bmesh", "mathutils", "thide_player",
             ".", ".registry",
         ];
         foreach (var file in PlayerFiles.JobFiles)

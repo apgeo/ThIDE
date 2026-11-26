@@ -18,6 +18,10 @@ public sealed record GeometryResult
     /// triangles. Empty when the walls are real scrap meshes or there are none.</summary>
     public IReadOnlyList<TubeLeg> TubeLegs { get; init; } = [];
 
+    /// <summary>For every triangle of synthesized tubes, the index of its leg in
+    /// <see cref="TubeLegs"/>. Empty when the walls are real scrap meshes or there are none.</summary>
+    public IReadOnlyList<int> TriangleLegs { get; init; } = [];
+
     /// <summary>The vector subtracted from world coordinates to recenter
     /// (world = local + Offset); the original bbox centre, or zero when recentering was
     /// disabled.</summary>

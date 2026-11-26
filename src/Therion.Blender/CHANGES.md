@@ -1,5 +1,67 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-27 — large caves, frame ranges, render jobs, bundles from elsewhere
+
+The plan stays **version 1** and this is player **1.12**. No plan key is new: a plan of a large
+cave has more models, and every player since 1.0 reads it.
+
+### Breaking changes
+- `IBlenderRenderHost` consumers: none. `RenderPhase` has one more value at its end, `Queued`.
+
+### Walls in parts and culling
+- **`WallParts`** (Therion.CaveGeometry): `Split(geometry)` gives `WallPart`s (`Index`, `Mesh`,
+  `Bounds`, `Branches`): tubes by branch of the reduced centreline graph, whole branches grown
+  along the network to about `PartLength` (400 m) of passage; scrap walls by a `GridSize` (100 m)
+  grid. Every vertex keeps its position, colour and reveal value. `IsLarge` (500,000 triangles, or
+  2 km across). `Subset(mesh, triangles)`. `GeometryResult.TriangleLegs` says the leg of every tube
+  triangle.
+- **Conversion.** `ConversionOptions.Parts` (`true`, `false` by default, `null` when large) writes
+  `walls.001.ply` onwards; `ConversionManifest.Parts` lists them as `WallPartFile`s. Bundles
+  (`RenderBundleWriter.FromModel` / `FromStoryboard`, `parts:`) carry them.
+- **`SourceSpec.Parts`** (not in a spec's file): the plan's walls are then models `walls:1`
+  onwards with role `walls` (`ScenePlanBuilder.WallsRole`, `PartId`), one frame and origin, the
+  rock material; the reveal targets the role (one change reveals every part).
+- **Culling.** A plan of an inside camera (`ScenePlanBuilder.IsInside`: flythrough, route) keeps the
+  parts within 200 m of its path (`NearPath`: `Contains`, `Touches`, `OfCamera`, `DefaultRadius`),
+  all of them when none is; an outside camera keeps all. Its station labels and lead markers are
+  those within 200 m of the path, the 200-label cap counting those
+  (`LabelPlanner.Plan(spec, meta, near)`, public for a tour planner); this applies to any inside
+  camera, parts or not. An annotation anchored in a part the plan leaves out (and in none it keeps)
+  is left out with its changes. A storyboard culls per shot.
+
+### Frame ranges (player)
+- `--frame-range A-B` with `--stage frames` renders those frames of the plan's own scene alone.
+  `Frames.begin(count, first, last)` looks only at its range (an unfinished frame outside it may be
+  another Blender's) and reads and writes the note under `frames.lock`, so Blenders that start at
+  once on one folder remove nothing of each other's. Refused for a movie's plan and outside 1 to
+  the frame count. Measured: frames 1–8 as one render and as 1–4 + 5–8 in two Blenders at once
+  have the same pixels, lead markers sized by their distance included.
+- `FrameRange` (`First`, `Last`, `Count`, `TryParse("A-B")`), `RenderOptions.FrameRange`.
+- Cycles keeps its render data from frame to frame (`use_persistent_data`) in a render of several
+  frames; `--no-persistent-data` turns it off. Measured to change no frame.
+
+### Render jobs
+- **`RenderJobRecord`** (`Id`, `Request`, `State`, `QueuedUtc`, `StartedUtc`, `EndedUtc`,
+  `Progress`, `Result`, `IsFinished`, `Ended`), **`RenderJobState`** (queued, running, succeeded,
+  failed, cancelled), **`RenderJobRequest`** (`Name`, `Owner`, `Spec`, `Storyboard`, `Bundle`,
+  `Model`, `Leads`, `Draft`, `KeepFrames`, `FramesDirectory`), **`RenderJobProgress`** (phase,
+  segment of n, frame of n, seconds per frame, seconds left; `From(tick)`), **`RenderJobResult`**
+  (`From(result)`, `Failure(kind, error)`), **`RenderJobFile`** (`Write`/`Read`, `WriteOne`/`ReadOne`,
+  `Restarted`: a running job queued again). Pure.
+- `RenderProgress` has `SecondsPerFrame`, `SecondsLeft`, `Segment`, `SegmentCount`; `FrameClock`
+  measures the pace from the first frame, counting no frame that was there.
+- `RenderOptions.JobName`, `Owner`.
+
+### Bundles from elsewhere
+- **`RenderBundleReader.Unpack(zip, folder, limits)`** (`RenderBundleLimits`: zip, unpacked bytes,
+  entries, triangles, frames × pixels × samples) unpacks only the plans and the files they name
+  (and the subtitles beside the output), after checking: no link (the zip or an entry), no entry
+  that leaves the folder, no module folders, no feature outside `ScenePlan.PlayerFeatures` /
+  `MoviePlan.MovieFeatures`, no `.blend` output, the validators, every path inside, the limits.
+  Throws `RenderBundleRefusedException`; gives `UnpackedBundle`. `PlyFaces(path)`.
+- `PlayerWriter.WritePlayer(plans, folder)` (the player beside plans that are there, which stay as
+  they were written), `PlayerWriter.Check(scene)` / `Check(movie, segments)`.
+
 ## 2026-11-26 (tours) — branch tours: a tour of the cave, lowered to a storyboard within its time
 
 No change to the plan or the player: a tour is a storyboard, and a storyboard is what it was.

@@ -1,5 +1,14 @@
 # Therion.CaveGeometry — changes for consumers
 
+## 2026-11-27 — the walls in parts
+
+- **`WallParts.Split(geometry)`**: the walls as `WallPart`s (`Index`, `Mesh`, `Bounds`, `Branches`,
+  `TriangleCount`), tubes by branch of the reduced graph (grown to `PartLength`, 400 m of passage),
+  scrap walls by a `GridSize` (100 m) grid; positions, colours, texture coordinates and reveal
+  values kept. `IsLarge(geometry)`, `Subset(mesh, triangles)`.
+- **`GeometryResult.TriangleLegs`**: the leg of every triangle of synthesized tubes (empty for scrap
+  walls). The tubes are built with it always; their mesh is unchanged.
+
 ## 2026-11-26 (later) — tours: the main passage, what hangs on it, and which of it to visit
 
 ### Additive API

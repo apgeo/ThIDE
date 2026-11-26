@@ -58,7 +58,8 @@ public static class ToolErrorCodes
 
     // ---- Blender renders -----------------------------------------------------------------------
 
-    /// <summary>A render an agent started is still running; renders run one at a time.</summary>
+    /// <summary>The host refused a render (its own panel holds the renderer), or too many renders
+    /// have not ended yet.</summary>
     public const string RenderBusy = "render_busy";
 
     /// <summary>No render job has that id (or none was started yet). Finished jobs are kept a while, not forever.</summary>

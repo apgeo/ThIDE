@@ -178,27 +178,27 @@ public class BlenderAnimationViewModelTests
     }
 
     [Fact]
-    public async Task An_agents_render_holds_the_slot_and_lands_in_the_history()
+    public async Task An_agents_render_does_not_block_the_panel_and_lands_in_the_history()
     {
-        var slot = new BlenderRenderSlot();
-        var vm = WithSource(new BlenderAnimationViewModel(new FakeRenderService(), new FakeSources(), null, slot: slot));
+        var queue = new Therion.Blender.Execution.RenderQueue();
+        var vm = WithSource(new BlenderAnimationViewModel(new FakeRenderService(), new FakeSources(), null, queue: queue));
         Assert.True(vm.RenderCommand.CanExecute(null));
 
-        Assert.True(slot.TryTake("orbit (agent r1)"));
+        var release = new TaskCompletionSource<RenderResult>();
+        var agent = queue.RunAsync(new RenderJobRequest { Name = "orbit (agent r1)", Owner = "agent" }, (_, _) => release.Task);
         Assert.True(vm.AgentRendering);
-        Assert.False(vm.RenderCommand.CanExecute(null));
-
-        slot.ReleaseAgent(new AgentRenderFinished("orbit (agent r1)",
-            new RenderResult { Succeeded = true, OutputPaths = ImmutableArray.Create("out/orbit.mp4") }, null));
-        Assert.False(vm.AgentRendering);
+        // The panel's render would wait for the agent's in the queue instead of being refused.
         Assert.True(vm.RenderCommand.CanExecute(null));
+
+        release.SetResult(new RenderResult { Succeeded = true, OutputPaths = ImmutableArray.Create("out/orbit.mp4") });
+        await agent;
+        for (int i = 0; i < 200 && vm.Jobs.Count == 0; i++) await Task.Delay(10);  // the history hears it on the UI's context
+        Assert.False(vm.AgentRendering);
         var entry = Assert.Single(vm.Jobs);
         Assert.Equal("orbit (agent r1)", entry.Name);
         Assert.True(entry.Succeeded);
 
-        // The panel's own render takes the slot, so an agent cannot start one meanwhile, and gives it back.
         await vm.RenderCommand.ExecuteAsync(null);
-        Assert.Null(slot.Holder);
         Assert.Equal(2, vm.Jobs.Count);
     }
 
@@ -352,11 +352,11 @@ public class BlenderAnimationViewModelTests
         Assert.Equal(SceneBuilder.Auto, vm.Builder);
 
         await vm.RenderCommand.ExecuteAsync(null);
-        Assert.Equal(new RenderOptions(), svc.LastOptions);
+        Assert.Equal(new RenderOptions { Owner = "panel" }, svc.LastOptions);
 
         vm.Builder = SceneBuilder.Generator;
         await vm.RenderCommand.ExecuteAsync(null);
-        Assert.Equal(new RenderOptions { Builder = SceneBuilder.Generator }, svc.LastOptions);
+        Assert.Equal(new RenderOptions { Builder = SceneBuilder.Generator, Owner = "panel" }, svc.LastOptions);
         // The builder is how a render is made, not what it shows: a preset neither holds nor changes it.
         vm.SelectedPreset = vm.Presets.First(p => p.Name == "Helix descent");
         Assert.Equal(SceneBuilder.Generator, vm.Builder);
@@ -375,7 +375,7 @@ public class BlenderAnimationViewModelTests
 
         await vm.PreviewCommand.ExecuteAsync(null);
 
-        Assert.Equal(new RenderOptions { Builder = SceneBuilder.Generator, Draft = true }, svc.LastOptions);
+        Assert.Equal(new RenderOptions { Builder = SceneBuilder.Generator, Draft = true, Owner = "panel" }, svc.LastOptions);
         Assert.Equal(vm.CurrentSpec.Camera, svc.LastSpec!.Camera);
         Assert.Contains("out/render-draft.mp4", vm.Outputs);
         Assert.Equal(

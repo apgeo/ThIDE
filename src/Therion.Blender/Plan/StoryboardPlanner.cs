@@ -197,7 +197,7 @@ public static class StoryboardPlanner
                 throw new ArgumentException($"{Shot(storyboard, i)}: {ex.Message.Split(" (Parameter", 2)[0]}", nameof(storyboard));
             }
 
-            var revealed = plan.Changes?.FirstOrDefault(c => c is { Reveal: not null, Target.Id: ScenePlanBuilder.ModelId });
+            var revealed = plan.Changes?.FirstOrDefault(c => c is { Reveal: not null, Target.Id: ScenePlanBuilder.ModelId } or { Reveal: not null, Target.Role: ScenePlanBuilder.WallsRole });
             var keys = revealed?.Reveal;
             if (holds && revealed is not null)
             {

@@ -958,6 +958,79 @@ Good to know:
 - The storyboard names every station the camera passes, so it belongs to this model: after the
   survey changed, make the tour again rather than editing an old storyboard.
 
+## Large caves, long renders
+
+**The walls in parts.** A large cave (more than half a million wall triangles, or more than two
+kilometres across) has its walls written in parts: the passages, a few hundred metres of them to a
+part (by a grid of 100 m for walls drawn from scraps). The parts together are the one mesh, vertex
+for vertex, with the same depth colours and the same reveal, so the picture does not change. What
+changes is that a camera **inside** the cave (a flythrough, a route) shows only the parts within
+200 m of its path; a camera outside (an orbit, a still) shows all of them. `--parts on` splits any
+cave, `--parts off` never splits one.
+
+**Labels near the route.** An inside camera labels only the stations, and marks only the leads,
+within 200 m of its path; the cap of 200 station labels then counts those. In a film, each shot
+picks its own. An annotation whose station lies in a part a shot leaves out is left out with it, so
+nothing floats where there are no walls.
+
+**What it will cost.** Before a render starts, the progress says what it will cost: the frames,
+the time at the seconds a frame is assumed to take (or as measured), the disk for the frames and
+the movie, and the memory Blender will need. A scene of more than 20 million triangles gets a
+warning (a graphics card may not hold it). While it renders, the progress says the seconds a frame
+takes and the time left, from the frames written so far. On the command line, `--estimate` prints
+the estimate and renders nothing:
+
+    therion-cli blender cave.lox --storyboard tour.storyboard.json --estimate
+
+**A range of frames.** `--frame-range 1-600 --frames <dir>` renders frames 1 to 600 of a scene
+alone into the frames folder, and nothing else. Several renders can share one folder, each with a
+range of its own, at the same time; the movie is written once all of them are there:
+
+    therion-cli blender cave.lox --spec tour.json --frames frames --frame-range 1-900
+    therion-cli blender cave.lox --spec tour.json --frames frames --frame-range 901-1800
+    therion-cli blender cave.lox --spec tour.json --frames frames --compose-only
+
+This pays on a machine with **several graphics cards**: start one render per card, each seeing its
+own card (`CUDA_VISIBLE_DEVICES=0`, `=1`, … for NVIDIA), each with its range. On one computer
+without them it gains little, as Cycles already uses every core. A film's shots are already
+rendered one by one; for a range of one shot, render that shot alone (`--shot`).
+
+**One render at a time.** In ThIDE, renders run one at a time, whoever starts them: a render
+started in the panel while an agent renders (or the other way round) waits for its turn, and the
+panel says so. An agent's render that ends is listed in the panel's history. If ThIDE stops in the
+middle of a render (not when it is cancelled), the render goes on with its frames when ThIDE starts
+again.
+
+## The render worker
+
+`therion-cli render-worker` renders [render bundles](#a-render-bundle-to-render-on-another-machine)
+that arrive in a folder, one at a time, oldest first, and leaves what they render in another. It is
+for a machine with Blender and a good graphics card that has nothing else of ThIDE; how the folders
+are filled (a synced share, an SFTP drop) is up to you.
+
+    therion-cli render-worker --inbox /srv/render/in --outbox /srv/render/out
+
+- Put a bundle in the inbox as `<job>.zip`. While it renders, `<job>.status.json` in the outbox says
+  how far it is: the shot, the frame, the seconds a frame takes and the time left. When it is done,
+  the outbox has `<job>.mp4` (or the stills), its subtitles and `<job>.log`.
+- To stop a job, put an empty `<job>.cancel` beside its zip. Its frames are kept; remove the cancel
+  file and it goes on with them. A worker that is stopped (Ctrl+C) also goes on with its frames
+  when it starts again.
+- `--once` stops when the inbox is empty; `--blender` names the Blender; `--max-hours`,
+  `--max-triangles` and `--max-bundle-gb` set the limits of a job; `--scratch` is where bundles are
+  unpacked and their frames kept.
+
+**Security.** A bundle is data, and the worker treats it so. It never runs the bundle's own
+`render.py`, `render.sh` or `thide_player`: it reads the plans, the meshes and the images, and plays
+them with its own player. It refuses, before Blender starts, a bundle whose plans name module
+folders or features outside the player's own, a path that leaves the bundle, a link, a plan the
+checks do not pass, and a bundle over its limits (its size, the unpacked size, the triangles, the
+frames × pixels × samples, the time). Extra modules come only from a folder the operator names
+(`--modules`). Blender runs with `-b --factory-startup` (no add-ons, no start-up scripts), and only
+the files the worker names go to the outbox. A fault in Blender's own readers of meshes and images
+is the risk that remains: run the worker as a user that can read and write the two folders and
+little else.
+
 ## Requirements & tips
 
 - **Blender 4.2 or newer** — older versions are rejected with a clear message.

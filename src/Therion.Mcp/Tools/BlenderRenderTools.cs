@@ -67,7 +67,7 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
     [Description("Starts rendering the cave model in Blender with a preset (see list_render_presets) and "
                + "answers at once with a job id; a render takes minutes to hours. Follow it with "
                + "render_status (waitSeconds waits for it), stop it with cancel_render. One render runs at "
-               + "a time. The model is the project's own unless you name a .lox or .3d: its last build "
+               + "a time: a render started while another runs waits for its turn (state queued). The model is the project's own unless you name a .lox or .3d: its last build "
                + "output, or, when that is missing or older than the sources, a fresh export by Therion of "
                + "the model alone (the thconfig's system commands are left out). Outputs go to "
                + "outputDirectory in the workspace, or to a temporary folder that render_status names. "
@@ -167,8 +167,7 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
 
         var job = new BlenderRenderJob(snapshot.Root, plan.Preset, plan.Spec, draft);
         string name = $"{plan.Spec.Output.BaseName} (agent {job.Id})";
-        if (jobs.Find(null) is { IsFinished: false } running)
-            return Busy(running);
+        options = options with { JobName = name, Owner = "agent" };
         if (!blender.TryBeginRender(name))
             return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.RenderBusy,
                 "A render started in ThIDE's Blender panel is running, and renders run one at a time. "
@@ -204,8 +203,8 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
 
         static ToolResult<RenderJobStatus> Busy(BlenderRenderJob running) =>
             ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.RenderBusy,
-                $"Render '{running.Id}' is still running, and renders run one at a time. Wait for it with "
-                + "render_status (waitSeconds), or stop it with cancel_render, then start again.");
+                $"{BlenderRenderJobs.Kept} renders have not ended yet, the oldest '{running.Id}'. Wait for them with "
+                + "render_status (waitSeconds), or stop one with cancel_render, then start again.");
     }
 
     [McpServerTool(Name = "cancel_render", Title = "Cancel a Blender render",
