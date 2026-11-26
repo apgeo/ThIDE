@@ -943,7 +943,8 @@ tour.json`; an option given beside it wins):
 }
 ```
 
-`preset` (`--preset`) is where every shot takes its materials, lighting and render engine from.
+`preset` (`--preset`) is where the film takes its materials, lighting and render engine from; they
+are written into the storyboard's `defaults`, where you can change them for every shot at once.
 `--bundle` writes the tour as a [render bundle](#a-render-bundle-to-render-on-another-machine),
 with the table and the notes in its README. An agent has the same through the tools `plan_tour`
 (the table, nothing written) and `write_tour_storyboard` (see [the agent tools](../mcp-host-setup.md)).

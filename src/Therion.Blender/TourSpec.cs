@@ -93,7 +93,8 @@ public sealed record TourSpec
 
     // ---- the film ----
 
-    /// <summary>The preset every shot takes its materials, lighting and render engine from.</summary>
+    /// <summary>The preset the film takes its materials, lighting and render engine from: they
+    /// are written into the storyboard's defaults, so the storyboard no longer needs the preset.</summary>
     public string Preset { get; init; } = "Full flythrough";
 
     public int Fps { get; init; } = 30;

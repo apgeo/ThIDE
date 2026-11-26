@@ -40,7 +40,11 @@ public class TourBuilderTests
         var shots = tour.Storyboard.Shots;
         Assert.Equal(["Main passage 1", "B1", "Main passage 2", "B3", "B4", "Main passage 3", "B5", "Main passage 4"], shots.Select(s => s.Name));
         Assert.All(shots, s => Assert.Equal(CameraTemplate.Route, s.Camera!.Template));
-        Assert.All(shots, s => Assert.Equal("Full flythrough", s.Preset));
+        // The look is the preset's, said once; a shot says only what it flies and shows.
+        Assert.All(shots, s => Assert.Null(s.Preset));
+        Assert.All(shots, s => Assert.Null(s.Labels));
+        var look = Presets.BuiltInPresets.FullFlythrough().Spec;
+        Assert.Equal((look.Engine, look.Materials, look.Lighting), (tour.Storyboard.Defaults.Engine, tour.Storyboard.Defaults.Materials, tour.Storyboard.Defaults.Lighting));
         Assert.All(shots, s => Assert.NotNull(s.Seconds));
 
         Assert.Equal(T(0, 3), Way(shots[0]));
@@ -110,7 +114,7 @@ public class TourBuilderTests
         Assert.Equal("Bypass B4 · 90 m", Shot(tour, "B4").Texts!.Corner);
         Assert.Null(Shot(tour, "Main passage 1").Texts);
         // Nothing of the cave's own labels in a tour's shots.
-        Assert.All(tour.Storyboard.Shots, s => Assert.False(s.Labels!.Leads.Show));
+        Assert.Equal(new LabelsSpec(), tour.Storyboard.Defaults.Labels);
 
         var marks = Shot(tour, "B1").Annotations!;
         Assert.Equal([AnnotationKind.Marker, AnnotationKind.Callout], marks.Select(a => a.Kind));

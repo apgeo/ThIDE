@@ -336,6 +336,12 @@ public static class TourBuilder
             {
                 Name = _spec.Name ?? T("{cave}: tour", "{cave}: tur"),
                 Fps = _spec.Fps,
+                // The look of the preset, said once for every shot; and none of the cave's own
+                // labels: a tour marks the leads on its way itself.
+                Defaults = new StoryboardDefaults
+                {
+                    Engine = _preset.Spec.Engine, Materials = _preset.Spec.Materials, Lighting = _preset.Spec.Lighting, Labels = new LabelsSpec(),
+                },
                 Shots = Shots(pieces, seconds),
                 Output = _spec.Output ?? new OutputSpec { BaseName = "cave-tour" },
             };
@@ -644,11 +650,8 @@ public static class TourBuilder
                 {
                     Name = name,
                     Seconds = Math.Round(seconds[i], 4),
-                    Preset = _spec.Preset,
                     Camera = piece.Kind == PieceKind.Peek ? camera with { Template = CameraTemplate.Viewpoints, Viewpoints = Look(visit!.Branch) }
                         : camera with { Template = CameraTemplate.Route, Route = piece.Route },
-                    // Nothing of the cave's labels: a tour marks the leads on its own way.
-                    Labels = new LabelsSpec(),
                     Annotations = annotations.Count > 0 ? annotations : null,
                     Texts = corner is null && captions.Count == 0 ? null : new OverlaySpec { Corner = corner, CornerCaptions = captions },
                     In = i > 0 && pieces[i - 1].End != piece.Start ? dip : null,

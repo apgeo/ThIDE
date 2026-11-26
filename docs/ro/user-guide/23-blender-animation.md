@@ -1008,8 +1008,9 @@ apoi până la `s140`. (Tabelul afișat de comandă este în engleză.)
 }
 ```
 
-`preset` (`--preset`) este presetarea din care fiecare secvență își ia materialele, iluminarea și
-motorul de randare. `--bundle` scrie turul ca [pachet de
+`preset` (`--preset`) este presetarea din care filmul își ia materialele, iluminarea și motorul
+de randare; ele sunt scrise în `defaults` din storyboard, unde le puteți schimba pentru toate
+secvențele deodată. `--bundle` scrie turul ca [pachet de
 randare](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator), cu tabelul și notele în
 README. Un agent are aceleași lucruri prin uneltele `plan_tour` (tabelul, fără să scrie nimic) și
 `write_tour_storyboard`.

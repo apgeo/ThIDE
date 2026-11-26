@@ -24,9 +24,10 @@ No change to the plan or the player: a tour is a storyboard, and a storyboard is
   terminal and for a bundle's README (`RenderBundleContent.ReadmeSections`). Leads given are the
   only ones counted; without any, the stations the model flags as continuations are.
 - **The storyboard.** One route shot for every stretch of the main passage between two junctions
-  that have a visit, and for every visit, each with explicit `stations` and explicit `Seconds`,
-  the preset named, and `Labels` empty (a tour's shots show none of the cave's own labels: only
-  what the tour marks). A shot that starts where the last one ended begins with a cut; one that
+  that have a visit, and for every visit, each with explicit `stations` and explicit `Seconds`.
+  The preset's engine, materials and lighting are written once, in the storyboard's `Defaults`,
+  with empty `Labels` (a tour's shots show none of the cave's own labels: only what the tour
+  marks); a shot names no preset. A shot that starts where the last one ended begins with a cut; one that
   starts elsewhere (back at a junction from a dead end, or from the far end of a bypass) with a
   dip of `DipSeconds` 0.3 (two frames at least). A `Cut` visit holds `EndHoldSeconds` 1.5 at the
   end; a `Return` is one shot `from` junction `via` the end `to` the junction with `speeds`
