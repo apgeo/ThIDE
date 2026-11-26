@@ -46,6 +46,18 @@ public sealed record CameraFraming
     /// there is no wall mesh.</summary>
     public KdTree? WallTree { get; init; }
 
+    /// <summary>The centreline the stations of a route are looked up and joined in; null when
+    /// the framing was not built from a geometry stage (a route then cannot be planned).</summary>
+    public CenterlineGraph? Centerline { get; init; }
+
+    /// <summary>The model <see cref="Centerline"/> was built from (local coordinates): the
+    /// stations' names, surveys and flags.</summary>
+    public CaveModel? Model { get; init; }
+
+    /// <summary>Every synthesized tube of the model, for the tubes along any path
+    /// (<see cref="AlongPath"/>); empty when the walls are not tubes.</summary>
+    public IReadOnlyList<TubeLeg> TubeLegs { get; init; } = [];
+
     /// <summary>Builds the framing from a geometry-stage result — the pipeline's one-liner.</summary>
     public static CameraFraming FromGeometry(GeometryResult geometry)
     {
@@ -59,7 +71,33 @@ public sealed record CameraFraming
             CenterlinePath = hasPath ? path : null,
             RouteTubes = hasPath && geometry.TubeLegs.Count > 0 ? TubesAlong(path, geometry.TubeLegs) : null,
             WallTree = geometry.Walls.Vertices.Count > 0 ? new KdTree(geometry.Walls.Vertices) : null,
+            Centerline = geometry.Centerline,
+            Model = geometry.RecenteredModel,
+            TubeLegs = geometry.TubeLegs,
         };
+    }
+
+    /// <summary>This framing with <paramref name="path"/> (station positions, local coordinates)
+    /// as its centreline path, and the tubes along it, so that a flight can be planned along any
+    /// way through the cave and not only the longest.</summary>
+    public CameraFraming AlongPath(IReadOnlyList<CaveVector3> path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        bool hasPath = path.Count >= 2;
+        return this with
+        {
+            CenterlinePath = hasPath ? path : null,
+            RouteTubes = hasPath && TubeLegs.Count > 0 ? TubesAlong(path, TubeLegs) : null,
+        };
+    }
+
+    /// <summary>This framing along the stations of <see cref="Centerline"/> with the indices
+    /// <paramref name="stations"/>, in order (see <see cref="AlongPath"/>).</summary>
+    public CameraFraming AlongStations(IReadOnlyList<int> stations)
+    {
+        ArgumentNullException.ThrowIfNull(stations);
+        var graph = Centerline ?? throw new InvalidOperationException("This framing has no centreline to find stations in.");
+        return AlongPath(stations.Select(graph.StationPosition).ToList());
     }
 
     /// <summary>The box round the vertices of a mesh; null for a mesh without any.</summary>
@@ -71,11 +109,14 @@ public sealed record CameraFraming
         return box;
     }
 
-    /// <summary>The tube of each leg of <paramref name="path"/>, turned to run the way the path
-    /// does. A leg and its tube are matched by their end positions, which both take unchanged
+    /// <summary>The tube of each leg of <paramref name="path"/> (null for a leg without one),
+    /// turned to run the way the path does. A leg and its tube are matched by their end positions, which both take unchanged
     /// from the same shots; where a passage was surveyed twice the first tube is used.</summary>
-    private static TubeLeg?[] TubesAlong(IReadOnlyList<CaveVector3> path, IReadOnlyList<TubeLeg> tubeLegs)
+    public static TubeLeg?[] TubesAlong(IReadOnlyList<CaveVector3> path, IReadOnlyList<TubeLeg> tubeLegs)
     {
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(tubeLegs);
+        if (path.Count < 2) return [];
         var byEnds = new Dictionary<(CaveVector3, CaveVector3), TubeLeg>(tubeLegs.Count);
         foreach (var leg in tubeLegs) byEnds.TryAdd((leg.From.Station, leg.To.Station), leg);
 
@@ -146,7 +187,8 @@ public static class CameraPlanner
 
     /// <summary>The flythrough gets a pose for every frame up to this many, so that each
     /// rendered frame is on the planned route and not on a chord between two poses; a longer
-    /// clip spreads this many poses evenly.</summary>
+    /// clip spreads this many poses evenly. (A route has a pose for every frame, with no
+    /// limit.)</summary>
     private const int MaxFlythroughKeys = 1800;
 
     /// <summary>Plans the camera. The <see cref="CameraTemplate.Static"/> template needs no
@@ -185,6 +227,7 @@ public static class CameraPlanner
             CameraTemplate.Flythrough => PlanFlythrough(cam, framing, frames, spec.Animation.Fps, ref clipStart),
             CameraTemplate.Viewpoints => PlanViewpoints(cam, spec.Animation.Fps, frames),
             CameraTemplate.StillSet => PlanStillSet(cam, center, radius),
+            CameraTemplate.Route => PlanRoute(cam, framing, frames, spec.Animation.Fps, ref clipStart),
             _ => throw new ArgumentOutOfRangeException(nameof(spec), cam.Template, "Unknown camera template."),
         };
 
@@ -302,6 +345,24 @@ public static class CameraPlanner
             double u = (double)i / (keys - 1);
             list.Add(new CameraKeyframe(FrameAt(u, frames), poses[i].Location, poses[i].Target, null));
         }
+        return (DedupByFrame(list), KeyInterpolation.Linear, false);
+    }
+
+    /// <summary>A route: one pose for every frame, however many (see <see cref="CameraRoutes"/>).
+    /// The flight is fitted to the clip's length; a route timed by itself has had that length
+    /// filled in before (<see cref="CameraRoutes.WithNaturalDuration"/>).</summary>
+    private static (IReadOnlyList<CameraKeyframe>, KeyInterpolation, bool) PlanRoute(
+        CameraSpec cam, CameraFraming framing, int frames, int fps, ref double clipStart)
+    {
+        var p = cam.Route ?? new RouteParams();
+        clipStart = Math.Max(0.005, Math.Min(clipStart, p.ClearanceMeters * 0.1 + 0.01));
+
+        int keys = Math.Max(frames, 2);
+        double seconds = fps > 0 ? Math.Max(frames - 1, 0) / (double)fps : 0.0;
+        var poses = CameraRoutes.Fly(framing, p, keys, seconds);
+        var list = new List<CameraKeyframe>(keys);
+        for (int i = 0; i < keys; i++)
+            list.Add(new CameraKeyframe(FrameAt((double)i / (keys - 1), frames), poses[i].Location, poses[i].Target, null));
         return (DedupByFrame(list), KeyInterpolation.Linear, false);
     }
 

@@ -11,6 +11,7 @@
 // real Blender.
 
 using Therion.Blender;
+using Therion.Blender.Emit;
 using Therion.Blender.Execution;
 using Therion.Blender.Plan;
 using Therion.Blender.Player;
@@ -53,6 +54,7 @@ public static class BlenderVerb
         }
 
         if (!TryBuildSpec(args, stderr, out var spec)) return 2;
+        if (!TryTimeRoute(source, stderr, ref spec)) return 2;
         if (!TryReadLeads(args, source, spec, stderr, out var leads)) return 2;
 
         string? bundle = Option(args, "--bundle");
@@ -364,7 +366,7 @@ public static class BlenderVerb
             spec = preset.Spec;
         }
         if (!(TryAddTexts(args, stderr, ref spec) && TryAddAnnotations(args, stderr, ref spec) && TryAddReveal(args, stderr, ref spec)
-              && TryAddHdri(args, stderr, ref spec)))
+              && TryAddHdri(args, stderr, ref spec) && TryAddRoute(args, stderr, ref spec)))
             return false;
         // --lamp-reach lights the scene by the lamp on the camera, turned up with the distance it looks over.
         if (Flag(args, "--lamp-reach"))
@@ -424,6 +426,71 @@ public static class BlenderVerb
     /// light, <c>--hdri-rotation &lt;degrees&gt;</c> turns it about the vertical and
     /// <c>--hdri-strength &lt;n&gt;</c> says how brightly it shines.
     /// </summary>
+    /// <summary>
+    /// <c>--route &lt;from&gt;[:&lt;via&gt;…]:&lt;to&gt;</c> flies the camera along the passages
+    /// from one station to another, stopping at those between (<c>entrance</c> and
+    /// <c>farthest</c> name stations the model gives). The route sets the clip's length, unless
+    /// <c>--route-seconds &lt;n&gt;</c> gives one to fit it into.
+    /// </summary>
+    private static bool TryAddRoute(IReadOnlyList<string> args, TextWriter stderr, ref SceneSpec spec)
+    {
+        string? stops = Option(args, "--route"), seconds = Option(args, "--route-seconds");
+        if (stops is null)
+        {
+            if (seconds is null) return true;
+            stderr.WriteLine("error: --route-seconds goes with --route <from>:<to>.");
+            return false;
+        }
+        var names = stops.Split(':');
+        if (stops.StartsWith("--", StringComparison.Ordinal) || names.Length < 2 || names.Any(string.IsNullOrWhiteSpace))
+        {
+            stderr.WriteLine($"error: --route takes stations as <from>:<to> or <from>:<via>:…:<to> (\"entrance:farthest\", \"e1:s40\"), not '{stops}'.");
+            return false;
+        }
+        var route = (spec.Camera.Route ?? new RouteParams()) with
+        {
+            From = names[0], To = names[^1], Via = names[1..^1], Stations = [], Timing = RouteTiming.Natural,
+        };
+        var animation = spec.Animation;
+        if (seconds is not null)
+        {
+            if (!double.TryParse(seconds, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double length)
+                || !(length > 0) || !double.IsFinite(length))
+            {
+                stderr.WriteLine($"error: --route-seconds takes a number of seconds (\"45\"), not '{seconds}'.");
+                return false;
+            }
+            route = route with { Timing = RouteTiming.Fit };
+            animation = animation with { DurationSeconds = length };
+        }
+        spec = spec with { Camera = spec.Camera with { Template = CameraTemplate.Route, Route = route }, Animation = animation };
+        return true;
+    }
+
+    /// <summary>A route that sets the clip's length is measured on the model here, before the
+    /// render or the bundle is planned; a station it cannot find is an error.</summary>
+    private static bool TryTimeRoute(string source, TextWriter stderr, ref SceneSpec spec)
+    {
+        if (spec.Camera.Template != CameraTemplate.Route || (spec.Camera.Route ?? new RouteParams()).Timing != RouteTiming.Natural)
+            return true;
+        try
+        {
+            var geometry = Therion.CaveGeometry.GeometryStage.Build(CaveModelReader.ReadFile(source));
+            spec = CameraRoutes.WithNaturalDuration(spec, CameraFraming.FromGeometry(geometry));
+            return true;
+        }
+        catch (ArgumentException ex)
+        {
+            stderr.WriteLine($"error: {ex.Message.Split(" (Parameter", 2)[0]}");
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CaveFileFormatException)
+        {
+            stderr.WriteLine($"error: cannot read '{source}' for its route: {ex.Message}");
+            return false;
+        }
+    }
+
     private static bool TryAddHdri(IReadOnlyList<string> args, TextWriter stderr, ref SceneSpec spec)
     {
         string? image = Option(args, "--hdri"), rotation = Option(args, "--hdri-rotation"), strength = Option(args, "--hdri-strength");

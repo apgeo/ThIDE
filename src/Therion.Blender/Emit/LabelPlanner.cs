@@ -64,7 +64,7 @@ public static class LabelPlanner
 
         var stations = PlanStations(labels.Stations, labels.Roof, meta, diagonal, out bool capped, out int matched);
         var components = labels.Components.Show ? PlanComponents(labels.Components, meta, diagonal) : [];
-        bool inside = spec.Camera.Template == CameraTemplate.Flythrough;
+        bool inside = spec.Camera.Template is CameraTemplate.Flythrough or CameraTemplate.Route;
         var leads = labels.Leads.Show ? PlanLeads(labels.Leads, labels.Roof, meta, diagonal, inside) : [];
         var byDistance = leads.Count > 0 && labels.Leads.Sizing == LeadMarkerSizing.CameraDistance
             ? new LeadDistanceSizing(LeadDistanceFactor * labels.Leads.MarkerScale,

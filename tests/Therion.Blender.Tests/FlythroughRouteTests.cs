@@ -411,7 +411,7 @@ public class FlythroughRouteTests
 
     /// <summary>The legs of a route as the open tubes the mesher makes of them, for asking how
     /// much room a point has: its distance to the nearest wall plane of a tube it is inside.</summary>
-    private sealed class Passage
+    internal sealed class Passage
     {
         private readonly List<(CaveVector3 From, CaveVector3 Along, double Length, List<(CaveVector3 On, CaveVector3 Outward)> Walls)> _legs = [];
 

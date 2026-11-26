@@ -177,6 +177,23 @@ public sealed class CenterlineGraph
         Dijkstra(source, weighted, out _);
 
     /// <summary>
+    /// The shortest way along the legs (in metres) from station <paramref name="from"/> to station
+    /// <paramref name="to"/>, as the station indices passed, both ends included: just
+    /// <paramref name="from"/> when the two are the same station, empty when no leg joins them.
+    /// Deterministic: of two equally long ways, the one Dijkstra settles first.
+    /// </summary>
+    public IReadOnlyList<int> ShortestPath(int from, int to)
+    {
+        if (from == to) return [from];
+        Dijkstra(from, weighted: true, out var prev);
+        if (!prev.ContainsKey(to)) return [];
+        var indices = new List<int>();
+        for (int node = to; node != -1; node = prev[node]) indices.Add(node);
+        indices.Reverse();
+        return indices;
+    }
+
+    /// <summary>
     /// The passage network with every run of degree-2 stations contracted into a single branch
     /// between the junctions and dead ends at its ends.
     /// </summary>

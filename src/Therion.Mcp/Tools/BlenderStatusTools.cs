@@ -7,7 +7,7 @@ using Therion.Blender.Presets;
 
 namespace Therion.Mcp.Tools;
 
-/// <param name="Camera">The camera move: static, orbit, helix, flythrough, viewpoints, or stillSet.</param>
+/// <param name="Camera">The camera move: static, orbit, helix, flythrough, viewpoints, stillSet, or route.</param>
 /// <param name="DurationSeconds">Length of an animated output; null for stills.</param>
 /// <param name="Frames">How many frames it renders as it stands (one per still).</param>
 public sealed record RenderPresetDto(

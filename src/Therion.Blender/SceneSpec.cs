@@ -134,6 +134,9 @@ public sealed record CameraSpec
 
     /// <summary>Still-set knobs (<see cref="CameraTemplate.StillSet"/>).</summary>
     public StillSetParams? Stills { get; init; }
+
+    /// <summary>Route knobs (<see cref="CameraTemplate.Route"/>; null ⇒ entrance to farthest).</summary>
+    public RouteParams? Route { get; init; }
 }
 
 /// <summary>Timing for animated outputs (frame range = round(fps · duration)).</summary>

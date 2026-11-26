@@ -52,7 +52,7 @@ internal static class FlythroughRoute
 
     /// <summary>Below this horizontal share a direction is too near the vertical to have a
     /// heading (about 6° off it).</summary>
-    private const double MinHorizontalShare = 0.1;
+    internal const double MinHorizontalShare = 0.1;
 
     // ---- where the camera flies ----
 
@@ -72,26 +72,48 @@ internal static class FlythroughRoute
         return Round(stations, null, p.SmoothingIterations);
     }
 
+    /// <summary>
+    /// The line of one stretch of a route between two stops, start to end, in local coordinates:
+    /// as <see cref="Build"/> makes the flythrough's, except at an end where the route goes on
+    /// (<paramref name="before"/> or <paramref name="after"/>, the tube of the leg beyond that
+    /// end, is given): there the stretch ends where the route passes that station, so that it
+    /// joins the next stretch, and does not step into its leg. With no tube given (the route's
+    /// two ends, a stop where it turns back, walls that are not tubes) an end is as the
+    /// flythrough's.
+    /// </summary>
+    internal static IReadOnlyList<CaveVector3> Stretch(
+        IReadOnlyList<CaveVector3> stations, IReadOnlyList<TubeLeg?>? tubes, KdTree? walls, FlythroughParams p,
+        TubeLeg? before, TubeLeg? after)
+    {
+        tubes = tubes is { } legs && legs.Count == stations.Count - 1 ? legs : null;
+        if (p.ClearanceMeters > 0 && tubes is not null) return AlongTubes(stations, tubes, p, before, after);
+        if (p.ClearanceMeters > 0 && walls is { Count: > 0 }) return BetweenWalls(stations, walls, p);
+        return Round(stations, null, p.SmoothingIterations);
+    }
+
     /// <summary>The middle of the tubes: from a passage radius inside the first leg to a
     /// passage radius short of the end of the last, through the middle of the passage at every
-    /// station between, with the corners rounded as far as the room at each allows.</summary>
+    /// station between, with the corners rounded as far as the room at each allows. An end with
+    /// the tube beyond it given (<paramref name="before"/>, <paramref name="after"/>) is where
+    /// the route passes that station instead.</summary>
     private static IReadOnlyList<CaveVector3> AlongTubes(
-        IReadOnlyList<CaveVector3> stations, IReadOnlyList<TubeLeg?> tubes, FlythroughParams p)
+        IReadOnlyList<CaveVector3> stations, IReadOnlyList<TubeLeg?> tubes, FlythroughParams p,
+        TubeLeg? before = null, TubeLeg? after = null)
     {
         int last = stations.Count - 1;
         var line = new CaveVector3[stations.Count];
         var slack = new double[stations.Count]; // how far a rounded corner may leave the line
 
-        line[0] = tubes[0]?.From.Center ?? stations[0];
-        line[last] = tubes[last - 1]?.To.Center ?? stations[last];
+        line[0] = before is null ? tubes[0]?.From.Center ?? stations[0] : Joint(stations[0], before, tubes[0]).Point;
+        line[last] = after is null ? tubes[last - 1]?.To.Center ?? stations[last] : Joint(stations[last], tubes[last - 1], after).Point;
         for (int i = 1; i < last; i++)
         {
             (line[i], double room) = Joint(stations[i], tubes[i - 1], tubes[i]);
             slack[i] = Math.Max(0.0, room - Math.Min(p.ClearanceMeters, room * RoomShare));
         }
 
-        line[0] = StepIn(line[0], line[1], tubes[0]?.From);
-        line[last] = StepIn(line[last], line[last - 1], tubes[last - 1]?.To);
+        if (before is null) line[0] = StepIn(line[0], line[1], tubes[0]?.From);
+        if (after is null) line[last] = StepIn(line[last], line[last - 1], tubes[last - 1]?.To);
         return Round(line, slack, p.SmoothingIterations);
     }
 
@@ -337,7 +359,7 @@ internal static class FlythroughRoute
 
     /// <summary>The point at arc length <paramref name="distance"/>, continued straight past
     /// the end of the path so the camera keeps looking along the passage on the final stretch.</summary>
-    private static CaveVector3 PointAhead(CenterlinePath path, double distance)
+    internal static CaveVector3 PointAhead(CenterlinePath path, double distance)
     {
         if (path.Points.Count == 0) return CaveVector3.Zero;
         if (distance <= path.Length || path.Points.Count < 2) return path.SampleAtDistance(distance);
@@ -349,7 +371,7 @@ internal static class FlythroughRoute
     /// <summary>Gives the moments without a heading (the view is near the vertical there) the
     /// heading before them, and makes the sequence continuous: no jump of a full turn where the
     /// angle wraps round.</summary>
-    private static void HoldHeadings(double[] heading, bool[] hasHeading)
+    internal static void HoldHeadings(double[] heading, bool[] hasHeading)
     {
         int first = Array.IndexOf(hasHeading, true);
         if (first < 0) return; // straight up or down all the way: any heading will do
@@ -363,7 +385,7 @@ internal static class FlythroughRoute
 
     /// <summary>A weighted average over neighbours either side (Gaussian weights, standard
     /// deviation <paramref name="sigma"/> entries); the ends repeat.</summary>
-    private static double[] Smoothed(double[] values, double sigma)
+    internal static double[] Smoothed(double[] values, double sigma)
     {
         if (sigma < 0.25 || values.Length < 3) return values;
         int radius = (int)Math.Ceiling(sigma * 3.0);
@@ -392,7 +414,7 @@ internal static class FlythroughRoute
     /// two keeps the limit and does half of each. Each is then run the other way from the
     /// other end's own value, so the view starts and ends where it was asked to.
     /// </summary>
-    private static void LimitTurn(double[] heading, double[] pitch, double maxStep)
+    internal static void LimitTurn(double[] heading, double[] pitch, double maxStep)
     {
         int last = heading.Length - 1;
         var (lateHeading, latePitch) = ((double[])heading.Clone(), (double[])pitch.Clone());
