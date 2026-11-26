@@ -383,6 +383,32 @@ public static class SceneSpecValidator
                     bad("camera.flythrough.smoothingIterations", $"Smoothing iterations must be within 0–{MaxSmoothingIterations}.");
                 break;
 
+            case CameraTemplate.Route:
+                var route = spec.Camera.Route ?? new RouteParams();
+                if (route.Stations.Count > 0 && (route.From is not null || route.To is not null || route.Via.Count > 0))
+                    bad("camera.route.stations", "A route is either a list of stations or from, to and via, not both.");
+                if (route.Stations.Count == 1)
+                    bad("camera.route.stations", "A list of stations needs at least two.");
+                foreach (var (name, path) in RouteNames(route))
+                    if (string.IsNullOrWhiteSpace(name)) bad(path, "A route names each station.");
+                if (string.Equals(route.From, RouteParams.Farthest, StringComparison.OrdinalIgnoreCase)
+                    || (route.Stations.Count > 0 && string.Equals(route.Stations[0], RouteParams.Farthest, StringComparison.OrdinalIgnoreCase)))
+                    bad(route.Stations.Count > 0 ? "camera.route.stations[0]" : "camera.route.from",
+                        $"'{RouteParams.Farthest}' is measured from the start; a route cannot start there.");
+                if (!Ok(route.StartHoldSeconds, 0, MaxDurationSeconds))
+                    bad("camera.route.startHoldSeconds", "Hold must be a non-negative number of seconds.");
+                if (!Ok(route.HoldSeconds, 0, MaxDurationSeconds))
+                    bad("camera.route.holdSeconds", "Hold must be a non-negative number of seconds.");
+                if (!Ok(route.EndHoldSeconds, 0, MaxDurationSeconds))
+                    bad("camera.route.endHoldSeconds", "Hold must be a non-negative number of seconds.");
+                if (!Ok(route.LookAheadMeters, 0, 1_000_000))
+                    bad("camera.route.lookAheadMeters", "Look-ahead must be a non-negative distance.");
+                if (!Ok(route.ClearanceMeters, 0, 1_000_000))
+                    bad("camera.route.clearanceMeters", "Clearance must be a non-negative distance.");
+                if (route.SmoothingIterations is < 0 or > MaxSmoothingIterations)
+                    bad("camera.route.smoothingIterations", $"Smoothing iterations must be within 0–{MaxSmoothingIterations}.");
+                break;
+
             case CameraTemplate.Viewpoints:
                 var vps = spec.Camera.Viewpoints;
                 if (vps is null || vps.Viewpoints.Count < MinViewpoints)
@@ -412,6 +438,14 @@ public static class SceneSpecValidator
                 bad("camera.template", $"Unknown camera template {spec.Camera.Template}.");
                 break;
         }
+    }
+
+    private static IEnumerable<(string? Name, string Path)> RouteNames(RouteParams route)
+    {
+        if (route.From is not null) yield return (route.From, "camera.route.from");
+        if (route.To is not null) yield return (route.To, "camera.route.to");
+        for (int i = 0; i < route.Via.Count; i++) yield return (route.Via[i], $"camera.route.via[{i}]");
+        for (int i = 0; i < route.Stations.Count; i++) yield return (route.Stations[i], $"camera.route.stations[{i}]");
     }
 
     private static void ValidateCaptions(IReadOnlyList<CaptionSpec> captions, string path, Action<string, string> bad)

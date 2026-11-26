@@ -1,5 +1,12 @@
 # Therion.CaveGeometry — changes for consumers
 
+## 2026-11-26 — shortest paths as stations
+
+### Additive API
+- **`CenterlineGraph.ShortestPath(from, to)`**: the station indices of the shortest way along the
+  legs (in metres) between two stations, both ends included; `[from]` for the same station, empty
+  when no leg joins them. Deterministic.
+
 ## 2026-11-25 — reveal values on the vertices of a mesh
 
 ### Additive API

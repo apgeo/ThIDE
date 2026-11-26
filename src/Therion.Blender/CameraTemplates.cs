@@ -24,6 +24,23 @@ public enum CameraTemplate
     Viewpoints,
     /// <summary>A set of framed still shots (standard orthographic views + custom).</summary>
     StillSet,
+    /// <summary>A flight along the passages between named stations: from one to another,
+    /// through others on the way, or along a list of stations; the camera's speed follows the
+    /// size of the passage, and it stops, holds and turns where it is asked to.</summary>
+    Route,
+}
+
+/// <summary>Where a route's length of time comes from.</summary>
+public enum RouteTiming
+{
+    /// <summary>The clip's duration (the spec's animation) is given: the flight is scaled to fit
+    /// it, holds and turns kept, the travel sped up or slowed down.</summary>
+    Fit,
+    /// <summary>The route sets the clip's duration: travel at the speed the passages give, plus
+    /// the holds and turns. Where the duration is filled in before planning
+    /// (<c>CameraRoutes.WithNaturalDuration</c>); a planner given a duration fits the flight to
+    /// it.</summary>
+    Natural,
 }
 
 /// <summary>Orbit/helix turn direction (seen from above).</summary>
@@ -129,6 +146,62 @@ public sealed record FlythroughParams
 
     /// <summary>Fly the passage from its far end back to the start.</summary>
     public bool Reverse { get; init; }
+}
+
+/// <summary>
+/// Route parameters: the stations a flight joins along the shortest passages between them. Either
+/// <see cref="From"/>, <see cref="To"/> and <see cref="Via"/> (the stops, in order), or a list of
+/// <see cref="Stations"/> to pass in order. A station is named as the model names it, or as
+/// <c>name@survey</c> where the name alone is in more than one survey. Two names stand for a
+/// station found in the model: <see cref="Entrance"/> (the first station flagged as an entrance)
+/// and <see cref="Farthest"/> (the station farthest from the start along the passages).
+/// </summary>
+/// <remarks>The camera flies at <c>clamp(2 · passage radius, 1.5, 12)</c> metres a second
+/// (the radius from the passage's tubes, else a fixed one), speeds up from rest and slows down to
+/// rest over about a second at every stop, holds there (<see cref="HoldSeconds"/>) and turns its
+/// view in place, at the flythrough's turn limit, to the way it goes on.</remarks>
+public sealed record RouteParams
+{
+    /// <summary>The symbolic name of the first station the model flags as an entrance.</summary>
+    public const string Entrance = "entrance";
+
+    /// <summary>The symbolic name of the station farthest from the route's start, measured along
+    /// the passages.</summary>
+    public const string Farthest = "farthest";
+
+    /// <summary>Where the route starts; null = <see cref="Entrance"/> (or, in a model with no
+    /// entrance, the first dead end of its largest part).</summary>
+    public string? From { get; init; }
+
+    /// <summary>Where it ends; null = <see cref="Farthest"/>.</summary>
+    public string? To { get; init; }
+
+    /// <summary>Stops on the way, in order. The camera stops at each, holds and turns.</summary>
+    public IReadOnlyList<string> Via { get; init; } = [];
+
+    /// <summary>Instead of from, to and via: the stations to pass, in order, each joined to the
+    /// next by the shortest passage. The camera stops only at the first and the last.</summary>
+    public IReadOnlyList<string> Stations { get; init; } = [];
+
+    /// <summary>How long the camera holds at the start before it moves off (seconds).</summary>
+    public double StartHoldSeconds { get; init; }
+
+    /// <summary>How long it holds at each stop on the way (seconds), before it turns.</summary>
+    public double HoldSeconds { get; init; } = 1.0;
+
+    /// <summary>How long it holds at the end (seconds).</summary>
+    public double EndHoldSeconds { get; init; }
+
+    public RouteTiming Timing { get; init; } = RouteTiming.Fit;
+
+    /// <summary>As <see cref="FlythroughParams.LookAheadMeters"/>.</summary>
+    public double LookAheadMeters { get; init; } = 6.0;
+
+    /// <summary>As <see cref="FlythroughParams.ClearanceMeters"/>.</summary>
+    public double ClearanceMeters { get; init; } = 1.5;
+
+    /// <summary>As <see cref="FlythroughParams.SmoothingIterations"/>.</summary>
+    public int SmoothingIterations { get; init; } = 2;
 }
 
 /// <summary>One explicit camera pose in a viewpoint sequence or custom still (local

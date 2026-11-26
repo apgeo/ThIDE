@@ -488,6 +488,56 @@ cel din Blender 4, mai albastru și mai luminos; playerul cere în ambele cerul 
 o scenă arată la fel în Blender 4.2, 4.5 și 5.0. (Până la playerul 1.8 al ThIDE, o scenă sub soare
 și cer arăta foarte diferit în Blender 5.)
 
+## Zborul pe un traseu între stații
+
+Șablonul *Flythrough* zboară prin cea mai lungă galerie a peșterii. Șablonul **Route** zboară pe
+drumul pe care îl numiți: de la o stație la alta, de-a lungul galeriilor, cu opriri la stațiile de
+pe drum. Stațiile sunt unite pe cele mai scurte galerii dintre ele, așa că un traseu până la capătul
+unei galerii laterale și înapoi înseamnă trei nume.
+
+- **Viteza după mărimea galeriei.** Camera zboară cu de două ori raza galeriei pe secundă, între
+  1,5 și 12 m/s: o târâtoare lată de 1,4 m este parcursă cu 1,5 m/s, o galerie lată de 10 m cu
+  10 m/s. Raza se citește din pereții galeriei, așa cum îi dau stânga, dreapta, sus și jos ale
+  ridicării; o galerie desenată din pereți reali (scrap-uri) este parcursă cu 4 m/s. Între galerii
+  de mărimi diferite viteza se schimbă treptat.
+- **Opriri.** La fiecare oprire camera încetinește până se oprește, în aproximativ o secundă,
+  stă pe loc (1 s la o oprire de pe drum, dacă nu dați alt timp), își rotește privirea pe loc, cu
+  cel mult 100° pe secundă, spre direcția în care merge mai departe, apoi accelerează din nou. La
+  capătul unei fundături se întoarce complet, în aproximativ două secunde.
+- **Durata clipului.** Un traseu durează cât îi iau deplasarea, opririle și rotirile, iar în linia
+  de comandă aceasta este durata clipului. Dacă dați în schimb o durată, deplasarea este grăbită
+  sau încetinită ca să încapă în ea; opririle și rotirile își păstrează durata.
+- **Două nume țin locul unor stații pe care le dă modelul:** `entrance`, prima stație semnalată
+  ca intrare, și `farthest`, stația cea mai îndepărtată de începutul traseului, măsurată de-a
+  lungul galeriilor. Un traseu fără stații numite merge de la intrare până la stația cea mai
+  îndepărtată. O stație cu același nume în mai multe ridicări se numește împreună cu ridicarea ei,
+  `5@upper`.
+
+Un exemplu inventat: intrarea peșterii este `e1`, o galerie laterală pleacă din galeria principală
+la `s12` și se termină la `b7`, iar galeria principală continuă până la `s40`. Pentru a intra, a
+privi galeria laterală până la capăt, a reveni și a merge mai departe:
+
+```
+therion-cli blender pestera.lox --preset "Full flythrough" --route e1:b7:s40
+```
+
+Același lucru într-o specificație de randare:
+
+```json
+"camera": {
+  "template": "Route",
+  "route": { "from": "e1", "via": ["b7"], "to": "s40", "holdSeconds": 1.5, "endHoldSeconds": 2, "timing": "Natural" }
+}
+```
+
+`stations` (`["e1", "s12", "s40"]`) enumeră stațiile de parcurs în locul lui `from`, `via` și `to`;
+camera se oprește atunci doar la prima și la ultima. `startHoldSeconds`, `holdSeconds` și
+`endHoldSeconds` sunt opririle de la început, de la fiecare oprire de pe drum și de la sfârșit;
+`lookAheadMeters`, `clearanceMeters` și `smoothingIterations` sunt cele ale zborului prin galerii.
+Cu `"timing": "Fit"` (implicit) traseul este potrivit la durata din specificație. În panou,
+șablonul **Route** zboară de la intrare până la stația cea mai îndepărtată, în durata clipului. O
+stație pe care modelul nu o are oprește randarea, iar mesajul îi spune numele.
+
 ## Doi constructori de scenă
 
 ThIDE are două moduri de a construi scena în Blender, iar **Constructor de scenă (avansat)** alege
@@ -563,7 +613,8 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--reveal date|order|distance [--reveal-from <station>] \
                      [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]] \
                     [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]] \
-                    [--leads <file.json>]... [--lamp-reach]
+                    [--leads <file.json>]... [--lamp-reach] \
+                    [--route <from>[:<via>...]:<to> [--route-seconds <n>]]
 ```
 
 `--export` scrie scriptul și resursele fără a rula Blender; altfel randează. Căile fișierelor
@@ -587,6 +638,10 @@ randării, `2` la o eroare de utilizare sau de specificație.
   privește camera: vedeți
   [O peșteră privită de departe](#o-peșteră-privită-de-departe-bătaia-lămpii). Nu merge împreună
   cu `--hdri`.
+- `--route e1:b7:s40` zboară camera de la `e1`, prin `b7`, până la `s40`, de-a lungul galeriilor,
+  oricare ar fi camera presetării: vedeți [Zborul pe un traseu între stații](#zborul-pe-un-traseu-între-stații).
+  Traseul dă durata clipului; `--route-seconds 45` îl potrivește în schimb în 45 de secunde. Merge
+  și cu `--bundle`.
 - **Marcaje pentru continuări.** O presetare sau o specificație care marchează continuările (*Full
   flythrough* o face) marchează stațiile pe care modelul însuși le are semnalate drept continuări,
   lucru pe care îl conține un fișier `.lox` (în Therion: `station <nume> "<comentariu>"

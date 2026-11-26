@@ -455,6 +455,55 @@ of Blender 4, bluer and brighter; the player asks for the sky of Blender 4 in bo
 looks the same in Blender 4.2, 4.5 and 5.0. (Up to ThIDE's player 1.8 a scene under the sun and
 the sky looked very different in Blender 5.)
 
+## Flying a route between stations
+
+The *Flythrough* template flies the cave's longest passage. The **Route** template flies the way
+you name: from one station to another along the passages, stopping at stations on the way. The
+stations are joined by the shortest passages between them, so a route out to the end of a side
+passage and back is three names.
+
+- **Speed by passage size.** The camera flies at twice the passage's radius a second, held
+  between 1.5 and 12 m/s: a crawl 1.4 m wide is flown at 1.5 m/s, a gallery 10 m wide at 10 m/s.
+  The radius is read from the passage's walls as the survey's left, right, up and down give them;
+  a passage drawn from real scrap walls is flown at 4 m/s. Between passages of different size the
+  speed changes gradually.
+- **Stops.** At every stop the camera slows down to rest over about a second, holds (1 s at a stop
+  on the way, unless you give another time), turns its view in place, at most 100° a second, to
+  the way it goes on, and speeds up again. At the end of a dead end it turns right round, in about
+  two seconds.
+- **The clip's length.** A route takes the time its travel, holds and turns take, and on the
+  command line that is the clip's length. Given a length instead, the travel is sped up or slowed
+  down to fit it; the holds and turns keep theirs.
+- **Two names stand for stations the model gives:** `entrance`, the first station flagged as an
+  entrance, and `farthest`, the station farthest from the route's start along the passages. A
+  route with no stations named runs from the entrance to the farthest station. A station named in
+  more than one survey is named with its survey, `5@upper`.
+
+An invented example: the cave's entrance is `e1`, a side passage leaves the main passage at `s12`
+and ends at `b7`, and the main passage goes on to `s40`. To fly in, look into the side passage
+to its end, come back and go on:
+
+```
+therion-cli blender cave.lox --preset "Full flythrough" --route e1:b7:s40
+```
+
+The same in a render spec:
+
+```json
+"camera": {
+  "template": "Route",
+  "route": { "from": "e1", "via": ["b7"], "to": "s40", "holdSeconds": 1.5, "endHoldSeconds": 2, "timing": "Natural" }
+}
+```
+
+`stations` (`["e1", "s12", "s40"]`) lists stations to pass instead of `from`, `via` and `to`; the
+camera then stops only at the first and the last. `startHoldSeconds`, `holdSeconds` and
+`endHoldSeconds` are the holds at the start, at each stop on the way and at the end;
+`lookAheadMeters`, `clearanceMeters` and `smoothingIterations` are the flythrough's. With
+`"timing": "Fit"` (the default) the route is fitted to the spec's duration. In the panel, the
+**Route** template flies from the entrance to the farthest station in the clip's length. A
+station the model does not have stops the render with its name in the message.
+
 ## Two scene builders
 
 ThIDE has two ways of building the scene in Blender, and **Scene builder (advanced)** chooses
@@ -526,7 +575,8 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--reveal date|order|distance [--reveal-from <station>] \
                      [--reveal-dates <file.3d>] [--reveal-seconds <start>-<end>]] \
                     [--hdri <image.hdr|.exr> [--hdri-rotation <degrees>] [--hdri-strength <n>]] \
-                    [--leads <file.json>]... [--lamp-reach]
+                    [--leads <file.json>]... [--lamp-reach] \
+                    [--route <from>[:<via>...]:<to> [--route-seconds <n>]]
 ```
 
 `--export` writes the script and assets without running Blender; otherwise it renders. Produced
@@ -548,6 +598,10 @@ failure, `2` on a usage or spec error.
   the camera looks over: see
   [A cave seen from far away](#a-cave-seen-from-far-away-the-lamps-reach). It does not go with
   `--hdri`.
+- `--route e1:b7:s40` flies the camera from `e1` through `b7` to `s40` along the passages,
+  whatever the preset's camera was: see [Flying a route between stations](#flying-a-route-between-stations).
+  The route sets the clip's length; `--route-seconds 45` fits it into 45 seconds instead. It goes
+  with `--bundle` too.
 - **Lead markers.** A preset or spec that marks leads (*Full flythrough* does) marks the stations
   the model itself flags as continuations, which a `.lox` file carries (Therion's
   `station <name> "<comment>" continuation`); a `.3d` file has no such flags. `--leads leads.json`

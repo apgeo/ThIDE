@@ -225,7 +225,7 @@ public class CameraScriptGoldenTests
         return null;
     }
 
-    private static string GoldenPath(string fileName)
+    internal static string GoldenPath(string fileName)
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null)
