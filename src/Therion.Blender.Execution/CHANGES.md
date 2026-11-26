@@ -1,5 +1,32 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-27 — the render worker takes jobs from a server
+
+### Breaking changes
+- None. `RenderWorker` keeps its API; its loop moved into an internal `BundleJobRunner` that the
+  server mode shares, with every check of a bundle.
+
+### Additive API
+- **`RenderNodeWorker`** (`RunAsync(once, ct)` → `RenderNodeRun(Jobs, Unauthorized)`,
+  `JobFolder(id)`), with **`RenderNodeOptions`** (`Server`, `Token`, `NodeName`, `Scratch`,
+  `Limits`, `MaxTime`, `ModuleFolders`, `Poll`, `FirstBackoff`, `MaxBackoff`, `DownloadTries`,
+  `WorkerVersion`) and `RenderNodeUnauthorizedException`: claims a job, downloads its bundle
+  (streamed, size and SHA-256 checked before it is read), renders the plan the job names (full or
+  draft) in the container it names, sends heartbeats with the progress that renew the lease, uploads
+  only the movie or stills, subtitles, log and status, and completes, or fails with a reason. A
+  cancel at a heartbeat or a lost lease kills Blender's process tree; a job claimed again on the
+  same node goes on from its frames; network failures and 5xx are retried with a growing wait; 401
+  or 403 stops the worker. The token goes only to the server's own origin and into no log.
+- **`RenderNodeToken.TryRead`**: the token of a token file, refused when the file is a link or
+  others may read or write it (Unix), or the token is empty or holds a space.
+
+### therion-cli
+- `render-worker --server URL --token-file F [--node-name N] [--scratch DIR] [--once]
+  [--poll-seconds S]`, with the folder worker's `--blender`, `--modules`, `--max-hours`,
+  `--max-triangles` and `--max-bundle-gb`. Exit code 3 when the server refuses the token, 2 for a
+  usage error (an address that is not HTTPS or this machine's, a token file that is missing or
+  readable by others).
+
 ## 2026-11-27 — composite presets, estimates of a film
 
 ### Additive API

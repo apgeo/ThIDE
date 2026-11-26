@@ -31,6 +31,7 @@
     <Compile Include="..\Therion.Blender.Tests\SceneProbe\InventedCave.cs" Link="Blender\InventedCave.cs" />
     <Compile Include="..\Therion.Blender.Tests\SceneProbe\TourCave.cs" Link="Blender\TourCave.cs" />
     <Compile Include="..\Therion.Blender.Tests\Survex3dFixtureBuilder.cs" Link="Blender\Survex3dFixtureBuilder.cs" />
+    <Compile Include="..\Therion.Blender.Tests\FakeRenderServer.cs" Link="Blender\FakeRenderServer.cs" />
   </ItemGroup>
 
 </Project>
