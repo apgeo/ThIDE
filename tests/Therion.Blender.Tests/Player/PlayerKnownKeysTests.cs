@@ -48,7 +48,7 @@ public class PlayerKnownKeysTests : IDisposable
             for name in ("bpy", "bmesh", "mathutils"):
                 sys.modules[name] = types.ModuleType(name)
             from thide_player import api, core
-            names = {{JsonSerializer.Serialize(ScenePlan.PlayerFeatures)}}
+            names = {{JsonSerializer.Serialize(ScenePlan.PlayerFeatures.Append(MoviePlan.SegmentsFeature))}}
             modules = [importlib.import_module("thide_player.modules." + name) for name in names]
 
             """.Replace("            ", "") + body.Replace("            ", ""), new UTF8Encoding(false));
@@ -237,6 +237,80 @@ public class PlayerKnownKeysTests : IDisposable
         Same([4, 5], Numbers("firstKeys"));
         // A jump that ends a hold shows nothing of the value it replaces.
         Same([1, 1, 4], Numbers("held"));
+    }
+
+    /// <summary>
+    /// The plan of a movie of several scenes, as a storyboard is lowered to it: the player's own
+    /// checks take it, put every segment on the frame the library puts it on, and refuse a key
+    /// they do not know, a segment out of its place and a transition longer than what it joins.
+    /// In Blender, the movie itself is in PlayerMovieBlenderTests.
+    /// </summary>
+    [Fact]
+    public void TheMoviesPlan_IsCheckedByThePlayer_AsTheLibraryChecksIt()
+    {
+        var movie = StoryboardPlanner.Lower(
+            new Storyboard
+            {
+                Fps = 10,
+                Shots =
+                [
+                    new ShotSpec { Name = "Outside", Seconds = 2 },
+                    new ShotSpec { Seconds = 3, In = new TransitionSpec { Kind = TransitionKind.Dissolve, Seconds = 0.5 } },
+                    new ShotSpec { Seconds = 2, In = new TransitionSpec { Kind = TransitionKind.Dip, Seconds = 0.7, Color = new ColorRgb(1, 0, 0) } },
+                ],
+                Texts = new OverlaySpec { Title = "Invented Cave" },
+                Output = new OutputSpec { Width = 320, Height = 180, BaseName = "film" },
+            },
+            new SourceSpec { PlyPath = "/job/model.ply" }, PlanFixtures.MediumFraming, PlanFixtures.MediumMeta).Movie;
+        string plan = Path.Combine(_dir, "movie.json");
+        File.WriteAllText(plan, ScenePlanSerializer.Write(movie));
+
+        string? output = RunPython("""
+            segments = modules[names.index("segments")]
+            with open(sys.argv[1], encoding="utf-8") as stream:
+                plan = json.load(stream)
+            core.check(plan)
+            core.check_sections(plan, [segments, modules[names.index("texts")], modules[names.index("output")]])
+            ctx = api.Context(plan, "/job", None)
+            parts = segments.check(ctx, plan["segments"])
+            print(json.dumps([[p["first"], p["count"], p["kind"], p["over"], p["out"], p["into"], p["name"]] for p in parts]))
+            print(json.dumps(parts[2]["colour"]), parts[1]["plan"].replace("\\", "/"))
+
+            def refused(change):
+                changed = json.loads(json.dumps(plan))
+                change(changed["segments"])
+                try:
+                    core.check_sections(changed, [segments])
+                    segments.check(ctx, changed["segments"])
+                    print("played")
+                except api.PlanError as error:
+                    print(error)
+
+            refused(lambda s: s[1].update(tint=1))
+            refused(lambda s: s[1]["in"].update(curve=1))
+            refused(lambda s: s[1].update(start=2))
+            refused(lambda s: s[2]["in"].update(seconds=9))
+            refused(lambda s: s[0].update({"in": {"kind": "dip", "seconds": 1}}))
+            refused(lambda s: s[2].update(plan="../other.json"))
+            refused(lambda s: s[2].update(frames="s01"))
+            refused(lambda s: s.pop())
+            """, plan);
+        if (output is null) return;
+
+        string[] lines = output.TrimEnd('\n').Split('\n');
+        // Frames 1–20, 16–45 over a dissolve of five, 46–65 after a dip of three frames and four.
+        Assert.Equal(
+            "[[1, 20, \"cut\", 0, 0, 0, \"Outside\"], [16, 30, \"dissolve\", 5, 0, 0, \"s02\"], [46, 20, \"dip\", 0, 3, 4, \"s03\"]]", lines[0]);
+        Assert.Equal(movie.Placed().Select(p => p.First), new[] { 1, 16, 46 });
+        Assert.EndsWith("[1.0, 0.0, 0.0] /job/scene-plan.s02.json", lines[1]);
+        Assert.Equal($"segments[1].tint is not known to player {PlayerFiles.Version}; a newer player may be needed", lines[2]);
+        Assert.Equal($"segments[1].in.curve is not known to player {PlayerFiles.Version}; a newer player may be needed", lines[3]);
+        Assert.StartsWith("segments[1].start: the segment starts on frame 21; after the one before it, it starts on frame 16", lines[4]);
+        Assert.StartsWith("segments[2].in.seconds: the dip is longer than the segments it joins", lines[5]);
+        Assert.StartsWith("segments[0]: the first segment starts the movie", lines[6]);
+        Assert.StartsWith("segments[2].plan: \"../other.json\" is not a path beside the plan", lines[7]);
+        Assert.StartsWith("segments[2].frames: every segment needs a frames folder of its own", lines[8]);
+        Assert.StartsWith("segments: the last segment ends on frame 45 and the movie has 65", lines[9]);
     }
 
     [Fact]
