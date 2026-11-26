@@ -37,7 +37,7 @@ public sealed record AnnotationPlan(
 }
 
 /// <summary>Lowers <see cref="AnnotationSpec"/>s to a plan's annotations and changes.</summary>
-public static class AnnotationPlanner
+public static partial class AnnotationPlanner
 {
     /// <summary>The folder, beside a plan, that the photos of a spec's annotations go into.</summary>
     public const string PhotosFolder = "photos";
@@ -47,6 +47,7 @@ public static class AnnotationPlanner
     private const double TextSizeFraction = 0.012;
     private const double MarkerRadiusFraction = 0.01;
     private const double PhotoWidthFraction = 0.1;
+    private const double OutlineWidthFraction = 0.004;
 
     /// <summary>How far above its anchor a callout's text stands when the spec does not say, in
     /// letter heights.</summary>
@@ -97,7 +98,7 @@ public static class AnnotationPlanner
             }
             else
             {
-                at = (a.At ?? CaveVector3.Zero) - origin;
+                at = (a.At ?? (a.Kind == AnnotationKind.Outline && a.Points is { Count: > 0 } first ? first[0] : CaveVector3.Zero)) - origin;
             }
             at = Rounded(at);
 
@@ -121,9 +122,30 @@ public static class AnnotationPlanner
                     break;
 
                 case AnnotationKind.Marker:
+                    double radius = Rounded(a.Size ?? diagonal * MarkerRadiusFraction);
                     annotation = annotation with
                     {
-                        Kind = PlanAnnotationKind.Marker, Radius = Rounded(a.Size ?? diagonal * MarkerRadiusFraction), Color = a.Color,
+                        Kind = PlanAnnotationKind.Marker, Radius = radius, Color = a.Color,
+                        Symbol = a.Symbol is PlanMarkerSymbol.Ball ? null : a.Symbol,
+                        Image = a.Symbol == PlanMarkerSymbol.Image
+                            ? !string.IsNullOrWhiteSpace(a.Image) && paths.TryGetValue(Path.GetFullPath(a.Image), out string? picture)
+                                ? picture
+                                : throw new ArgumentException($"annotations[{i}].image: a marker that is an image needs its image file.", nameof(annotations))
+                            : null,
+                        SizeBy = a.SizeBy,
+                        Factor = a.SizeBy is null ? null : a.SizeFactor,
+                        MinRadius = a.SizeBy is null ? null : a.MinSize,
+                        MaxRadius = a.SizeBy is null ? null : a.MaxSize,
+                    };
+                    break;
+
+                case AnnotationKind.Outline:
+                    annotation = annotation with
+                    {
+                        Kind = PlanAnnotationKind.Outline,
+                        Points = (a.Points ?? []).Select(p => Rounded(p - origin)).ToList(),
+                        Width = Rounded(a.Size ?? diagonal * OutlineWidthFraction),
+                        Color = a.Color,
                     };
                     break;
 
@@ -186,7 +208,8 @@ public static class AnnotationPlanner
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var a in annotations)
         {
-            if (a is not { Kind: AnnotationKind.Photo } || string.IsNullOrWhiteSpace(a.Image)) continue;
+            bool shows = a is { Kind: AnnotationKind.Photo } or { Kind: AnnotationKind.Marker, Symbol: PlanMarkerSymbol.Image };
+            if (!shows || string.IsNullOrWhiteSpace(a.Image)) continue;
             string source = Path.GetFullPath(a.Image);
             if (taken.ContainsKey(source)) continue;
             string name = SafeFileName(a.Image);

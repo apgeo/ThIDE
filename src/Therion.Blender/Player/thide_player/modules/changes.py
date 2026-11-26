@@ -138,13 +138,18 @@ def build(ctx, changes):
     if not changes:
         return
     scene = ctx.scene
-    taken = {}                       # (object, property) -> the change that has it
+    taken = {}                       # (object, property, "id" or "role") -> the change that has it
     see_through, tinted, revealed = set(), set(), set()  # the materials that read the numbers
     faded, coloured, shown = [], [], []  # the objects whose numbers change
     soft = False                     # whether a reveal has an edge or a glow
     world = {}                       # the world's tracks, each with where the plan has it
     tracks = 0
-    for index, change in enumerate(changes):
+    # A change by id comes before one by role, so that it has a property of its target first and
+    # the role's change leaves that property of that target alone.
+    def by_role(change):
+        return isinstance(change.get("target"), dict) and change["target"].get("id") is None
+
+    for index, change in sorted(enumerate(changes), key=lambda pair: by_role(pair[1])):
         where = "changes[%d]" % index
         named = [name for name in OF_A_TARGET + OF_THE_SCENE if change.get(name) is not None]
         for name in named:
@@ -164,15 +169,23 @@ def build(ctx, changes):
             continue
 
         objects = targets(scene, target, where + ".target")
+        left_to_id = set()  # (object, property) a change by id has: this change by role leaves them
         for name in named:
             if name not in OF_A_TARGET:
                 raise api.PlanError('%s.%s: a change of "%s" has no target' % (where, name, name))
             for obj in objects:
-                if (obj.name, name) in taken:
+                way = "role" if by_role(change) else "id"
+                if (obj.name, name, way) in taken:
                     raise api.PlanError('%s.%s: %s changes "%s" of "%s" already'
-                                        % (where, name, taken[(obj.name, name)], name, obj.name))
-                taken[(obj.name, name)] = where
+                                        % (where, name, taken[(obj.name, name, way)], name, obj.name))
+                taken[(obj.name, name, way)] = where
+                if way == "role" and (obj.name, name, "id") in taken:
+                    left_to_id.add((obj.name, name))
+        all_named = named
         for obj in objects:
+            named = [name for name in all_named if (obj.name, name) not in left_to_id]
+            if not named:
+                continue
             light = obj.type == "LIGHT"
             for name in named:
                 if light and name not in ("visible", "energy"):

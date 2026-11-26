@@ -8,7 +8,11 @@ Each annotation has a kind and an anchor ("at"), the point it is about:
 
     label      a text that turns to face the camera, centred on the anchor
     callout    a text that stands "offset" away from the anchor, with a line from the anchor to it
-    marker     a glowing ball on the anchor
+    marker     a glowing ball on the anchor; "symbol" makes it a "pin", a "cone", a "cube", a
+               "ring" (turned to the camera) or an "image" (a small picture of "image", turned to
+               the camera, 2 x "radius" wide). "sizeBy" ("distance" or "screen") scales it with its
+               distance from the camera, as labels.markers.byDistance does
+    outline    a line of "width" that lies along "points", drawn as the plan's lines are
     photo      a picture from an image file, centred on the anchor or "offset" away from it (with
                a line to the anchor when "lineWidth" is given). It faces the camera: it stays
                parallel to the picture and upright in it, wherever the camera is and however
@@ -45,6 +49,7 @@ KEYS = [{
     "radius": None, "offset": None, "lineWidth": None, "color": None, "strength": None, "image": None,
     "width": None, "height": None, "facing": None, "normal": None, "up": None,
     "frame": {"width": None, "color": None},
+    "symbol": None, "sizeBy": None, "factor": None, "minRadius": None, "maxRadius": None, "points": None,
 }]
 
 # What every annotation says, and what one of each kind may say beside it.
@@ -52,7 +57,8 @@ OF_EVERY_KIND = ("id", "role", "kind", "at", "model")
 OF_A_KIND = {
     "label": ("text", "size", "color", "strength"),
     "callout": ("text", "size", "offset", "lineWidth", "color", "strength"),
-    "marker": ("radius", "color", "strength"),
+    "marker": ("radius", "color", "strength", "symbol", "image", "sizeBy", "factor", "minRadius", "maxRadius"),
+    "outline": ("points", "width", "color", "strength"),
     "photo": ("image", "width", "height", "facing", "normal", "up", "frame", "offset", "lineWidth", "strength"),
 }
 
@@ -91,8 +97,11 @@ def build(ctx, annotations):
                 raise api.PlanError('%s.%s: a %s has no "%s"' % (where, key, kind, key))
         at = mathutils.Vector(api.vector(item.get("at"), where + ".at"))
         anchor = anchor_of(scene, models, item, at, where)
-        for part in PARTS[kind](made, item, where):
+        parts = PARTS[kind](made, item, where)
+        for part in parts:
             put(scene, part, at, anchor, item.get("role", kind), ident)
+        if kind == "marker" and item.get("sizeBy") is not None:
+            size_marker(made, item, parts[0].obj, where)
     if made.mosaics:
         api.warn("the draft shows a photo as a mosaic of its colours, %d tiles along its longer side" % DRAFT_TILES)
     api.report("annotations", len(annotations))
@@ -248,10 +257,97 @@ def callout(made, item, where):
     return [Part(text, "text", colour, offset), Part(line(item["id"], offset, width, material), "line", colour)]
 
 
+SYMBOLS = ("ball", "pin", "cone", "cube", "ring", "image")
+
+
 def marker(made, item, where):
+    symbol = item.get("symbol", "ball")
+    if symbol not in SYMBOLS:
+        raise api.PlanError('%s.symbol: unknown symbol "%s"' % (where, symbol))
+    if symbol != "image" and "image" in item:
+        raise api.PlanError('%s.image: only a marker whose symbol is "image" has one' % where)
+    radius = positive(item.get("radius"), where + ".radius")
+    if symbol == "image":
+        # A small picture turned to the camera, as a photo is; it shows its image as it is.
+        card_item = {"id": item["id"], "image": item.get("image"), "width": 2.0 * radius,
+                     "strength": item.get("strength", 1.0)}
+        return photo(made, card_item, where)
     colour, strength = glow_of(item, where, MARKER_COLOUR, 2.0)
-    ball = api.ball(item["id"], positive(item.get("radius"), where + ".radius"), made.glow(colour, strength))
-    return [Part(ball, "ball", colour)]
+    material = made.glow(colour, strength)
+    if symbol == "ball":
+        return [Part(api.ball(item["id"], radius, material), "ball", colour)]
+    mesh = bpy.data.meshes.new(item["id"])
+    shape_of(symbol, mesh, radius)
+    mesh.materials.append(material)
+    obj = bpy.data.objects.new(item["id"], mesh)
+    if symbol == "ring":
+        api.face(obj, made.camera)
+    return [Part(obj, symbol, colour)]
+
+
+def shape_of(symbol, mesh, radius):
+    """Fills a mesh with a symbol of a marker. A pin and a cone stand with their point on the
+    anchor (the object's origin); a cube and a ring are centred on it."""
+    if symbol == "ring":
+        vertices, faces = [], []
+        around, across, tube = 24, 8, radius * 0.18
+        for i in range(around):
+            a = 2.0 * math.pi * i / around
+            for j in range(across):
+                b = 2.0 * math.pi * j / across
+                reach = radius + tube * math.cos(b)
+                vertices.append((reach * math.cos(a), reach * math.sin(a), tube * math.sin(b)))
+        for i in range(around):
+            for j in range(across):
+                first, next_i, next_j = i * across + j, ((i + 1) % around) * across + j, i * across + (j + 1) % across
+                faces.append((first, next_i, ((i + 1) % around) * across + (j + 1) % across, next_j))
+        mesh.from_pydata(vertices, [], faces)
+        mesh.update()
+        return
+    import bmesh
+    shape = bmesh.new()
+    if symbol == "cube":
+        bmesh.ops.create_cube(shape, size=2.0 * radius)
+    else:
+        sides = 16
+        height = 2.0 * radius
+        base = radius * (0.6 if symbol == "pin" else 1.0)
+        bmesh.ops.create_cone(shape, cap_ends=True, segments=sides, radius1=0.0, radius2=base, depth=height)
+        bmesh.ops.translate(shape, vec=(0.0, 0.0, height / 2.0), verts=shape.verts)  # the point on the origin
+        if symbol == "pin":
+            bmesh.ops.create_icosphere(shape, subdivisions=2, radius=radius,
+                                       matrix=mathutils.Matrix.Translation((0.0, 0.0, height + radius * 0.8)))
+    shape.to_mesh(mesh)
+    shape.free()
+
+
+def size_marker(made, item, obj, where):
+    """A driver scales the marker with its distance from the camera, as labels.markers.byDistance
+    does, and with the radius the marker was made at."""
+    how = item["sizeBy"]
+    if how not in ("distance", "screen"):
+        raise api.PlanError('%s.sizeBy: "distance" or "screen"' % where)
+    factor = positive(item.get("factor"), where + ".factor")
+    radius = item["radius"]
+    lowest = positive(item.get("minRadius", radius / 4.0), where + ".minRadius")
+    highest = positive(item.get("maxRadius", radius * 4.0), where + ".maxRadius")
+    if lowest > highest:
+        raise api.PlanError("%s.minRadius: the smallest radius is not larger than the largest" % where)
+    if how == "screen":
+        # A share of the picture's width: the width the lens sees at a distance is 2 tan(a/2) of it.
+        factor *= 2.0 * math.tan(made.camera.data.angle / 2.0)
+    api.size_by_distance(obj, made.camera, radius, {"factor": factor, "minRadius": lowest, "maxRadius": highest}, None, 0)
+
+
+def outline(made, item, where):
+    colour, strength = glow_of(item, where, TEXT_COLOUR, 1.5)
+    given = item.get("points")
+    if not isinstance(given, list) or len(given) < 2:
+        raise api.PlanError("%s.points: an outline needs at least two points" % where)
+    at = mathutils.Vector(api.vector(item.get("at"), where + ".at"))
+    points = [mathutils.Vector(api.vector(p, "%s.points[%d]" % (where, i))) - at for i, p in enumerate(given)]
+    width = positive(item.get("width"), where + ".width")
+    return [Part(tube_of(item["id"], points, width, made.glow(colour, strength), "outline"), "line", colour)]
 
 
 def photo(made, item, where):
@@ -322,7 +418,7 @@ def to_the_edge(offset, half_width, half_height, turn):
     return 0.98 * min(reaches) if reaches else 0.0
 
 
-PARTS = {"label": label, "callout": callout, "marker": marker, "photo": photo}
+PARTS = {"label": label, "callout": callout, "marker": marker, "photo": photo, "outline": outline}
 
 
 def turned(item, where):
@@ -348,13 +444,18 @@ def turned(item, where):
 def line(name, offset, width, material):
     """The line from an anchor to what stands offset away from it: a thin tube from the object's
     own origin, which is put on the anchor."""
+    return tube_of(name, [mathutils.Vector(NOWHERE), offset], width, material, "line")
+
+
+def tube_of(name, points, width, material, suffix):
+    """A thin tube through points that are given from the object's own origin."""
     vertices, faces = [], []
-    api.tube([mathutils.Vector(NOWHERE), offset], None, width / 2.0, vertices, faces, [])
-    mesh = bpy.data.meshes.new(name + ".line")
+    api.tube(points, None, width / 2.0, vertices, faces, [])
+    mesh = bpy.data.meshes.new(name + "." + suffix)
     mesh.from_pydata(vertices, [], faces)
     mesh.update()
     mesh.materials.append(material)
-    return bpy.data.objects.new(name + ".line", mesh)
+    return bpy.data.objects.new(name + "." + suffix, mesh)
 
 
 def card(name, image, width, height, border, border_colour, draft):

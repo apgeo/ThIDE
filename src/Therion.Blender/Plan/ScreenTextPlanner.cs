@@ -241,10 +241,11 @@ public static class ScreenTextPlanner
         if (overlays.TitleSeconds is { } seconds)
         {
             // A card: in the middle of the picture for its time, then it fades.
-            double goes = Rounded(overlays.TitleFade ?? TitleFadeSeconds);
+            double goes = Rounded(overlays.TitleFadeOut ?? overlays.TitleFade ?? TitleFadeSeconds);
+            double? comes = overlays.TitleFadeIn ?? overlays.TitleFade;
             PlanScreenItem Card(PlanScreenItem item) => item with
             {
-                End = Rounded(seconds + goes), FadeOut = goes > 0 ? goes : null, FadeIn = overlays.TitleFade is > 0 ? goes : null,
+                End = Rounded(seconds + goes), FadeOut = goes > 0 ? goes : null, FadeIn = comes is > 0 ? Rounded(comes.Value) : null,
             };
             items.Add(Card(Text("title", TitleRole, title, 0.5, subtitle is null ? 0.5 : 0.53, CardTitleSize * narrow) with
             {
@@ -255,7 +256,7 @@ public static class ScreenTextPlanner
             return;
         }
         double wrap = TitleWrapBeside(overlays.NorthArrow, aspect, narrow);
-        double? appears = overlays.TitleFade is > 0 ? Rounded(overlays.TitleFade.Value) : null;
+        double? appears = (overlays.TitleFadeIn ?? overlays.TitleFade) is > 0 ? Rounded((overlays.TitleFadeIn ?? overlays.TitleFade)!.Value) : null;
         items.Add(Text("title", TitleRole, title, 0.5, 1 - Margin, TitleSize * narrow) with { AlignY = PlanAlignY.Top, Wrap = wrap, FadeIn = appears });
         if (subtitle is not null)
             items.Add(Text("subtitle", SubtitleRole, subtitle, 0.5, 1 - Margin - TitleSize * narrow * 1.35, SubtitleSize * narrow) with

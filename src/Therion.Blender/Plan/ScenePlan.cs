@@ -623,6 +623,40 @@ public enum PlanAnnotationKind
     Marker,
     /// <summary>A picture from an image file.</summary>
     Photo,
+    /// <summary>A line of a width that lies along <see cref="PlanAnnotation.Points"/>: the outline
+    /// of a passage or a room on the surface it lies on, drawn as a plan's lines are.</summary>
+    Outline,
+}
+
+/// <summary>What a marker looks like.</summary>
+public enum PlanMarkerSymbol
+{
+    /// <summary>A glowing ball centred on the anchor.</summary>
+    Ball,
+    /// <summary>A ball on a point: the point is on the anchor and the ball stands above it.</summary>
+    Pin,
+    /// <summary>A cone that stands on its point, which is on the anchor.</summary>
+    Cone,
+    /// <summary>A cube centred on the anchor.</summary>
+    Cube,
+    /// <summary>A flat ring centred on the anchor, turned to the camera.</summary>
+    Ring,
+    /// <summary>A small picture from <see cref="PlanAnnotation.Image"/>, centred on the anchor
+    /// and turned to the camera, <c>2 × radius</c> wide.</summary>
+    Image,
+}
+
+/// <summary>What sets how large a marker is seen to be.</summary>
+public enum PlanMarkerSizing
+{
+    /// <summary>Its radius is <see cref="PlanAnnotation.Factor"/> metres for each metre between it
+    /// and the camera, between <see cref="PlanAnnotation.MinRadius"/> and
+    /// <see cref="PlanAnnotation.MaxRadius"/>: as <c>labels.markers.byDistance</c> has it.</summary>
+    Distance,
+    /// <summary>It is seen as large as <see cref="PlanAnnotation.Factor"/> times the picture's width
+    /// wherever the camera is, between the two radii: the radius that gives it follows from the
+    /// distance and the camera's lens at the start of the clip.</summary>
+    Screen,
 }
 
 /// <summary>Which way a photo faces.</summary>
@@ -682,8 +716,33 @@ public sealed record PlanAnnotation
     /// <summary>The height of the letters of a label or a callout, in metres.</summary>
     public double? Size { get; init; }
 
-    /// <summary>The radius of a marker, in metres.</summary>
+    /// <summary>The radius of a marker, in metres; with <see cref="SizeBy"/> the radius of the
+    /// shape the marker is made as, which the distance then scales.</summary>
     public double? Radius { get; init; }
+
+    /// <summary>What a marker looks like; null is <see cref="PlanMarkerSymbol.Ball"/>.</summary>
+    public PlanMarkerSymbol? Symbol { get; init; }
+
+    /// <summary>What sets how large a marker is seen to be; null is its radius, as it is.</summary>
+    public PlanMarkerSizing? SizeBy { get; init; }
+
+    /// <summary>With <see cref="SizeBy"/>: metres of radius per metre of distance
+    /// (<see cref="PlanMarkerSizing.Distance"/>), or the share of the picture's width the radius is
+    /// seen as (<see cref="PlanMarkerSizing.Screen"/>).</summary>
+    public double? Factor { get; init; }
+
+    /// <summary>With <see cref="SizeBy"/>: the smallest radius, in metres; null is a quarter of
+    /// <see cref="Radius"/>.</summary>
+    public double? MinRadius { get; init; }
+
+    /// <summary>With <see cref="SizeBy"/>: the largest radius, in metres; null is four times
+    /// <see cref="Radius"/>.</summary>
+    public double? MaxRadius { get; init; }
+
+    /// <summary>The points of an outline, in the plan's frame or, with <see cref="Model"/>, in
+    /// that model's own coordinates. At least two. <see cref="At"/> is where it is said to be (a
+    /// window that depends on the camera's nearness measures from it): a point of it.</summary>
+    public IReadOnlyList<CaveVector3>? Points { get; init; }
 
     /// <summary>Where the text of a callout, or the middle of a photo, stands from the anchor,
     /// in metres along the frame's axes. A callout needs one; a photo without one is centred on
@@ -695,7 +754,7 @@ public sealed record PlanAnnotation
     /// only when this is set.</summary>
     public double? LineWidth { get; init; }
 
-    /// <summary>The colour a label, a callout or a marker glows in; null is the colour the
+    /// <summary>The colour a label, a callout, a marker or an outline glows in; null is the colour the
     /// plan's labels have by default (cream for a text, orange-red for a marker). A photo has
     /// its own colours.</summary>
     public ColorRgb? Color { get; init; }
@@ -708,7 +767,7 @@ public sealed record PlanAnnotation
     /// <c>.jpg</c>.</summary>
     public string? Image { get; init; }
 
-    /// <summary>The width of a photo, in metres.</summary>
+    /// <summary>The width of a photo, or the thickness of an outline, in metres.</summary>
     public double? Width { get; init; }
 
     /// <summary>The height of a photo, in metres; null is what the image's own shape gives for
@@ -736,6 +795,7 @@ public sealed record PlanAnnotation
         PlanAnnotationKind.Callout => "callout",
         PlanAnnotationKind.Marker => "marker",
         PlanAnnotationKind.Photo => "photo",
+        PlanAnnotationKind.Outline => "outline",
         _ => "annotation",
     };
 }
@@ -973,6 +1033,9 @@ public readonly record struct PlanColorKey(double T, ColorRgb Value, PlanEasing 
 /// on, and a third (constant too) the value the move to the next key starts from, which no frame
 /// shows. A change without a target is of the scene itself (<see cref="WorldColor"/>,
 /// <see cref="WorldStrength"/>, <see cref="WorldBackdrop"/>, <see cref="WorldRotation"/>).
+/// A change by id and a change by role may both change one property of one target: the change by
+/// id has it, and the change by role leaves it alone for that target and changes it of the other
+/// targets of the role. Two by id, or two by role, may not.
 /// </summary>
 public sealed record PlanChange
 {

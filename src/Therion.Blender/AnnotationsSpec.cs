@@ -27,6 +27,8 @@ public enum AnnotationKind
     Marker,
     /// <summary>A picture from an image file.</summary>
     Photo,
+    /// <summary>A line of a thickness along <see cref="AnnotationSpec.Points"/>, lying on a surface.</summary>
+    Outline,
 }
 
 /// <summary>Which way a photo faces.</summary>
@@ -93,6 +95,32 @@ public sealed record AnnotationSpec
     /// <summary>A border about a photo.</summary>
     public bool Framed { get; init; }
 
+    /// <summary>What a marker looks like: a ball (the default), a pin, a cone, a cube, a ring, or a
+    /// small picture (<see cref="Image"/>, <c>2 × Size</c> wide).</summary>
+    public Plan.PlanMarkerSymbol? Symbol { get; init; }
+
+    /// <summary>What sets how large a marker is seen to be (<see cref="Plan.PlanMarkerSizing"/>);
+    /// null is its size as it is. Needs <see cref="SizeFactor"/>.</summary>
+    public Plan.PlanMarkerSizing? SizeBy { get; init; }
+
+    /// <summary>With <see cref="SizeBy"/>: metres of radius per metre of distance, or the share of
+    /// the picture's width the marker is seen across.</summary>
+    public double? SizeFactor { get; init; }
+
+    /// <summary>With <see cref="SizeBy"/>: the smallest radius, in metres; null is a quarter of the
+    /// size.</summary>
+    public double? MinSize { get; init; }
+
+    /// <summary>With <see cref="SizeBy"/>: the largest radius, in metres; null is four times the
+    /// size.</summary>
+    public double? MaxSize { get; init; }
+
+    /// <summary>The points of an outline, in the model's coordinates like <see cref="At"/>; its
+    /// thickness is <see cref="Size"/>. Without <see cref="At"/> and <see cref="Station"/> the
+    /// outline is at its first point.</summary>
+    [JsonConverter(typeof(TriplesConverter))]
+    public IReadOnlyList<CaveVector3>? Points { get; init; }
+
     /// <summary>What the annotation is, for a change of the plan that names a group: lower-case
     /// words joined by '-'. Null is its kind.</summary>
     public string? Role { get; init; }
@@ -132,6 +160,28 @@ public sealed record AnnotationSpec
 
     /// <summary>A colour, written as <c>[r, g, b]</c>; read from that or from
     /// <c>{ "r": …, "g": …, "b": … }</c>.</summary>
+    private sealed class TriplesConverter : JsonConverter<IReadOnlyList<CaveVector3>>
+    {
+        public override IReadOnlyList<CaveVector3> Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartArray) throw new JsonException("Expected a list of points: [[x, y, z], ...].");
+            var points = new List<CaveVector3>();
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+            {
+                var (x, y, z) = ReadTriple(ref reader, "x", "y", "z");
+                points.Add(new CaveVector3(x, y, z));
+            }
+            return points;
+        }
+
+        public override void Write(Utf8JsonWriter writer, IReadOnlyList<CaveVector3> value, JsonSerializerOptions options)
+        {
+            writer.WriteStartArray();
+            foreach (var p in value) WriteTriple(writer, p.X, p.Y, p.Z);
+            writer.WriteEndArray();
+        }
+    }
+
     private sealed class ColorConverter : JsonConverter<ColorRgb>
     {
         public override ColorRgb Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)

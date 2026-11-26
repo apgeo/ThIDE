@@ -61,7 +61,8 @@ public static class SceneSpecSerializer
         if (type.Type == typeof(RevealSpec))
         {
             foreach (var property in type.Properties)
-                if (property.Name is "from" or "datesPath" or "end") property.ShouldSerialize = (_, value) => value is not null;
+                if (property.Name is "from" or "datesPath" or "end" or "counterFormat") property.ShouldSerialize = (_, value) => value is not null;
+                else if (property.Name == "counterDecimals") property.ShouldSerialize = (_, value) => value is not 0;
         }
         if (type.Type == typeof(AnnotationSpec))
         {
@@ -88,7 +89,7 @@ public static class SceneSpecSerializer
         if (type.Type != typeof(OverlaySpec)) return;
         foreach (var property in type.Properties)
         {
-            if (property.Name is "credits" or "endCard" or "subtitle" or "titleSeconds" or "titleFade" or "corner")
+            if (property.Name is "credits" or "endCard" or "subtitle" or "titleSeconds" or "titleFade" or "titleFadeIn" or "titleFadeOut" or "corner")
                 property.ShouldSerialize = (_, value) => value is not null;
             else if (property.Name is "captions" or "cornerCaptions")
                 property.ShouldSerialize = (_, value) => value is IReadOnlyList<CaptionSpec> { Count: > 0 };

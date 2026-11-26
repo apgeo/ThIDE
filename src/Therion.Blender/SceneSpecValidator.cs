@@ -175,6 +175,15 @@ public static class SceneSpecValidator
             bad("labels.overlays.endCard.fade", "An end card takes from 0 seconds to its own time to appear.");
         if (overlays.TitleFade is { } titleFade && !(titleFade >= 0 && titleFade <= MaxEndCardSeconds))
             bad("labels.overlays.titleFade", $"A fade takes from 0 to {MaxEndCardSeconds} seconds.");
+        if (overlays.TitleFadeIn is { } fadeIn && !(fadeIn >= 0 && fadeIn <= MaxEndCardSeconds))
+            bad("labels.overlays.titleFadeIn", $"A fade takes from 0 to {MaxEndCardSeconds} seconds.");
+        if (overlays.TitleFadeOut is { } fadeOut)
+        {
+            if (!(fadeOut >= 0 && fadeOut <= MaxEndCardSeconds))
+                bad("labels.overlays.titleFadeOut", $"A fade takes from 0 to {MaxEndCardSeconds} seconds.");
+            else if (overlays.TitleSeconds is null)
+                bad("labels.overlays.titleFadeOut", "Only a title card goes: give it titleSeconds.");
+        }
         if (overlays.TitleSeconds is { } titleSeconds && !(titleSeconds > 0 && titleSeconds <= MaxDurationSeconds))
             bad("labels.overlays.titleSeconds", "A title card stays for more than 0 seconds.");
         if (!(overlays.FadeFromBlack >= 0 && overlays.FadeFromBlack <= MaxEndCardSeconds))
@@ -218,6 +227,10 @@ public static class SceneSpecValidator
             else if (reveal.By != RevealBy.Date)
                 bad("reveal.datesPath", "A file with survey dates goes with a reveal by date.");
         }
+        if (reveal.CounterFormat is not null && !reveal.CounterFormat.Contains(Plan.ScenePlanValidator.CounterPlace, StringComparison.Ordinal))
+            bad("reveal.counterFormat", $"A counter's text says where its number goes: {Plan.ScenePlanValidator.CounterPlace}.");
+        if (reveal.CounterDecimals is < 0 or > 6)
+            bad("reveal.counterDecimals", "A counter shows from 0 to 6 decimals.");
         if (!(reveal.Start >= 0) || !double.IsFinite(reveal.Start))
             bad("reveal.start", "The reveal starts at a time in seconds, not negative.");
         else if (reveal.Start >= duration)

@@ -47,6 +47,10 @@ public sealed record RevealOptions
 }
 
 /// <summary>A leg of the centreline with the reveal values at its two ends.</summary>
+/// <summary>A leg of a plain graph of legs, for <see cref="RevealField.FromLegs"/>: two stations by
+/// name and where they are, and, optionally, the day it was surveyed.</summary>
+public readonly record struct RevealGraphLeg(string From, string To, CaveVector3 FromPosition, CaveVector3 ToPosition, DateOnly? Date = null);
+
 public readonly record struct RevealLeg(CaveVector3 From, CaveVector3 To, double FromValue, double ToValue);
 
 /// <summary>
@@ -96,6 +100,48 @@ public sealed record RevealField
             RevealSource.Distance => ByDistance(model, shots, options.FromStation),
             _ => throw new ArgumentOutOfRangeException(nameof(options), options.Source, "Unknown reveal source."),
         };
+    }
+
+    /// <summary>
+    /// The reveal field of a plain graph of legs: station names and positions, and optionally the
+    /// date of each leg, with no <see cref="CaveModel"/> to build. The legs are those that are
+    /// meshed (no leg shorter than a millimetre). By date, the legs without a date take the
+    /// earliest one; by distance, from <see cref="RevealOptions.FromStation"/>, else from
+    /// <paramref name="entrances"/>, else from the first station of each separate part.
+    /// <see cref="RevealOptions.Dates"/> is not used. Null when there is nothing to reveal by.
+    /// </summary>
+    /// <param name="entrances">The names of the stations that are entrances.</param>
+    /// <exception cref="ArgumentException">A station that <see cref="RevealOptions.FromStation"/>
+    /// names is not in the graph.</exception>
+    public static RevealField? FromLegs(IReadOnlyList<RevealGraphLeg> legs, RevealOptions options, IReadOnlyCollection<string>? entrances = null)
+    {
+        ArgumentNullException.ThrowIfNull(legs);
+        ArgumentNullException.ThrowIfNull(options);
+        var stations = new Dictionary<string, CaveStation>(StringComparer.Ordinal);
+        void Station(string name, CaveVector3 position)
+        {
+            if (stations.ContainsKey(name)) return;
+            stations[name] = new CaveStation
+            {
+                Id = (uint)stations.Count, Name = name, Position = position,
+                Flags = entrances?.Contains(name) == true ? CaveStationFlags.Entrance : CaveStationFlags.None,
+            };
+        }
+        foreach (var leg in legs)
+        {
+            Station(leg.From, leg.FromPosition);
+            Station(leg.To, leg.ToPosition);
+        }
+        var model = new CaveModel
+        {
+            Stations = stations.Values.ToList(),
+            Shots = legs.Select(l => new CaveShot
+            {
+                FromStationId = stations[l.From].Id, ToStationId = stations[l.To].Id,
+                FromPosition = l.FromPosition, ToPosition = l.ToPosition, DateFrom = l.Date,
+            }).ToList(),
+        };
+        return Build(model, options with { Dates = null });
     }
 
     private static RevealField Of(RevealSource source, IReadOnlyList<CaveShot> shots, IReadOnlyList<(double From, double To)> values) => new()

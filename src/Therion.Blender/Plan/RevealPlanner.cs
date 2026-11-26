@@ -146,55 +146,98 @@ public static class RevealPlanner
         var reveal = spec.Reveal!;
         int fps = spec.Animation.Fps;
 
-        // Nothing is there while the threshold is at the lowest value. Everything is there, and
-        // nothing glows any more, once it is past the highest by the edge or by the glow's
-        // width, whichever is more, and by a little more, so that the last part is not left a
-        // hair short by the rounding of the numbers on the way.
-        double range = values.Max - values.Min;
-        double little = Math.Max(range, 1.0) * 1e-3;
-        double edge = Rounded(reveal.Edge * range);
-        double glow = reveal.Glow ? Rounded(Math.Max(GlowShare * range, little)) : 0.0;
-        double start = Rounded(reveal.Start);
-        double end = Rounded(reveal.End ?? (frameCount - 1) / (double)fps);
-        if (end <= start) end = Rounded(start + 1.0 / fps);
+        var change = Change(new PlanChangeTarget { Id = modelId }, values.Min, values.Max, reveal.Start, reveal.End ?? (frameCount - 1) / (double)fps,
+            reveal.Edge, reveal.Glow, reveal.GlowColor, fps);
+        PlanScreenItem? counter = null;
+        if (reveal.Counter && (reveal.By == RevealBy.Date || reveal.CounterFormat is not null))
+            counter = Counter(new PlanChangeTarget { Id = modelId }, values.Min, values.Max, reveal.CounterFormat ?? ScenePlanValidator.CounterPlace,
+                reveal.CounterDecimals);
+        return (change, counter);
+    }
 
-        var change = new PlanChange
+    /// <summary>
+    /// The change that reveals what <paramref name="target"/> names, by the rule the plan of a spec
+    /// uses, for whoever writes a plan without a <see cref="SceneSpec"/> or a <see cref="SceneMeta"/>.
+    /// The threshold starts at <paramref name="min"/>, the lowest reveal value, at
+    /// <paramref name="start"/> seconds, with nothing there, and ends at <paramref name="end"/>
+    /// seconds a little above <paramref name="max"/>: past the highest value by the edge or the
+    /// glow's width, whichever is more, and a little more, so that the last part is not left a
+    /// hair short by the rounding of the numbers on the way. Everything is there then, and nothing
+    /// glows any more.
+    /// </summary>
+    /// <param name="target">A model or a line by id, or, to key several that share a role in step,
+    /// by role (<see cref="ByRole"/>).</param>
+    /// <param name="min">The lowest and the highest reveal value there is (<see cref="RevealField.Min"/>,
+    /// <see cref="RevealField.Max"/>).</param>
+    /// <param name="edge">How soft the front is, as a share of the range of the values.</param>
+    /// <param name="glow">Whether a glow follows the front: <see cref="GlowShare"/> of the range
+    /// wide, <see cref="GlowStrength"/> strong, in <paramref name="glowColor"/> (default orange).</param>
+    /// <param name="fps">The clip's frame rate: <paramref name="end"/> is kept a frame after
+    /// <paramref name="start"/> at least.</param>
+    public static PlanChange Change(
+        PlanChangeTarget target, double min, double max, double start, double end, double edge = 0.03, bool glow = true,
+        ColorRgb? glowColor = null, int fps = 30)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        double range = max - min;
+        double little = Math.Max(range, 1.0) * 1e-3;
+        double edgeWidth = Rounded(edge * range);
+        double glowWidth = glow ? Rounded(Math.Max(GlowShare * range, little)) : 0.0;
+        double from = Rounded(start);
+        double to = Rounded(end);
+        if (to <= from) to = Rounded(from + 1.0 / fps);
+        var color = glowColor ?? new ColorRgb(1.0, 0.55, 0.15);
+        return new PlanChange
         {
-            Target = new PlanChangeTarget { Id = modelId },
-            Reveal = [new PlanNumberKey(start, Rounded(values.Min)), new PlanNumberKey(end, Rounded(values.Max + Math.Max(edge, glow) + little))],
-            RevealFront = edge > 0 || reveal.Glow
+            Target = target,
+            Reveal = [new PlanNumberKey(from, Rounded(min)), new PlanNumberKey(to, Rounded(max + Math.Max(edgeWidth, glowWidth) + little))],
+            RevealFront = edgeWidth > 0 || glow
                 ? new PlanRevealFront
                 {
-                    Edge = edge,
-                    Glow = reveal.Glow
-                        ? new PlanRevealGlow
-                        {
-                            Color = new ColorRgb(Rounded(reveal.GlowColor.R), Rounded(reveal.GlowColor.G), Rounded(reveal.GlowColor.B)),
-                            Strength = GlowStrength,
-                            Width = glow,
-                        }
+                    Edge = edgeWidth,
+                    Glow = glow
+                        ? new PlanRevealGlow { Color = new ColorRgb(Rounded(color.R), Rounded(color.G), Rounded(color.B)), Strength = GlowStrength, Width = glowWidth }
                         : null,
                 }
                 : null,
         };
+    }
 
-        PlanScreenItem? counter = null;
-        if (reveal.By == RevealBy.Date && reveal.Counter)
-            counter = new PlanScreenItem
+    /// <summary>The target that names every model and line of a role: the parts of one cave (its
+    /// walls and its centreline) revealed from one threshold track, in step. Give them one role
+    /// in the plan and key them with one <see cref="Change"/> of this target.</summary>
+    public static PlanChangeTarget ByRole(string role)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(role);
+        return new PlanChangeTarget { Role = role };
+    }
+
+    /// <summary>
+    /// The text that counts a reveal: <paramref name="format"/> with its <c>{}</c> replaced by the
+    /// number the threshold has got to, kept between <paramref name="min"/> and
+    /// <paramref name="max"/>, with <paramref name="decimals"/> decimals (cut, not rounded). A year
+    /// counter is <c>"{}"</c>; metres from an entrance <c>"{} m"</c> over a reveal by distance;
+    /// the number of the leg over a reveal by order.
+    /// </summary>
+    public static PlanScreenItem Counter(PlanChangeTarget target, double min, double max, string format = ScenePlanValidator.CounterPlace, int decimals = 0)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentException.ThrowIfNullOrEmpty(format);
+        double scale = Math.Pow(10, decimals);
+        return new PlanScreenItem
+        {
+            Id = CounterId, Role = CounterRole, Kind = PlanScreenItemKind.Text, Text = format,
+            // Above the scale bar, in the corner nothing else is written in.
+            At = new PlanPoint(ScreenTextPlanner.Margin, 0.17), Size = CounterSize,
+            AlignX = PlanAlignX.Left, AlignY = PlanAlignY.Bottom,
+            Counter = new PlanCounter
             {
-                Id = CounterId, Role = CounterRole, Kind = PlanScreenItemKind.Text, Text = ScenePlanValidator.CounterPlace,
-                // Above the scale bar, in the corner nothing else is written in.
-                At = new PlanPoint(ScreenTextPlanner.Margin, 0.17), Size = CounterSize,
-                AlignX = PlanAlignX.Left, AlignY = PlanAlignY.Bottom,
-                Counter = new PlanCounter
-                {
-                    Target = new PlanChangeTarget { Id = modelId },
-                    // The years of the first and of the last survey: the threshold starts on the
-                    // first and ends past the last.
-                    Min = Math.Floor(values.Min), Max = Math.Floor(values.Max),
-                },
-            };
-        return (change, counter);
+                Target = target, Decimals = decimals,
+                // The first and the last value there is: the threshold starts below the first and
+                // ends past the last.
+                Min = Math.Floor(min * scale) / scale, Max = Math.Floor(max * scale) / scale,
+            },
+        };
     }
 
     /// <summary>What a render of <paramref name="spec"/> cannot say for itself about its reveal:
