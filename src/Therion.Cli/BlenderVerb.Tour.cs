@@ -135,6 +135,19 @@ public static partial class BlenderVerb
     private static Therion.Blender.Player.RenderBundleReadmeSection TourReadme(Tour tour, string language)
         => new(language == "ro" ? "Turul galeriilor" : "Branch tour", tour.ReadmeText());
 
+    /// <summary>One of an enum's names, in any case: not a number, and not several names.</summary>
+    private static bool Word<TEnum>(string text, out TEnum value) where TEnum : struct, Enum
+    {
+        foreach (string name in Enum.GetNames<TEnum>())
+            if (name.Equals(text, StringComparison.OrdinalIgnoreCase))
+            {
+                value = Enum.Parse<TEnum>(name);
+                return true;
+            }
+        value = default;
+        return false;
+    }
+
     private static bool TryReadTourOptions(IReadOnlyList<string> args, TextWriter stderr, ref TourSpec spec)
     {
         bool Number(string option, double least, out double? value)
@@ -156,14 +169,14 @@ public static partial class BlenderVerb
         }
         bool Mode(string text, string option, out TourBranchMode mode)
         {
-            if (Enum.TryParse(text, ignoreCase: true, out mode) && Enum.IsDefined(mode) && !int.TryParse(text, out _)) return true;
+            if (Word(text, out mode)) return true;
             stderr.WriteLine($"error: {option} takes cut, return, peek or skip, not '{text}'.");
             return false;
         }
 
         if (Option(args, "--trunk") is { } trunk)
         {
-            if (!Enum.TryParse(trunk, ignoreCase: true, out TourTrunkKind kind) || !Enum.IsDefined(kind) || int.TryParse(trunk, out _))
+            if (!Word(trunk, out TourTrunkKind kind))
             {
                 stderr.WriteLine($"error: --trunk takes auto, longest, farthest, deepest, through or via, not '{trunk}'.");
                 return false;

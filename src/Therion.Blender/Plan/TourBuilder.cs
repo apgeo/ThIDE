@@ -681,7 +681,7 @@ public static class TourBuilder
                 });
                 annotations.Add(new AnnotationSpec
                 {
-                    Id = id + "-text", Kind = AnnotationKind.Callout, At = at, Text = string.IsNullOrWhiteSpace(note) ? T("Lead", "Continuare") : note,
+                    Id = id + "-text", Kind = AnnotationKind.Callout, At = at, Text = string.IsNullOrWhiteSpace(note) ? T("Lead", "Pistă") : note,
                     Size = Math.Round(Math.Clamp(0.12 * radius, 0.06, 0.5), 3), Offset = new CaveVector3(0, 0, Math.Round(0.5 * radius, 3)),
                     Within = within, Role = "lead-text",
                 });

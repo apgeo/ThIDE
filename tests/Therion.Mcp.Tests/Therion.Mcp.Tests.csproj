@@ -50,6 +50,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- An invented cave for the tour tools: no surveyed data. -->
+    <Compile Include="..\Therion.Blender.Tests\SceneProbe\TourCave.cs" Link="Blender\TourCave.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The fixed-seed runner for the generated-input tests. -->
     <Compile Include="..\Shared\Properties\*.cs" LinkBase="Shared\Properties" />
   </ItemGroup>

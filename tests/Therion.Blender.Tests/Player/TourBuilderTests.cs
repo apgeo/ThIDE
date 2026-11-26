@@ -130,7 +130,7 @@ public class TourBuilderTests
         Assert.Equal("Galerie laterală B1 · 60 m", Shot(tour, "B1").Texts!.Corner);
         Assert.Equal("Ocolire B4 · 90 m", Shot(tour, "B4").Texts!.Corner);
         Assert.Equal("continuă încă 13 m", Shot(tour, "B3").Texts!.CornerCaptions.Single().Text);
-        Assert.Equal("Continuare", Shot(tour, "B5").Annotations![1].Text);
+        Assert.Equal("Pistă", Shot(tour, "B5").Annotations![1].Text);
         Assert.Equal("{cave}: tur", tour.Storyboard.Name);
         Assert.StartsWith("Galeria principală", tour.Storyboard.Shots[0].Name);
     }

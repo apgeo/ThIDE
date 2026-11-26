@@ -169,6 +169,7 @@ public class BlenderTourVerbTests : IDisposable
     [InlineData("--tour", "--branch", "B5:return")]
     [InlineData("--tour", "--branch", "B5=fly")]
     [InlineData("--tour", "--branch-mode", "fly")]
+    [InlineData("--tour", "--branch-mode", "cut,return")]
     [InlineData("--tour", "--tour-seconds", "soon")]
     [InlineData("--tour", "--tour-seconds", "0")]
     [InlineData("--tour", "--max-branches", "-1")]
