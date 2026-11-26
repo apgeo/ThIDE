@@ -100,6 +100,16 @@ static void PrintHelp()
     Console.WriteLine("                                         changed is rendered again alone. --draft drafts every shot: an animatic of the film.");
     Console.WriteLine("                                         --shot renders one shot alone, as any scene is rendered. --bundle writes the film as a");
     Console.WriteLine("                                         render bundle: the plan of every shot and of the movie, with one mesh for all of them.");
+    Console.WriteLine("  therion-cli blender <model.lox|.3d> --tour [--tour-file <tour.json>] [--trunk auto|longest|farthest|deepest|through|via]");
+    Console.WriteLine("                     [--tour-start <station>] [--tour-via <station>]… [--tour-end <station>] [--tour-seconds <n>] [--branch-seconds <n>]");
+    Console.WriteLine("                     [--branch-mode cut|return|peek|skip] [--branch <id>=<mode>]… [--peek-short] [--min-length <m>] [--max-branches <n>]");
+    Console.WriteLine("                     [--no-lead-branches] [--include <id|station|survey>]… [--exclude <…>]… [--tour-depth <n>] [--tour-language en|ro]");
+    Console.WriteLine("                     [--preset \"<name>\"] [--leads <file.json>] [--write-storyboard <file.json>] [--draft] [--bundle <file.zip|folder>]");
+    Console.WriteLine("                                         A tour of the cave's branches: the main passage from the entrance to the farthest station,");
+    Console.WriteLine("                                         with the side passages worth a visit flown into at their junctions (B1, B2 … in the table");
+    Console.WriteLine("                                         it prints), within 180 s for the film and 20 s for each. It is made as a storyboard and");
+    Console.WriteLine("                                         rendered, drafted or bundled like one; --write-storyboard keeps the storyboard, and alone");
+    Console.WriteLine("                                         writes it without rendering, to edit by hand and render with --storyboard.");
     Console.WriteLine("  therion-cli build <thconfig|folder> [--all] [--therion <path>] [--quiet] [--no-log] [--json] [--stop-on-failure]");
     Console.WriteLine("                                         Compile with Therion and print a summary; exit 0 only if all succeed.");
     Console.WriteLine("  therion-cli new --list                 List project templates (built-in and imported).");

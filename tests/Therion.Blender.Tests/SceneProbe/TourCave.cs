@@ -19,9 +19,15 @@ internal static class TourCave
 {
     private static readonly CaveVector3 Origin = new(512_000.0, 5_120_000.0, 1_200.0);
 
-    public static CaveModel Build()
+    public static CaveModel Build() => Build(tiny: false);
+
+    /// <summary>A cave for a render: a main passage a0 … a6 of six legs of 8 m, with two side
+    /// passages of two legs each, u1 – u2 off a2 (a lead at its end) and v1 – v2 off a4.</summary>
+    public static CaveModel BuildTiny() => Build(tiny: true);
+
+    private static CaveModel Build(bool tiny)
     {
-        var surveys = new List<CaveSurvey> { new(0, 0, "", "Invented Tour Cave") };
+        var surveys = new List<CaveSurvey> { new(0, 0, "", tiny ? "Invented Tiny Cave" : "Invented Tour Cave") };
         var stations = new List<CaveStation>();
         var shots = new List<CaveShot>();
         var byName = new Dictionary<string, int>();
@@ -58,6 +64,27 @@ internal static class TourCave
         var medium = new CaveLrud(1, 1.5, 1, 1);    // 2.5 m wide
         var narrow = new CaveLrud(0.5, 0.5, 0.5, 0.5);
         var even = new CaveLrud(1, 1, 1, 1);
+
+        if (tiny)
+        {
+            uint way = Survey("way");
+            Station(way, "a0", 0, 0, 0, CaveStationFlags.Entrance | CaveStationFlags.Fixed);
+            for (int i = 1; i <= 6; i++)
+            {
+                Station(way, $"a{i}", 8 * i, 0, 0);
+                Leg(way, $"a{i - 1}", $"a{i}", wide);
+            }
+            uint sides = Survey("sides");
+            Station(sides, "u1", 16, 8, 0);
+            Station(sides, "u2", 16, 16, 0, CaveStationFlags.Continuation);
+            Station(sides, "v1", 32, -8, 0);
+            Station(sides, "v2", 32, -16, 0);
+            Leg(sides, "a2", "u1", even);
+            Leg(sides, "u1", "u2", even);
+            Leg(sides, "a4", "v1", even);
+            Leg(sides, "v1", "v2", even);
+            return new CaveModel { SourceFormat = CaveSourceFormat.Lox, Surveys = surveys, Stations = stations, Shots = shots };
+        }
 
         uint main = Survey("main");
         Station(main, "t0", 0, 0, 0, CaveStationFlags.Entrance | CaveStationFlags.Fixed);
