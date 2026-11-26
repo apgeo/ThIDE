@@ -2529,4 +2529,5 @@ This cannot be undone.</value></data>
   <data name="Blender_Queue_Queued" xml:space="preserve"><value>waiting</value></data>
   <data name="Blender_Queue_Running" xml:space="preserve"><value>rendering</value></data>
   <data name="Blender_Status_RestartRendering" xml:space="preserve"><value>A render ThIDE was closed in the middle of goes on; a render started now waits for it.</value></data>
+  <data name="Blender_UI_ShotSelect" xml:space="preserve"><value>Select the shot to edit it</value></data>
 </root>

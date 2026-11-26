@@ -177,6 +177,17 @@ public sealed partial class BlenderAnimationViewModel
 
     private StoryboardShotViewModel NewShotRow(ShotSpec shot) => new(shot, FindPreset, ShotsChanged);
 
+    /// <summary>Selects a shot: the settings edit it from now on.</summary>
+    [RelayCommand]
+    private void SelectShot(StoryboardShotViewModel? row) => SelectedShot = row;
+
+    partial void OnSelectedShotChanged(StoryboardShotViewModel? oldValue, StoryboardShotViewModel? newValue)
+    {
+        if (oldValue is not null) oldValue.IsSelected = false;
+        if (newValue is not null) newValue.IsSelected = true;
+        DraftShotCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnSelectedShotChanged(StoryboardShotViewModel? value)
     {
         if (value is null) return;
@@ -447,12 +458,16 @@ public sealed partial class StoryboardShotViewModel : ObservableObject
     private ShotSpec _shot;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NameId), nameof(UpId), nameof(DownId), nameof(RemoveId))]
+    [NotifyPropertyChangedFor(nameof(SelectId), nameof(NameId), nameof(UpId), nameof(DownId), nameof(RemoveId))]
     private int _number;
 
     [ObservableProperty] private double _stripStart;
     [ObservableProperty] private double _stripEnd;
 
+    /// <summary>True for the shot the settings edit.</summary>
+    [ObservableProperty] private bool _isSelected;
+
+    public string SelectId => $"Blender.Shot.{Number}.Select";
     public string NameId => $"Blender.Shot.{Number}.Name";
     public string UpId => $"Blender.Shot.{Number}.Up";
     public string DownId => $"Blender.Shot.{Number}.Down";

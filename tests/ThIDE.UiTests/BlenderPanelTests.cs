@@ -528,6 +528,45 @@ public class BlenderPanelTests
     }
 
     [UiFact]
+    public async Task The_storyboard_tab_lists_the_shots_of_a_composite_moves_and_removes_them()
+    {
+        var dir = DemoCave();
+        await using var app = await ThideApp.StartAsync(dir, "demo.thconfig");
+        await app.WaitAsync("role:TabItem;name:demo.thconfig;state:selected");
+        await app.MenuAsync("Tools > Blender Animation…");
+        await app.WaitAsync("#Blender.Render");
+        await app.SetTextAsync("#Blender.RenderDirectory", Path.Combine(dir, "renders"));
+
+        // The scene's own buttons give way to the film's.
+        await app.InvokeAsync("#Blender.Tab.Storyboard", "select");
+        await app.WaitAsync("#Blender.AddComposite");
+        Assert.False(await app.ExistsAsync("#Blender.Render;state:showing"));
+        await app.InvokeAsync("#Blender.AddComposite");
+        await app.WaitAsync("#Blender.Shot.3.Name");
+        Assert.Equal(["Outside", "Main passage", "Way out"],
+            [await app.TextOfAsync("#Blender.Shot.1.Name"), await app.TextOfAsync("#Blender.Shot.2.Name"), await app.TextOfAsync("#Blender.Shot.3.Name")]);
+        await app.WaitAsync("#Blender.ShotStrip");
+
+        // Selected, a shot is what the settings edit: the helix of "Way out".
+        await app.InvokeAsync("#Blender.Shot.3.Select");
+        await app.WaitAsync("#Blender.DraftShot;state:enabled");
+        Assert.Contains("Helix", await app.TextOfAsync("#Blender.CameraTemplate"), StringComparison.Ordinal);
+
+        await app.InvokeAsync("#Blender.Shot.3.Up");
+        await app.WaitAsync("#Blender.Shot.2.Name");
+        Assert.Equal("Way out", await app.TextOfAsync("#Blender.Shot.2.Name"));
+        await app.InvokeAsync("#Blender.Shot.1.Remove");
+        await app.WaitAsync("#Blender.Shot.3.Name", gone: true);
+        Assert.Equal("Way out", await app.TextOfAsync("#Blender.Shot.1.Name"));
+        Assert.True(await app.ExistsAsync("#Blender.DraftAll"));
+        Directory.CreateDirectory(ThideApp.ArtifactsDir);
+        await File.WriteAllBytesAsync(Path.Combine(ThideApp.ArtifactsDir, "blender-panel-storyboard.png"), await app.ScreenshotAsync("#Blender.Storyboard"));
+
+        await app.InvokeAsync("#Blender.Tab.Scene", "select");
+        await app.WaitAsync("#Blender.Render;state:showing");
+    }
+
+    [UiFact]
     public async Task Render_with_the_real_Blender_writes_a_video()
     {
         if (!OnPath("therion") || !OnPath("blender")) return;

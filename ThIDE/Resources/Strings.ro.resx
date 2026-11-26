@@ -2529,4 +2529,5 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_Queue_Queued" xml:space="preserve"><value>în așteptare</value></data>
   <data name="Blender_Queue_Running" xml:space="preserve"><value>se randează</value></data>
   <data name="Blender_Status_RestartRendering" xml:space="preserve"><value>O randare întreruptă la închiderea ThIDE continuă; o randare pornită acum o așteaptă.</value></data>
+  <data name="Blender_UI_ShotSelect" xml:space="preserve"><value>Selectați cadrul ca să-l editați</value></data>
 </root>

@@ -17,6 +17,16 @@ public sealed class BlenderFactAttribute : FactAttribute
     }
 }
 
+/// <summary>As <see cref="BlenderFactAttribute"/>, for a test with cases.</summary>
+public sealed class BlenderTheoryAttribute : TheoryAttribute
+{
+    public BlenderTheoryAttribute()
+    {
+        if (!BlenderFactAttribute.Enabled)
+            Skip = $"Needs a local Blender; set {BlenderFactAttribute.OptInVariable}=1 to run.";
+    }
+}
+
 /// <summary>A real-Blender test that states how the output should be and fails today because of
 /// a known defect. It is skipped until the defect is fixed; set THIDE_BLENDER_DEFECTS=1 as well
 /// to run it and see the current numbers. Whoever fixes the defect removes the attribute's

@@ -87,26 +87,28 @@
                     </ComboBox>
                 </DockPanel>
                 <TextBlock Text="{l:Loc Blender_UI_Shots}" FontWeight="Bold" />
-                <ListBox AutomationProperties.AutomationId="Blender.Shots" AutomationProperties.Name="{l:Loc Blender_UI_Shots}" MaxHeight="260"
-                         ItemsSource="{Binding Blender.Shots}" SelectedItem="{Binding Blender.SelectedShot}">
-                    <ListBox.ItemTemplate>
+                <ItemsControl AutomationProperties.AutomationId="Blender.Shots" AutomationProperties.Name="{l:Loc Blender_UI_Shots}" ItemsSource="{Binding Blender.Shots}">
+                    <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vmm:StoryboardShotViewModel">
-                            <Grid ColumnDefinitions="24,*,80,50,90,Auto,Auto,Auto">
-                                <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center" />
-                                <TextBox Grid.Column="1" AutomationProperties.AutomationId="{Binding NameId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotName}" Text="{Binding Name}" />
-                                <TextBlock Grid.Column="2" Text="{Binding Kind}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Grid.Column="3" Text="{Binding Seconds, StringFormat='{}{0:0.#} s'}" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="4" Text="{Binding Transition}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                <Button Grid.Column="5" AutomationProperties.AutomationId="{Binding UpId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotUp}" Content="&#x2191;" Padding="6,0"
-                                        ToolTip.Tip="{l:Loc Blender_UI_ShotUp}" Command="{Binding $parent[ListBox].DataContext.Blender.MoveShotUpCommand}" CommandParameter="{Binding}" />
-                                <Button Grid.Column="6" AutomationProperties.AutomationId="{Binding DownId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotDown}" Content="&#x2193;" Padding="6,0"
-                                        ToolTip.Tip="{l:Loc Blender_UI_ShotDown}" Command="{Binding $parent[ListBox].DataContext.Blender.MoveShotDownCommand}" CommandParameter="{Binding}" />
-                                <Button Grid.Column="7" AutomationProperties.AutomationId="{Binding RemoveId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotRemove}" Content="&#x2715;" Padding="6,0"
-                                        ToolTip.Tip="{l:Loc Blender_UI_ShotRemove}" Command="{Binding $parent[ListBox].DataContext.Blender.RemoveShotCommand}" CommandParameter="{Binding}" />
-                            </Grid>
+                            <Border Padding="2" CornerRadius="2" Background="{Binding IsSelected, Converter={x:Static local:SelectedShotBrush.Instance}}">
+                                <Grid ColumnDefinitions="30,*,80,50,90,Auto,Auto,Auto">
+                                    <Button Grid.Column="0" AutomationProperties.AutomationId="{Binding SelectId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotSelect}" Content="{Binding Number}" Padding="4,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_ShotSelect}" Command="{Binding $parent[ItemsControl].DataContext.Blender.SelectShotCommand}" CommandParameter="{Binding}" />
+                                    <TextBox Grid.Column="1" Margin="4,0,0,0" AutomationProperties.AutomationId="{Binding NameId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotName}" Text="{Binding Name}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Kind}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Seconds, StringFormat='{}{0:0.#} s'}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Transition}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Button Grid.Column="5" AutomationProperties.AutomationId="{Binding UpId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotUp}" Content="&#x2191;" Padding="6,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_ShotUp}" Command="{Binding $parent[ItemsControl].DataContext.Blender.MoveShotUpCommand}" CommandParameter="{Binding}" />
+                                    <Button Grid.Column="6" AutomationProperties.AutomationId="{Binding DownId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotDown}" Content="&#x2193;" Padding="6,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_ShotDown}" Command="{Binding $parent[ItemsControl].DataContext.Blender.MoveShotDownCommand}" CommandParameter="{Binding}" />
+                                    <Button Grid.Column="7" AutomationProperties.AutomationId="{Binding RemoveId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotRemove}" Content="&#x2715;" Padding="6,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_ShotRemove}" Command="{Binding $parent[ItemsControl].DataContext.Blender.RemoveShotCommand}" CommandParameter="{Binding}" />
+                                </Grid>
+                            </Border>
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <!-- the shots along the film -->
                 <Border AutomationProperties.AutomationId="Blender.ShotStrip" AutomationProperties.Name="{l:Loc Blender_UI_ShotStrip}" IsVisible="{Binding Blender.Shots.Count}"
                         Height="20" BorderBrush="#80808080" BorderThickness="1" CornerRadius="2" ClipToBounds="True" ToolTip.Tip="{l:Loc Blender_UI_ShotStrip_Tip}">
