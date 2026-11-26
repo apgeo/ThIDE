@@ -92,6 +92,14 @@ static void PrintHelp()
     Console.WriteLine("                                         --draft adds a quick draft plan, --render renders the bundle here: its draft when it has one,");
     Console.WriteLine("                                         else the full plan, or what --render-plan names. --readme-language writes the bundle's");
     Console.WriteLine("                                         README in Romanian (ro) instead of English.");
+    Console.WriteLine("  therion-cli blender <model.lox|.3d> --storyboard <file.json> [--shot <n>] [--draft] [--out <dir>] [--keep-frames] [--compose-only]");
+    Console.WriteLine("                     [--frames <dir>] [--bundle <file.zip|folder> [--render [--render-plan full|draft|both]]] [--blender <path>]");
+    Console.WriteLine("                                         Render a film of several shots from a storyboard: every shot's frames, each in a folder of");
+    Console.WriteLine("                                         its own, then the film from them, joined with cuts, dips and dissolves, with its texts over");
+    Console.WriteLine("                                         it. Run again after it was stopped, it goes on with the shot it stopped in; a shot that was");
+    Console.WriteLine("                                         changed is rendered again alone. --draft drafts every shot: an animatic of the film.");
+    Console.WriteLine("                                         --shot renders one shot alone, as any scene is rendered. --bundle writes the film as a");
+    Console.WriteLine("                                         render bundle: the plan of every shot and of the movie, with one mesh for all of them.");
     Console.WriteLine("  therion-cli build <thconfig|folder> [--all] [--therion <path>] [--quiet] [--no-log] [--json] [--stop-on-failure]");
     Console.WriteLine("                                         Compile with Therion and print a summary; exit 0 only if all succeed.");
     Console.WriteLine("  therion-cli new --list                 List project templates (built-in and imported).");

@@ -60,6 +60,26 @@ public interface IBlenderRenderService
         => RenderAsync(spec, source, new RenderOptions(), progress, ct);
 
     /// <summary>
+    /// Renders a film of several shots (<see cref="Storyboard"/>): every shot's frames in a
+    /// Blender of its own, into a folder of its own inside the frames folder, then the film from
+    /// them, joined as the storyboard says, with its texts over it. A shot whose frames are
+    /// there, rendered from the same scene, is not rendered again: with
+    /// <see cref="RenderOptions.KeepFrames"/> or a <see cref="RenderOptions.FramesDirectory"/> a
+    /// film that was stopped goes on with the shot it stopped in, and a film of which one shot
+    /// was changed renders that shot alone. <see cref="RenderOptions.Draft"/> is a draft of
+    /// every shot: an animatic of the whole film.
+    /// </summary>
+    /// <exception cref="ArgumentException">The storyboard is invalid, or cannot be planned for
+    /// the model.</exception>
+    Task<RenderResult> RenderStoryboardAsync(
+        Storyboard storyboard,
+        RenderSource source,
+        RenderOptions options,
+        IProgress<RenderProgress>? progress = null,
+        CancellationToken ct = default)
+        => throw new NotSupportedException("This render service does not render storyboards.");
+
+    /// <summary>
     /// Export-only mode (FR-10a) of the script generator: convert + generate, writing the
     /// generated Blender Python script and its assets (PLY + scene-meta, or a self-contained
     /// <c>.py</c>) into <paramref name="outputDir"/> for the user to run manually. Does not launch

@@ -37,6 +37,35 @@ public static class PlayerWriter
     public static PlayerJob WriteJob(ScenePlan plan, string folder, IReadOnlyDictionary<string, string>? files = null)
     {
         ThrowIfInvalid(plan);
+        WriteFilesAndPlayer([plan], folder, files);
+        string planFile = Path.Combine(folder, ScenePlanSerializer.FileName);
+        ScenePlanSerializer.WriteFile(plan, planFile);
+        return new PlayerJob(folder, Path.Combine(folder, PlayerFiles.EntryFileName), planFile);
+    }
+
+    /// <summary>
+    /// Writes the job folder of a film of several scenes: the movie's plan as
+    /// <c>scene-plan.json</c>, the plan of every segment beside it under the name the movie gives
+    /// it (<c>scene-plan.s01.json</c> onwards), <c>render.py</c> and the player's package. The
+    /// segments share the files they name: one mesh serves them all.
+    /// </summary>
+    /// <param name="files">As for <see cref="WriteJob(ScenePlan, string, IReadOnlyDictionary{string, string}?)"/>.</param>
+    /// <exception cref="ArgumentException">The movie's plan or a segment's is invalid, or a file
+    /// is not one a plan carries.</exception>
+    /// <exception cref="FileNotFoundException">A file a plan names is not in the folder.</exception>
+    public static PlayerJob WriteJob(StoryboardPlan film, string folder, IReadOnlyDictionary<string, string>? files = null)
+    {
+        ThrowIfInvalid(film);
+        WriteFilesAndPlayer(film.Segments, folder, files);
+        for (int i = 0; i < film.Segments.Count; i++)
+            ScenePlanSerializer.WriteFile(film.Segments[i], InFolder(folder, film.Movie.Segments[i].Plan));
+        string planFile = Path.Combine(folder, ScenePlanSerializer.FileName);
+        ScenePlanSerializer.WriteFile(film.Movie, planFile);
+        return new PlayerJob(folder, Path.Combine(folder, PlayerFiles.EntryFileName), planFile);
+    }
+
+    private static void WriteFilesAndPlayer(IReadOnlyList<ScenePlan> plans, string folder, IReadOnlyDictionary<string, string>? files)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(folder);
         Directory.CreateDirectory(folder);
 
@@ -50,14 +79,19 @@ public static class PlayerWriter
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(source, target, overwrite: true);
         }
-        var photos = PhotosOf(plan);
-        foreach (var (planPath, what) in FilesOf(plan))
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var plan in plans)
         {
-            string path = InFolder(folder, planPath);
-            if (!File.Exists(path))
-                throw new FileNotFoundException($"The file of {what} is not in the job folder: {path}", path);
-            if (photos.Contains(planPath)) CheckPhoto(planPath, what, () => File.OpenRead(path));
-            if (planPath == plan.Look.World?.Image) CheckEnvironment(planPath, what, () => File.OpenRead(path));
+            var photos = PhotosOf(plan);
+            foreach (var (planPath, what) in FilesOf(plan))
+            {
+                if (!seen.Add(planPath)) continue;
+                string path = InFolder(folder, planPath);
+                if (!File.Exists(path))
+                    throw new FileNotFoundException($"The file of {what} is not in the job folder: {path}", path);
+                if (photos.Contains(planPath)) CheckPhoto(planPath, what, () => File.OpenRead(path));
+                if (planPath == plan.Look.World?.Image) CheckEnvironment(planPath, what, () => File.OpenRead(path));
+            }
         }
 
         string package = Path.Combine(folder, PlayerFiles.PackageName);
@@ -68,10 +102,6 @@ public static class PlayerWriter
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.WriteAllText(target, file.Text, Utf8NoBom);
         }
-
-        string planFile = Path.Combine(folder, ScenePlanSerializer.FileName);
-        ScenePlanSerializer.WriteFile(plan, planFile);
-        return new PlayerJob(folder, Path.Combine(folder, PlayerFiles.EntryFileName), planFile);
     }
 
     /// <summary>
@@ -187,6 +217,30 @@ public static class PlayerWriter
         {
             throw new ArgumentException($"The file of {what} ({planPath}) cannot travel with the plan: {ex.Message}.", nameof(planPath));
         }
+    }
+
+    /// <summary>Checks the plan of a film and the plans of its segments: each valid, one for
+    /// every segment, with the frames and the size the movie takes them to have.</summary>
+    /// <exception cref="ArgumentException">One of them is not; the message names it.</exception>
+    internal static void ThrowIfInvalid(StoryboardPlan film)
+    {
+        ArgumentNullException.ThrowIfNull(film);
+        var errors = MoviePlanValidator.Validate(film.Movie).Select(e => $"{e.Path}: {e.Message}").ToList();
+        if (film.Segments.Count != film.Movie.Segments.Count)
+            errors.Add($"segments: the movie has {film.Movie.Segments.Count} and there are plans for {film.Segments.Count}");
+        else
+            for (int i = 0; i < film.Segments.Count; i++)
+            {
+                var plan = film.Segments[i];
+                string name = film.Movie.Segments[i].Plan;
+                errors.AddRange(ScenePlanValidator.Validate(plan).Select(e => $"{name}: {e.Path}: {e.Message}"));
+                if (plan.Timeline.Fps != film.Movie.Timeline.Fps || plan.Timeline.FrameCount != film.Movie.Segments[i].FrameCount)
+                    errors.Add($"{name}: its timeline is not the one its segment has in the movie");
+                if (plan.Look.Width != film.Width || plan.Look.Height != film.Height)
+                    errors.Add($"{name}: its picture is not the size of the first segment's; a movie has one size");
+            }
+        if (errors.Count > 0)
+            throw new ArgumentException("The film's plans are invalid: " + string.Join("; ", errors), nameof(film));
     }
 
     private static void ThrowIfInvalid(ScenePlan plan)

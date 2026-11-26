@@ -133,6 +133,169 @@ public sealed class BlenderRenderService : IBlenderRenderService
         return result;
     }
 
+    public async Task<RenderResult> RenderStoryboardAsync(
+        Storyboard storyboard, RenderSource source, RenderOptions options, IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(storyboard);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(options);
+        if (options.ComposeOnly && string.IsNullOrWhiteSpace(options.FramesDirectory))
+            throw new ArgumentException("Writing the output from frames needs the folder the frames are in.", nameof(options));
+        var errors = StoryboardValidator.Validate(storyboard);
+        if (errors.Count > 0)
+            throw new ArgumentException(
+                "The storyboard is invalid: " + string.Join("; ", errors.Select(e => $"{e.Path}: {e.Message}")), nameof(storyboard));
+        if (options.Builder == SceneBuilder.Generator)
+            return new RenderResult
+            {
+                Succeeded = false,
+                FailureKind = RenderFailureKind.BuilderRefused,
+                ErrorMessage = "A storyboard is rendered by the player: the script generator renders one scene.",
+            };
+
+        var locate = _locator.Locate(_blenderOverride?.Invoke());
+        if (!locate.IsUsable)
+            return new RenderResult
+            {
+                Succeeded = false,
+                FailureKind = locate.Status == BlenderLocateStatus.TooOld
+                    ? RenderFailureKind.BlenderTooOld
+                    : RenderFailureKind.BlenderNotFound,
+                ErrorMessage = locate.Detail,
+            };
+
+        string jobDir = CreateJobDirectory();
+        string outputDir = string.IsNullOrWhiteSpace(storyboard.Output.OutputDirectory)
+            ? jobDir
+            : Path.GetFullPath(storyboard.Output.OutputDirectory);
+        bool outputsElsewhere = !string.Equals(Path.GetFullPath(jobDir), outputDir, StringComparison.Ordinal);
+        var choice = new SceneBuilderChoice(SceneBuilder.Player, [], []);
+        RenderResult result;
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+            result = await RenderFilmAsync(storyboard, source, options, locate.Installation!, jobDir, outputDir, progress, ct).ConfigureAwait(false);
+            var warnings = result.Warnings;
+            if (BlenderLocator.UntestedVersionWarning(locate.Installation!.Version) is { } untested)
+                warnings = [untested, .. warnings];
+            result = Copy(result, result.JobLogPath, warnings, choice);
+        }
+        finally
+        {
+            DeleteScratch(jobDir);
+        }
+        if (outputsElsewhere && result.Succeeded && TryDeleteDirectory(jobDir))
+            return Copy(result, jobLogPath: null, result.Warnings, choice);
+        return result;
+    }
+
+    /// <summary>
+    /// A film: convert, lower the storyboard to the plans of its segments and of the movie, write
+    /// them and the player into the job folder, render every segment's frames into a folder of
+    /// its own inside the frames folder, then write the film from them. A segment whose frames
+    /// are there is passed over by the player itself.
+    /// </summary>
+    private async Task<RenderResult> RenderFilmAsync(
+        Storyboard storyboard, RenderSource source, RenderOptions options, BlenderInstallation blender, string jobDir, string outputDir,
+        IProgress<RenderProgress>? progress, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        progress?.Report(new RenderProgress(RenderPhase.ConvertingGeometry, "Converting model"));
+        var needs = StoryboardPlanner.ConversionSpec(storyboard);
+        var (conversion, placed) = await ConvertAsync(needs, source, jobDir, outputDir, ct).ConfigureAwait(false);
+
+        ct.ThrowIfCancellationRequested();
+        progress?.Report(new RenderProgress(RenderPhase.GeneratingScript, "Planning the film"));
+        var film = StoryboardPlanner.Lower(
+            storyboard with { Output = storyboard.Output with { OutputDirectory = outputDir } },
+            placed.Source, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
+        if (options.Draft) film = film.Draft();
+        var job = PlayerWriter.WriteJob(film, jobDir, film.Files);
+        var movie = film.Movie;
+        var output = PlanOutputs.SpecOf(film, outputDir);
+
+        string framesDir = Path.GetFullPath(options.FramesDirectory
+            ?? (options.KeepFrames
+                ? Path.Combine(outputDir, movie.Output.BaseName + "-frames")
+                : Path.Combine(jobDir, PlanOutputs.FramesFolderName)));
+        var stages = new List<RenderResult>();
+        if (!options.ComposeOnly)
+        {
+            int total = movie.Segments.Sum(s => s.FrameCount), before = 0;
+            for (int i = 0; i < movie.Segments.Count; i++)
+            {
+                var segment = movie.Segments[i];
+                string frames = Path.Combine(framesDir, segment.Frames.Replace('/', Path.DirectorySeparatorChar));
+                string shot = $"Shot {i + 1} of {movie.Segments.Count}" + (segment.Name is { } name ? $" ({name})" : "");
+                int done = before;
+                // Each shot's progress as a part of the whole film's.
+                var part = progress is null ? null : new SyncRelay(tick => progress.Report(tick with
+                {
+                    Message = $"{shot}: {tick.Message}",
+                    Fraction = tick is { Frame: { } frame, Phase: RenderPhase.Rendering } ? Math.Clamp((done + frame) / (double)total, 0, 1) : null,
+                }));
+                var rendered = await _runner.RunAsync(
+                    blender,
+                    new RenderJob(job.ScriptPath, jobDir, segment.FrameCount, PlanOutputs.FramesOf(film.Segments[i], frames))
+                    {
+                        ScriptArguments = ["--plan", Path.Combine(jobDir, segment.Plan), "--stage", "frames", "--frames", frames],
+                        // The first one's preflight counts the film that is made from the frames.
+                        ExtraBytes = i == 0 ? DiskPreflight.EstimateBytes(movie.OutputFrameCount, output.Width, output.Height, output.Kind) : 0,
+                        LogFileName = SegmentLogName(segment.Id),
+                    },
+                    part, ct).ConfigureAwait(false);
+                stages.Add(rendered);
+                if (!rendered.Succeeded) break;
+                before += segment.FrameCount;
+            }
+        }
+
+        RenderResult result;
+        if (stages.Count > 0 && !stages[^1].Succeeded)
+        {
+            result = stages[^1];
+        }
+        else
+        {
+            // The second stage plays the movie's plan, which is the one beside the script.
+            string[] arguments = ["--stage", "compose", "--frames", framesDir];
+            var composed = await _runner.RunAsync(
+                blender,
+                new RenderJob(job.ScriptPath, jobDir, movie.OutputFrameCount, output)
+                {
+                    ScriptArguments = options.KeepFrames || options.ComposeOnly ? [.. arguments, "--keep-frames"] : arguments,
+                },
+                progress, ct).ConfigureAwait(false);
+            result = composed;
+        }
+        string? kept = Directory.Exists(framesDir) && !IsInside(framesDir, jobDir) ? framesDir : null;
+
+        var outputs = result.OutputPaths;
+        if (result.Succeeded) outputs = outputs.AddRange(WriteSubtitles(film.Captions, outputDir, movie.Output.BaseName));
+        return new RenderResult
+        {
+            Succeeded = result.Succeeded,
+            FailureKind = result.FailureKind,
+            ErrorMessage = stages.Count > 0 && !stages[^1].Succeeded
+                ? $"Shot {stages.Count} of {movie.Segments.Count}: {result.ErrorMessage}"
+                : result.ErrorMessage,
+            StartFailedPath = result.StartFailedPath,
+            OutputPaths = outputs,
+            Device = stages.Select(s => s.Device).FirstOrDefault(d => d is not null) ?? result.Device,
+            FrameCount = result.FrameCount,
+            JobLogPath = result.JobLogPath,
+            Duration = stages.Aggregate(TimeSpan.Zero, (sum, s) => sum + s.Duration) + (ReferenceEquals(result, stages.LastOrDefault()) ? TimeSpan.Zero : result.Duration),
+            Warnings = [.. film.Notices, .. stages.Where(s => !ReferenceEquals(s, result)).SelectMany(s => s.Warnings).Distinct(StringComparer.Ordinal), .. result.Warnings],
+            FramesDirectory = kept,
+        };
+    }
+
+    /// <summary>Passes progress on as it comes, on the thread it comes on.</summary>
+    private sealed class SyncRelay(Action<RenderProgress> report) : IProgress<RenderProgress>
+    {
+        public void Report(RenderProgress value) => report(value);
+    }
+
     /// <summary>
     /// The player's path: convert, lower the spec to a scene plan, write the plan and the player
     /// into the job folder, and play it. A plan with texts, and any render whose frames are asked
@@ -200,7 +363,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
 
         var outputs = result.OutputPaths;
         if (result.Succeeded && plan.Output.Kind != PlanOutputKind.Still)
-            outputs = outputs.AddRange(WriteSubtitles(placed, outputDir, plan.Output.BaseName));
+            outputs = outputs.AddRange(WriteSubtitles(placed.Labels.Overlays.Captions, outputDir, plan.Output.BaseName));
         return new RenderResult
         {
             Succeeded = result.Succeeded,
@@ -259,12 +422,11 @@ public sealed class BlenderRenderService : IBlenderRenderService
         Warnings = [.. frames.Warnings, .. composed.Warnings],
     };
 
-    /// <summary>Writes the spec's captions as subtitles beside the movie, as
+    /// <summary>Writes the captions as subtitles beside the movie, as
     /// <c>&lt;base name&gt;.srt</c> and <c>.vtt</c>, and returns the files written. A caption
     /// file that cannot be written is not worth failing a finished render for.</summary>
-    private static IEnumerable<string> WriteSubtitles(SceneSpec spec, string outputDir, string baseName)
+    private static IEnumerable<string> WriteSubtitles(IReadOnlyList<CaptionSpec> captions, string outputDir, string baseName)
     {
-        var captions = spec.Labels.Overlays.Captions;
         if (Subtitles.OneAtATime(captions).Count == 0) return [];
         var written = new List<string>(2);
         foreach (var (extension, text) in new[] { (Subtitles.SrtExtension, Subtitles.Srt(captions)), (Subtitles.VttExtension, Subtitles.Vtt(captions)) })
@@ -308,7 +470,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
                 if (Directory.GetLastWriteTimeUtc(dir) > cutoff) continue;
                 // A render that was killed leaves the player and its frames behind as well.
                 if (!Directory.EnumerateDirectories(dir).All(d => ScratchFolderNames.Contains(Path.GetFileName(d)))) continue;
-                if (!Directory.EnumerateFiles(dir).All(f => DisposableFileNames.Contains(Path.GetFileName(f)))) continue;
+                if (!Directory.EnumerateFiles(dir).All(f => IsDisposable(Path.GetFileName(f)))) continue;
                 if (TryDeleteDirectory(dir)) deleted++;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
@@ -527,7 +689,10 @@ public sealed class BlenderRenderService : IBlenderRenderService
     /// file still locked or already gone is left alone.</summary>
     private static void DeleteScratch(string jobDir)
     {
-        foreach (var name in ScratchFileNames)
+        IEnumerable<string> segmentPlans;
+        try { segmentPlans = Directory.EnumerateFiles(jobDir, SegmentPlanPattern).Select(Path.GetFileName).OfType<string>().ToList(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { segmentPlans = []; }
+        foreach (var name in ScratchFileNames.Concat(segmentPlans))
         {
             try { File.Delete(Path.Combine(jobDir, name)); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
@@ -541,6 +706,19 @@ public sealed class BlenderRenderService : IBlenderRenderService
 
     /// <summary>The log of the first of two stages; the second writes <c>job.log</c>.</summary>
     private const string FramesLogName = "job-frames.log";
+
+    /// <summary>The log of the first stage of one segment of a film.</summary>
+    private static string SegmentLogName(string id) => $"job-frames.{id}.log";
+
+    /// <summary>The plans of a film's segments in a job folder (<see cref="MoviePlan.SegmentFileName"/>).</summary>
+    private const string SegmentPlanPattern = "scene-plan.*.json";
+
+    /// <summary>Whether a file of a job folder is scratch or a log: what the folder may hold and
+    /// still be deleted by <see cref="PruneJobFolders"/>.</summary>
+    private static bool IsDisposable(string name)
+        => DisposableFileNames.Contains(name)
+           || (name.StartsWith("job-frames.", StringComparison.Ordinal) && name.EndsWith(".log", StringComparison.Ordinal))
+           || (name.StartsWith("scene-plan.", StringComparison.Ordinal) && name.EndsWith(".json", StringComparison.Ordinal));
 
     // ConversionOptions' default file names (the terrain and its image too), the script
     // PrepareAsync writes, and the plan the player plays.

@@ -6,7 +6,9 @@
 // render in two stages that is stopped goes on when the same command is run again. Labels,
 // callouts, markers and photos come from a JSON file (--annotations), and the cave can appear
 // part by part (--reveal). The leads a preset marks are the stations the model flags as
-// continuations, or those of a JSON file (--leads). Kept in its
+// continuations, or those of a JSON file (--leads). A film of several shots comes from a
+// storyboard file (--storyboard): rendered whole, drafted whole, written as a bundle, or one shot
+// of it alone (--shot). Kept in its
 // own class (not a Program.cs local function) so it is unit-testable with in-memory writers and no
 // real Blender.
 
@@ -53,7 +55,13 @@ public static class BlenderVerb
             return 2;
         }
 
-        if (!TryBuildSpec(args, stderr, out var spec)) return 2;
+        // A film of several shots (--storyboard), unless one shot of it is asked for (--shot):
+        // that one is a render spec like any other from here on.
+        if (!TryReadStoryboard(args, stderr, out var storyboard, out int? shot)) return 2;
+        if (storyboard is not null && shot is null)
+            return await StoryboardAsync(args, source, format, storyboard, stdout, stderr).ConfigureAwait(false);
+
+        if (!TryBuildSpec(args, stderr, storyboard, shot, out var spec)) return 2;
         if (!TryTimeRoute(source, stderr, ref spec)) return 2;
         if (!TryReadLeads(args, source, spec, stderr, out var leads)) return 2;
 
@@ -100,7 +108,9 @@ public static class BlenderVerb
                 stderr.WriteLine($"error: --readme-language takes one of: {string.Join(", ", RenderBundleWriter.ReadmeLanguages)}.");
                 return 2;
             }
-            return await BundleAsync(model, spec, leads, bundle, draft, language, plans, Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
+            return await BundleAsync(
+                    work => RenderBundleWriter.FromModel(model, spec, work, draft, leads: leads), bundle, draft, language, plans,
+                    Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
                 .ConfigureAwait(false);
         }
 
@@ -224,8 +234,10 @@ public static class BlenderVerb
     /// and renders the <paramref name="plans"/> asked for: a zip is unpacked into a temporary
     /// folder first, and what they write is moved to <paramref name="outDir"/>, or beside the
     /// zip.</summary>
+    /// <param name="make">Converts the model into the folder it is given and returns the
+    /// bundle's content: one scene, or a film of several.</param>
     private static async Task<int> BundleAsync(
-        ResolvedModelSource model, SceneSpec spec, IReadOnlyList<SourceLead> leads, string bundle, bool draft, string language,
+        Func<string, RenderBundleContent> make, string bundle, bool draft, string language,
         RenderPlans plans, string? outDir,
         string? blenderOverride, TextWriter stdout, TextWriter stderr)
     {
@@ -235,13 +247,13 @@ public static class BlenderVerb
         try
         {
             stderr.WriteLine($"[{RenderPhase.ConvertingGeometry}] Converting model");
-            content = RenderBundleWriter.FromModel(model, spec, work, draft, leads: leads) with { Language = language };
+            content = make(work) with { Language = language };
             if (zip) RenderBundleWriter.WriteZip(content, bundle);
             else RenderBundleWriter.WriteFolder(content, bundle);
         }
         catch (ArgumentException ex)
         {
-            stderr.WriteLine($"error: invalid render spec: {ex.Message}");
+            stderr.WriteLine($"error: invalid {(ex.ParamName == "storyboard" ? "storyboard" : "render spec")}: {ex.Message}");
             return 2;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CaveFileFormatException)
@@ -283,20 +295,31 @@ public static class BlenderVerb
                 return 1;
             }
         }
-        var toRender = new List<(ScenePlan Plan, string File)>();
-        if (plans.HasFlag(RenderPlans.Draft)) toRender.Add((content.Draft!, RenderBundleWriter.DraftPlanFileName));
-        if (plans.HasFlag(RenderPlans.Full)) toRender.Add((content.Plan, ScenePlanSerializer.FileName));
+        // What a plan of the bundle writes, as the runner collects it: a scene's, or a film's,
+        // whose plan is the movie's and takes the player through every segment.
+        string In(string directory) => Path.GetFullPath(Path.Combine(folder, directory));
+        (string File, int Frames, OutputSpec Output, long FrameBytes, bool Full) Of(ScenePlan plan, string file, bool full)
+            => (file, plan.OutputFrameCount, PlanOutputs.SpecOf(plan, In(plan.Output.Directory)), plan.HasTexts ? PlanOutputs.FrameBytes(plan) : 0, full);
+        (string File, int Frames, OutputSpec Output, long FrameBytes, bool Full) OfFilm(StoryboardPlan film, string file, bool full)
+            => (file, film.Movie.OutputFrameCount, PlanOutputs.SpecOf(film, In(film.Movie.Output.Directory)), PlanOutputs.FrameBytes(film), full);
+        var toRender = new List<(string File, int Frames, OutputSpec Output, long FrameBytes, bool Full)>();
+        if (plans.HasFlag(RenderPlans.Draft))
+            toRender.Add(content.Film is null
+                ? Of(content.Draft!, RenderBundleWriter.DraftPlanFileName, full: false)
+                : OfFilm(content.FilmDraft!, RenderBundleWriter.DraftPlanFileName, full: false));
+        if (plans.HasFlag(RenderPlans.Full))
+            toRender.Add(content.Film is null
+                ? Of(content.Plan, ScenePlanSerializer.FileName, full: true)
+                : OfFilm(content.Film, ScenePlanSerializer.FileName, full: true));
         string? destination = outDir ?? (zip ? Path.GetDirectoryName(Path.GetFullPath(bundle)) : null);
         var progress = new Progress<RenderProgress>(p => stderr.WriteLine($"[{p.Phase}] {p.Message}"));
-        foreach (var (plan, file) in toRender)
+        foreach (var (file, frames, output, frameBytes, full) in toRender)
         {
-            // The player takes a plan with texts through both of its stages itself.
-            var job = new RenderJob(
-                Path.Combine(folder, PlayerFiles.EntryFileName), folder, plan.OutputFrameCount,
-                PlanOutputs.SpecOf(plan, Path.GetFullPath(Path.Combine(folder, plan.Output.Directory))))
+            // The player takes a plan with texts, and a film, through its stages itself.
+            var job = new RenderJob(Path.Combine(folder, PlayerFiles.EntryFileName), folder, frames, output)
             {
                 ScriptArguments = ["--plan", Path.Combine(folder, file)],
-                ExtraBytes = plan.HasTexts ? PlanOutputs.FrameBytes(plan) : 0,
+                ExtraBytes = frameBytes,
             };
             var result = await new BlenderRunner(new RealBlenderProcessLauncher()).RunAsync(blender, job, progress).ConfigureAwait(false);
             if (!result.Succeeded)
@@ -309,10 +332,10 @@ public static class BlenderVerb
 
             var outputs = result.OutputPaths.ToList();
             // The captions' subtitles lie where the movie was written; they go where it goes.
-            if (ReferenceEquals(plan, content.Plan) && content.Captions.Count > 0)
+            if (full && content.Captions.Count > 0)
                 foreach (string extension in new[] { Subtitles.SrtExtension, Subtitles.VttExtension })
                 {
-                    string subtitles = Path.Combine(folder, RenderBundleWriter.SubtitlePath(plan, extension).Replace('/', Path.DirectorySeparatorChar));
+                    string subtitles = Path.Combine(output.OutputDirectory, output.BaseName + extension);
                     if (File.Exists(subtitles)) outputs.Add(subtitles);
                 }
             if (destination is not null)
@@ -345,11 +368,215 @@ public static class BlenderVerb
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
-    private static bool TryBuildSpec(IReadOnlyList<string> args, TextWriter stderr, out SceneSpec spec)
+    /// <summary>The options that say what one scene shows: with a storyboard, the storyboard says it.</summary>
+    private static readonly string[] SceneOptions =
+    [
+        "--title", "--credits", "--end-card", "--end-card-seconds", "--caption", "--annotations", "--reveal", "--reveal-from",
+        "--reveal-dates", "--reveal-seconds", "--hdri", "--hdri-rotation", "--hdri-strength", "--lamp-reach",
+    ];
+
+    /// <summary>
+    /// The storyboard of <c>--storyboard &lt;file.json&gt;</c>, and the shot of it that
+    /// <c>--shot &lt;n&gt;</c> asks for alone (the first is 1). Both null without the option.
+    /// </summary>
+    private static bool TryReadStoryboard(IReadOnlyList<string> args, TextWriter stderr, out Storyboard? storyboard, out int? shot)
+    {
+        storyboard = null;
+        shot = null;
+        string? path = Option(args, "--storyboard"), number = Option(args, "--shot");
+        if (path is null)
+        {
+            if (number is null && !Flag(args, "--shot")) return true;
+            stderr.WriteLine("error: --shot goes with a storyboard (--storyboard <file.json>).");
+            return false;
+        }
+        if (Option(args, "--spec") is not null || Option(args, "--preset") is not null)
+        {
+            stderr.WriteLine("error: --storyboard does not go with --spec or --preset: a storyboard's shots say what they show.");
+            return false;
+        }
+        if (!File.Exists(path))
+        {
+            stderr.WriteLine($"error: storyboard file not found: {path}");
+            return false;
+        }
+        try { storyboard = StoryboardSerializer.ReadFile(path); }
+        catch (StoryboardFormatException ex)
+        {
+            stderr.WriteLine($"error: bad storyboard: {ex.Message}");
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            stderr.WriteLine($"error: {ex.Message}");
+            return false;
+        }
+        // A photo and an HDRI image are named relative to the storyboard's file, as an
+        // annotations file names them.
+        storyboard = Rooted(storyboard, Path.GetDirectoryName(Path.GetFullPath(path))!);
+
+        if (number is not null || Flag(args, "--shot"))
+        {
+            if (!int.TryParse(number, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int n)
+                || n < 1 || n > storyboard.Shots.Count)
+            {
+                stderr.WriteLine($"error: --shot takes the number of a shot, 1 to {storyboard.Shots.Count}, not '{number}'.");
+                return false;
+            }
+            shot = n;
+        }
+        var errors = StoryboardValidator.Validate(storyboard, film: shot is null);
+        if (errors.Count == 0) return true;
+        stderr.WriteLine("error: invalid storyboard:");
+        foreach (var error in errors) stderr.WriteLine($"  {error.Path}: {error.Message}");
+        storyboard = null;
+        return false;
+    }
+
+    /// <summary>The storyboard with the files it names relative to its own folder made absolute:
+    /// the photos of its annotations, its HDRI images and its files of survey dates.</summary>
+    private static Storyboard Rooted(Storyboard storyboard, string folder)
+    {
+        string? In(string? file) => string.IsNullOrWhiteSpace(file) ? file : Path.GetFullPath(Path.Combine(folder, file));
+        IReadOnlyList<AnnotationSpec>? Photos(IReadOnlyList<AnnotationSpec>? annotations)
+            => annotations?.Select(a => a?.Image is null ? a! : a with { Image = In(a.Image) }).ToList();
+        LightingSpec? Lit(LightingSpec? lighting) => lighting?.HdriPath is null ? lighting : lighting with { HdriPath = In(lighting.HdriPath) };
+        RevealSpec? Dated(RevealSpec? reveal) => reveal?.DatesPath is null ? reveal : reveal with { DatesPath = In(reveal.DatesPath) };
+        var defaults = storyboard.Defaults;
+        return storyboard with
+        {
+            Defaults = defaults with { Annotations = Photos(defaults.Annotations), Lighting = Lit(defaults.Lighting), Reveal = Dated(defaults.Reveal) },
+            Shots = storyboard.Shots.Select(s => s is null ? s! : s with
+            {
+                Annotations = Photos(s.Annotations), Lighting = Lit(s.Lighting),
+                Reveal = s.Reveal is { Spec: { } own } reveal ? reveal with { Spec = Dated(own) } : s.Reveal,
+            }).ToList(),
+        };
+    }
+
+    /// <summary>
+    /// A whole storyboard: rendered as a film (every shot's frames, then the film from them),
+    /// as a draft of every shot with <c>--draft</c>, or written as a bundle with <c>--bundle</c>.
+    /// </summary>
+    private static async Task<int> StoryboardAsync(
+        IReadOnlyList<string> args, string source, CaveSourceFormat format, Storyboard storyboard, TextWriter stdout, TextWriter stderr)
+    {
+        if (SceneOptions.FirstOrDefault(o => Flag(args, o)) is { } said)
+        {
+            stderr.WriteLine($"error: {said} does not go with a whole storyboard: say it in the storyboard, or render one shot (--shot <n>).");
+            return 2;
+        }
+        if (Option(args, "--export") is not null)
+        {
+            stderr.WriteLine("error: --export writes one scene's script; a storyboard is written as a bundle (--bundle <file.zip|folder>).");
+            return 2;
+        }
+        string? builderName = Option(args, "--builder");
+        if (builderName is not null && !builderName.Equals("auto", StringComparison.OrdinalIgnoreCase) && !builderName.Equals("player", StringComparison.OrdinalIgnoreCase))
+        {
+            stderr.WriteLine("error: a storyboard is rendered by the player (--builder auto or player).");
+            return 2;
+        }
+
+        // The leads are read when any shot marks them.
+        bool marksLeads = Enumerable.Range(0, storyboard.Shots.Count).Any(i => StoryboardPlanner.ShotSpec(storyboard, i).Labels.Leads.Show);
+        if (!TryReadLeads(args, source, new SceneSpec { Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = marksLeads } } }, stderr, out var leads))
+            return 2;
+
+        var model = new ResolvedModelSource { Path = Path.GetFullPath(source), Format = format, Kind = ModelSourceKind.ExternalFile };
+        string? bundle = Option(args, "--bundle");
+        bool draft = Flag(args, "--draft"), render = Flag(args, "--render");
+        bool keepFrames = Flag(args, "--keep-frames"), composeOnly = Flag(args, "--compose-only");
+        string? framesDir = Option(args, "--frames"), renderPlan = Option(args, "--render-plan");
+        if (bundle is null && (render || renderPlan is not null))
+        {
+            stderr.WriteLine("error: --render and --render-plan go with --bundle <file.zip|folder>.");
+            return 2;
+        }
+        if (bundle is not null)
+        {
+            if (keepFrames || composeOnly || framesDir is not null || builderName is not null)
+            {
+                stderr.WriteLine("error: --builder, --keep-frames, --compose-only and --frames go with a render, not with --bundle.");
+                return 2;
+            }
+            if (bundle.StartsWith("--", StringComparison.Ordinal))
+            {
+                stderr.WriteLine("error: --bundle takes a .zip file or a folder.");
+                return 2;
+            }
+            string language = Option(args, "--readme-language") ?? "en";
+            if (!RenderBundleWriter.ReadmeLanguages.Contains(language, StringComparer.Ordinal))
+            {
+                stderr.WriteLine($"error: --readme-language takes one of: {string.Join(", ", RenderBundleWriter.ReadmeLanguages)}.");
+                return 2;
+            }
+            if (!TryRenderPlans(renderPlan, draft, render, stderr, out var plans)) return 2;
+            return await BundleAsync(
+                    work => RenderBundleWriter.FromStoryboard(model, storyboard, work, draft, leads: leads), bundle, draft, language, plans,
+                    Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
+                .ConfigureAwait(false);
+        }
+
+        string? blenderOverride = Option(args, "--blender");
+        string outDir = Option(args, "--out") ?? Directory.GetCurrentDirectory();
+        var service = new BlenderRenderService(
+            new BlenderLocator(new ProcessBlenderProbe()), new BlenderRunner(new RealBlenderProcessLauncher()), outDir,
+            geometry: null, blenderOverride: () => blenderOverride);
+        var progress = new Progress<RenderProgress>(p => stderr.WriteLine($"[{p.Phase}] {p.Message}"));
+        var options = new RenderOptions
+        {
+            Draft = draft,
+            KeepFrames = keepFrames,
+            ComposeOnly = composeOnly,
+            // The frames of every shot have a place of their own beside the outputs, so that the
+            // same command, run again, goes on with the shot it stopped in.
+            FramesDirectory = Path.GetFullPath(framesDir ?? Path.Combine(outDir, storyboard.Output.BaseName + (draft ? "-draft" : "") + "-frames")),
+        };
+        try
+        {
+            var result = await service.RenderStoryboardAsync(storyboard, new RenderSource(model, leads), options, progress).ConfigureAwait(false);
+            foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
+            if (result.Succeeded)
+            {
+                foreach (var path in result.OutputPaths) stdout.WriteLine(path);
+                string what = composeOnly ? "wrote" : draft ? "rendered a draft of" : "rendered";
+                stderr.WriteLine($"{what} a film of {storyboard.Shots.Count} shot(s), {result.FrameCount} frame(s){(result.Device is null ? "" : " on " + result.Device)} in {result.Duration.TotalSeconds:0.0}s");
+                if (result.FramesDirectory is not null) stderr.WriteLine($"the frames are in {result.FramesDirectory}");
+                return 0;
+            }
+            if (result.FailureKind == RenderFailureKind.BuilderRefused)
+            {
+                stderr.WriteLine($"error: {result.ErrorMessage}");
+                return 2;
+            }
+            stderr.WriteLine($"error: render failed ({result.FailureKind}): {result.ErrorMessage}");
+            if (result.FramesDirectory is not null)
+                stderr.WriteLine($"the frames rendered so far are in {result.FramesDirectory}; run the same command again to go on from them");
+            return 1;
+        }
+        catch (ArgumentException ex)
+        {
+            stderr.WriteLine($"error: invalid storyboard: {ex.Message}");
+            return 2;
+        }
+        catch (Exception ex) when (ex is IOException or ModelSourceNotFoundException or CaveFileFormatException)
+        {
+            stderr.WriteLine($"error: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static bool TryBuildSpec(IReadOnlyList<string> args, TextWriter stderr, Storyboard? storyboard, int? shot, out SceneSpec spec)
     {
         spec = BuiltInPresets.OrbitShowcase().Spec;
 
-        if (Option(args, "--spec") is { } specPath)
+        if (storyboard is not null && shot is { } number)
+        {
+            // One shot of a storyboard, as a scene of its own.
+            spec = StoryboardPlanner.ShotSpec(storyboard, number - 1);
+        }
+        else if (Option(args, "--spec") is { } specPath)
         {
             if (!File.Exists(specPath)) { stderr.WriteLine($"error: spec file not found: {specPath}"); return false; }
             try { spec = SceneSpecSerializer.ReadFile(specPath); }
