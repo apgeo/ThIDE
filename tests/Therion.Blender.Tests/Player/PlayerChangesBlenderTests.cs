@@ -419,8 +419,10 @@ public partial class PlayerChangesBlenderTests
         (error, _) = await Refused(job, Changed(plan, Of(role: ScenePlanBuilder.LeadMarkerRole) with { Scale = [new PlanVectorKey(0, new CaveVector3(2, 2, 2))] }));
         Assert.Equal($"changes[0].scale: \"{marker}\" is not a model; the size of a text or a marker is its own section's", error);
 
-        // One property of one thing, changed twice.
-        (error, _) = await Refused(job, Changed(plan, Of(role: ScenePlanBuilder.LeadMarkerRole) with { Visible = hard }, Of(marker) with { Visible = hard }));
+        // One property of one thing, changed twice by role or twice by id (once by each is allowed: the id's wins).
+        (error, _) = await Refused(job, Changed(plan, Of(role: ScenePlanBuilder.LeadMarkerRole) with { Visible = hard }, Of(role: ScenePlanBuilder.LeadMarkerRole) with { Visible = hard }));
+        Assert.Equal($"changes[1].visible: changes[0] changes \"visible\" of \"{marker}\" already", error);
+        (error, _) = await Refused(job, Changed(plan, Of(marker) with { Visible = hard }, Of(marker) with { Visible = hard }));
         Assert.Equal($"changes[1].visible: changes[0] changes \"visible\" of \"{marker}\" already", error);
 
         // Listed before the module that gives the cave its material.
