@@ -1154,6 +1154,64 @@ fișierele pe care executorul le numește. Rămâne riscul unui defect în citit
 poligoane și imagini ale Blender: rulați executorul ca un utilizator care poate citi și scrie cele
 două dosare și prea puțin altceva.
 
+### Randarea pentru un server
+
+Același executor își poate lua lucrările de la un server care păstrează pachete de randare (un nod
+de randare al unui server precum SilexGIS), în loc de un dosar: cere serverului o lucrare, descarcă
+pachetul, îl randează, trimite înapoi filmul, subtitrările și jurnalul Blender și cere următoarea
+lucrare. Serverul nu se conectează niciodată la calculator; calculatorul este cel care apelează
+serverul. Protocolul este descris în
+[`docs/dev/render-worker-protocol.md`](../../dev/render-worker-protocol.md) (în engleză).
+
+    therion-cli render-worker --server https://example.org/api/v1/render-nodes/ \
+        --token-file ~/.config/thide-node/token --node-name gpu-1
+
+- `--server` este adresa dată de administratorul serverului; trebuie să fie HTTPS (HTTP simplu
+  este acceptat doar către acest calculator, pentru teste). `--token-file` este un fișier al cărui
+  prim rând este tokenul nodului, dat de administrator; trebuie să poată fi citit doar de
+  dumneavoastră (`chmod 600`), altfel executorul refuză să pornească. Tokenul nu este scris
+  niciodată în jurnal.
+- `--node-name` este numele afișat de server (implicit numele calculatorului); `--scratch` este
+  locul unde se descarcă pachetele și se păstrează cadrele (câte un dosar pentru fiecare lucrare);
+  `--poll-seconds` (30) este cât așteaptă o lucrare înainte de a întreba din nou; `--once` face o
+  singură cerere și randează ce primește. `--blender`, `--modules` și limitele sunt cele ale
+  executorului cu dosare; limitele unei lucrări le pot doar micșora.
+- Filmul este scris în containerul cerut de lucrare: implicit MP4 (H.264) sau WebM, pe care un
+  server îl poate prefera pentru că H.264 vine cu condițiile unui grup de brevete.
+- O lucrare anulată pe server oprește Blender la următorul semnal de prezență (o treime din durata
+  rezervării, 40 s pentru o rezervare de 2 minute). O rețea care cade este încercată din nou, cu
+  așteptări tot mai lungi; dacă serverul nu poate fi atins o rezervare întreagă, lucrarea este
+  oprită, iar serverul o dă altcuiva. Cadrele ei rămân: dacă aceeași lucrare revine la acest
+  calculator, continuă de la ele. Un token refuzat de server oprește executorul (codul de ieșire 3).
+
+**Pregătirea unui calculator cu placă grafică.**
+
+1. Instalați Blender 4.2 sau mai nou de pe [blender.org](https://www.blender.org/download/)
+   (versiunile LTS sunt cele testate), verificați descărcarea cu SHA-256 publicat pe site și
+   dezarhivați-o, de exemplu în `/opt/blender`. Verificați că vede placa: în preferințele Blender
+   sau randând o previzualizare cu executorul cu dosare.
+2. Compilați `therion-cli` din sursele ThIDE cu .NET SDK:
+   `dotnet publish src/Therion.Cli -c Release -o /opt/thide-cli`.
+3. Creați un utilizator doar pentru executor (`useradd --system --create-home thide-render`), puneți
+   fișierul cu tokenul în dosarul lui personal cu `chmod 600` și porniți executorul ca acel
+   utilizator, de exemplu dintr-un serviciu systemd cu `Restart=on-failure`,
+   `--blender /opt/blender/blender` și `--scratch /var/lib/thide-render`.
+
+Pentru un container, scrieți o rețetă care descarcă Blender în timp ce se construiește imaginea (de
+pe blender.org, verificând SHA-256) și construiți imaginea pe calculatorul care o rulează. Nu
+publicați o imagine care conține Blender: Blender este GPL, iar o imagine care îl conține este o
+redistribuire a Blender, cu tot ce cere aceasta celui care o publică. Nu dați containerului altă
+rețea decât adresa serverului și alt dosar decât cel de lucru.
+
+**Securitatea unui nod.** Tot ce s-a spus mai sus despre un pachet este valabil și pentru o lucrare
+de la un server: este o colecție de date, scripturile lui nu rulează niciodată, este verificat
+înainte să pornească Blender și se trimit înapoi doar fișierele numite de executor. În plus,
+dimensiunea și SHA-256 ale pachetului sunt verificate față de cele date de server înainte ca el să
+fie citit, tokenul merge doar la adresa serverului și doar prin HTTPS, iar o lucrare eșuată nu
+încarcă nimic în afară de motivul eșecului. Pentru că rămâne riscul unui defect în cititoarele
+Blender, rulați Blender ca un utilizator care nu poate atinge mult mai mult decât dosarul de lucru:
+un utilizator separat sau un container ca mai sus.
+
 ## Cerințe și sfaturi
 
 - **Blender 4.2 sau mai nou** — versiunile mai vechi sunt respinse cu un mesaj clar.
