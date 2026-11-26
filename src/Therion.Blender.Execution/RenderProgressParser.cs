@@ -18,6 +18,9 @@ namespace Therion.Blender.Execution;
 /// <summary>Parses render output into <see cref="RenderProgress"/> ticks (D-08 tiers 1–2).</summary>
 public sealed partial class RenderProgressParser
 {
+    /// <summary>What Blender prints when it finds no OpenGL to draw with.</summary>
+    internal const string NoOpenGlLine = "No OpenGL vendor detected";
+
     private readonly int? _expectedFrameCount;
     private readonly List<string> _warnings = [];
     private int _lastNativeFrame = -1;
@@ -58,6 +61,11 @@ public sealed partial class RenderProgressParser
     /// one had stopped (<c>THIDE:resumed</c>); null when it started from nothing.</summary>
     public int? ResumedFrames { get; private set; }
 
+    /// <summary>True once Blender said it found no OpenGL to draw with ("No OpenGL vendor
+    /// detected"): a draft (the solid view) and EEVEE then cannot render. On Windows that is a
+    /// Blender started outside a signed-in desktop session (a service, an SSH session).</summary>
+    public bool NoOpenGl { get; private set; }
+
     /// <summary>Non-fatal notices the script surfaced (label caps, missing HDRI, …).</summary>
     public IReadOnlyList<string> Warnings => _warnings;
 
@@ -65,6 +73,7 @@ public sealed partial class RenderProgressParser
     public RenderProgress? Consume(string? line)
     {
         if (line is null) return null;
+        if (line.Contains(NoOpenGlLine, StringComparison.Ordinal)) NoOpenGl = true;
         const string prefix = "THIDE:";
         int idx = line.IndexOf(prefix, StringComparison.Ordinal);
         if (idx >= 0)

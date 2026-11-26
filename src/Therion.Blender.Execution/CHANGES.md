@@ -1,5 +1,20 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-27 — fixes from a Windows machine with a GPU
+
+### Breaking changes
+- None. `IBlenderProcess` has one more member, `WaitForExitAsync(timeout)`, with a default body
+  that returns at once: an implementation outside this assembly needs no change.
+
+### Behaviour
+- A render that is cancelled returns only once the killed Blender is gone (at most 30 s). Windows
+  keeps what a dying process holds locked, its working folder included, so a worker job that went
+  on with its frames right after a cancel could find its bundle folder in use.
+- A Blender that crashes after it found no OpenGL to draw with (`No OpenGL vendor detected`: a draft
+  or EEVEE started outside a signed-in desktop session on Windows, such as a service or an SSH
+  session) is reported as a crash that says so and says where to render instead.
+  `RenderProgressParser.NoOpenGl` tells it.
+
 ## 2026-11-27 — the render worker takes jobs from a server
 
 ### Breaking changes

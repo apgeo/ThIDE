@@ -1,5 +1,19 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-27 — fixes from a Windows machine with a GPU
+
+The plan stays **version 1** and the player stays **1.12**: no key is new or changed.
+
+### Breaking changes
+- None.
+
+### The player
+- A render on a GPU (OptiX, CUDA, HIP, oneAPI, Metal) denoises on the GPU too
+  (`cycles.denoising_use_gpu`, Blender 4.1 and newer). Started with `--factory-startup`, Blender
+  ran the denoiser on the CPU, which took most of a GPU frame's time at 1920×1080.
+- A scene saved as a `.blend` names its output with `/` on Windows as well (`//../frames/part_####`,
+  not `//..\frames\part_####`), so a file saved on Windows renders where it should elsewhere.
+
 ## 2026-11-27 — the render node protocol
 
 The plan stays **version 1**; the player does not change.

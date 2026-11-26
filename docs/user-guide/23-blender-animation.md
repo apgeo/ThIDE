@@ -1111,13 +1111,21 @@ The server never reaches the machine; the machine calls the server. The protocol
 1. Install Blender 4.2 or newer from [blender.org](https://www.blender.org/download/) (the LTS
    versions are the tested ones), check the download against the SHA-256 the site lists, and unpack
    it, for example into `/opt/blender`. Check that it sees the card: in Blender's preferences, or
-   by rendering a draft with the folder worker.
+   by rendering a small bundle with Cycles with the folder worker: its `<job>.log` says
+   `THIDE:device=OPTIX` or `CUDA` (on an NVIDIA card), `HIP`, `ONEAPI` or `METAL`, and `CPU` when no
+   card could be used.
 2. Build `therion-cli` from ThIDE's source with the .NET SDK:
    `dotnet publish src/Therion.Cli -c Release -o /opt/thide-cli`.
 3. Make a user of its own for the worker (`useradd --system --create-home thide-render`), put the
    token file in its home with `chmod 600`, and start the worker as that user, for example from a
    systemd service with `Restart=on-failure`, `--blender /opt/blender/blender` and
    `--scratch /var/lib/thide-render`.
+4. On **Windows**, Blender can draw with OpenGL only inside a signed-in desktop session. A worker
+   started as a service, by a scheduled task that runs whether the user is signed in or not, or
+   over SSH renders Cycles on the card, but not a draft (the solid view) and not EEVEE: Blender
+   stops there, and the job's error says why. To render those too, start the worker in the
+   session of a user who is signed in (a scheduled task "at log on", run only when the user is
+   signed in), and keep that session from locking.
 
 For a container, write a recipe that downloads Blender while the image is built (from
 blender.org, checking its SHA-256) and build the image on the machine that runs it. Do not publish

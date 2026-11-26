@@ -38,7 +38,9 @@ public class BlenderRunnerE2ETests
 
     private static async Task<RenderResult> RunSmoke(string baseName, OutputSpec output, int frameCount, Func<string, string> script)
     {
-        var locate = new BlenderLocator(new ProcessBlenderProbe()).Locate();
+        // THIDE_BLENDER_PATH as the other real-Blender tests take it: a portable Blender (a folder
+        // unpacked anywhere on Windows) is found neither on the PATH nor where installers put it.
+        var locate = new BlenderLocator(new ProcessBlenderProbe()).Locate(Environment.GetEnvironmentVariable("THIDE_BLENDER_PATH"));
         Assert.True(locate.IsUsable, "THIDE_BLENDER_E2E=1 but no Blender >= 4.2 was located.");
 
         var dir = Path.Combine(Path.GetTempPath(), "thide-e2e-" + Guid.NewGuid().ToString("N"));

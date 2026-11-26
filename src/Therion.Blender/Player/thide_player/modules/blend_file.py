@@ -47,7 +47,9 @@ def render(ctx, blend):
     # output stays in the plan's folder: the folder can then be moved and rendered elsewhere.
     output = scene.render.filepath
     if is_inside(output, ctx.plan_dir):
-        scene.render.filepath = bpy.path.relpath(output, start=folder)
+        # Written with "/" on every system: Blender reads it so on Windows too, and a file saved
+        # on Windows then renders where it should on Linux and macOS as well.
+        scene.render.filepath = bpy.path.relpath(output, start=folder).replace(os.sep, "/")
     # The images a module has loaded travel inside the file, as the meshes do: it needs nothing
     # beside it.
     for image in bpy.data.images:
