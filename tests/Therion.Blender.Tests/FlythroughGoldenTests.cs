@@ -1,7 +1,8 @@
-// The flythrough preset's poses, held exactly: a digest of every keyframe (frame, place and
-// target, to the last bit) for the built-in "Full flythrough" on invented caves, forwards and
-// backwards, short clips and one past the flythrough's pose limit. Routes share the flythrough's
-// code for where the camera flies; this is what keeps that sharing from moving the flythrough.
+// The flythrough preset's poses, held: a digest of every keyframe (frame, place and target, to
+// ten micrometres, since the last bits of sines and cosines differ between platforms' runtimes)
+// for the built-in "Full flythrough" on invented caves, forwards and backwards, short clips and
+// one past the flythrough's pose limit. Routes share the flythrough's code for where the camera
+// flies; this is what keeps that sharing from moving the flythrough.
 //
 // Golden workflow: THIDE_UPDATE_GOLDENS=1 rewrites Goldens/flythrough-poses.txt, then inspect + commit.
 
@@ -35,7 +36,7 @@ public class FlythroughGoldenTests
         var text = new StringBuilder();
         foreach (var k in keys)
             text.Append(CultureInfo.InvariantCulture,
-                $"{k.Frame} {k.Location.X:R} {k.Location.Y:R} {k.Location.Z:R} {k.Target.X:R} {k.Target.Y:R} {k.Target.Z:R}\n");
+                $"{k.Frame} {k.Location.X:F5} {k.Location.Y:F5} {k.Location.Z:F5} {k.Target.X:F5} {k.Target.Y:F5} {k.Target.Z:F5}\n");
         return Convert.ToHexString(SHA256.HashData(Encoding.ASCII.GetBytes(text.ToString())));
     }
 

@@ -6,7 +6,7 @@ Nothing changes in the plan (still **version 1**) or the player: a route is a ca
 pose a frame, as every other. Everything here is additive.
 
 ### Breaking changes
-- None. The flythrough's poses are unchanged to the last bit (a golden of the built-in preset on
+- None. The flythrough's poses are unchanged (a golden of the built-in preset, to 10 µm, on
   invented caves holds them), its 1,800-pose limit included.
 
 ### The route camera
