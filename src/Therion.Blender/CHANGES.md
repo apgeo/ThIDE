@@ -1,5 +1,60 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-26 — camera routes
+
+Nothing changes in the plan (still **version 1**) or the player: a route is a camera track, one
+pose a frame, as every other. Everything here is additive.
+
+### Breaking changes
+- None. The flythrough's poses are unchanged to the last bit (a golden of the built-in preset on
+  invented caves holds them), its 1,800-pose limit included.
+
+### The route camera
+- **`CameraTemplate.Route`** with **`CameraSpec.Route`** (`RouteParams`, JSON `camera.route`):
+  `From`, `To` and `Via` (the stops, in order), or `Stations` (stations to pass in order; the
+  camera stops only at the first and last). A station is named as the model names it, or as
+  `name@survey` where the name is in more than one survey; `RouteParams.Entrance` (`"entrance"`,
+  the first station flagged as an entrance) and `RouteParams.Farthest` (`"farthest"`, the
+  station farthest from the start along the passages) stand for stations the model gives. Null
+  parameters fly from the entrance (or, in a model with none, the first dead end of its largest
+  part) to the farthest station. Stops are joined by the shortest passages.
+- Holds: `StartHoldSeconds`, `HoldSeconds` (each stop on the way, 1 s), `EndHoldSeconds`. The
+  camera speeds up from rest and slows down to rest over about a second at every stop (the
+  flythrough has one ease for its whole path), and at a stop on the way turns its view in place,
+  at the flythrough's turn limit, from the way it came to the way it goes on (a half turn at a
+  dead end, about 1.8 s).
+- Speed by passage size: `CameraRoutes.SpeedFor(radius)` = `clamp(2 · radius, 1.5, 12)` m/s, the
+  radius from the tube of the nearest leg (the mean of its two cross-sections' half width and half
+  height), `CameraRoutes.FallbackRadius` (2 m) where there is no tube (scrap walls). Speed changes
+  between passages at no more than 1 m/s².
+- `RouteParams.Timing`: `Fit` (the default) fits the flight into the spec's duration, scaling the
+  travel and keeping holds and turns (unless they would take more than 80 % of the clip);
+  `Natural` lets the route set the duration, filled in by **`CameraRoutes.WithNaturalDuration`**
+  (the CLI does; a planner given a `Natural` route without it fits it to the spec's duration).
+- `LookAheadMeters`, `ClearanceMeters`, `SmoothingIterations` as the flythrough's. Where the camera
+  flies inside a passage is the flythrough's: the middle of the tubes, corners rounded, a passage
+  radius short of the route's ends and of a stop where it turns back.
+- One pose for every frame, with no limit (the flythrough keeps its 1,800).
+- Lead markers sized `HiddenInFlythrough` are hidden for a route too.
+- `SceneSpecValidator` checks `camera.route.*`. A station that is not in the model, is on no leg,
+  is ambiguous, or cannot be reached is an `ArgumentException` from the planner naming the
+  station and the field (`camera.route.via[1]`).
+
+### Routes for other planners
+- **`CameraRoutes.Resolve(framing, route)`** → `RoutePath` (the station indices passed, the stops
+  among them, the hold at each). **`CameraRoutes.Measure(framing, route)`** → `RouteMeasure`
+  (length; travel, hold and turn seconds; `Seconds`): what a route takes, for a planner with a
+  time budget. **`CameraRoutes.NameOf(framing, station)`** names a station by index so that a
+  route finds it again (`name` or `name@survey`).
+- **`CameraFraming`** carries `Centerline`, `Model` and `TubeLegs` (from `FromGeometry`), and
+  frames any way through the cave: **`AlongPath(points)`**, **`AlongStations(indices)`**; the
+  tube lookup **`CameraFraming.TubesAlong(path, tubeLegs)`** is public.
+
+### CLI
+- `therion-cli blender … --route <from>[:<via>…]:<to> [--route-seconds <n>]`: a route camera over
+  whatever the preset or spec had; the route sets the clip's length unless `--route-seconds`
+  gives one. A station it cannot find is a usage error (exit 2) before anything is written.
+
 ## 2026-11-26 — marker symbols and sizes, outlines, id over role, photo layout, a reveal over a leg graph
 
 The plan stays **version 1** and this is player **1.10**. Everything here is a new key, a new
