@@ -1,5 +1,31 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-27 — composite presets
+
+The plan stays **version 1**; the player does not change.
+
+### Breaking changes
+- None. `RouteParams` has one more key, `branches`, written only when set.
+
+### Additive API
+- **Composite presets** (`Presets/CompositePreset.cs`): `CompositePreset` (`Name`, `Description`,
+  `BuiltIn`, `Storyboard`), `CompositePresetSerializer` (`Read`, `ReadFile`, `Write`, `WriteFile`;
+  `PresetFormatException` on a bad file) and `BuiltInComposites` (`All`, `ByName`, `Showcase`,
+  `GrandTour`, `ExplorationHistory`). `PresetStore.LoadComposites`, `SaveComposite`,
+  `DeleteComposite` keep them beside the presets as `*.composite.json` (`CompositeExtension`).
+- **Symbolic routes.** `RouteParams.Branches` (`AutoBranches` = `"auto"`): the shot is a tour of
+  the cave's branches. `RouteParams.Newest` (`"newest"`) as `From`: the passage of the last survey
+  day. A plan made of either unexpanded is refused (`CameraRoutes.Resolve`).
+- **`StoryboardExpander`** (`Plan/`): `IsSymbolic(storyboard, presets)`; `Expand(storyboard,
+  geometry, leads, presets, language)` → `ExpandedStoryboard` (`Storyboard`, `Tours`, `Notices`):
+  a tour shot becomes the shots of `TourBuilder.Build` (the first takes the shot's `in` and texts,
+  all its look), a route from `newest` the two farthest-apart stations of the last day's legs
+  (from the one nearer an entrance), the main passage without dates. `InlinePresets(storyboard,
+  presets)` writes a non-built-in preset into the shots that name it, giving the same shots.
+- `RenderBundleWriter.FromStoryboard` expands after its conversion; the notices are the bundle's.
+- **`StoryboardFiles`**: `Rooted(storyboard, folder)`, `Named(storyboard)`, `Map(storyboard, f)`
+  over the photos, HDRI images and survey-date files a storyboard names (the CLI's helper, moved).
+
 ## 2026-11-27 — large caves, frame ranges, render jobs, bundles from elsewhere
 
 The plan stays **version 1** and this is player **1.12**. No plan key is new: a plan of a large

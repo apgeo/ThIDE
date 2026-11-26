@@ -61,6 +61,45 @@ public sealed class PresetStore
         return true;
     }
 
+    /// <summary>Extension for composite preset files (a storyboard template).</summary>
+    public const string CompositeExtension = ".composite.json";
+
+    /// <summary>Every readable composite preset of the user's, sorted by name; unreadable files
+    /// are skipped, as for <see cref="Load"/>.</summary>
+    public IReadOnlyList<CompositePreset> LoadComposites()
+    {
+        if (!System.IO.Directory.Exists(Directory)) return [];
+        var composites = new List<CompositePreset>();
+        foreach (var path in System.IO.Directory.EnumerateFiles(Directory, "*" + CompositeExtension))
+        {
+            try { composites.Add(CompositePresetSerializer.ReadFile(path) with { BuiltIn = false }); }
+            catch (Exception ex) when (ex is PresetFormatException or IOException or UnauthorizedAccessException) { }
+        }
+        composites.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
+        return composites;
+    }
+
+    /// <summary>Saves (or overwrites) a composite preset; returns the file written.</summary>
+    public string SaveComposite(CompositePreset composite)
+    {
+        ArgumentNullException.ThrowIfNull(composite);
+        if (string.IsNullOrWhiteSpace(composite.Name))
+            throw new ArgumentException("A composite preset needs a name to be saved.", nameof(composite));
+        System.IO.Directory.CreateDirectory(Directory);
+        var path = Path.Combine(Directory, Slug(composite.Name) + CompositeExtension);
+        CompositePresetSerializer.WriteFile(composite with { BuiltIn = false }, path);
+        return path;
+    }
+
+    /// <summary>Deletes the composite preset with this name; true if a file was removed.</summary>
+    public bool DeleteComposite(string name)
+    {
+        var path = Path.Combine(Directory, Slug(Guard(name)) + CompositeExtension);
+        if (!File.Exists(path)) return false;
+        File.Delete(path);
+        return true;
+    }
+
     /// <summary>True when a user preset with this name exists.</summary>
     public bool Exists(string name) => File.Exists(PathFor(Guard(name)));
 

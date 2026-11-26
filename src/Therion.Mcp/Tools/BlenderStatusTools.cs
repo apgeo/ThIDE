@@ -3,6 +3,7 @@ using System.Diagnostics;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using Therion.Blender;
+using Therion.Blender.Plan;
 using Therion.Blender.Presets;
 
 namespace Therion.Mcp.Tools;
@@ -24,7 +25,13 @@ public sealed record RenderPresetDto(
     string Engine,
     int Samples);
 
-public sealed record RenderPresetList(IReadOnlyList<RenderPresetDto> Presets);
+/// <summary>A composite preset: a film of several shots any cave can be made into.</summary>
+/// <param name="Shots">The names of its shots, in order; a tour shot becomes the tour's shots.</param>
+/// <param name="Seconds">How long the shots say they are; a tour's is at most its shot's.</param>
+public sealed record CompositePresetDto(string Name, string? Description, bool BuiltIn, IReadOnlyList<string> Shots, double Seconds);
+
+/// <param name="Composites">The composite presets: start_render renders one's film when its name is the preset.</param>
+public sealed record RenderPresetList(IReadOnlyList<RenderPresetDto> Presets, IReadOnlyList<CompositePresetDto>? Composites = null);
 
 /// <summary>
 /// Reading the Blender side: which presets exist and how a render is getting on. Registered only on a
@@ -40,9 +47,23 @@ public sealed class BlenderStatusTools(IBlenderRenderHost blender, BlenderRender
     [Description("The presets start_render and export_render_script accept: the built-in ones and the "
                + "user's own, each with its camera move, output (video, frames or still), size, length "
                + "and render samples. Pick one by name; start_render can override the output kind, size, "
-               + "length and samples.")]
+               + "length and samples. composites are films of several shots (an orbit, the main passage, a tour of the "
+               + "branches, the history of the exploration) that start_render makes of the cave when one is the preset.")]
     public ToolResult<RenderPresetList> ListRenderPresets() =>
-        ToolResult<RenderPresetList>.Success(new RenderPresetList(Presets(blender).Select(ToDto).ToList()));
+        ToolResult<RenderPresetList>.Success(new RenderPresetList(
+            Presets(blender).Select(ToDto).ToList(),
+            Composites(blender).Select(c => new CompositePresetDto(
+                c.Name, c.Description, c.BuiltIn, c.Storyboard.Shots.Select((s, i) => s.Name ?? $"Shot {i + 1}").ToList(),
+                Math.Round(Enumerable.Range(0, c.Storyboard.Shots.Count).Sum(i => SecondsOf(c.Storyboard, i)), 1))).ToList()));
+
+    private static double SecondsOf(Storyboard storyboard, int shot)
+    {
+        try { return StoryboardPlanner.ShotSpec(storyboard, shot).Animation.DurationSeconds; }
+        catch (ArgumentException) { return 0; }  // a user's composite that names a preset no longer there
+    }
+
+    internal static IReadOnlyList<CompositePreset> Composites(IBlenderRenderHost blender) =>
+        [.. BuiltInComposites.All, .. blender.UserComposites()];
 
     [McpServerTool(Name = "render_status", Title = "Blender render status", ReadOnly = true, Idempotent = true)]
     [Description("How a render started with start_render is getting on: running, succeeded, failed or "

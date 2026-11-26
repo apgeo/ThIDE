@@ -802,6 +802,124 @@ public sealed class BlenderRenderToolsTests : IDisposable
         return services.BuildServiceProvider();
     }
 
+    // ---- films: storyboards and composite presets ------------------------------------------------
+
+    private void WriteStoryboard(string relative, Storyboard storyboard)
+    {
+        string path = _fixture.PathTo(relative.Split('/'));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        StoryboardSerializer.WriteFile(storyboard, path);
+    }
+
+    private static Storyboard TwoShots(string? firstPreset = "Orbit showcase") => new()
+    {
+        Name = "Film",
+        Shots =
+        [
+            new ShotSpec { Name = "Round", Preset = firstPreset, Seconds = 4 },
+            new ShotSpec { Name = "Down", Preset = "Helix descent", Seconds = 3, In = new TransitionSpec { Kind = TransitionKind.Dip, Seconds = 0.5 } },
+        ],
+        Output = new OutputSpec { BaseName = "film", OutputDirectory = "/elsewhere" },
+    };
+
+    [Fact]
+    public async Task A_storyboard_is_rendered_as_a_film_by_the_agent_into_the_workspace()
+    {
+        WriteStoryboard("films/two.storyboard.json", TwoShots());
+        var (render, status) = await ToolsAsync();
+
+        var started = await render.StartRender(storyboard: "films/two.storyboard.json", model: "out/cave.3d", outputDirectory: "renders", draft: true);
+
+        Assert.True(started.Ok, started.Error?.Message);
+        Assert.Equal("films/two.storyboard.json", started.Data!.Preset);
+        Assert.Equal(210, started.Data.Frames);
+        var done = await FinishedAsync(status, started.Data.JobId);
+        Assert.Equal("succeeded", done.State);
+        var film = _blender.Renderer.LastStoryboard!;
+        Assert.Equal(["Round", "Down"], film.Shots.Select(s => s.Name));
+        Assert.Equal(_fixture.PathTo("renders"), film.Output.OutputDirectory);
+        Assert.Equal(("agent", true), (_blender.Renderer.LastOptions!.Owner, _blender.Renderer.LastOptions.Draft));
+        Assert.Equal(["renders/film.mp4"], done.Outputs);
+    }
+
+    [Fact]
+    public async Task A_storyboard_outside_the_workspace_or_missing_is_refused()
+    {
+        var (render, _) = await ToolsAsync();
+        var outside = await render.StartRender(storyboard: "../two.storyboard.json");
+        Assert.Equal(ToolErrorCodes.PathOutsideWorkspace, outside.Error!.Code);
+        var missing = await render.StartRender(storyboard: "films/none.storyboard.json");
+        Assert.Equal(ToolErrorCodes.FileNotFound, missing.Error!.Code);
+        File.WriteAllText(_fixture.PathTo("bad.storyboard.json"), "{ \"version\": 1, \"shots\": [ { \"nope\": 1 } ] }");
+        var bad = await render.StartRender(storyboard: "bad.storyboard.json");
+        Assert.Equal(ToolErrorCodes.InvalidArgument, bad.Error!.Code);
+        Assert.Null(_blender.Renderer.LastStoryboard);
+    }
+
+    [Fact]
+    public async Task A_file_the_storyboard_names_outside_the_workspace_is_refused()
+    {
+        var film = TwoShots() with { Defaults = new StoryboardDefaults { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "../../sky.hdr" } } };
+        WriteStoryboard("films/sky.storyboard.json", film);
+        var (render, _) = await ToolsAsync();
+
+        var refused = await render.StartRender(storyboard: "films/sky.storyboard.json");
+
+        Assert.Equal(ToolErrorCodes.PathOutsideWorkspace, refused.Error!.Code);
+        Assert.DoesNotContain("..", refused.Error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task An_invalid_storyboard_and_scene_settings_with_one_are_refused()
+    {
+        WriteStoryboard("films/unknown.storyboard.json", TwoShots(firstPreset: "No such preset"));
+        WriteStoryboard("films/two.storyboard.json", TwoShots());
+        var (render, _) = await ToolsAsync();
+
+        var invalid = await render.StartRender(storyboard: "films/unknown.storyboard.json");
+        Assert.Equal(ToolErrorCodes.InvalidArgument, invalid.Error!.Code);
+        Assert.Contains("shots[0].preset", invalid.Error.Message, StringComparison.Ordinal);
+        var mixed = await render.StartRender(storyboard: "films/two.storyboard.json", samples: 16);
+        Assert.Equal(ToolErrorCodes.InvalidArgument, mixed.Error!.Code);
+        var generator = await render.StartRender(storyboard: "films/two.storyboard.json", builder: "generator");
+        Assert.Equal(ToolErrorCodes.InvalidArgument, generator.Error!.Code);
+    }
+
+    [Fact]
+    public async Task A_users_preset_in_a_storyboard_is_written_into_its_shot()
+    {
+        _blender.Saved.Add(BuiltInPresets.HelixDescent() with { Name = "Mine", BuiltIn = false });
+        WriteStoryboard("films/mine.storyboard.json", TwoShots(firstPreset: "Mine"));
+        var (render, status) = await ToolsAsync();
+
+        var started = await render.StartRender(storyboard: "films/mine.storyboard.json");
+
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        var shots = _blender.Renderer.LastStoryboard!.Shots;
+        Assert.Null(shots[0].Preset);
+        Assert.Equal(CameraTemplate.Helix, shots[0].Camera!.Template);
+        Assert.Equal("Helix descent", shots[1].Preset);
+    }
+
+    [Fact]
+    public async Task A_composite_preset_is_listed_and_rendered_by_its_name()
+    {
+        var (render, status) = await ToolsAsync();
+
+        var composites = status.ListRenderPresets().Data!.Composites!;
+        Assert.Equal(BuiltInComposites.All.Select(c => c.Name), composites.Select(c => c.Name));
+        Assert.Equal(["Outside", "Tour"], composites.Single(c => c.Name == "Grand tour").Shots);
+
+        var started = await render.StartRender(preset: "grand tour", model: "out/cave.3d");
+        Assert.True(started.Ok, started.Error?.Message);
+        Assert.Equal("Grand tour", started.Data!.Preset);
+        await FinishedAsync(status, started.Data.JobId);
+        Assert.Equal("{cave}: grand tour", _blender.Renderer.LastStoryboard!.Name);
+        // The tour is made of the cave by the renderer, which reads the model.
+        Assert.Equal(RouteParams.AutoBranches, _blender.Renderer.LastStoryboard.Shots[1].Camera!.Route!.Branches);
+    }
+
     // ---- fakes ----------------------------------------------------------------------------------
 
     private sealed class FakeBlenderHost(string workspaceModel, string jobRoot) : IBlenderRenderHost
@@ -901,6 +1019,20 @@ public sealed class BlenderRenderToolsTests : IDisposable
             var script = Path.Combine(outputDir, "render.py");
             File.WriteAllText(script, "# render\n");
             return Task.FromResult(script);
+        }
+
+        public Storyboard? LastStoryboard { get; private set; }
+
+        public Task<RenderResult> RenderStoryboardAsync(Storyboard storyboard, RenderSource source, RenderOptions options,
+            IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+        {
+            LastStoryboard = storyboard;
+            LastOptions = options;
+            var dir = storyboard.Output.OutputDirectory.Length > 0 ? storyboard.Output.OutputDirectory : Path.Combine(jobRoot, "job-film");
+            Directory.CreateDirectory(dir);
+            var file = Path.Combine(dir, storyboard.Output.BaseName + ".mp4");
+            File.WriteAllBytes(file, [0]);
+            return Task.FromResult(new RenderResult { Succeeded = true, OutputPaths = [file], FrameCount = 3 });
         }
 
         public SceneSpec? LastExportSpec { get; private set; }

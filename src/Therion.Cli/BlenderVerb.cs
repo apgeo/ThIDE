@@ -445,7 +445,7 @@ public static partial class BlenderVerb
         }
         // A photo and an HDRI image are named relative to the storyboard's file, as an
         // annotations file names them.
-        storyboard = Rooted(storyboard, Path.GetDirectoryName(Path.GetFullPath(path))!);
+        storyboard = StoryboardFiles.Rooted(storyboard, Path.GetDirectoryName(Path.GetFullPath(path))!);
 
         if (number is not null || Flag(args, "--shot"))
         {
@@ -463,27 +463,6 @@ public static partial class BlenderVerb
         foreach (var error in errors) stderr.WriteLine($"  {error.Path}: {error.Message}");
         storyboard = null;
         return false;
-    }
-
-    /// <summary>The storyboard with the files it names relative to its own folder made absolute:
-    /// the photos of its annotations, its HDRI images and its files of survey dates.</summary>
-    private static Storyboard Rooted(Storyboard storyboard, string folder)
-    {
-        string? In(string? file) => string.IsNullOrWhiteSpace(file) ? file : Path.GetFullPath(Path.Combine(folder, file));
-        IReadOnlyList<AnnotationSpec>? Photos(IReadOnlyList<AnnotationSpec>? annotations)
-            => annotations?.Select(a => a?.Image is null ? a! : a with { Image = In(a.Image) }).ToList();
-        LightingSpec? Lit(LightingSpec? lighting) => lighting?.HdriPath is null ? lighting : lighting with { HdriPath = In(lighting.HdriPath) };
-        RevealSpec? Dated(RevealSpec? reveal) => reveal?.DatesPath is null ? reveal : reveal with { DatesPath = In(reveal.DatesPath) };
-        var defaults = storyboard.Defaults;
-        return storyboard with
-        {
-            Defaults = defaults with { Annotations = Photos(defaults.Annotations), Lighting = Lit(defaults.Lighting), Reveal = Dated(defaults.Reveal) },
-            Shots = storyboard.Shots.Select(s => s is null ? s! : s with
-            {
-                Annotations = Photos(s.Annotations), Lighting = Lit(s.Lighting),
-                Reveal = s.Reveal is { Spec: { } own } reveal ? reveal with { Spec = Dated(own) } : s.Reveal,
-            }).ToList(),
-        };
     }
 
     /// <summary>

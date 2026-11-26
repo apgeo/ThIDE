@@ -1,0 +1,546 @@
+// The Storyboard tab of the Blender panel: a film as a list of shots. A shot is added from a
+// preset (a camera move with its look) or a composite preset adds its shots (Showcase, Grand
+// tour, Exploration history); the shots are reordered and removed here, and the panel's settings
+// edit the shot that is selected: selecting one loads what it shows into them, and every change
+// made there is written back into it. The output settings are the film's. Draft all, Draft shot
+// and Render go through the render queue as the panel's (owner "panel"); the estimate is shown
+// before a render starts. The queue itself is listed, with a cancel for each job.
+//
+// The VM holds no film logic: Storyboard, StoryboardValidator and StoryboardExpander compute.
+
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Therion.Blender;
+using Therion.Blender.Execution;
+using Therion.Blender.Plan;
+using Therion.Blender.Presets;
+using Therion.Blender.Sources;
+using ThIDE.Resources;
+
+namespace ThIDE.ViewModels;
+
+public sealed partial class BlenderAnimationViewModel
+{
+    /// <summary>The panel's tabs: one scene, or a film of several shots.</summary>
+    public const int SceneTab = 0, StoryboardTab = 1;
+
+    /// <summary>The tab shown: <see cref="SceneTab"/> or <see cref="StoryboardTab"/>.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStoryboardTab), nameof(IsSceneTab))]
+    private int _panelTab;
+
+    public bool IsStoryboardTab => PanelTab == StoryboardTab;
+    public bool IsSceneTab => !IsStoryboardTab;
+
+    /// <summary>The film's shots, in order.</summary>
+    public ObservableCollection<StoryboardShotViewModel> Shots { get; } = [];
+
+    /// <summary>The shot the settings edit; null edits the scene alone.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedShot))]
+    private StoryboardShotViewModel? _selectedShot;
+
+    public bool HasSelectedShot => SelectedShot is not null;
+
+    /// <summary>The composite presets: the built-in ones, then the user's.</summary>
+    public ObservableCollection<CompositeItem> Composites { get; } = [];
+
+    [ObservableProperty] private CompositeItem? _selectedComposite;
+
+    /// <summary>What is wrong with the film as it stands; Draft and Render wait for none.</summary>
+    public ObservableCollection<string> StoryboardBlockers { get; } = [];
+
+    /// <summary>The film's estimate in plain words, once one was made.</summary>
+    [ObservableProperty] private string? _filmEstimate;
+
+    /// <summary>The jobs in the render queue: the running one, those waiting, the last ended.</summary>
+    public ObservableCollection<QueueRowViewModel> QueueRows { get; } = [];
+
+    /// <summary>How the selected shot begins.</summary>
+    public IReadOnlyList<TransitionKind> TransitionKinds { get; } = Enum.GetValues<TransitionKind>();
+
+    /// <summary>How long the film is, as its shots say (a tour's is at most its shot's).</summary>
+    public double FilmSeconds => Math.Max(Shots.Sum(s => s.Seconds) - Shots.Skip(1).Sum(s => s.Shot.In is { Kind: TransitionKind.Dissolve } d ? d.Seconds : 0), 1e-3);
+
+    // What the film has that no shot does: its name, its texts and the defaults, from a composite.
+    private string? _filmName;
+    private OverlaySpec? _filmTexts;
+    private StoryboardDefaults _filmDefaults = new();
+
+    /// <summary>The film the tab describes: its shots, with the output the settings say.</summary>
+    public Storyboard CurrentStoryboard => new()
+    {
+        Name = _filmName,
+        Fps = _spec.Animation.Fps,
+        Defaults = _filmDefaults,
+        Texts = _filmTexts,
+        Shots = Shots.Select(s => s.Shot).ToList(),
+        Output = _spec.Output with
+        {
+            // A film is a video or frames, written where the renders go.
+            Kind = _spec.Output.Kind == OutputKind.Still ? OutputKind.Video : _spec.Output.Kind,
+            OutputDirectory = RenderDirectory?.Trim() ?? "",
+        },
+    };
+
+    private RenderPreset? FindPreset(string name) => Presets.FirstOrDefault(p => p.Name == name)?.Preset;
+
+    private void LoadComposites()
+    {
+        Composites.Clear();
+        foreach (var composite in BuiltInComposites.All) Composites.Add(new CompositeItem(composite));
+        if (_presetStore is not null)
+            foreach (var composite in _presetStore.LoadComposites()) Composites.Add(new CompositeItem(composite));
+        SelectedComposite ??= Composites.FirstOrDefault();
+    }
+
+    // ---- the shots ----
+
+    /// <summary>Adds a shot of the selected preset after the selected shot (or at the end); it
+    /// begins with a dissolve unless it is the first.</summary>
+    [RelayCommand(CanExecute = nameof(CanAddShot))]
+    private void AddShot()
+    {
+        if (SelectedPreset is not { } preset) return;
+        var spec = preset.Preset.Spec;
+        var shot = new ShotSpec
+        {
+            Name = preset.Name,
+            Preset = preset.Name,
+            Seconds = spec.Animation.DurationSeconds,
+            In = Shots.Count == 0 ? null : new TransitionSpec { Kind = TransitionKind.Dissolve, Seconds = 1 },
+        };
+        int at = SelectedShot is { } selected ? Shots.IndexOf(selected) + 1 : Shots.Count;
+        Shots.Insert(at, NewShotRow(shot));
+        ShotsChanged();
+        SelectedShot = Shots[at];
+    }
+
+    private bool CanAddShot => SelectedPreset is not null && SelectedPreset.Preset.Spec.Camera.Template != CameraTemplate.StillSet;
+
+    /// <summary>Adds the shots of the selected composite at the end. Into an empty film it also
+    /// brings the composite's name, texts and defaults.</summary>
+    [RelayCommand]
+    private void AddComposite()
+    {
+        if (SelectedComposite is not { } item) return;
+        var film = item.Composite.Storyboard;
+        if (Shots.Count == 0)
+        {
+            _filmName = film.Name;
+            _filmTexts = film.Texts;
+            _filmDefaults = film.Defaults;
+        }
+        for (int i = 0; i < film.Shots.Count; i++)
+        {
+            var shot = film.Shots[i];
+            // Joined to the shots before by a dip.
+            if (i == 0 && Shots.Count > 0) shot = shot with { In = new TransitionSpec { Kind = TransitionKind.Dip, Seconds = 0.6 } };
+            Shots.Add(NewShotRow(shot));
+        }
+        ShotsChanged();
+    }
+
+    [RelayCommand]
+    private void MoveShotUp(StoryboardShotViewModel? row) => Move(row, -1);
+
+    [RelayCommand]
+    private void MoveShotDown(StoryboardShotViewModel? row) => Move(row, +1);
+
+    private void Move(StoryboardShotViewModel? row, int by)
+    {
+        if (row is null) return;
+        int from = Shots.IndexOf(row), to = from + by;
+        if (from < 0 || to < 0 || to >= Shots.Count) return;
+        Shots.Move(from, to);
+        // The film begins with its first shot: that one has nothing to dip or dissolve from.
+        if (Shots[0].Shot.In is not null) Shots[0].Shot = Shots[0].Shot with { In = null };
+        ShotsChanged();
+    }
+
+    [RelayCommand]
+    private void RemoveShot(StoryboardShotViewModel? row)
+    {
+        if (row is null || !Shots.Remove(row)) return;
+        if (SelectedShot == row) SelectedShot = null;
+        if (Shots.Count > 0 && Shots[0].Shot.In is not null) Shots[0].Shot = Shots[0].Shot with { In = null };
+        if (Shots.Count == 0) (_filmName, _filmTexts, _filmDefaults) = (null, null, new StoryboardDefaults());
+        ShotsChanged();
+    }
+
+    private StoryboardShotViewModel NewShotRow(ShotSpec shot) => new(shot, FindPreset, ShotsChanged);
+
+    /// <summary>Selects a shot: the settings edit it from now on.</summary>
+    [RelayCommand]
+    private void SelectShot(StoryboardShotViewModel? row) => SelectedShot = row;
+
+    partial void OnSelectedShotChanged(StoryboardShotViewModel? oldValue, StoryboardShotViewModel? newValue)
+    {
+        if (oldValue is not null) oldValue.IsSelected = false;
+        if (newValue is not null) newValue.IsSelected = true;
+        DraftShotCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedShotChanged(StoryboardShotViewModel? value)
+    {
+        if (value is null) return;
+        // What the shot shows, over its preset and the film's defaults, into the settings; the
+        // output settings stay the film's.
+        SceneSpec spec;
+        try
+        {
+            var alone = CurrentStoryboard with { Shots = [value.Shot with { In = null, Reveal = value.Shot.Reveal is { Mode: ShotRevealMode.Hold } ? null : value.Shot.Reveal }] };
+            spec = StoryboardPlanner.ShotSpec(alone with { Output = alone.Output with { OutputDirectory = "out" } }, 0, FindPreset);
+        }
+        catch (ArgumentException)
+        {
+            return;
+        }
+        _suspend = true;
+        try
+        {
+            _spec = spec with { Source = _spec.Source, Output = _spec.Output };
+            AnnotationsPath = "";
+            PushSpecToKnobs(_spec);
+        }
+        finally { _suspend = false; }
+        Revalidate();
+    }
+
+    /// <summary>After a change of the settings: the selected shot takes what they say.</summary>
+    private void WriteSettingsToShot()
+    {
+        if (!IsStoryboardTab || SelectedShot is not { } row) return;
+        var old = row.Shot;
+        var spec = _spec;
+        row.Shot = old with
+        {
+            Preset = null,
+            Seconds = spec.Animation.DurationSeconds,
+            Camera = spec.Camera,
+            Engine = spec.Engine,
+            Materials = spec.Materials,
+            Lighting = spec.Lighting,
+            Labels = spec.Labels with { Overlays = new OverlaySpec() },
+            // The end card and the fades are the film's.
+            Texts = spec.Labels.Overlays with { EndCard = null, FadeFromBlack = 0, FadeToBlack = 0 },
+            Annotations = spec.Annotations,
+            Reveal = spec.Reveal is { } reveal ? ShotReveal.Of(reveal) : old.Reveal is { Mode: ShotRevealMode.Hold } ? ShotReveal.Hold : ShotReveal.None,
+        };
+        ShotsChanged();
+    }
+
+    /// <summary>The shots changed: they take their numbers and places on the strip, and the film
+    /// is checked again.</summary>
+    private void ShotsChanged()
+    {
+        double film = FilmSeconds, at = 0;
+        for (int i = 0; i < Shots.Count; i++)
+        {
+            var row = Shots[i];
+            if (i > 0 && row.Shot.In is { Kind: TransitionKind.Dissolve } dissolve) at -= dissolve.Seconds;
+            at = Math.Max(at, 0);
+            row.Place(i + 1, at / film, Math.Min(1, (at + row.Seconds) / film));
+            at += row.Seconds;
+        }
+        OnPropertyChanged(nameof(FilmSeconds));
+        RevalidateStoryboard();
+    }
+
+    private void RevalidateStoryboard()
+    {
+        StoryboardBlockers.Clear();
+        if (Shots.Count > 0)
+        {
+            var film = CurrentStoryboard;
+            foreach (var error in StoryboardValidator.Validate(film with { Output = film.Output with { OutputDirectory = "out" } }, FindPreset))
+                StoryboardBlockers.Add($"{error.Path}: {error.Message}");
+        }
+        FilmEstimate = null;
+        DraftAllCommand.NotifyCanExecuteChanged();
+        DraftShotCommand.NotifyCanExecuteChanged();
+        RenderFilmCommand.NotifyCanExecuteChanged();
+        EstimateFilmCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnPanelTabChanged(int value) => RevalidateStoryboard();
+
+    partial void OnSelectedPresetChanged(PresetItem? oldValue, PresetItem? newValue)
+    {
+        // In the film, a preset is what a shot is added from: the settings no longer edit a shot.
+        if (IsStoryboardTab) SelectedShot = null;
+        AddShotCommand.NotifyCanExecuteChanged();
+    }
+
+    // ---- draft, estimate, render ----
+
+    private bool CanStartFilm => !IsBusy && HasSource && Shots.Count > 0 && StoryboardBlockers.Count == 0
+                                 && _renderService is not null && _sources is not null;
+
+    [RelayCommand(CanExecute = nameof(CanStartFilm))]
+    private Task DraftAllAsync() => RunFilmAsync(draft: true, shot: null);
+
+    [RelayCommand(CanExecute = nameof(CanDraftShot))]
+    private Task DraftShotAsync() => RunFilmAsync(draft: true, shot: SelectedShot);
+
+    private bool CanDraftShot => CanStartFilm && SelectedShot is not null;
+
+    [RelayCommand(CanExecute = nameof(CanStartFilm))]
+    private Task RenderFilmAsync() => RunFilmAsync(draft: false, shot: null);
+
+    [RelayCommand(CanExecute = nameof(CanEstimate))]
+    private async Task EstimateFilmAsync()
+    {
+        LastError = null;
+        IsBusy = true;
+        try
+        {
+            var source = await _sources!.AcquireAsync(BuildRequest()).ConfigureAwait(true);
+            await EstimateAsync(Film(null), source, draft: false).ConfigureAwait(true);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.IO.IOException or NotSupportedException
+                                       or ModelSourceNotFoundException)
+        {
+            LastError = ex.Message.Split(" (Parameter", 2)[0];
+        }
+        finally
+        {
+            IsBusy = false;
+            RevalidateCommands();
+        }
+    }
+
+    private bool CanEstimate => CanStartFilm && _renderService is IRenderEstimator;
+
+    /// <summary>The film to render: every shot, or one alone; the user's presets written into
+    /// the shots, so that a restart that starts it again renders the same.</summary>
+    private Storyboard Film(StoryboardShotViewModel? only)
+    {
+        var film = CurrentStoryboard;
+        if (only is not null)
+        {
+            var shot = only.Shot;
+            film = film with
+            {
+                Shots = [shot with { In = null, Reveal = shot.Reveal is { Mode: ShotRevealMode.Hold } ? ShotReveal.None : shot.Reveal }],
+                Output = film.Output with { BaseName = film.Output.BaseName + "." + StoryboardPlanner.SegmentId(Shots.IndexOf(only)) },
+            };
+        }
+        return StoryboardExpander.InlinePresets(film, FindPreset);
+    }
+
+    private async Task EstimateAsync(Storyboard film, RenderSource source, bool draft)
+    {
+        if (_renderService is not IRenderEstimator estimator) return;
+        var estimate = await estimator.EstimateStoryboardAsync(film, source, new RenderOptions { Draft = draft, Owner = PanelHolder }).ConfigureAwait(true);
+        FilmEstimate = string.Format(CultureInfo.CurrentCulture, Tr.Get("Blender_Storyboard_Estimate"),
+            estimate.Frames, TimeSpan.FromSeconds(Math.Round(estimate.Seconds)).ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture),
+            estimate.DiskBytes / 1e9, estimate.MemoryBytes / 1e9);
+    }
+
+    private async Task RunFilmAsync(bool draft, StoryboardShotViewModel? shot)
+    {
+        Outputs.Clear();
+        Warnings.Clear();
+        LastError = null;
+        IsBusy = true;
+        RevalidateCommands();
+        _cts = new CancellationTokenSource();
+        try
+        {
+            var progress = new Progress<RenderProgress>(OnProgress);
+            StatusMessage = Tr.Get("Blender_Status_Acquiring");
+            var source = await _sources!.AcquireAsync(BuildRequest(), _cts.Token).ConfigureAwait(true);
+            var film = Film(shot);
+            // What it will cost is shown before the long render starts.
+            if (!draft)
+            {
+                try { await EstimateAsync(film, source, draft).ConfigureAwait(true); }
+                catch (Exception ex) when (ex is NotSupportedException or System.IO.IOException) { }
+            }
+            var options = new RenderOptions { Draft = draft, Owner = PanelHolder, JobName = film.Output.BaseName };
+            var result = await _renderService!.RenderStoryboardAsync(film, source, options, progress, _cts.Token).ConfigureAwait(true);
+            ApplyResult(result, draft);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = Tr.Get("Blender_Status_Cancelled");
+        }
+        catch (Exception ex)
+        {
+            LastError = ex.Message.Split(" (Parameter", 2)[0];
+            StatusMessage = Tr.Get("Blender_Status_Failed");
+        }
+        finally
+        {
+            IsBusy = false;
+            IsIndeterminate = false;
+            _cts?.Dispose();
+            _cts = null;
+            Revalidate();
+            RevalidateCommands();
+        }
+    }
+
+    private void RevalidateCommands()
+    {
+        DraftAllCommand.NotifyCanExecuteChanged();
+        DraftShotCommand.NotifyCanExecuteChanged();
+        RenderFilmCommand.NotifyCanExecuteChanged();
+        EstimateFilmCommand.NotifyCanExecuteChanged();
+    }
+
+    // ---- the queue ----
+
+    /// <summary>Lists the queue's jobs again: the queue changed.</summary>
+    private void RefreshQueueRows()
+    {
+        QueueRows.Clear();
+        if (_queue is null) return;
+        int n = 0;
+        foreach (var job in _queue.Jobs)
+        {
+            n++;
+            QueueRows.Add(new QueueRowViewModel(job.Id, n, job.Request.Name, OwnerText(job.Request.Owner), StateText(job.State),
+                job.State is RenderJobState.Queued or RenderJobState.Running));
+        }
+    }
+
+    private static string OwnerText(string? owner) => owner switch
+    {
+        PanelHolder => Tr.Get("Blender_Queue_OwnerPanel"),
+        RenderQueue.RestartOwner => Tr.Get("Blender_Queue_OwnerRestart"),
+        _ => Tr.Get("Blender_Queue_OwnerAgent"),
+    };
+
+    private static string StateText(RenderJobState state) => state switch
+    {
+        RenderJobState.Queued => Tr.Get("Blender_Queue_Queued"),
+        RenderJobState.Running => Tr.Get("Blender_Queue_Running"),
+        RenderJobState.Succeeded => Tr.Get("Blender_Status_Done"),
+        RenderJobState.Cancelled => Tr.Get("Blender_Status_Cancelled"),
+        _ => Tr.Get("Blender_Status_Failed"),
+    };
+
+    [RelayCommand]
+    private void CancelQueued(QueueRowViewModel? row)
+    {
+        if (row is not null) _queue?.Cancel(row.Id);
+    }
+
+    /// <summary>A render a restart started again (ThIDE was closed in the middle of it) is running.</summary>
+    public bool ResumedRendering => _queue?.Running is { Request.Owner: RenderQueue.RestartOwner };
+}
+
+/// <summary>One shot of the film as a row of the Storyboard tab.</summary>
+public sealed partial class StoryboardShotViewModel : ObservableObject
+{
+    private readonly Func<string, RenderPreset?> _presets;
+    private readonly Action _changed;
+
+    public StoryboardShotViewModel(ShotSpec shot, Func<string, RenderPreset?> presets, Action changed)
+    {
+        _shot = shot;
+        _presets = presets;
+        _changed = changed;
+    }
+
+    /// <summary>The shot as the storyboard has it.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Name), nameof(Kind), nameof(Seconds), nameof(Transition), nameof(TransitionKind), nameof(TransitionSeconds))]
+    private ShotSpec _shot;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectId), nameof(NameId), nameof(UpId), nameof(DownId), nameof(RemoveId))]
+    private int _number;
+
+    [ObservableProperty] private double _stripStart;
+    [ObservableProperty] private double _stripEnd;
+
+    /// <summary>True for the shot the settings edit.</summary>
+    [ObservableProperty] private bool _isSelected;
+
+    public string SelectId => $"Blender.Shot.{Number}.Select";
+    public string NameId => $"Blender.Shot.{Number}.Name";
+    public string UpId => $"Blender.Shot.{Number}.Up";
+    public string DownId => $"Blender.Shot.{Number}.Down";
+    public string RemoveId => $"Blender.Shot.{Number}.Remove";
+
+    /// <summary>The shot's name; editing it renames the shot.</summary>
+    public string Name
+    {
+        get => Shot.Name ?? "";
+        set
+        {
+            if (value == (Shot.Name ?? "")) return;
+            Shot = Shot with { Name = string.IsNullOrWhiteSpace(value) ? null : value };
+            _changed();
+        }
+    }
+
+    private CameraSpec? Camera => Shot.Camera ?? (Shot.Preset is { } name ? _presets(name)?.Spec.Camera : null);
+
+    /// <summary>What the camera does: its template, or a tour of the branches.</summary>
+    public string Kind => Camera is { Template: CameraTemplate.Route, Route.Branches: not null }
+        ? Tr.Get("Blender_Shot_Tour")
+        : (Camera?.Template ?? CameraTemplate.Static).ToString();
+
+    /// <summary>How long the shot is, as it says or as its preset does.</summary>
+    public double Seconds => Shot.Seconds
+        ?? (Shot.Preset is { } name ? _presets(name)?.Spec.Animation.DurationSeconds : null)
+        ?? StoryboardPlanner.DefaultShotSeconds;
+
+    public string Transition => Shot.In is not { Kind: not Therion.Blender.TransitionKind.Cut } t
+        ? Tr.Get("Blender_Shot_Cut")
+        : string.Format(CultureInfo.CurrentCulture, Tr.Get(t.Kind == Therion.Blender.TransitionKind.Dip ? "Blender_Shot_Dip" : "Blender_Shot_Dissolve"), t.Seconds);
+
+    /// <summary>How the shot begins: editable for any shot but the first.</summary>
+    public TransitionKind TransitionKind
+    {
+        get => Shot.In?.Kind ?? Therion.Blender.TransitionKind.Cut;
+        set
+        {
+            if (value == TransitionKind || Number == 1) return;
+            Shot = Shot with { In = value == Therion.Blender.TransitionKind.Cut ? null : (Shot.In ?? new TransitionSpec()) with { Kind = value } };
+            _changed();
+        }
+    }
+
+    public double TransitionSeconds
+    {
+        get => Shot.In?.Seconds ?? new TransitionSpec().Seconds;
+        set
+        {
+            if (Shot.In is null || value == Shot.In.Seconds) return;
+            Shot = Shot with { In = Shot.In with { Seconds = value } };
+            _changed();
+        }
+    }
+
+    internal void Place(int number, double start, double end)
+    {
+        Number = number;
+        StripStart = Math.Clamp(start, 0, 1);
+        StripEnd = Math.Clamp(end, 0, 1);
+    }
+}
+
+/// <summary>A composite preset in the tab's list.</summary>
+public sealed record CompositeItem(CompositePreset Composite)
+{
+    public string Name => Composite.Name;
+    public string? Description => Composite.Description;
+}
+
+/// <summary>A job of the render queue as a row of the tab.</summary>
+public sealed record QueueRowViewModel(string Id, int Number, string Name, string Owner, string State, bool CanCancel)
+{
+    public string CancelId => $"Blender.Queue.{Number}.Cancel";
+}

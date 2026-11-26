@@ -128,3 +128,12 @@ public sealed record RenderEstimate
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0; }
     }
 }
+
+/// <summary>A render service that can say what a film will cost before it is rendered.</summary>
+public interface IRenderEstimator
+{
+    /// <summary>What a render of <paramref name="storyboard"/> will cost: its frames, the time at
+    /// the measured or assumed seconds a frame, the disk and the memory.</summary>
+    /// <exception cref="ArgumentException">The storyboard is invalid, or cannot be planned for the model.</exception>
+    Task<RenderEstimate> EstimateStoryboardAsync(Storyboard storyboard, RenderSource source, RenderOptions options, CancellationToken ct = default);
+}

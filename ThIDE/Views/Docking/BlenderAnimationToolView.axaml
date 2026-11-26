@@ -62,6 +62,117 @@
                 </ComboBox>
             </DockPanel>
 
+            <!-- one scene, or a film of several shots -->
+            <TabStrip AutomationProperties.AutomationId="Blender.Tabs" SelectedIndex="{Binding Blender.PanelTab}">
+                <TabStripItem AutomationProperties.AutomationId="Blender.Tab.Scene" Content="{l:Loc Blender_UI_TabScene}" />
+                <TabStripItem AutomationProperties.AutomationId="Blender.Tab.Storyboard" Content="{l:Loc Blender_UI_TabStoryboard}" />
+            </TabStrip>
+            <StackPanel AutomationProperties.AutomationId="Blender.Storyboard" Spacing="6" IsVisible="{Binding Blender.IsStoryboardTab}">
+                <TextBlock Text="{l:Loc Blender_UI_StoryboardHint}" TextWrapping="Wrap" Opacity="0.8" />
+                <DockPanel>
+                    <Button AutomationProperties.AutomationId="Blender.AddShot" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_AddShot}"
+                            ToolTip.Tip="{l:Loc Blender_UI_AddShot_Tip}" Command="{Binding Blender.AddShotCommand}" Margin="6,0,0,0" />
+                    <TextBlock Text="{Binding Blender.SelectedPreset.Name, FallbackValue=''}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </DockPanel>
+                <DockPanel>
+                    <Button AutomationProperties.AutomationId="Blender.AddComposite" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_AddComposite}"
+                            Command="{Binding Blender.AddCompositeCommand}" Margin="6,0,0,0" />
+                    <ComboBox AutomationProperties.AutomationId="Blender.Composite" AutomationProperties.Name="{l:Loc Blender_UI_Composite}" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding Blender.Composites}" SelectedItem="{Binding Blender.SelectedComposite}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vmm:CompositeItem">
+                                <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Description}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </DockPanel>
+                <TextBlock Text="{l:Loc Blender_UI_Shots}" FontWeight="Bold" />
+                <ItemsControl AutomationProperties.AutomationId="Blender.Shots" AutomationProperties.Name="{l:Loc Blender_UI_Shots}" ItemsSource="{Binding Blender.Shots}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vmm:StoryboardShotViewModel">
+                            <Border Padding="2" CornerRadius="2" Background="{Binding IsSelected, Converter={x:Static local:SelectedShotBrush.Instance}}">
+                                <Grid ColumnDefinitions="30,*,80,50,90,Auto,Auto,Auto">
+                                    <Button Grid.Column="0" AutomationProperties.AutomationId="{Binding SelectId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotSelect}" Content="{Binding Number}" Padding="4,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_ShotSelect}" Command="{Binding $parent[ItemsControl].DataContext.Blender.SelectShotCommand}" CommandParameter="{Binding}" />
+                                    <TextBox Grid.Column="1" Margin="4,0,0,0" AutomationProperties.AutomationId="{Binding NameId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotName}" Text="{Binding Name}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Kind}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Seconds, StringFormat='{}{0:0.#} s'}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Transition}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Button Grid.Column="5" AutomationProperties.AutomationId="{Binding UpId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotUp}" Content="&#x2191;" Padding="6,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_ShotUp}" Command="{Binding $parent[ItemsControl].DataContext.Blender.MoveShotUpCommand}" CommandParameter="{Binding}" />
+                                    <Button Grid.Column="6" AutomationProperties.AutomationId="{Binding DownId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotDown}" Content="&#x2193;" Padding="6,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_ShotDown}" Command="{Binding $parent[ItemsControl].DataContext.Blender.MoveShotDownCommand}" CommandParameter="{Binding}" />
+                                    <Button Grid.Column="7" AutomationProperties.AutomationId="{Binding RemoveId}" AutomationProperties.Name="{l:Loc Blender_UI_ShotRemove}" Content="&#x2715;" Padding="6,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_ShotRemove}" Command="{Binding $parent[ItemsControl].DataContext.Blender.RemoveShotCommand}" CommandParameter="{Binding}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <!-- the shots along the film -->
+                <Border AutomationProperties.AutomationId="Blender.ShotStrip" AutomationProperties.Name="{l:Loc Blender_UI_ShotStrip}" IsVisible="{Binding Blender.Shots.Count}"
+                        Height="20" BorderBrush="#80808080" BorderThickness="1" CornerRadius="2" ClipToBounds="True" ToolTip.Tip="{l:Loc Blender_UI_ShotStrip_Tip}">
+                    <ItemsControl ItemsSource="{Binding Blender.Shots}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><local:CaptionStripPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerTheme>
+                            <ControlTheme TargetType="ContentPresenter" x:DataType="vmm:StoryboardShotViewModel">
+                                <Setter Property="local:CaptionStripPanel.Start" Value="{Binding StripStart}" />
+                                <Setter Property="local:CaptionStripPanel.End" Value="{Binding StripEnd}" />
+                            </ControlTheme>
+                        </ItemsControl.ItemContainerTheme>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vmm:StoryboardShotViewModel">
+                                <Border Background="#B05AA05A" BorderBrush="#FF3A7A3A" BorderThickness="1,0" Margin="0,2" ToolTip.Tip="{Binding Name}">
+                                    <TextBlock Text="{Binding Number}" FontSize="10" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+                <TextBlock FontSize="11" Opacity="0.7" IsVisible="{Binding Blender.Shots.Count}" Text="{Binding Blender.FilmSeconds, StringFormat='{}{0:0.#} s'}" />
+                <!-- how the selected shot begins -->
+                <DockPanel IsVisible="{Binding Blender.HasSelectedShot}">
+                    <TextBlock Text="{l:Loc Blender_UI_ShotTransition}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.ShotTransitionSeconds" AutomationProperties.Name="{l:Loc Blender_UI_ShotTransitionSeconds}"
+                             DockPanel.Dock="Right" Width="70" Margin="6,0,0,0" Text="{Binding Blender.SelectedShot.TransitionSeconds, FallbackValue=0}" />
+                    <ComboBox AutomationProperties.AutomationId="Blender.ShotTransition" AutomationProperties.Name="{l:Loc Blender_UI_ShotTransition}" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding Blender.TransitionKinds}" SelectedItem="{Binding Blender.SelectedShot.TransitionKind, FallbackValue={x:Null}}" />
+                </DockPanel>
+                <TextBlock Text="{l:Loc Blender_UI_EditsShot}" TextWrapping="Wrap" FontStyle="Italic" IsVisible="{Binding Blender.HasSelectedShot}" />
+                <ItemsControl AutomationProperties.AutomationId="Blender.StoryboardBlockers" ItemsSource="{Binding Blender.StoryboardBlockers}" Foreground="#C05050">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" /></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <WrapPanel>
+                    <Button AutomationProperties.AutomationId="Blender.DraftAll" Content="{l:Loc Blender_UI_DraftAll}" Command="{Binding Blender.DraftAllCommand}" Margin="0,0,6,6" />
+                    <Button AutomationProperties.AutomationId="Blender.DraftShot" Content="{l:Loc Blender_UI_DraftShot}" Command="{Binding Blender.DraftShotCommand}" Margin="0,0,6,6" />
+                    <Button AutomationProperties.AutomationId="Blender.EstimateFilm" Content="{l:Loc Blender_UI_EstimateFilm}" Command="{Binding Blender.EstimateFilmCommand}" Margin="0,0,6,6" />
+                    <Button AutomationProperties.AutomationId="Blender.RenderFilm" Content="{l:Loc Blender_UI_RenderFilm}" Command="{Binding Blender.RenderFilmCommand}" Margin="0,0,6,6" />
+                    <Button AutomationProperties.AutomationId="Blender.CancelFilm" Content="{l:Loc Blender_UI_Cancel}" Command="{Binding Blender.CancelCommand}" IsVisible="{Binding Blender.IsBusy}" Margin="0,0,6,6" />
+                </WrapPanel>
+                <TextBlock AutomationProperties.AutomationId="Blender.FilmEstimate" Text="{Binding Blender.FilmEstimate}" TextWrapping="Wrap"
+                           IsVisible="{Binding Blender.FilmEstimate, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <!-- the render queue -->
+                <TextBlock Text="{l:Loc Blender_UI_Queue}" FontWeight="Bold" IsVisible="{Binding Blender.QueueRows.Count}" />
+                <ItemsControl AutomationProperties.AutomationId="Blender.Queue" ItemsSource="{Binding Blender.QueueRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vmm:QueueRowViewModel">
+                            <DockPanel Margin="0,2">
+                                <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="{Binding CancelId}" AutomationProperties.Name="{l:Loc Blender_UI_QueueCancel}"
+                                        Content="{l:Loc Blender_UI_QueueCancel}" IsVisible="{Binding CanCancel}" Padding="6,0"
+                                        Command="{Binding $parent[ItemsControl].DataContext.Blender.CancelQueuedCommand}" CommandParameter="{Binding}" />
+                                <TextBlock DockPanel.Dock="Left" Text="{Binding Name}" FontWeight="SemiBold" Width="150" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <TextBlock DockPanel.Dock="Left" Text="{Binding Owner}" Width="70" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding State}" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
             <Separator />
 
             <!-- camera + engine -->
@@ -275,7 +386,7 @@
                 <TextBlock Text="{l:Loc Blender_UI_ExportDir}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.ExportDirectory" AutomationProperties.Name="{l:Loc Blender_UI_ExportDir}" Text="{Binding Blender.ExportDirectory}" />
             </DockPanel>
-            <WrapPanel>
+            <WrapPanel IsVisible="{Binding Blender.IsSceneTab}">
                 <Button AutomationProperties.AutomationId="Blender.Render" Content="{l:Loc Blender_UI_Render}" Command="{Binding Blender.RenderCommand}" Margin="0,0,6,6" />
                 <Button AutomationProperties.AutomationId="Blender.Preview" Content="{l:Loc Blender_UI_Preview}" Command="{Binding Blender.PreviewCommand}" ToolTip.Tip="{l:Loc Blender_UI_Preview_Tip}" Margin="0,0,6,6" />
                 <Button AutomationProperties.AutomationId="Blender.ExportScript" Content="{l:Loc Blender_UI_Export}" Command="{Binding Blender.ExportScriptCommand}" ToolTip.Tip="{l:Loc Blender_UI_Export_Tip}" Margin="0,0,6,6" />

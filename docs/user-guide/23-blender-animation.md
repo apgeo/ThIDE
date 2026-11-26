@@ -835,6 +835,53 @@ storyboard is a film: for stills, or a Blender file of the scene, render one sho
 use a render spec. The schema that describes the file is in the ThIDE repository
 (`src/Therion.Blender/storyboard.schema.json`).
 
+## Composite presets: a whole film as a template
+
+A **composite preset** is a storyboard that fits any cave: it names no station, only places the
+model can find (the entrance, the farthest station, the passage surveyed last) and a tour of the
+branches, and its texts say `{cave}`. When it is rendered, ThIDE reads the model and makes it into
+that cave's film. Three come with ThIDE:
+
+| Composite | The film |
+|---|---|
+| **Showcase** | an orbit round the cave, then the main passage from the entrance to the farthest station, then a helix down round it |
+| **Grand tour** | an orbit, then a [branch tour](#branch-tours) of the main passage and the side passages worth a visit (at most two minutes), and an end card |
+| **Exploration history** | the cave appearing in the order it was surveyed, with a counter of the years, then a flight along the passage surveyed last, the whole cave held in view |
+
+In a storyboard file, the symbols are two keys of a route camera:
+
+```json
+{ "name": "Tour", "preset": "Full flythrough", "seconds": 120,
+  "camera": { "template": "Route", "route": { "branches": "auto" } } }
+{ "name": "Found last", "preset": "Full flythrough", "seconds": 14, "reveal": "hold",
+  "camera": { "template": "Route", "route": { "from": "newest" } } }
+```
+
+`"branches": "auto"` makes the shot a tour of the cave's branches, from the route's `from` (the
+entrance when it is left out), within the shot's seconds, with the look of its preset; the tour's
+shots take its place. `"from": "newest"` flies the passage of the last survey day, from its end
+nearer the entrance to its other end; a model without survey dates flies the main passage instead.
+What was done is in the render's warnings. Your own composites are kept beside your presets, as
+`*.composite.json` files (a `name`, a `description` and the `storyboard`).
+
+## The Storyboard tab
+
+The panel has two tabs above its settings. **Scene** is one render, as above. **Storyboard** is a
+film of several shots:
+
+- **Add shot** adds a shot of the preset chosen at the top of the panel, after the selected shot;
+  **Add its shots** adds every shot of the chosen composite preset. Each row shows the shot's
+  name (type to rename it), its camera (or *tour*), its seconds and how it begins; the arrows move
+  it and ✕ removes it. The strip under the list shows the shots along the film.
+- The number button of a row selects the shot: the panel's settings below then show it, and every
+  change made there is written into it. **Begins with** chooses a cut, a dip or a dissolve and its
+  seconds. The output settings (size, frame rate, file name) are the film's.
+- **Draft all** drafts every shot, **Draft shot** the selected one alone, **Estimate** says how
+  many frames, how long, how much disk and memory the film takes, and **Render film** shows that
+  estimate and renders. The renders wait their turn in the render queue, listed under the buttons
+  with a **Cancel** for each; a render that ThIDE was closed in the middle of goes on at the next
+  start and is listed as *resumed*.
+
 ## Branch tours
 
 A **tour** is a film of the cave made by rules instead of by hand: the main passage is flown from
