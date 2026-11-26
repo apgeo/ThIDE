@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:thide:storyboard:1",
+  "title": "ThIDE storyboard, version 1",
+  "description": "A film as a list of shots, for the ThIDE Blender module. Each shot is a camera move with a look of its own and begins with a cut, a dip to a colour or a dissolve; texts lie over one shot or over the whole film. A shot is described with the sections of a render spec (camera, materials, lighting, engine, labels, annotations, reveal): this schema names them and leaves their own keys to the render spec, whose reader refuses a key it does not know. Times of a shot are seconds from the shot's start; times of the film's texts are seconds from the film's start. Enum words are read in any case.",
+  "type": "object",
+  "required": ["version", "shots"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "name": { "type": "string", "description": "The film's name. {cave}, {length} and {depth} are filled in from the model, here and in every text." },
+    "fps": { "type": "integer", "minimum": 1, "maximum": 240, "description": "The frame rate of every shot and of the film. Default 30." },
+    "defaults": {
+      "description": "What every shot has unless it says otherwise, or names a preset. A section left out is what a render spec has by default.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "seed": { "type": "integer", "description": "The seed of every shot. Default 1." },
+        "engine": { "$ref": "#/$defs/engine" },
+        "materials": { "$ref": "#/$defs/materials" },
+        "lighting": { "$ref": "#/$defs/lighting" },
+        "labels": { "$ref": "#/$defs/labels", "description": "A render spec's 'labels'. Its 'overlays' are written over every shot that has no 'texts' of its own." },
+        "surface": { "type": "object", "description": "A render spec's 'surface': the terrain above the cave, one for the whole film." },
+        "annotations": { "$ref": "#/$defs/annotations" },
+        "reveal": { "$ref": "#/$defs/reveal", "description": "A render spec's 'reveal', run by every shot that neither names a preset nor says what it does about the reveal: each of them shows the cave appear again." }
+      }
+    },
+    "texts": {
+      "$ref": "#/$defs/overlays",
+      "description": "What is written over the film as a whole, in the film's time: a render spec's 'labels.overlays' with a title (or a title card), credits, a corner text, captions, the end card after the last shot and the fades out of black and to black. A scale bar, a north arrow and a depth legend belong to a shot and are refused here."
+    },
+    "shots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "description": "Shown in the progress of the render and in its notices." },
+          "seconds": { "type": "number", "exclusiveMinimum": 0, "description": "How long the shot is. Default: the preset's length, or 10." },
+          "preset": { "type": "string", "minLength": 1, "description": "The name of a preset the shot starts from: its camera, materials, lighting, engine, labels in the scene and reveal, and its length when 'seconds' is left out. The preset's texts over the picture are not taken. The keys below override it." },
+          "camera": { "type": "object", "description": "A render spec's 'camera': any template but the set of stills. Default: the preset's, or a camera that stands still and frames the cave." },
+          "materials": { "$ref": "#/$defs/materials" },
+          "lighting": { "$ref": "#/$defs/lighting" },
+          "engine": { "$ref": "#/$defs/engine" },
+          "labels": { "$ref": "#/$defs/labels" },
+          "annotations": { "$ref": "#/$defs/annotations", "description": "A render spec's 'annotations', with times from the shot's start." },
+          "reveal": {
+            "description": "A render spec's 'reveal' with times from the shot's start; or \"hold\": the cave stays as the shot before left it; or \"none\": the whole cave is there. Left out: the preset's reveal, or the default one. Every reveal of a storyboard is by the same thing (by, from, datesPath)."
+          },
+          "texts": { "$ref": "#/$defs/overlays", "description": "What is written over this shot, with times from its start: a render spec's 'labels.overlays' without an end card and without fades, which are the film's. Left out: the overlays of the shot's own 'labels', or the default ones." },
+          "in": {
+            "description": "How the shot begins. Left out: a cut. The first shot begins the film and has none.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "type": "string", "pattern": "^([cC][uU][tT]|[dD][iI][pP]|[dD][iI][sS][sS][oO][lL][vV][eE])$", "description": "cut; dip: the picture goes to a colour over the last frames of the shot before and comes out of it over the first frames of this one; dissolve: the shot starts before the other ends and the picture goes evenly from the one to the other." },
+              "seconds": { "type": "number", "exclusiveMinimum": 0, "description": "How long a dip (both halves together) or a dissolve takes: at least a frame, and no longer than the shots it joins. Default 1." },
+              "color": {
+                "description": "The colour of a dip, linear RGB. Default black.",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": { "r": { "type": "number", "minimum": 0, "maximum": 1 }, "g": { "type": "number", "minimum": 0, "maximum": 1 }, "b": { "type": "number", "minimum": 0, "maximum": 1 } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "output": {
+      "description": "A render spec's 'output': what the film is written as. kind is Video or FrameSequence; width and height are those of every shot.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "engine": { "type": "object", "description": "A render spec's 'engine'." },
+    "materials": { "type": "object", "description": "A render spec's 'materials'." },
+    "lighting": { "type": "object", "description": "A render spec's 'lighting'." },
+    "labels": { "type": "object", "description": "A render spec's 'labels'." },
+    "annotations": { "type": "array", "items": { "type": "object" }, "description": "A render spec's 'annotations'." },
+    "reveal": { "type": "object" },
+    "overlays": { "type": "object" }
+  }
+}

@@ -40,7 +40,7 @@ public static class SceneSpecSerializer
     /// and time, and the fades were added to the overlays after the format's first release. They
     /// are written only when a spec has them, so a spec without them is the same JSON, and has
     /// the same hash, as before they existed.</summary>
-    private static void WriteLaterTextsOnlyWhenSet(JsonTypeInfo type)
+    internal static void WriteLaterTextsOnlyWhenSet(JsonTypeInfo type)
     {
         // The annotations came later still, and are written under the same rule.
         if (type.Type == typeof(SceneSpec))
