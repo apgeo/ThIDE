@@ -222,6 +222,8 @@ these tools.
 | `render_status` | how the job is getting on; `waitSeconds` (up to 60) waits for it and streams progress |
 | `cancel_render` | stops the job, Blender included |
 | `export_render_script` | writes the scene a render would show into a workspace folder, to render with Blender elsewhere, without running Blender |
+| `plan_tour` | works out a tour of the cave's branches and answers with the branch table, the shots and what was left out; writes nothing |
+| `write_tour_storyboard` | the same tour, written as a storyboard file in the workspace |
 
 A render takes minutes to hours, longer than a host waits for one tool call, so it runs as a job: start
 it, then ask `render_status` until it says `succeeded`, `failed` (with a `failureKind` such as
@@ -252,8 +254,21 @@ all of it. Either is run with `blender -b --factory-startup --python render.py` 
 beside the script. `builder: "generator"` writes the earlier generated script instead (`render.py`,
 `model.ply`, `scene-meta.json`), and the answer's `leftOut` names what that script does not draw.
 
-`start_render`, `cancel_render` and `export_render_script` change things, so the Assistant panel asks
-before each, as it does for `run_build`.
+`plan_tour` reads the model and plans a film that flies the main passage and visits the side passages
+worth it (see *Branch tours* in the user guide's Blender chapter). It takes `trunk` (`auto`, `longest`,
+`farthest`, `deepest`, `through`, `via`), `start`, `via`, `end`, the budgets `tourSeconds` and
+`branchSeconds`, `mode` (`cut`, `return`, `peek`, `skip`) and `modes` (each `"B5=return"`), `peekShort`,
+`minLength`, `maxCount`, `withLeads`, `include`, `exclude`, `depth`, `preset` and `language`, and answers
+with a row for the main passage and one for every side passage (junction, length, reach, depth change,
+mean width, leads, surveys, rank, whether it is chosen and why, mode, seconds, speed, how far it goes on
+when cut short), the film shot by shot, and notices. It is read-only: it uses the model's last build
+output as it is and says in `staleModel` when that is older than the sources. `write_tour_storyboard`
+takes the same and a `storyboard` file name ending in `.storyboard.json`, writes the storyboard there
+(an existing file only with `overwrite: true`) and may export the model with Therion first (`reExport`).
+The leads a tour counts and marks are the workspace's leads.
+
+`start_render`, `cancel_render`, `export_render_script` and `write_tour_storyboard` change things, so the
+Assistant panel asks before each, as it does for `run_build`.
 
 ## The built-in Assistant panel
 

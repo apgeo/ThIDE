@@ -1,5 +1,86 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-26 (tours) — branch tours: a tour of the cave, lowered to a storyboard within its time
+
+No change to the plan or the player: a tour is a storyboard, and a storyboard is what it was.
+
+### Breaking changes
+- None. `RouteParams` has one more optional member (`Speeds`), written only when set: a route
+  without it is the JSON, and has the hash, it had.
+
+### Tours (`TourSpec`, `TourBuilder`, `Tour`)
+- **`TourSpec`**: the way (`Start`, `Trunk`, `Via`, `End`) and the choice (`MinLength`,
+  `MaxCount`, `WithLeads`, `Include`, `Exclude`, `Depth`) of `Therion.CaveGeometry`'s
+  `TourOptions`; the visits (`Mode`: `TourBranchMode.Cut`, `Return`, `Peek`, `Skip`; `Modes` by
+  branch id, where naming a branch is a choice by hand; `PeekShort`); the time (`TourSeconds`
+  180, `BranchSeconds` 20); the film (`Name`, `Preset` "Full flythrough", `Fps`, `Output`,
+  `Language` `en` or `ro` for the texts over the picture). **`TourSpecSerializer`** reads and
+  writes it as JSON (camelCase, enum words in any case, comments allowed, an unknown key refused;
+  `TourFormatException`).
+- **`TourBuilder.Build(geometry, spec, leads?, presets?)`** gives a **`Tour`**: `Plan` (the
+  `TourPlan`), `Storyboard`, `Rows` (a `TourRow` for the main passage and for every side system:
+  the table's numbers, `Chosen`, `Why`, `Mode`, `Dropped`, `Seconds`, `Speed`, `FlownMeters`,
+  `ContinuesMeters`), `Notices`, `Seconds`; `TableText()` and `ReadmeText()` write the table for a
+  terminal and for a bundle's README (`RenderBundleContent.ReadmeSections`). Leads given are the
+  only ones counted; without any, the stations the model flags as continuations are.
+- **The storyboard.** One route shot for every stretch of the main passage between two junctions
+  that have a visit, and for every visit, each with explicit `stations` and explicit `Seconds`.
+  The preset's engine, materials and lighting are written once, in the storyboard's `Defaults`,
+  with empty `Labels` (a tour's shots show none of the cave's own labels: only what the tour
+  marks); a shot names no preset. A shot that starts where the last one ended begins with a cut; one that
+  starts elsewhere (back at a junction from a dead end, or from the far end of a bypass) with a
+  dip of `DipSeconds` 0.3 (two frames at least). A `Cut` visit holds `EndHoldSeconds` 1.5 at the
+  end; a `Return` is one shot `from` junction `via` the end `to` the junction with `speeds`
+  `[1, ReturnSpeed]`; a bypass is flown through (hold `ThroughHoldSeconds` 0.5) and the film goes
+  back to its first junction; a `Peek` is a three-second shot of the viewpoints camera at the
+  junction, turned into the passage. With `Depth` 2 a branch is flown in stretches, with its own
+  side passages visited on the way ("B4 (1)", "B4.1", "B4 (2)").
+- **Texts and leads.** A visit's shots have "Side passage B3 · 96 m" (or "Bypass …") in the
+  corner; a shot that is cut short has "continues 60 m" as a corner caption while the camera
+  holds. Every lead on a shot's way has a marker and a callout (its note, or "Lead") as
+  annotations at the station's point (`at`, in the model's coordinates), sized by the passage and
+  there `within` a distance of the camera.
+- **Time, in this order.** A side passage over `BranchSeconds` is flown up to `MaxSpeedUp` (2)
+  times faster; a flight back that still does not fit becomes a cut; then it is flown only as far
+  as the time allows (stations are whole: the way ends at a station). A tour over `TourSeconds`: everything is flown up to
+  twice as fast (the least speed that fits is used); flights back become cuts, the lowest-ranked
+  first; side passages are left out, the lowest first (looks, then what the rules chose, then what
+  was chosen by hand; deeper before shallower, worse rank before better); last the main passage
+  is cut short. Every one of these is a notice. No shot is shorter than `MinShotSeconds`.
+- A tour that cannot be made is an `ArgumentException` named by its option (`tour.tourSeconds`,
+  `tour.preset`, `tour.language`, and those of `TourPlanner.Plan`).
+
+### Routes
+- **`RouteParams.Speeds`**: how many times the passage's own speed each stretch between two stops
+  is flown at (`[1, 2]`: back out twice as fast); a stretch without an entry is flown at the
+  passage's speed. `CameraRoutes.Measure` counts it; the validator holds each within
+  `SceneSpecValidator.MinRouteSpeed`–`MaxRouteSpeed` (0.1–10).
+- **`CameraRoutes.NamesOf(framing, stations)`**: `NameOf` for many stations with one look at the
+  model.
+- **Behaviour to know:** `CameraRoutes.Resolve` joins two consecutive stations that a leg joins by
+  that leg, without a search. The way is the same (nothing is shorter than a straight leg) except
+  where another way is exactly as long, which the search might have preferred; a list that names
+  every station of a way is now resolved in the time it takes to read it.
+
+### Command line and agent tools
+- **`therion-cli blender <model> --tour`** (`--tour-file`, `--trunk`, `--tour-start`,
+  `--tour-via`, `--tour-end`, `--tour-seconds`, `--branch-seconds`, `--branch-mode`,
+  `--branch <id>=<mode>`, `--peek-short`, `--min-length`, `--max-branches`,
+  `--no-lead-branches`, `--include`, `--exclude`, `--tour-depth`, `--tour-language`, `--preset`,
+  `--leads`): prints the table and the notices, and renders, drafts (`--draft`) or bundles
+  (`--bundle`, with the table in the README) the tour's storyboard. `--write-storyboard <file>`
+  keeps the storyboard; without `--draft` or `--bundle` it writes it and renders nothing.
+- **MCP**: `plan_tour` (read-only, both profiles: the table, the shots and the notices; no file,
+  no export by Therion) and `write_tour_storyboard` (full profile: the same, written as a
+  `.storyboard.json` in the workspace; an existing file only with `overwrite`).
+
+### Not built
+- A tour of every part of a cave that is not joined (one part, and a notice for the others).
+- A turn of the view into a side passage while the camera goes on (`Peek` is a shot of its own,
+  joined by cuts). A way cut short inside a leg (it ends at a station).
+- The branch table in the panel, composite presets and the `storyboard` parameter of
+  `start_render`.
+
 ## 2026-11-26 (later) — storyboards: a film of several shots, joined in the second stage
 
 The plan stays **version 1** and this is player **1.11**. A film is a list of shots; each shot is

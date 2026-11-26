@@ -534,6 +534,8 @@ Același lucru într-o specificație de randare:
 camera se oprește atunci doar la prima și la ultima. `startHoldSeconds`, `holdSeconds` și
 `endHoldSeconds` sunt opririle de la început, de la fiecare oprire de pe drum și de la sfârșit;
 `lookAheadMeters`, `clearanceMeters` și `smoothingIterations` sunt cele ale zborului prin galerii.
+`speeds` (`[1, 2]`) spune de câte ori viteza proprie a galeriei este parcursă fiecare porțiune
+dintre două opriri: la intrare cu viteza galeriei, la ieșire de două ori mai repede.
 Cu `"timing": "Fit"` (implicit) traseul este potrivit la durata din specificație. În panou,
 șablonul **Route** zboară de la intrare până la stația cea mai îndepărtată, în durata clipului. O
 stație pe care modelul nu o are oprește randarea, iar mesajul îi spune numele.
@@ -888,6 +890,140 @@ O fotografie, o imagine HDRI și un fișier cu datele ridicărilor sunt numite r
 storyboardului. Un storyboard este un film: pentru imagini statice sau pentru un fișier Blender al
 scenei, randați o singură secvență (`--shot`) sau folosiți o specificație de randare. Schema care
 descrie fișierul se află în depozitul ThIDE (`src/Therion.Blender/storyboard.schema.json`).
+
+## Tururi ale galeriilor
+
+Un **tur** este un film al peșterii făcut după reguli, nu de mână: galeria principală este
+parcursă de la intrare spre interior, iar la fiecare joncțiune care merită camera intră în galeria
+laterală, îi arată capătul și revine. ThIDE calculează turul din model, îl încadrează în timpul
+pe care îl dați și îl scrie ca [storyboard](#un-film-din-mai-multe-secvențe-storyboardul), care se
+randează, se previzualizează sau se împachetează ca oricare altul și poate fi mai întâi editat de
+mână.
+
+```
+therion-cli blender pestera.lox --tour --draft
+therion-cli blender pestera.lox --tour --write-storyboard tur.storyboard.json
+therion-cli blender pestera.lox --storyboard tur.storyboard.json
+```
+
+Prima linie face o previzualizare a întregului tur, de privit înainte de randarea lungă. A doua
+scrie storyboardul și nu randează nimic; a treia îl randează, după ce ați schimbat ce ați dorit.
+Fiecare comandă `--tour` afișează tabelul galeriilor laterale și ce a hotărât despre fiecare.
+
+**Galeria principală** (`--trunk`). Implicit merge de la prima stație semnalată ca intrare până la
+stația cea mai îndepărtată de ea de-a lungul galeriilor (`farthest`); un model fără intrare
+primește cea mai lungă galerie, așa cum o parcurge șablonul *Flythrough* (`longest`). `deepest`
+merge până la stația cea mai de jos, `through` până la o altă intrare (sau până la `--tour-end`),
+iar `via` prin stațiile pe care le numiți (`--tour-via s20 --tour-via s77 --tour-end s140`).
+`--tour-start` numește alt început. Galeria principală este parcursă o singură dată și nu trece
+de două ori prin aceeași stație.
+
+**Galerii laterale.** După ce se scot vizele galeriei principale, fiecare rest conex al peșterii
+este un sistem lateral. Unul care atârnă de galeria principală într-o singură stație este o
+**ramură**: este parcursă de la joncțiunea ei până la stația ei cea mai îndepărtată. Unul care
+atârnă de ea în două stații este o **ocolire** (o buclă apare ca ocolire): este parcursă de la
+prima joncțiune până la a doua, apoi filmul revine la prima și continuă pe galeria principală,
+astfel că nimic nu este parcurs de două ori și nimic nu este sărit. Sunt numerotate **B1, B2, …**
+de-a lungul galeriei principale; numerele nu se schimbă în funcție de ce este ales. Tabelul spune
+pentru fiecare: joncțiunea, lungimea (toate vizele ei), **raza de acțiune** (cât de departe ajunge
+de galeria principală), diferența de nivel, lățimea medie (stânga + dreapta din ridicare), pistele,
+ridicările și rangul.
+
+**Care sunt vizitate.**
+
+| Regulă | Implicit | Opțiune |
+|---|---|---|
+| Lungimea minimă | cea mai mare dintre 50 m și 2 % din galeria principală | `--min-length 30` |
+| Câte | 12, cele mai bine clasate întâi | `--max-branches 8` |
+| Rang | după raza de acțiune, apoi după lungime | |
+| Piste | o galerie laterală cu o pistă este vizitată oricât de scurtă ar fi | `--no-lead-branches` |
+| De mână | bate orice regulă: numărul unei ramuri, o stație din ea sau numele unei ridicări | `--include B2`, `--exclude side2` |
+| Adâncime | 1: ce atârnă de galeria principală; 2 și ce atârnă de ramurile vizitate (B3.1, B3.2) | `--tour-depth 2` |
+
+Pistele sunt stațiile pe care modelul le are semnalate drept continuări, sau cele din `--leads
+<fișier.json>`.
+
+**Cum este vizitată o galerie laterală** (`--branch-mode` pentru toate, `--branch B5=return`
+pentru una):
+
+| Mod | Ce face camera | Timp de film |
+|---|---|---|
+| `cut` (implicit) | intră, încetinește, se oprește la o rază de galerie înainte de capăt și stă 1,5 s; apoi filmul taie înapoi la joncțiune, printr-o trecere prin negru de 0,3 s | zborul de intrare |
+| `return` | ca la `cut`, apoi se întoarce și zboară înapoi de două ori mai repede | de aproximativ 1,6 ori |
+| `peek` | rămâne la joncțiune și privește în galeria laterală 3 s | 3 s |
+| `skip` | trece mai departe | deloc |
+
+O ocolire este parcursă întotdeauna până la capăt. `--peek-short` aruncă o privire, de la
+joncțiune, în galeriile laterale lăsate deoparte ca prea scurte. Cât timp se vede o galerie
+laterală, numărul și lungimea ei stau în colțul imaginii („Galerie laterală B3 · 96 m”, cu
+`--tour-language ro`; implicit textele sunt în engleză), iar fiecare pistă de pe drumul camerei
+are un marcaj și nota ei cât timp camera este aproape. Secvențele unui tur nu arată etichetele de
+stații ale peșterii.
+
+**Timpul.** Camera zboară cu viteza dată de mărimea galeriei (vezi [Zborul pe un traseu între
+stații](#zborul-pe-un-traseu-între-stații)), așa că filmul are o durată firească. Două bugete o
+țin în frâu: `--tour-seconds` (180) pentru film și `--branch-seconds` (20) pentru o galerie
+laterală. Când ceva depășește bugetul, se face, în această ordine:
+
+1. o galerie laterală este parcursă mai repede, până la de două ori viteza; apoi este parcursă
+   doar cât îi permite timpul, iar colțul spune cât mai continuă („continuă încă 60 m”). Un zbor
+   de întoarcere care nu încape devine mai întâi o tăietură;
+2. întregul tur este parcurs mai repede, până la de două ori viteza;
+3. zborurile de întoarcere devin tăieturi, cele mai slab clasate întâi;
+4. galeriile laterale cele mai slab clasate sunt lăsate deoparte (întâi privirile; cele alese de
+   mână, ultimele);
+5. galeria principală însăși este scurtată.
+
+Tot ce a fost lăsat deoparte sau scurtat este spus în notele pe care le afișează comanda și în
+README-ul unui pachet.
+
+Un exemplu inventat: o galerie principală de 620 m de la `e1` la `s140`, nouă sisteme laterale,
+180 s.
+
+| Ramură | Joncțiune | Lungime | Rază | Piste | Aleasă | Mod | Secunde |
+|---|---|---|---|---|---|---|---|
+| trunk | e1 → s140 | 620 m | — | 1 | da | — | 96 |
+| B1 | s12 | 140 m | 110 m | 0 | da | cut | 20 (viteză 1,4×) |
+| B2 | s31 | 12 m | 10 m | 0 | nu (scurtă) | skip | 0 |
+| B3 | s48 | 96 m | 80 m | 2 | da | cut | 17 |
+| B4 | s48 → s77 | 190 m | ocolire | 0 | da | through | 20 (scurtată la 130 m: continuă încă 60 m) |
+| B5 | s90 | 22 m | 20 m | 1 | da (pistă) | return | 10 |
+| B6–B9 | … | 8–30 m | … | 0 | nu (scurtă) | skip | 0 |
+
+Filmul: de la `e1` la `s12`, în B1 și o tăietură înapoi, mai departe până la `s48`, în B3, prin B4
+cât permit 20 s, înapoi la `s48` și mai departe, pe lângă `s77`, până la `s90`, în B5 și înapoi,
+apoi până la `s140`. (Tabelul afișat de comandă este în engleză.)
+
+**Un fișier de tur** spune același lucru ca opțiunile și călătorește împreună cu proiectul
+(`--tour-file tur.json`; o opțiune dată pe lângă el are întâietate):
+
+```json
+{
+  "trunk": "farthest", "start": "e1",
+  "minLength": 30, "maxCount": 8, "include": ["B2"], "exclude": ["B7"],
+  "mode": "cut", "modes": { "B5": "return", "B9": "peek" },
+  "tourSeconds": 180, "branchSeconds": 20,
+  "preset": "Full flythrough", "language": "ro",
+  "output": { "width": 1920, "height": 1080, "baseName": "tur-pestera" }
+}
+```
+
+`preset` (`--preset`) este presetarea din care filmul își ia materialele, iluminarea și motorul
+de randare; ele sunt scrise în `defaults` din storyboard, unde le puteți schimba pentru toate
+secvențele deodată. `--bundle` scrie turul ca [pachet de
+randare](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator), cu tabelul și notele în
+README. Un agent are aceleași lucruri prin uneltele `plan_tour` (tabelul, fără să scrie nimic) și
+`write_tour_storyboard`.
+
+Bine de știut:
+
+- Turul rămâne în partea de peșteră în care se află începutul lui; părțile pe care nicio viză nu
+  le leagă de ea sunt numite într-o notă și nu sunt vizitate.
+- O galerie laterală parcursă la adâncimea 1 este parcursă până la stația ei cea mai îndepărtată;
+  galeriile ei laterale sunt socotite în lungimea și în pistele ei și sunt vizitate doar cu
+  `--tour-depth 2`.
+- Storyboardul numește fiecare stație pe lângă care trece camera, deci aparține acestui model:
+  după ce ridicarea s-a schimbat, faceți turul din nou, în loc să editați un storyboard vechi.
 
 ## Cerințe și sfaturi
 

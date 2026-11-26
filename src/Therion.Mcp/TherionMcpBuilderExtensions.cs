@@ -68,8 +68,8 @@ public static class TherionMcpBuilderExtensions
     /// Blender rendering — registered only when the caller supplied an <see cref="IBlenderRenderHost"/>.
     /// The read-only half goes with ring R1 (both profiles), the half that runs Blender with R2.
     /// </summary>
-    private static readonly Type BlenderReadToolType = typeof(BlenderStatusTools);
-    private static readonly Type BlenderRenderToolType = typeof(BlenderRenderTools);
+    private static readonly Type[] BlenderReadToolTypes = [typeof(BlenderStatusTools), typeof(BlenderTourTools)];
+    private static readonly Type[] BlenderRenderToolTypes = [typeof(BlenderRenderTools), typeof(BlenderTourWriteTools)];
 
     /// <summary>Read-only MCP resources — a URI-addressable view of the R1 reads, in both profiles (T-04.1).</summary>
     private static readonly Type[] ResourceTypes =
@@ -128,11 +128,11 @@ public static class TherionMcpBuilderExtensions
     internal static IReadOnlyList<Type> ToolTypes(McpProfile profile, bool includeUi, bool includeBlender = false)
     {
         var types = new List<Type>(ReadOnlyToolTypes);
-        if (includeBlender) types.Add(BlenderReadToolType);
+        if (includeBlender) types.AddRange(BlenderReadToolTypes);
         if (profile is McpProfile.Full)
         {
             types.AddRange(MutatingToolTypes);
-            if (includeBlender) types.Add(BlenderRenderToolType);
+            if (includeBlender) types.AddRange(BlenderRenderToolTypes);
             if (includeUi) types.AddRange(UiToolTypes);
         }
         return types;

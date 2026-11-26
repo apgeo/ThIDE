@@ -28,6 +28,9 @@ public static class SceneSpecValidator
     public const double MaxScale = 1_000;
     public const int MaxSmoothingIterations = 8;
     public const int MinViewpoints = 2;
+
+    /// <summary>The range of <see cref="RouteParams.Speeds"/>: times the passage's own speed.</summary>
+    public const double MinRouteSpeed = 0.1, MaxRouteSpeed = 10.0;
     public const double MinFStop = 0.5;
     public const double MaxFStop = 1_000;
     public const double MaxLightStrength = 100;
@@ -401,6 +404,9 @@ public static class SceneSpecValidator
                     bad("camera.route.holdSeconds", "Hold must be a non-negative number of seconds.");
                 if (!Ok(route.EndHoldSeconds, 0, MaxDurationSeconds))
                     bad("camera.route.endHoldSeconds", "Hold must be a non-negative number of seconds.");
+                for (int i = 0; i < (route.Speeds?.Count ?? 0); i++)
+                    if (!Ok(route.Speeds![i], MinRouteSpeed, MaxRouteSpeed))
+                        bad($"camera.route.speeds[{i}]", $"A stretch is flown at {MinRouteSpeed} to {MaxRouteSpeed} times the passage's speed.");
                 if (!Ok(route.LookAheadMeters, 0, 1_000_000))
                     bad("camera.route.lookAheadMeters", "Look-ahead must be a non-negative distance.");
                 if (!Ok(route.ClearanceMeters, 0, 1_000_000))

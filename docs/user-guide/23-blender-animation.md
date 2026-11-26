@@ -499,7 +499,9 @@ The same in a render spec:
 `stations` (`["e1", "s12", "s40"]`) lists stations to pass instead of `from`, `via` and `to`; the
 camera then stops only at the first and the last. `startHoldSeconds`, `holdSeconds` and
 `endHoldSeconds` are the holds at the start, at each stop on the way and at the end;
-`lookAheadMeters`, `clearanceMeters` and `smoothingIterations` are the flythrough's. With
+`lookAheadMeters`, `clearanceMeters` and `smoothingIterations` are the flythrough's. `speeds`
+(`[1, 2]`) says how many times the passage's own speed each stretch between two stops is flown at:
+in at the passage's speed and back out at twice that. With
 `"timing": "Fit"` (the default) the route is fitted to the spec's duration. In the panel, the
 **Route** template flies from the entrance to the farthest station in the clip's length. A
 station the model does not have stops the render with its name in the message.
@@ -832,6 +834,129 @@ A photo, an HDRI image and a file of survey dates are named relative to the stor
 storyboard is a film: for stills, or a Blender file of the scene, render one shot (`--shot`) or
 use a render spec. The schema that describes the file is in the ThIDE repository
 (`src/Therion.Blender/storyboard.schema.json`).
+
+## Branch tours
+
+A **tour** is a film of the cave made by rules instead of by hand: the main passage is flown from
+the entrance inwards, and at every junction worth it the camera flies into the side passage,
+shows its end and comes back. ThIDE works the tour out from the model, brings it within a time
+you give, and writes it as a [storyboard](#a-film-of-several-shots-the-storyboard), which is
+rendered, drafted or bundled like any other, and can be edited by hand first.
+
+```
+therion-cli blender cave.lox --tour --draft
+therion-cli blender cave.lox --tour --write-storyboard tour.storyboard.json
+therion-cli blender cave.lox --storyboard tour.storyboard.json
+```
+
+The first line drafts the whole tour, to look at before the long render. The second writes the
+storyboard and renders nothing; the third renders it, after you changed what you wanted. Every
+`--tour` command prints the table of the side passages and what it decided about each.
+
+**The main passage** (`--trunk`). By default it runs from the first station flagged as an entrance
+to the station farthest from it along the passages (`farthest`); a model without an entrance gets
+its longest passage, as the *Flythrough* template flies it (`longest`). `deepest` runs to the
+lowest station, `through` to another entrance (or to `--tour-end`), and `via` through the stations
+you name (`--tour-via s20 --tour-via s77 --tour-end s140`). `--tour-start` names another start. The
+main passage is flown once and passes no station twice.
+
+**Side passages.** With the main passage's legs taken out, every connected remainder of the cave
+is one side system. One that hangs on the main passage at a single station is a **branch**: it is
+flown from its junction to its own farthest station. One that hangs on it at two stations is a
+**bypass** (a loop shows up as one): it is flown through from its first junction to its second,
+then the film goes back to the first and carries on along the main passage, so nothing is flown
+twice and nothing is missed. They are numbered **B1, B2, …** along the main passage; the numbers do
+not change with what is chosen. The table says for each: its junction, its length (all its legs),
+its **reach** (how far from the main passage it gets), its depth change, its mean width (left +
+right of the survey), its leads, its surveys and its rank.
+
+**Which are visited.**
+
+| Rule | Default | Option |
+|---|---|---|
+| Least length | the greater of 50 m and 2 % of the main passage | `--min-length 30` |
+| How many | 12, the best ranked first | `--max-branches 8` |
+| Rank | by reach, then by length | |
+| Leads | a side passage with a lead is visited whatever its length | `--no-lead-branches` |
+| By hand | wins over every rule: a branch's number, a station in it, or a survey's name | `--include B2`, `--exclude side2` |
+| Depth | 1: what hangs on the main passage; 2 also what hangs on the visited branches (B3.1, B3.2) | `--tour-depth 2` |
+
+The leads are the stations the model flags as continuations, or those of `--leads <file.json>`.
+
+**How a side passage is visited** (`--branch-mode` for all of them, `--branch B5=return` for one):
+
+| Mode | What the camera does | Film time |
+|---|---|---|
+| `cut` (default) | flies in, slows down, stops a passage radius short of the end and holds 1.5 s; then the film cuts back to the junction, through a dip of 0.3 s | the flight in |
+| `return` | as `cut`, then turns round and flies back out at twice the speed | about 1.6 times |
+| `peek` | stays at the junction and looks into the side passage for 3 s | 3 s |
+| `skip` | passes by | none |
+
+A bypass is always flown through. `--peek-short` gives the side passages that are left out as too
+short a look from their junction. While a side passage is on, its number and length stand in the
+corner of the picture ("Side passage B3 · 96 m"), and every lead on the camera's way has a marker
+and its note while the camera is near (`--tour-language ro` writes these texts in Romanian). A
+tour's shots show no station labels of the cave.
+
+**Time.** The camera flies at the speed the passage's size gives (see [Flying a route between
+stations](#flying-a-route-between-stations)), so the film has a natural length. Two budgets hold
+it: `--tour-seconds` (180) for the film and `--branch-seconds` (20) for one side passage. When
+something is over its budget, this is done, in this order:
+
+1. a side passage is flown faster, up to twice the speed; then it is flown only as far as its
+   time allows, and the corner says how far it goes on ("continues 60 m"). A flight back that
+   does not fit becomes a cut first;
+2. the whole tour is flown faster, up to twice the speed;
+3. flights back become cuts, the lowest-ranked first;
+4. the lowest-ranked side passages are left out (looks first; those you chose by hand last);
+5. the main passage itself is cut short.
+
+Whatever was left out or cut short is said in the notes the command prints, and in the README of
+a bundle.
+
+An invented example: a main passage of 620 m from `e1` to `s140`, nine side systems, 180 s.
+
+| Branch | Junction | Length | Reach | Leads | Chosen | Mode | Seconds |
+|---|---|---|---|---|---|---|---|
+| trunk | e1 → s140 | 620 m | — | 1 | yes | — | 96 |
+| B1 | s12 | 140 m | 110 m | 0 | yes | cut | 20 (speed 1.4×) |
+| B2 | s31 | 12 m | 10 m | 0 | no (short) | skip | 0 |
+| B3 | s48 | 96 m | 80 m | 2 | yes | cut | 17 |
+| B4 | s48 → s77 | 190 m | bypass | 0 | yes | through | 20 (cut short at 130 m: continues 60 m) |
+| B5 | s90 | 22 m | 20 m | 1 | yes (lead) | return | 10 |
+| B6–B9 | … | 8–30 m | … | 0 | no (short) | skip | 0 |
+
+The film: `e1` to `s12`, into B1 and a cut back, on to `s48`, into B3, through B4 as far as 20 s
+allow, back at `s48` and on past `s77` to `s90`, into B5 and out again, and on to `s140`.
+
+**A tour file** says the same as the options, and travels with a project (`--tour-file
+tour.json`; an option given beside it wins):
+
+```json
+{
+  "trunk": "farthest", "start": "e1",
+  "minLength": 30, "maxCount": 8, "include": ["B2"], "exclude": ["B7"],
+  "mode": "cut", "modes": { "B5": "return", "B9": "peek" },
+  "tourSeconds": 180, "branchSeconds": 20,
+  "preset": "Full flythrough", "language": "en",
+  "output": { "width": 1920, "height": 1080, "baseName": "cave-tour" }
+}
+```
+
+`preset` (`--preset`) is where the film takes its materials, lighting and render engine from; they
+are written into the storyboard's `defaults`, where you can change them for every shot at once.
+`--bundle` writes the tour as a [render bundle](#a-render-bundle-to-render-on-another-machine),
+with the table and the notes in its README. An agent has the same through the tools `plan_tour`
+(the table, nothing written) and `write_tour_storyboard` (see [the agent tools](../mcp-host-setup.md)).
+
+Good to know:
+
+- The tour stays in the part of the cave its start is in; parts that no leg joins to it are named
+  in a note and get no visit.
+- A side passage flown at depth 1 is flown to its farthest station; its own side passages are
+  counted in its length and its leads, and visited only with `--tour-depth 2`.
+- The storyboard names every station the camera passes, so it belongs to this model: after the
+  survey changed, make the tour again rather than editing an old storyboard.
 
 ## Requirements & tips
 

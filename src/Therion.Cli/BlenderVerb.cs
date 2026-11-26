@@ -8,7 +8,8 @@
 // part by part (--reveal). The leads a preset marks are the stations the model flags as
 // continuations, or those of a JSON file (--leads). A film of several shots comes from a
 // storyboard file (--storyboard): rendered whole, drafted whole, written as a bundle, or one shot
-// of it alone (--shot). Kept in its
+// of it alone (--shot); a tour of the cave's branches (--tour, BlenderVerb.Tour.cs) is a
+// storyboard made from the model. Kept in its
 // own class (not a Program.cs local function) so it is unit-testable with in-memory writers and no
 // real Blender.
 
@@ -24,7 +25,7 @@ using Therion.Cave3D.Parsing;
 
 namespace Therion.Cli;
 
-public static class BlenderVerb
+public static partial class BlenderVerb
 {
     /// <summary>
     /// Runs the verb. <paramref name="args"/> is the full CLI argv (args[0] == "blender").
@@ -58,8 +59,12 @@ public static class BlenderVerb
         // A film of several shots (--storyboard), unless one shot of it is asked for (--shot):
         // that one is a render spec like any other from here on.
         if (!TryReadStoryboard(args, stderr, out var storyboard, out int? shot)) return 2;
+        // A tour of the cave's branches (--tour) is a storyboard made from the model.
+        if (!TryPlanTour(args, source, storyboard is not null, stdout, stderr, out var tour, out bool written)) return 2;
+        if (written) return 0;
+        if (tour is not null) storyboard = tour.Storyboard;
         if (storyboard is not null && shot is null)
-            return await StoryboardAsync(args, source, format, storyboard, stdout, stderr).ConfigureAwait(false);
+            return await StoryboardAsync(args, source, format, storyboard, stdout, stderr, tour).ConfigureAwait(false);
 
         if (!TryBuildSpec(args, stderr, storyboard, shot, out var spec)) return 2;
         if (!TryTimeRoute(source, stderr, ref spec)) return 2;
@@ -459,7 +464,8 @@ public static class BlenderVerb
     /// as a draft of every shot with <c>--draft</c>, or written as a bundle with <c>--bundle</c>.
     /// </summary>
     private static async Task<int> StoryboardAsync(
-        IReadOnlyList<string> args, string source, CaveSourceFormat format, Storyboard storyboard, TextWriter stdout, TextWriter stderr)
+        IReadOnlyList<string> args, string source, CaveSourceFormat format, Storyboard storyboard, TextWriter stdout, TextWriter stderr,
+        Tour? tour = null)
     {
         if (SceneOptions.FirstOrDefault(o => Flag(args, o)) is { } said)
         {
@@ -478,9 +484,10 @@ public static class BlenderVerb
             return 2;
         }
 
-        // The leads are read when any shot marks them.
+        // The leads are read when any shot marks them. A tour has read them, and marks its own.
         bool marksLeads = Enumerable.Range(0, storyboard.Shots.Count).Any(i => StoryboardPlanner.ShotSpec(storyboard, i).Labels.Leads.Show);
-        if (!TryReadLeads(args, source, new SceneSpec { Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = marksLeads } } }, stderr, out var leads))
+        IReadOnlyList<SourceLead> leads = [];
+        if (tour is null && !TryReadLeads(args, source, new SceneSpec { Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = marksLeads } } }, stderr, out leads))
             return 2;
 
         var model = new ResolvedModelSource { Path = Path.GetFullPath(source), Format = format, Kind = ModelSourceKind.ExternalFile };
@@ -513,7 +520,13 @@ public static class BlenderVerb
             }
             if (!TryRenderPlans(renderPlan, draft, render, stderr, out var plans)) return 2;
             return await BundleAsync(
-                    work => RenderBundleWriter.FromStoryboard(model, storyboard, work, draft, leads: leads), bundle, draft, language, plans,
+                    work =>
+                    {
+                        var content = RenderBundleWriter.FromStoryboard(model, storyboard, work, draft, leads: leads);
+                        // What a tour chose, left out and cut short is said in the bundle too.
+                        return tour is null ? content : content with { ReadmeSections = [.. content.ReadmeSections, TourReadme(tour, language)] };
+                    },
+                    bundle, draft, language, plans,
                     Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
                 .ConfigureAwait(false);
         }

@@ -1,5 +1,41 @@
 # Therion.CaveGeometry — changes for consumers
 
+## 2026-11-26 (later) — tours: the main passage, what hangs on it, and which of it to visit
+
+### Additive API
+- **`TourPlanner.Plan(graph, model, options?, leads?)`** gives a **`TourPlan`**: a tour of a cave as
+  far as the passage network alone decides it. No camera and no time; pure and deterministic (ties
+  go to the lower station index, and the legs' order in the file does not matter).
+- **The trunk** (`TourOptions.Trunk`, `TourTrunkKind`): `Longest` (the longest passage, begun at
+  the end nearer the start), `Farthest` (from the start to the station farthest along the
+  passages), `Deepest` (to the lowest station), `Through` (to another entrance, or to
+  `TourOptions.End`), `Via` (through `TourOptions.Via`, to `End`). `Auto` is `Farthest` when there
+  is a start (`TourOptions.Start`, or the first station flagged as an entrance), else `Longest`.
+  The trunk is a simple path in the start's part of the cave: `TourPlan.TrunkStations`,
+  `TrunkLength`, `TrunkLeads`, `Component`; the other parts are counted
+  (`OtherComponents`, `OtherComponentsLength`).
+- **Side systems** (`TourPlan.Branches`, each a **`TourBranch`**): the trunk's legs taken out, every
+  connected remainder is one. `Kind` is `Branch` (it hangs on the trunk at one station;
+  `Stations` is the way from `Junction` to its farthest station) or `Bypass` (at two or more;
+  `Stations` runs from the first to the last, `Rejoins`). A leg between two trunk stations that is
+  not the trunk's own is a bypass of one leg. Each has `Id` ("B1" … in tour order: along the
+  trunk, at one junction the shorter first; the ids do not depend on the choice), `JunctionAt`,
+  `Length` (all its legs), `RouteLength`, `Reach`, `DepthChange`, `MeanWidth` (left + right of the
+  legs' shots, weighted by length; null without them), `Leads`, `Surveys`, `Rank` (by reach, then
+  length) and `Choice`.
+- **The choice** (`TourChoice`: `ByRank`, `Included`, `Lead`, `Short`, `OverCount`, `Excluded`;
+  `TourBranch.Chosen`): `TourOptions.MinLength` (null: the greater of `DefaultMinLength` 50 m and
+  `MinLengthTrunkShare` 2 % of the trunk), `MaxCount` (12), `WithLeads` (a side system with a
+  lead is chosen whatever its length), `Include` and `Exclude` (branch ids, station names, survey
+  names; a choice by hand wins over every rule, and `TourPlan.Unmatched` lists the entries that
+  named nothing), `Depth` (2 also lists what hangs on the chosen branches' own ways, "B3.1", with
+  `Parent` and `Depth`).
+- **Leads** are the stations given by index, or the stations the model flags as continuations.
+- An option that cannot be met is an `ArgumentException` whose parameter name is the option's
+  (`tour.start`, `tour.via[1]`, `tour.end`, `tour.trunk`): a station that is not in the model, in
+  more than one survey (`name@survey` tells them apart) or on no leg; no second entrance; stations
+  in parts that are not joined; a way that would pass a station twice.
+
 ## 2026-11-26 — shortest paths as stations
 
 ### Additive API
