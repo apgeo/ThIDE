@@ -284,10 +284,10 @@ public sealed class LargeSystemsBlenderTests(ITestOutputHelper output)
         var storyboard = new Storyboard
         {
             Fps = 8,
-            Defaults = new StoryboardDefaults { Engine = new EngineSpec { Kind = RenderEngineKind.Cycles, Samples = 16, Denoise = false, Gpu = GpuMode.CpuOnly } },
+            Defaults = new StoryboardDefaults { Engine = new EngineSpec { Kind = RenderEngineKind.Cycles, Samples = 48, Denoise = false, Gpu = GpuMode.CpuOnly } },
             Shots =
             [
-                new ShotSpec { Preset = "Orbit showcase", Seconds = 4 },
+                new ShotSpec { Preset = "Orbit showcase", Seconds = 10 },
                 new ShotSpec { Preset = "Orbit showcase", Seconds = 2, In = new TransitionSpec { Kind = TransitionKind.Dip, Seconds = 0.5 } },
             ],
             Output = new OutputSpec { Kind = OutputKind.Video, Width = 160, Height = 90, BaseName = "film" },
@@ -315,7 +315,7 @@ public sealed class LargeSystemsBlenderTests(ITestOutputHelper output)
         Assert.Equal(RenderJobState.Cancelled, stopped.State);
         Assert.True(File.Exists(zip), "a stopped job keeps its bundle");
         int kept = Directory.GetFiles(Path.Combine(root, "scratch", "film", "frames", "s01"), "frame_*.png").Length;
-        Assert.InRange(kept, 3, 31);
+        Assert.InRange(kept, 3, 79);  // stopped inside the first shot of 80 frames
         Assert.Empty(worker.Pending());
 
         File.Delete(cancel);

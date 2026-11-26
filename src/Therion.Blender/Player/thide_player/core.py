@@ -289,6 +289,8 @@ def another_blender(script, args, plan_path, stage, frames_dir, keep_frames=Fals
         command += ["--modules", os.path.abspath(folder)]
     if keep_frames:
         command.append("--keep-frames")
+    if getattr(args, "no_persistent_data", False):
+        command.append("--no-persistent-data")
     sys.stdout.flush()
     sys.stderr.flush()
     try:

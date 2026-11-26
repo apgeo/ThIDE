@@ -14,6 +14,10 @@ public sealed class RenderQueue : IDisposable
     /// <summary>How many ended jobs are remembered.</summary>
     public const int KeptEnded = 20;
 
+    /// <summary>The owner of a job that <see cref="Resume"/> started again: whoever asked for it
+    /// first is gone.</summary>
+    public const string RestartOwner = "restart";
+
     private readonly object _lock = new();
     private readonly List<Entry> _entries = [];   // in the order they were queued
     private readonly string? _stateFile;
@@ -184,7 +188,7 @@ public sealed class RenderQueue : IDisposable
         {
             if (replay(job.Request) is not { } work) continue;
             // Queued here, one after the other, so that they keep their order.
-            tasks.Add(Swallow(RunAsync(job.Request, work, null, CancellationToken.None, job.Id)));
+            tasks.Add(Swallow(RunAsync(job.Request with { Owner = RestartOwner }, work, null, CancellationToken.None, job.Id)));
         }
         Save(force: true);
         return tasks;

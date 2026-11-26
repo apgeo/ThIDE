@@ -162,6 +162,7 @@ public sealed class RenderJobsTests : IDisposable
         Assert.Equal(["cut short", "waiting"], replayed);
         Assert.Empty(after.Interrupted);
         Assert.Equal(2, after.Jobs.Count(j => j.State == RenderJobState.Succeeded));
+        Assert.All(after.Jobs.Where(j => j.State == RenderJobState.Succeeded), j => Assert.Equal(RenderQueue.RestartOwner, j.Request.Owner));
         // The file says so too: a third start has nothing to go on with.
         Assert.Empty(new RenderQueue(file).Interrupted);
         gate.SetResult(Done);
