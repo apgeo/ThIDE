@@ -494,8 +494,9 @@ public static partial class ScenePlanValidator
     {
         [PlanAnnotationKind.Label] = ["text", "size", "color", "strength"],
         [PlanAnnotationKind.Callout] = ["text", "size", "offset", "lineWidth", "color", "strength"],
-        [PlanAnnotationKind.Marker] = ["radius", "color", "strength"],
+        [PlanAnnotationKind.Marker] = ["radius", "color", "strength", "symbol", "image", "sizeBy", "factor", "minRadius", "maxRadius"],
         [PlanAnnotationKind.Photo] = ["image", "width", "height", "facing", "normal", "up", "frame", "offset", "lineWidth", "strength"],
+        [PlanAnnotationKind.Outline] = ["points", "width", "color", "strength"],
     };
 
     private static void ValidateAnnotations(ScenePlan plan, IReadOnlyList<PlanAnnotation> annotations, Action<string, string> bad)
@@ -547,7 +548,7 @@ public static partial class ScenePlanValidator
                 bad(path + ".model", $"The plan has no model or line '{a.Model}'.");
             if (!AnnotationFields.TryGetValue(a.Kind, out var fields))
             {
-                bad(path + ".kind", "An annotation is a label, a callout, a marker or a photo.");
+                bad(path + ".kind", "An annotation is a label, a callout, a marker, a photo or an outline.");
                 continue;
             }
 
@@ -559,7 +560,9 @@ public static partial class ScenePlanValidator
                          ("offset", a.Offset is not null), ("lineWidth", a.LineWidth is not null), ("color", a.Color is not null),
                          ("strength", a.Strength is not null), ("image", a.Image is not null), ("width", a.Width is not null),
                          ("height", a.Height is not null), ("facing", a.Facing is not null), ("normal", a.Normal is not null),
-                         ("up", a.Up is not null), ("frame", a.Frame is not null),
+                         ("up", a.Up is not null), ("frame", a.Frame is not null), ("symbol", a.Symbol is not null),
+                         ("sizeBy", a.SizeBy is not null), ("factor", a.Factor is not null), ("minRadius", a.MinRadius is not null),
+                         ("maxRadius", a.MaxRadius is not null), ("points", a.Points is not null),
                      })
                 if (set && !fields.Contains(name))
                     bad($"{path}.{name}", $"A {kind} has no '{name}'.");
@@ -587,6 +590,37 @@ public static partial class ScenePlanValidator
 
                 case PlanAnnotationKind.Marker:
                     if (!Positive(a.Radius)) bad(path + ".radius", "The radius of a marker must be positive.");
+                    if (a.Symbol is { } symbol && !Enum.IsDefined(symbol))
+                        bad(path + ".symbol", "A marker is a ball, a pin, a cone, a cube, a ring or an image.");
+                    if (a.Symbol == PlanMarkerSymbol.Image)
+                    {
+                        if (!IsPathBesideThePlan(a.Image))
+                            bad(path + ".image", "A marker that is an image names its file relative to the plan, beside it.");
+                        else if (!HasImageExtension(a.Image!))
+                            bad(path + ".image", "An image file is a .png or a .jpg.");
+                    }
+                    else if (a.Image is not null)
+                        bad(path + ".image", "Only a marker whose symbol is 'image' has an image.");
+                    if (a.SizeBy is null)
+                    {
+                        foreach (var (name, set) in new (string, bool)[] { ("factor", a.Factor is not null), ("minRadius", a.MinRadius is not null), ("maxRadius", a.MaxRadius is not null) })
+                            if (set) bad($"{path}.{name}", "Only a marker with 'sizeBy' has one.");
+                    }
+                    else
+                    {
+                        if (!Enum.IsDefined(a.SizeBy.Value)) bad(path + ".sizeBy", "A marker is sized by 'distance' or by 'screen'.");
+                        if (!Positive(a.Factor)) bad(path + ".factor", "A marker sized by distance or screen needs a positive factor.");
+                        if (a.MinRadius is not null && !Positive(a.MinRadius)) bad(path + ".minRadius", "The smallest radius must be positive.");
+                        if (a.MaxRadius is not null && !Positive(a.MaxRadius)) bad(path + ".maxRadius", "The largest radius must be positive.");
+                        if (Positive(a.Radius) && (a.MinRadius ?? a.Radius / 4) > (a.MaxRadius ?? a.Radius * 4))
+                            bad(path + ".minRadius", "The smallest radius is not larger than the largest.");
+                    }
+                    break;
+
+                case PlanAnnotationKind.Outline:
+                    if (a.Points is not { Count: >= 2 } points) bad(path + ".points", "An outline needs at least two points.");
+                    else if (points.Any(p => !IsFinite(p))) bad(path + ".points", "The points must be finite.");
+                    if (!Positive(a.Width)) bad(path + ".width", "The width of an outline must be positive.");
                     break;
 
                 case PlanAnnotationKind.Photo:
@@ -660,7 +694,9 @@ public static partial class ScenePlanValidator
             things.Add(new Thing(light.Id, "light", ThingKind.Light, HasMaterial: false));
         bool knowsTheScene = plan.Features.All(f => ScenePlan.PlayerFeatures.Contains(f, StringComparer.Ordinal));
 
-        var taken = new Dictionary<(string Id, ThingKind Kind, string Property), int>();
+        // Which change has a property of a thing, by its id and by its role: both may, and the
+        // id's change has it; two by id, or two by role, may not.
+        var taken = new Dictionary<(string Id, ThingKind Kind, string Property), (int? ById, int? ByRole)>();
         for (int i = 0; i < changes.Count; i++)
         {
             var change = changes[i];
@@ -708,12 +744,18 @@ public static partial class ScenePlanValidator
 
             void Once(string property)
             {
+                bool byId = change.Target is { Id: { Length: > 0 } };
                 foreach (var thing in targets)
-                    if (!taken.TryAdd((thing.Id, thing.Kind, property), i))
+                {
+                    var key = (thing.Id, thing.Kind, property);
+                    taken.TryGetValue(key, out var had);
+                    if ((byId ? had.ById : had.ByRole) is { } earlier)
                     {
-                        bad($"{path}.{property}", $"changes[{taken[(thing.Id, thing.Kind, property)]}] changes this of '{thing.Id}' already.");
+                        bad($"{path}.{property}", $"changes[{earlier}] changes this of '{thing.Id}' already.");
                         return;
                     }
+                    taken[key] = byId ? (i, had.ByRole) : (had.ById, i);
+                }
             }
             // A light has no material: it is shown and hidden, and its energy changes.
             bool NotOfALight(string property)
@@ -734,8 +776,8 @@ public static partial class ScenePlanValidator
             }
             void OneOfTheWorld(string property, string what)
             {
-                if (change.Target is null && !taken.TryAdd(("", ThingKind.Model, property), i))
-                    bad($"{path}.{property}", $"changes[{taken[("", ThingKind.Model, property)]}] changes the world's {what} already.");
+                if (change.Target is null && !taken.TryAdd(("", ThingKind.Model, property), (i, null)))
+                    bad($"{path}.{property}", $"changes[{taken[("", ThingKind.Model, property)].ById}] changes the world's {what} already.");
             }
 
             // ---- the keys ----

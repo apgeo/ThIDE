@@ -203,6 +203,10 @@ the first frame and a card goes in 0.8 s):
 "endCard": { "text": "Thank you", "seconds": 4, "fade": 2 }
 ```
 
+`"titleFadeIn"` and `"titleFadeOut"` give the two their own times: `"titleFadeIn": 0.3,
+"titleFadeOut": 1.5` has the card come quickly and go slowly. Each, when set, wins over
+`"titleFade"` for its half; `titleFadeOut` goes with `titleSeconds`, because only a card goes.
+
 **Captions are also written as subtitles**: `<name>.srt` and `<name>.vtt` beside the movie, for a
 video player or a web page that can show them, turn them off or translate them.
 
@@ -277,7 +281,10 @@ than the panel (`glowColor` and `counter`; the panel keeps a preset's):
 - `glow` makes what has just appeared shine (in `glowColor`, a warm orange unless you say
   otherwise) until the reveal has moved on.
 - `counter` (for `date`) writes the year the reveal has got to above the scale bar. **Map
-  reveal** has it on: switch that preset to `date` and it counts the years.
+  reveal** has it on: switch that preset to `date` and it counts the years. With
+  `"counterFormat": "{} m"` a reveal by `distance` also has a counter, of the metres from the
+  entrance, and one by `order` counts the legs; `{}` is where the number goes, and
+  `counterDecimals` (0 to 6) how many decimals it has.
 - `from` (for `distance`) is the name of the station the distances are measured from.
 - `datesPath` (for `date`) names the file that has the dates.
 
@@ -311,7 +318,8 @@ Beside the labels ThIDE makes from the model (its stations, its leads), a scene 
 |---|---|
 | `label` | a text on its station, turned to the camera |
 | `callout` | a text that stands away from its station, with a line from the station to it |
-| `marker` | a glowing ball |
+| `marker` | a glowing ball, or a pin, a cone, a cube, a ring or a small picture |
+| `outline` | a line along a list of points, for the outline of a passage or a room on the surface it lies on |
 | `photo` | a picture from a PNG or JPEG file, on its station or above it with a line to it |
 
 They are written as a JSON list, in a file of their own:
@@ -328,13 +336,16 @@ They are written as a JSON list, in a file of their own:
 
 | Key | Meaning |
 |---|---|
-| `kind` | `label`, `callout`, `marker` or `photo` |
+| `kind` | `label`, `callout`, `marker`, `photo` or `outline` |
 | `station` *or* `at` | where: the name of a station, as the model has it, or a point `[east, north, up]` in the model's own coordinates |
 | `text` | what a label or a callout says |
 | `image` | a photo's file, a `.png` or a `.jpg`, named from where the annotations file lies |
 | `size` | in metres: the height of a text's letters, the radius of a marker, the width of a photo. Left out, it suits the cave: a text as large as a station label, a photo a tenth of the cave's extent |
 | `offset` | `[east, north, up]` in metres: where a callout's text or a photo stands from its station. A callout without one stands four letter heights above; a photo without one is on its station, and with one it has a line to it |
 | `color` | `[red, green, blue]`, each 0 to 1, of a text or a marker |
+| `symbol` | of a marker: `ball` (the default), `pin`, `cone`, `cube`, `ring` or `image`. A pin and a cone stand with their point on the station; a ring turns to the camera; `image` is a small picture (`image` names its file) as wide as twice `size` |
+| `sizeBy`, `sizeFactor`, `minSize`, `maxSize` | of a marker: `"sizeBy": "distance"` makes its radius `sizeFactor` metres for every metre between it and the camera, `"screen"` makes it as wide in the picture as `sizeFactor` times the picture's width, wherever the camera is; both stay between `minSize` and `maxSize` (a quarter and four times `size` unless you say) |
+| `points` | of an outline: the points `[east, north, up]` it runs along, in the model's own coordinates; its thickness is `size`, and it is where its first point is unless you give a `station` or `at` |
 | `framed` | `true` puts a border about a photo |
 | `facing`, `normal` | `"facing": "fixed"` makes a photo a card that faces along `normal` (`[east, north, up]`) and stays so; without it a photo faces the camera |
 | `from`, `to` | when it is there, in seconds from the start of the movie; without them, throughout |

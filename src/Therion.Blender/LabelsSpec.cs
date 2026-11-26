@@ -197,6 +197,16 @@ public sealed record OverlaySpec
     /// card takes <see cref="Plan.ScreenTextPlanner.TitleFadeSeconds"/> to go.</summary>
     public double? TitleFade { get; init; }
 
+    /// <summary>How long the title takes to appear, in seconds; null is <see cref="TitleFade"/>.
+    /// Set, it parts the two: <see cref="TitleFade"/> then says only how long the card takes to
+    /// go.</summary>
+    public double? TitleFadeIn { get; init; }
+
+    /// <summary>How long a title card takes to go, in seconds; null is <see cref="TitleFade"/>,
+    /// or <see cref="Plan.ScreenTextPlanner.TitleFadeSeconds"/> when that is not set either. Only
+    /// a card (<see cref="TitleSeconds"/>) goes; a title at the top stays throughout.</summary>
+    public double? TitleFadeOut { get; init; }
+
     /// <summary>A line that stays in the top left corner of the picture throughout, beside the
     /// credits line: a place, a date. Null or blank is none.</summary>
     public string? Corner { get; init; }

@@ -1,5 +1,90 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-26 — marker symbols and sizes, outlines, id over role, photo layout, a reveal over a leg graph
+
+The plan stays **version 1** and this is player **1.10**. Everything here is a new key, a new
+entry point or a rule that became wider, so every plan of yesterday plays as it did. A plan that
+uses a new key needs a player 1.10 (an older player refuses the key by name, as it refuses every
+key it does not know).
+
+### Breaking changes
+- `ScenePlanValidator` no longer refuses a change by id and a change by role of the same property
+  of one target (see below): a producer that relied on that refusal to catch its own mistakes
+  checks it itself. Two by id, or two by role, are refused as before.
+- Nothing else in this library's API.
+
+### Annotations: marker symbols and sizes by the camera
+- **`PlanAnnotation.Symbol`** (`annotations[].symbol`, a marker): `ball` (the default), `pin`,
+  `cone`, `cube`, `ring` or `image`. A pin and a cone stand with their point on the anchor, a cube
+  and a ring are centred on it, a ring turns to the camera as a text does, and `image` is a small
+  picture of `image` (a `.png` or `.jpg` that travels with the plan), turned to the camera,
+  `2 × radius` wide. Each is a few primitives built by the player; a part's name is the symbol's
+  (`pin`, `cone`, `cube`, `ring`, `picture`).
+- **`SizeBy`** (`sizeBy`: `distance` | `screen`), with **`Factor`**, **`MinRadius`** and
+  **`MaxRadius`**: the marker's scale follows its distance from the camera as
+  `labels.markers.byDistance` does (the same driver). `distance`: the radius is `factor` metres per
+  metre of distance; `screen`: it is seen `factor` times the picture's width across wherever the
+  camera is (by the camera's lens at the start of the clip). Both are held between the two radii
+  (a quarter and four times `radius` unless given), and `radius` is the size the shape is made at.
+- `AnnotationSpec` has `Symbol`, `SizeBy`, `SizeFactor`, `MinSize` and `MaxSize`; a marker that is
+  an image names its file in `Image`, which `AnnotationPlanner.Files` carries as a photo's.
+
+### Annotations: outlines
+- **`PlanAnnotationKind.Outline`** (`kind: "outline"`, with `points` (two at least), `width`,
+  `color`, `strength`): a tube through the points, drawn as the plan's lines are and shown and
+  hidden by changes as any annotation is (role `outline`). The points are in the plan's frame, or
+  in the model's own coordinates with `model`; `at` is the point the annotation is said to be at.
+  The producer puts the points on the surface; nothing is draped. `AnnotationSpec` has
+  `AnnotationKind.Outline` with `Points` and `Size` (the width).
+
+### Changes: by id over by role
+- A change **by id and a change by role may both change the same property of one target**; the
+  **change by id has it**, whichever comes first in the list, and the change by role leaves that
+  property of that target alone and changes it of every other target of the role. Two changes by
+  id, or two by role, of one property of one target are still refused. The player works the
+  changes by id first.
+
+### `AnnotationPlanner`: a model's point, and photos laid out
+- **`Near(camera, timeline, point, within, model, changes)`** works the nearness of a point of a
+  model, with the point in the model's own coordinates: it goes where the model's `scale` and
+  `offset` keys take it frame by frame (stretch along its own axes, its turn, its place plus the
+  offset; the change by id has the model's keys before the one by role). `ModelPointAt` is the
+  place at one time. The key rules are those of the player except for the third key on a frame,
+  which is read as the second.
+- **`Layout(cards, camera, timeline, options)`** for photos (`PhotoCard`, `PhotoLayoutOptions`,
+  `PhotoLayout`): photos whose times overlap are shown **one at a time** (the shown one stays
+  until its time is over, then the `PhotoOrder` picks: nearest to the camera, or highest
+  `Priority`); photos shown together are moved apart **on the screen** (on the frame in the middle
+  of the first time each is shown, kept inside the picture and a `Gap` apart; a card whose anchor
+  is off the picture is left alone) and a card that moved gets a line to its anchor; a card's
+  **`Caption`** is a label under it (`<id>-caption`, role `photo-caption`) shown and hidden with
+  it. The result is annotations and changes to add to a plan. A card is fixed in the scene: the
+  separation is exact for that frame and fine for a camera that moves slowly.
+
+### Reveal
+- **`RevealField.FromLegs(legs, options, entrances)`** is the entry point over a plain graph of
+  legs (`RevealGraphLeg`: station names, positions, an optional date); no `CaveModel` is needed.
+- **`RevealPlanner.Change(target, min, max, start, end, edge, glow, glowColor, fps)`** is the rule
+  for a reveal's first and last key, its edge and its glow, public and free of `SceneSpec` and
+  `SceneMeta`; the plan of a spec is made by it. **`RevealPlanner.ByRole(role)`** names every
+  model and line of a role: give the parts of one cave (walls, centreline) one role and key them
+  all, in step, with one change.
+- **`RevealPlanner.Counter(target, min, max, format, decimals)`** is the counter, and `RevealSpec`
+  has **`CounterFormat`** (with `{}` where the number goes: `"{} m"`) and **`CounterDecimals`**:
+  with a format the counter counts a reveal by distance (metres from the entrance) and by order
+  (the number of the leg) too. Without a format only a reveal by date has one, as before.
+
+### Texts
+- **`OverlaySpec.TitleFadeIn`** and **`TitleFadeOut`** split `TitleFade`. `TitleFade` alone means
+  what it did: the title takes that long to appear and, as a card, to go. `TitleFadeIn` and
+  `TitleFadeOut` each override their half; `TitleFadeOut` needs `TitleSeconds` (only a card goes).
+
+### `LampReach`
+- **`Keys` and `Apply` take an optional `daylight`**, a share 0 to 1 for each time (each frame
+  for `Apply`): the lamp is raised only by the share of daylight that is gone (1 leaves it as it
+  is, 0 gives the whole reach, in between is linear). `Keys` takes time linear in the number of
+  times on a straight run, where it took the square; the keys are the same.
+
 ## 2026-11-25 (later) — keys before the clip and three on a frame, a backdrop apart from the light, bands, photos over the picture
 
 The plan stays **version 1**, and this is the same player **1.9** as the entry below: the two

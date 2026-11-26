@@ -13,7 +13,7 @@ using Therion.Blender.Tests.SceneProbe;
 
 namespace Therion.Blender.Tests.Player;
 
-public class PlayerTwoStageBlenderTests
+public partial class PlayerTwoStageBlenderTests
 {
     private static readonly Lazy<ProbeAssets> Small = new(() =>
         SceneProbeRunner.Prepare("stages-small", InventedCave.Build(InventedCaveSize.Small)));

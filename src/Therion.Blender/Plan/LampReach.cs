@@ -40,51 +40,63 @@ public static class LampReach
     /// <summary>
     /// The keys of a lamp's energy for a camera that looks over the given distances: at each
     /// time the energy <see cref="Energy"/> gives, with the keys left out that a straight line
-    /// between their neighbours stands in for (within <paramref name="tolerance"/>).
+    /// between their neighbours stands in for (within <paramref name="tolerance"/>). Linear in
+    /// the number of times, however long a straight run is.
     /// </summary>
     /// <param name="distances">How far the camera looks at each time, in rising order of time:
     /// the distance to what the lamp is to light.</param>
+    /// <param name="daylight">How much of the light is the day's at each of those times, 0 to 1,
+    /// one for each of them: the lamp is raised only by the share of daylight that is gone, so a
+    /// share of 1 leaves it as it is and a share of 0 gives it all the reach. Null is 0: night.</param>
     public static IReadOnlyList<PlanNumberKey> Keys(
         IReadOnlyList<(double T, double Distance)> distances, double energy,
-        double reference = DefaultDistance, double tolerance = DefaultTolerance)
+        double reference = DefaultDistance, double tolerance = DefaultTolerance, IReadOnlyList<double>? daylight = null)
     {
         ArgumentNullException.ThrowIfNull(distances);
         if (!(energy >= 0) || !double.IsFinite(energy))
             throw new ArgumentOutOfRangeException(nameof(energy), energy, "A lamp's energy is not negative.");
         if (!(tolerance >= 0)) throw new ArgumentOutOfRangeException(nameof(tolerance), tolerance, "The tolerance is not negative.");
-        var all = distances.Select(d => (d.T, Value: Rounded(Energy(energy, d.Distance, reference)))).ToList();
+        if (daylight is not null)
+        {
+            if (daylight.Count != distances.Count)
+                throw new ArgumentException("There is a daylight share for every time: one for each distance.", nameof(daylight));
+            if (daylight.Any(d => !(d >= 0 && d <= 1)))
+                throw new ArgumentOutOfRangeException(nameof(daylight), "A share of daylight is within 0–1.");
+        }
+        var all = distances.Select((d, i) =>
+        {
+            double raised = Energy(energy, d.Distance, reference);
+            return (d.T, Value: Rounded(energy + (raised - energy) * (daylight is null ? 1.0 : 1.0 - daylight[i])));
+        }).ToList();
         if (all.Count == 0) return [];
 
         // From each key that is kept, the farthest key that a straight line reaches with every
-        // key between them within the tolerance.
+        // key between them within the tolerance. A line from the key kept to a later one has a
+        // slope; each key between them allows a range of slopes (the line passes within the
+        // tolerance of it). So one range is kept as the later keys come, and a key is reached
+        // when its own slope is in it: each key is looked at once.
         var kept = new List<PlanNumberKey> { new(all[0].T, all[0].Value) };
         int from = 0;
         while (from < all.Count - 1)
         {
             int to = from + 1;
-            for (int next = from + 2; next < all.Count; next++)
+            double low = double.NegativeInfinity, high = double.PositiveInfinity;
+            for (int next = from + 1; next < all.Count; next++)
             {
-                if (!Straight(all, from, next, tolerance)) break;
+                double span = all[next].T - all[from].T;
+                if (!(span > 0)) break;
+                double slope = (all[next].Value - all[from].Value) / span;
+                if (next > from + 1 && !(slope >= low && slope <= high)) break;
                 to = next;
+                double room = tolerance * Math.Max(all[next].Value, 1e-9);
+                low = Math.Max(low, (all[next].Value - room - all[from].Value) / span);
+                high = Math.Min(high, (all[next].Value + room - all[from].Value) / span);
             }
             kept.Add(new PlanNumberKey(all[to].T, all[to].Value));
             from = to;
         }
         // A lamp that never changes has one key.
         return kept.All(k => k.Value == kept[0].Value) ? [kept[0]] : kept;
-    }
-
-    private static bool Straight(List<(double T, double Value)> all, int from, int to, double tolerance)
-    {
-        double span = all[to].T - all[from].T;
-        if (!(span > 0)) return false;
-        for (int i = from + 1; i < to; i++)
-        {
-            double share = (all[i].T - all[from].T) / span;
-            double line = all[from].Value + (all[to].Value - all[from].Value) * share;
-            if (Math.Abs(line - all[i].Value) > tolerance * Math.Max(all[i].Value, 1e-9)) return false;
-        }
-        return true;
     }
 
     /// <summary>
@@ -130,11 +142,13 @@ public static class LampReach
     /// <param name="distances">How far the camera looks at each time, when whoever makes the
     /// plan knows it better than the poses' targets say (the distance to the nearest cave, for
     /// a camera whose target is only where it focuses); null takes the poses' targets.</param>
+    /// <param name="daylight">How much of the light is the day's on each frame of the clip, 0 to 1
+    /// (<see cref="Keys"/>); null is none: the lamp is raised by all of its reach.</param>
     /// <exception cref="ArgumentException">The plan has no light <paramref name="lightId"/>, or
     /// a change keys the lamp's energy already.</exception>
     public static ScenePlan Apply(
         ScenePlan plan, double reference = DefaultDistance, string? lightId = null,
-        IReadOnlyList<(double T, double Distance)>? distances = null)
+        IReadOnlyList<(double T, double Distance)>? distances = null, IReadOnlyList<double>? daylight = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         var lamps = plan.Look.Lights
@@ -152,7 +166,7 @@ public static class LampReach
             if (changes.Any(c => c is { Energy: not null, Target: not null }
                                  && (c.Target.Id == lamp.Id || c.Target.Role == "light")))
                 throw new ArgumentException($"A change keys the energy of '{lamp.Id}' already; a lamp's reach is its energy, keyed.", nameof(plan));
-            var keys = Keys(distances, lamp.Energy, reference);
+            var keys = Keys(distances, lamp.Energy, reference, daylight: daylight);
             if (keys.Count == 0) continue;
             if (keys.Count == 1)
                 lights[lights.IndexOf(lamp)] = lamp with { Energy = keys[0].Value };

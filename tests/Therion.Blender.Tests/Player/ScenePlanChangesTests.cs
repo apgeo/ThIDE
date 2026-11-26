@@ -320,7 +320,8 @@ public class ScenePlanChangesTests
         Assert.Empty(Paths(With(Of("Key") with { Energy = on, Visible = [new PlanVisibleKey(1, false)] })));
         // Every light has the role "light".
         Assert.Empty(Paths(With(Of(role: "light") with { Energy = on })));
-        Assert.Equal(["changes[1].energy"], Paths(With(Of(role: "light") with { Energy = on }, Of("Headlamp") with { Energy = on })));
+        Assert.Empty(Paths(With(Of(role: "light") with { Energy = on }, Of("Headlamp") with { Energy = on })));
+        Assert.Equal(["changes[1].energy"], Paths(With(Of(role: "light") with { Energy = on }, Of(role: "light") with { Energy = on })));
 
         Assert.Equal(["changes[0].energy[1].value"], Paths(With(Of("Key") with { Energy = [new PlanNumberKey(0, 1), new PlanNumberKey(1, -1)] })));
         Assert.Equal(["changes[0].energy"], Paths(With(Of("CaveModel") with { Energy = on })));
@@ -345,7 +346,8 @@ public class ScenePlanChangesTests
         Assert.Equal(
             ["changes[0].offset[1].value"],
             Paths(With(Of("CaveModel") with { Offset = [aside[0], new PlanVectorKey(1, new CaveVector3(0, double.NaN, 0))] })));
-        Assert.Equal(["changes[1].offset"], Paths(With(Of("CaveModel") with { Offset = aside }, Of(role: "model") with { Offset = aside })));
+        Assert.Empty(Paths(With(Of("CaveModel") with { Offset = aside }, Of(role: "model") with { Offset = aside })));
+        Assert.Equal(["changes[1].offset"], Paths(With(Of("CaveModel") with { Offset = aside }, Of("CaveModel") with { Offset = aside })));
 
         var dim = new[] { new PlanNumberKey(0, 1), new PlanNumberKey(1, 0) };
         Assert.Empty(Paths(With(new PlanChange { WorldStrength = dim })));
@@ -396,9 +398,14 @@ public class ScenePlanChangesTests
     [Fact]
     public void TwoChanges_DoNotChangeTheSamePropertyOfTheSameThing()
     {
+        // By id and by role is allowed: the change by id has it (see ChangesByIdAndByRole...).
+        Assert.Empty(Paths(With(Of(role: "lead-marker") with { Opacity = Solid }, Of("lead:far.7") with { Opacity = Solid })));
         Assert.Equal(
             ["changes[1].opacity"],
-            Paths(With(Of(role: "lead-marker") with { Opacity = Solid }, Of("lead:far.7") with { Opacity = Solid })));
+            Paths(With(Of(role: "lead-marker") with { Opacity = Solid }, Of(role: "lead-marker") with { Opacity = Solid })));
+        Assert.Equal(
+            ["changes[1].opacity"],
+            Paths(With(Of("lead:far.7") with { Opacity = Solid }, Of("lead:far.7") with { Opacity = Solid })));
         Assert.Equal(
             ["changes[1].worldColor"],
             Paths(With(
@@ -463,7 +470,7 @@ public class ScenePlanChangesTests
         Assert.True(order.IndexOf(ScenePlan.TexturedMaterialsFeature) < order.IndexOf(ScenePlan.ChangesFeature));
         Assert.True(order.IndexOf(ScenePlan.LabelsFeature) < order.IndexOf(ScenePlan.ChangesFeature));
         Assert.True(order.IndexOf(ScenePlan.ChangesFeature) < order.IndexOf(ScenePlan.BlendFileFeature));
-        Assert.Equal("1.9", PlayerFiles.Version);
+        Assert.Equal("1.10", PlayerFiles.Version);
         Assert.Equal(1, PlayerFiles.PlanVersion);
     }
 }

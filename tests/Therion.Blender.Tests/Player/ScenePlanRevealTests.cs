@@ -151,8 +151,9 @@ public class ScenePlanRevealTests
         Assert.Contains(ScenePlanValidator.Validate(noMaterial), e => e.Path == "changes[0].reveal" && e.Message == "The model 'Bare' has no material to change; give it one.");
 
         // Two changes do not reveal the same thing.
-        var twice = Revealed with { Changes = [.. Revealed.Changes!, new PlanChange { Target = new PlanChangeTarget { Role = "survey-lines" }, Reveal = [new PlanNumberKey(0, 1)] }] };
-        Assert.Contains($"changes[{Revealed.Changes!.Count}].reveal", Paths(twice));
+        var role = new PlanChange { Target = new PlanChangeTarget { Role = "survey-lines" }, Reveal = [new PlanNumberKey(0, 1)] };
+        var twice = Revealed with { Changes = [.. Revealed.Changes!, role, role] };
+        Assert.Contains($"changes[{Revealed.Changes!.Count + 1}].reveal", Paths(twice));
 
         // Its keys.
         Assert.Equal(["changes[5].reveal"], Paths(WithChange(c => c with { Reveal = [] })));

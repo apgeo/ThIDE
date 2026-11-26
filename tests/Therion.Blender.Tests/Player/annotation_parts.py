@@ -75,10 +75,16 @@ def describe(obj, depsgraph):
         vertices = [world @ vertex.co for vertex in obj.data.vertices]
         part["vertices"] = len(vertices)
         part["faces"] = len(obj.data.polygons)
+        # Where its mesh lies about its own origin, along its own axes.
+        local = [vertex.co for vertex in obj.data.vertices]
+        if local:
+            part["bounds"] = [vec([min(c[i] for c in local) for i in range(3)]), vec([max(c[i] for c in local) for i in range(3)])]
         if obj.get("thide_part") == "line":
             # A ring of six about each of its two points.
             part["ends"] = [vec(middle(vertices[:6])), vec(middle(vertices[6:12]))]
             part["width"] = round(2.0 * (vertices[0] - middle(vertices[:6])).length, 6)
+            # Every point of it, as a ring of six about each.
+            part["rings"] = [vec(middle(vertices[at:at + 6])) for at in range(0, len(vertices) - 5, 6)]
         if obj.get("thide_part") == "picture":
             mesh = obj.data
             pictures = [polygon for polygon in mesh.polygons if polygon.material_index == 0]

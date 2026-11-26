@@ -54,4 +54,14 @@ public sealed record RevealSpec
     /// <summary>For <see cref="RevealBy.Date"/>: write the year the reveal has got to over the
     /// picture.</summary>
     public bool Counter { get; init; } = true;
+
+    /// <summary>What the counter says, with <c>{}</c> where its number goes (<c>"{} m"</c>). Set,
+    /// the reveal has a counter whatever it is by: the metres from the entrance for
+    /// <see cref="RevealBy.Distance"/>, the number of the leg for <see cref="RevealBy.Order"/>,
+    /// the year for <see cref="RevealBy.Date"/>. Null counts the years of a reveal by date and
+    /// nothing else, as before (<c>"{}"</c>).</summary>
+    public string? CounterFormat { get; init; }
+
+    /// <summary>How many decimals the counter's number has, from 0 to 6.</summary>
+    public int CounterDecimals { get; init; }
 }
