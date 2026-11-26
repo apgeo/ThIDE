@@ -20,7 +20,9 @@ A text with a "counter" shows a number that changes: the threshold of a reveal o
 changes, as it is at every frame, in place of the {} in the text (a year counter over the history
 of an exploration). The number is worked out here from the same keys the reveal is keyed with,
 the way Blender works out the curve, and is written as one strip for every stretch of frames it
-stays the same over.
+stays the same over. A counter with "keys" of its own counts those instead: in a movie of several
+scenes the reveal runs in the scenes' plans, and the movie's plan has its threshold as keys in the
+movie's time.
 """
 
 import math
@@ -38,7 +40,8 @@ KEYS = {
         "height": None, "alignX": None, "alignY": None, "color": None, "opacity": None, "backing": None,
         "wrap": None, "start": None, "end": None, "fadeIn": None, "fadeOut": None, "slot": None,
         "turn": [{"t": None, "degrees": None}],
-        "counter": {"target": {"id": None, "role": None}, "decimals": None, "min": None, "max": None},
+        "counter": {"target": {"id": None, "role": None}, "keys": [{"t": None, "value": None, "easing": None}],
+                    "decimals": None, "min": None, "max": None},
     }],
 }
 # A text changes no frame of the first stage: only the second stage runs again.
@@ -48,8 +51,9 @@ KINDS = ("text", "box", "arrow", "image")
 ALIGN_X = {"left": "LEFT", "center": "CENTER", "right": "RIGHT"}
 ALIGN_Y = {"top": "TOP", "center": "CENTER", "bottom": "BOTTOM"}
 
-# The frames lie on channel 1 of the video editor; the items go above them.
-FIRST_CHANNEL = 2
+# The frames lie on channel 1 of the video editor, and on those above it when they take more
+# than one (the scenes of a movie and what joins them); the items go above them.
+FRAMES_CHANNEL = 1
 LAST_CHANNEL = 128
 
 COUNTER_PLACE = "{}"  # where the number of a counter goes in its text
@@ -108,10 +112,10 @@ def compose(ctx, texts):
     last = scene.frame_end
 
     taken = []  # (first frame, last frame, top channel) of every item placed so far
-    top = FIRST_CHANNEL - 1
+    top = below = FRAMES_CHANNEL + ctx.frames.channels - 1
     for item, first, final in in_their_slots(ctx, texts.get("items", []), last):
         # Above every earlier item it shares a frame with; items that never meet share channels.
-        channel = 1 + max([c for a, b, c in taken if a <= final and first <= b] + [FIRST_CHANNEL - 1])
+        channel = 1 + max([c for a, b, c in taken if a <= final and first <= b] + [below])
         used = PLACE[item["kind"]](ctx, item, channel, first, final)
         if channel + used - 1 > LAST_CHANNEL:
             raise api.PlanError("texts: more items show at one time than the video editor has channels")
@@ -200,19 +204,31 @@ def counted(ctx, item, where):
 
     counter = item["counter"]
     target = counter.get("target") if isinstance(counter, dict) else None
-    if not isinstance(target, dict) or (target.get("id") is None) == (target.get("role") is None):
-        raise api.PlanError('%s.counter.target: a target is an "id" or a "role"' % where)
-    curve = None
-    for index, change in enumerate(ctx.plan.get("changes") or []):
-        if change.get("reveal") and change.get("target") == target:
-            at = "changes[%d].reveal" % index
-            curve = changes.curve_of(
-                changes.points_of(ctx, change["reveal"], at, lambda key, place: changes.finite(key.get("value"), place + ".value")),
-                ctx.frame_count)
-    if curve is None:
-        raise api.PlanError(
-            '%s.counter.target: no change of the plan reveals this target; a counter shows the threshold of a reveal'
-            % where)
+    keys = counter.get("keys") if isinstance(counter, dict) else None
+
+    def curve_of(track, at):
+        return changes.curve_of(
+            changes.points_of(ctx, track, at, lambda key, place: changes.finite(key.get("value"), place + ".value")),
+            ctx.frame_count)
+
+    if keys is not None:
+        # The threshold as keys of the counter's own: there is no change here to read it from.
+        if target is not None:
+            raise api.PlanError('%s.counter: a counter has a "target" or "keys", not both' % where)
+        if not isinstance(keys, list) or not keys:
+            raise api.PlanError("%s.counter.keys: the keys of a counter are a list of at least one" % where)
+        curve = curve_of(keys, where + ".counter.keys")
+    else:
+        if not isinstance(target, dict) or (target.get("id") is None) == (target.get("role") is None):
+            raise api.PlanError('%s.counter.target: a target is an "id" or a "role"' % where)
+        curve = None
+        for index, change in enumerate(ctx.plan.get("changes") or []):
+            if change.get("reveal") and change.get("target") == target:
+                curve = curve_of(change["reveal"], "changes[%d].reveal" % index)
+        if curve is None:
+            raise api.PlanError(
+                '%s.counter.target: no change of the plan reveals this target; a counter shows the threshold of a reveal'
+                % where)
     decimals = counter.get("decimals", 0)
     if isinstance(decimals, bool) or not isinstance(decimals, int) or not 0 <= decimals <= 6:
         raise api.PlanError("%s.counter.decimals: a counter shows from 0 to 6 decimals" % where)

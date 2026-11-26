@@ -8,7 +8,9 @@ rem                         plan was changed (a title, a caption), nothing is re
 rem
 rem A scene with texts over the picture is rendered in two stages: its frames first, into "frames"
 rem beside this script, then the output from them. A render that was stopped goes on where it
-rem stopped when this script is started again.
+rem stopped when this script is started again. A film of several shots (scene-plan.json then names
+rem the plan of every shot) is rendered shot by shot, each into a folder of its own inside "frames",
+rem and goes on with the shot it was stopped in.
 rem
 rem What it writes goes to the folder the plan names, "out" beside this script. Blender is looked
 rem for on the PATH and in "%ProgramFiles%\Blender Foundation"; to use another one, name it in

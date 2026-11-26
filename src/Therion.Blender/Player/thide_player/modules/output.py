@@ -23,7 +23,8 @@ KEYS = {"kind": None, "container": None, "directory": None, "baseName": None, "r
 # Where the output goes and what it is called changes no frame of the first stage.
 IN_FRAMES = False
 
-# The channel of the video editor the frames lie on; everything else lies over them.
+# The channel of the video editor the frames lie on (the first of them, when they take more than
+# one: api.Frames.channels); everything else lies over them.
 FRAMES_CHANNEL = 1
 
 CONTAINERS = {"mp4": ("MPEG4", ".mp4"), "mkv": ("MKV", ".mkv"), "webm": ("WEBM", ".webm")}
@@ -82,6 +83,8 @@ def render(ctx, output):
     if not output.get("render", True):
         return
     scene = ctx.scene
+    if ctx.frames is not None and ctx.frames.from_other_plans:
+        return  # the frames are those of other plans: whoever names them has rendered them
     if scene.camera is None:
         raise api.PlanError('there is no camera to render through; the plan\'s "features" need "camera_track"')
     if ctx.frames is not None:
@@ -152,10 +155,7 @@ def compose(ctx, output):
     count = 1 if output.get("kind") == "still" else ctx.frame_count
     frames.expect(count, "output")
     build(ctx, output)
-
-    strip = api.image_strip(scene, "Frames", frames.path(1), FRAMES_CHANNEL, 1)
-    for number in range(2, count + 1):
-        strip.elements.append(os.path.basename(frames.path(number)))
+    frames.lay(scene, FRAMES_CHANNEL)
 
 
 def finish(ctx, output):
@@ -165,10 +165,7 @@ def finish(ctx, output):
     still = output["kind"] == "still"
     if still:
         scene.frame_start = scene.frame_end = 1
-    strip = api.strips(scene)["Frames"]
-    last = os.path.basename(ctx.frames.path(ctx.frames.count))
-    for _ in range(scene.frame_end - len(strip.elements)):
-        strip.elements.append(last)
+    ctx.frames.hold(scene)
     os.makedirs(os.path.dirname(scene.render.filepath), exist_ok=True)
     render_reporting(scene, scene.frame_end, still)
     api.report("output", scene.render.filepath)
