@@ -98,7 +98,12 @@ public static class CameraRoutes
                 if (stop && at[^1] == stations.Count - 1) holds[^1] = Math.Max(holds[^1], hold);
                 continue;
             }
-            var way = graph.ShortestPath(stations[^1], station);
+            // Two stations joined by a leg are joined by that leg: nothing is shorter than a
+            // straight line, and a list that names every station of a long way is not searched
+            // for once per station.
+            IReadOnlyList<int> way = graph.Neighbours(stations[^1]).Contains(station)
+                ? new[] { stations[^1], station }
+                : graph.ShortestPath(stations[^1], station);
             if (way.Count == 0)
                 throw new ArgumentException(
                     $"No passage joins the route's station '{stops[k - 1].Name}' to '{name}': they are in parts of the cave that are not connected.",
@@ -153,6 +158,16 @@ public static class CameraRoutes
     {
         ArgumentNullException.ThrowIfNull(framing);
         return new StationLookup(framing).NameOf(station);
+    }
+
+    /// <summary><see cref="NameOf"/> for several stations at once: the names are looked up in
+    /// the model once.</summary>
+    public static IReadOnlyList<string> NamesOf(CameraFraming framing, IEnumerable<int> stations)
+    {
+        ArgumentNullException.ThrowIfNull(framing);
+        ArgumentNullException.ThrowIfNull(stations);
+        var lookup = new StationLookup(framing);
+        return stations.Select(lookup.NameOf).ToList();
     }
 
     /// <summary>The poses of a route clip of <paramref name="keys"/> poses over
@@ -341,7 +356,7 @@ internal sealed class RouteFlight
             var line = FlythroughRoute.Stretch(points, tubes, framing.WallTree, fly, before, after).ToList();
             if (k > 0) line[0] = stretches[^1].Path.Points[^1];
             var path = new CenterlinePath(line);
-            stretches.Add(Timed(path, points, tubes));
+            stretches.Add(Timed(path, points, tubes, p.Speeds is { } speeds && k < speeds.Count ? speeds[k] : 1.0));
         }
 
         var stops = new List<Stop>(route.Stops.Count);
@@ -365,9 +380,10 @@ internal sealed class RouteFlight
     /// The time the camera takes along <paramref name="path"/>: sampled every quarter metre, a
     /// speed by the passage's size at each sample (the radius of the nearest leg's tube), changes
     /// of speed limited to <see cref="CruiseAcceleration"/>, and a start from rest and a stop at
-    /// rest, each over <see cref="FlythroughRoute.EaseSeconds"/> at the speed there.
+    /// rest, each over <see cref="FlythroughRoute.EaseSeconds"/> at the speed there. The whole
+    /// stretch is flown <paramref name="factor"/> times as fast as the passages alone say.
     /// </summary>
-    private static Stretch Timed(CenterlinePath path, IReadOnlyList<CaveVector3> stations, IReadOnlyList<TubeLeg?>? tubes)
+    private static Stretch Timed(CenterlinePath path, IReadOnlyList<CaveVector3> stations, IReadOnlyList<TubeLeg?>? tubes, double factor)
     {
         double length = path.Length;
         int samples = (int)Math.Clamp(Math.Ceiling(length / SampleSpacing) + 1, 2, MaxSamples);
@@ -394,7 +410,7 @@ internal sealed class RouteFlight
                 if (d < best) (best, bestLeg) = (d, j);
             }
             leg = bestLeg;
-            speed[i] = CameraRoutes.SpeedFor(radius[leg]);
+            speed[i] = CameraRoutes.SpeedFor(radius[leg]) * factor;
         }
 
         // Smaller changes of speed than the passage sizes alone would make: slow down ahead of a

@@ -194,6 +194,13 @@ public sealed record RouteParams
 
     public RouteTiming Timing { get; init; } = RouteTiming.Fit;
 
+    /// <summary>How many times the passage's own speed each stretch between two stops is flown
+    /// at, in order: <c>[1, 2]</c> flies back out of a side passage twice as fast as it flew in.
+    /// A stretch without an entry is flown at the passage's speed; null is all of them. Written
+    /// only when set, so a route without it is the JSON it was.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<double>? Speeds { get; init; }
+
     /// <summary>As <see cref="FlythroughParams.LookAheadMeters"/>.</summary>
     public double LookAheadMeters { get; init; } = 6.0;
 
