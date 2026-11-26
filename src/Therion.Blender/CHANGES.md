@@ -70,7 +70,9 @@ refuses it by name).
   had not ended); `None`, or no reveal, shows the whole cave. The counter is a text of the movie
   and counts the same keys in the movie's time (`PlanCounter.Keys`).
 - Labels, annotations (with their nearness to the camera) and timed changes are planned per shot,
-  from that shot's camera. Notices name their shot; one that every shot has is said once.
+  from that shot's camera. Notices name their shot; one that every shot has is said once. The
+  lowering adds its own: a shot that holds when no shot before it left a reveal, and captions of a
+  shot that lie outside the time its texts show for.
 - A film of one shot: its segment is `ScenePlanBuilder.FromSpec` of the same spec but for the
   texts and the output's name, so its frames have the same digest and are the same pictures.
 

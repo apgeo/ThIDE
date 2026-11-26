@@ -165,6 +165,7 @@ public static class StoryboardPlanner
         var specs = new List<SceneSpec>(shots);
         var plans = new List<ScenePlan>(shots);
         var tracks = new List<IReadOnlyList<PlanNumberKey>?>(shots);  // the reveal's keys, in each shot's own time
+        var unshown = new List<string>();  // what the film cannot show of what the storyboard asks for
         RevealSpec? heldSpec = null;
         double heldValue = 0;
         for (int i = 0; i < shots; i++)
@@ -178,6 +179,8 @@ public static class StoryboardPlanner
             // is given that reveal's last value below.
             bool holds = storyboard.Shots[i].Reveal is { Mode: ShotRevealMode.Hold } && heldSpec is not null;
             if (holds) spec = spec with { Reveal = heldSpec! with { Start = 0, End = null } };
+            else if (storyboard.Shots[i].Reveal is { Mode: ShotRevealMode.Hold })
+                unshown.Add($"{Shot(storyboard, i)}: the shot before it left no reveal to hold; the whole cave is shown.");
 
             ScenePlan plan;
             try { plan = ScenePlanBuilder.FromSpec(spec, framing, meta); }
@@ -251,9 +254,14 @@ public static class StoryboardPlanner
                 }
                 items.Add(moved);
             }
+            int outside = 0;
             foreach (var caption in Subtitles.OneAtATime(TextPlaceholders.Resolve(specs[i].Labels.Overlays, values).Captions))
                 if (Shown(caption.Start, caption.End, gauge: false) is var (shown, gone))
                     captions.Add(caption with { Start = Rounded(shown), End = Rounded(gone ?? timing[^1].Last / (double)fps) });
+                else
+                    outside++;
+            if (outside > 0)
+                unshown.Add($"{Shot(storyboard, i)}: {outside} of its captions lie outside the time the shot's texts show for, and are left out.");
         }
 
         var over = storyboard.Texts is { } film ? TextPlaceholders.Resolve(film, values) : null;
@@ -306,7 +314,7 @@ public static class StoryboardPlanner
             // The segments' plans carry no texts: those are the movie's.
             Segments = plans.Select(p => p with { Texts = null, Features = p.Features.Where(f => f != ScenePlan.TextsFeature).ToList() }).ToList(),
             Shots = specs,
-            Notices = Notices(storyboard, specs, meta, framing),
+            Notices = [.. Notices(storyboard, specs, meta, framing), .. unshown],
             NotCarried = specs.SelectMany(ScenePlanBuilder.NotCarried).Distinct(StringComparer.Ordinal).ToList(),
             Captions = captions.OrderBy(c => c.Start).ToList(),
             Files = files,

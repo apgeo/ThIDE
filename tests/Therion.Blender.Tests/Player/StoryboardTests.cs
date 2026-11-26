@@ -342,6 +342,33 @@ public class StoryboardTests
         }));
     }
 
+    [Fact]
+    public void WhatTheFilmCannotShow_IsSaid_WithItsShotNamed()
+    {
+        var shots = ThreeShots.Shots;
+        var film = Lower(ThreeShots with
+        {
+            Shots =
+            [
+                shots[0],
+                // Nothing was revealed before it; and one of its captions begins after it has ended.
+                shots[1] with
+                {
+                    Reveal = ShotReveal.Hold,
+                    Texts = new OverlaySpec { Captions = [new CaptionSpec { Text = "In time", Start = 1, End = 2 }, new CaptionSpec { Text = "Too late", Start = 5, End = 6 }] },
+                },
+                shots[2] with { Annotations = [new AnnotationSpec { Id = "far", Text = "Never near", Station = "upper0", Within = 0.001 }] },
+            ],
+        });
+
+        Assert.Contains("Shot 2 (Main passage): the shot before it left no reveal to hold; the whole cave is shown.", film.Notices);
+        Assert.Contains("Shot 2 (Main passage): 1 of its captions lie outside the time the shot's texts show for, and are left out.", film.Notices);
+        Assert.Contains(film.Notices, n => n.StartsWith("Shot 3 (Way out): ", StringComparison.Ordinal) && n.Contains("far", StringComparison.Ordinal));
+        Assert.Equal(["In time"], film.Captions.Select(c => c.Text));
+        Assert.Null(RevealOf(film.Segments[1]));
+        Assert.Empty(Lower(ThreeShots).Notices);
+    }
+
     // ---- the validator ----
 
     [Fact]
