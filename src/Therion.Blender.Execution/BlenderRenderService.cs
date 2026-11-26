@@ -212,9 +212,12 @@ public sealed class BlenderRenderService : IBlenderRenderService
 
         ct.ThrowIfCancellationRequested();
         progress?.Report(new RenderProgress(RenderPhase.GeneratingScript, "Planning the film"));
+        // A composite's symbolic routes become this cave's stations, from the geometry just read.
+        var expanded = StoryboardExpander.Expand(storyboard, conversion.Geometry, source.Leads);
         var film = StoryboardPlanner.Lower(
-            storyboard with { Output = storyboard.Output with { OutputDirectory = outputDir } },
+            expanded.Storyboard with { Output = storyboard.Output with { OutputDirectory = outputDir } },
             placed.Source, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
+        if (expanded.Notices.Count > 0) film = film with { Notices = [.. expanded.Notices, .. film.Notices] };
         if (options.Draft) film = film.Draft();
         var job = PlayerWriter.WriteJob(film, jobDir, film.Files);
         var movie = film.Movie;
@@ -342,7 +345,8 @@ public sealed class BlenderRenderService : IBlenderRenderService
         {
             var (conversion, placed) = await ConvertAsync(StoryboardPlanner.ConversionSpec(storyboard), source, jobDir, jobDir, ct, options.Parts)
                 .ConfigureAwait(false);
-            var film = StoryboardPlanner.Lower(storyboard with { Output = storyboard.Output with { OutputDirectory = jobDir } },
+            var expanded = StoryboardExpander.Expand(storyboard, conversion.Geometry, source.Leads).Storyboard;
+            var film = StoryboardPlanner.Lower(expanded with { Output = storyboard.Output with { OutputDirectory = jobDir } },
                 placed.Source, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
             if (options.Draft) film = film.Draft();
             return Estimate(film.Segments, film.Movie.OutputFrameCount, jobDir);

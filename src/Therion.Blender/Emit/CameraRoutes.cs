@@ -59,6 +59,11 @@ public static class CameraRoutes
     {
         ArgumentNullException.ThrowIfNull(framing);
         ArgumentNullException.ThrowIfNull(route);
+        // The symbols of a storyboard's routes are made into stations before a plan is made.
+        if (route.Branches is not null)
+            throw new ArgumentException("A route with branches is a tour of the cave's branches: a storyboard's shot, made into the tour's shots when the model is read.", "camera.route.branches");
+        if (string.Equals(route.From, RouteParams.Newest, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"'{RouteParams.Newest}' is a storyboard's route, made into stations when the model is read.", "camera.route.from");
         var lookup = new StationLookup(framing);
 
         // The stops, by station index, with the hold at each and whether the camera stops there.

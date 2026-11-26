@@ -56,7 +56,7 @@ public sealed record RenderScriptExport(
 /// tool generated, or the player with the scene plan this tool wrote, with factory settings.
 /// </remarks>
 [McpServerToolType]
-public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost blender, BlenderRenderJobs jobs)
+public sealed partial class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost blender, BlenderRenderJobs jobs)
 {
     /// <summary>How long cancel_render waits for Blender to stop before answering.</summary>
     private static readonly TimeSpan CancelWait = TimeSpan.FromSeconds(10);
@@ -76,7 +76,9 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                + "with captions also gets them as .srt and .vtt subtitles. annotations names a JSON file of "
                + "labels, callouts, markers and photos that stand in the scene. reveal shows the cave part "
                + "by part while the clip runs: by survey date, survey order or distance from an entrance. "
-               + "hdri lights the scene by an image all round it, which is also its background.")]
+               + "hdri lights the scene by an image all round it, which is also its background. storyboard renders a "
+               + "film of several shots from a storyboard file instead of one scene, and a preset that is a composite "
+               + "(list_render_presets, composites) renders its film of this cave.")]
     public async Task<ToolResult<RenderJobStatus>> StartRender(
         [Description("Preset name from list_render_presets. Defaults to \"Orbit showcase\".")]
         string preset = DefaultPreset,
@@ -145,10 +147,30 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         double? hdriStrength = null,
         [Description(HdriRotationHelp)]
         double? hdriRotation = null,
+        [Description(StoryboardHelp)]
+        string? storyboard = null,
         CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
         if (error is not null) return ToolResult<RenderJobStatus>.Failure(error);
+
+        // A film of several shots: from a storyboard file, or a composite preset made into this cave's.
+        var composite = Composite(preset);
+        if (!string.IsNullOrWhiteSpace(storyboard) || composite is not null)
+        {
+            bool scene = !string.IsNullOrWhiteSpace(outputKind) || durationSeconds > 0 || samples > 0 || title is not null
+                || credits is not null || endCard is not null || endCardSeconds > 0 || captions is { Length: > 0 } || annotations is not null
+                || reveal is not null || revealFrom is not null || revealDates is not null || hdri is not null || hdriStrength is not null
+                || hdriRotation is not null;
+            if (scene)
+                return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument,
+                    "A storyboard's shots say what they show: outputKind, durationSeconds, samples, the texts, annotations, reveal and hdri "
+                    + "go with one scene. Say them in the storyboard; width, height, baseName and outputDirectory apply to the film.");
+            if (!string.IsNullOrWhiteSpace(storyboard) && composite is not null)
+                return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument,
+                    $"'{composite.Name}' is a composite preset, a film of its own: name it or a storyboard file, not both.");
+            return StartFilm(snapshot!.Root, storyboard, composite, model, width, height, outputDirectory, baseName, reExport, draft, builder);
+        }
 
         var (plan, refused) = Plan(snapshot!.Root, preset, model, outputKind, width, height, durationSeconds,
             samples, outputDirectory, baseName, reExport, needsDirectory: false,
@@ -168,6 +190,16 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         var job = new BlenderRenderJob(snapshot.Root, plan.Preset, plan.Spec, draft);
         string name = $"{plan.Spec.Output.BaseName} (agent {job.Id})";
         options = options with { JobName = name, Owner = "agent" };
+        return Launch(job, name, plan.Request,
+            (source, progress, token) => blender.Renderer.RenderAsync(plan.Spec, source, options, progress, token));
+    }
+
+    /// <summary>Starts <paramref name="job"/>: claims the host's render slot, finds the model and runs
+    /// <paramref name="render"/> on it in the background.</summary>
+    private ToolResult<RenderJobStatus> Launch(
+        BlenderRenderJob job, string name, ModelSourceRequest request,
+        Func<RenderSource, IProgress<RenderProgress>, CancellationToken, Task<RenderResult>> render)
+    {
         if (!blender.TryBeginRender(name))
             return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.RenderBusy,
                 "A render started in ThIDE's Blender panel is running, and renders run one at a time. "
@@ -180,10 +212,9 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
             try
             {
                 running.Report(new RenderProgress(RenderPhase.AcquiringSource, "Finding the model"));
-                var source = await blender.AcquireAsync(plan.Request, token).ConfigureAwait(false);
+                var source = await blender.AcquireAsync(request, token).ConfigureAwait(false);
                 running.SetModel(source.Model);
-                result = await blender.Renderer.RenderAsync(plan.Spec, source, options, new InlineProgress<RenderProgress>(running.Report), token)
-                    .ConfigureAwait(false);
+                result = await render(source, new InlineProgress<RenderProgress>(running.Report), token).ConfigureAwait(false);
                 return result;
             }
             catch (Exception ex)
@@ -574,25 +605,8 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
             return Refuse(ToolErrorCodes.InvalidArgument,
                 "The render settings are not valid: " + string.Join("; ", problems.Select(p => $"{p.Path}: {p.Message}")));
 
-        ModelSourceRequest request;
-        if (!string.IsNullOrWhiteSpace(model))
-        {
-            if (!WorkspacePaths.TryResolve(root, model, out var file, out var reason))
-                return Refuse(ToolErrorCodes.PathOutsideWorkspace, reason);
-            if (!File.Exists(file))
-                return Refuse(ToolErrorCodes.FileNotFound, $"No such file: {model}");
-            var ext = Path.GetExtension(file);
-            if (!ext.Equals(".lox", StringComparison.OrdinalIgnoreCase) && !ext.Equals(".3d", StringComparison.OrdinalIgnoreCase))
-                return Refuse(ToolErrorCodes.InvalidArgument,
-                    $"'{model}' is not a model Blender can render. Name a Therion .lox or a Survex .3d, or omit "
-                    + "model to render the project's own.");
-            request = ModelSourceRequest.ForExternalFile(file);
-        }
-        else
-        {
-            request = ModelSourceRequest.ForWorkspace(allowReExport: reExport);
-        }
-
-        return (new RenderPlan(chosen.Name, spec, request), null);
+        var (request, wrong) = ModelRequest(root, model, reExport);
+        if (wrong is not null) return (null, wrong);
+        return (new RenderPlan(chosen.Name, spec, request!), null);
     }
 }

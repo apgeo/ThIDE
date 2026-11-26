@@ -250,8 +250,10 @@ public static class RenderBundleWriter
             Parts = parts,
         });
         var manifest = conversion.Manifest;
+        // A composite's symbolic routes become this cave's stations, from the geometry just read.
+        var expanded = StoryboardExpander.Expand(storyboard, conversion.Geometry, leads, presets);
         var film = StoryboardPlanner.Lower(
-            storyboard with { Output = storyboard.Output with { OutputDirectory = OutputDirectory } },
+            expanded.Storyboard with { Output = storyboard.Output with { OutputDirectory = OutputDirectory } },
             new SourceSpec
             {
                 PlyPath = manifest.ModelPath, SurfacePlyPath = manifest.SurfacePath, SurfaceImagePath = manifest.SurfaceImagePath,
@@ -270,7 +272,7 @@ public static class RenderBundleWriter
             FilmDraft = draft ? film.Draft() : null,
             Files = files,
             NotCarried = film.NotCarried,
-            Notices = film.Notices,
+            Notices = [.. expanded.Notices, .. film.Notices],
             Captions = film.Captions,
         };
     }

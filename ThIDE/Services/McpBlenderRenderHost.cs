@@ -29,6 +29,12 @@ public sealed class McpBlenderRenderHost(
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return []; }
     }
 
+    public IReadOnlyList<CompositePreset> UserComposites()
+    {
+        try { return presets.LoadComposites(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return []; }
+    }
+
     public Task<RenderSource> AcquireAsync(ModelSourceRequest request, CancellationToken ct = default) =>
         sources.AcquireAsync(request, ct);
 }

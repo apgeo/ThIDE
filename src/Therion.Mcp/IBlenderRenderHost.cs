@@ -18,6 +18,9 @@ public interface IBlenderRenderHost
     /// <summary>The user's saved presets, besides the built-in ones. Empty when the host keeps none.</summary>
     IReadOnlyList<RenderPreset> UserPresets();
 
+    /// <summary>The user's saved composite presets (films of several shots), besides the built-in ones.</summary>
+    IReadOnlyList<CompositePreset> UserComposites() => [];
+
     /// <summary>
     /// The model a render reads and the workspace leads to mark in it: the file
     /// <paramref name="request"/> names, or else the workspace's newest model (re-exported with Therion

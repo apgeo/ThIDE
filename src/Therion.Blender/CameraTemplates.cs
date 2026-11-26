@@ -169,6 +169,14 @@ public sealed record RouteParams
     /// the passages.</summary>
     public const string Farthest = "farthest";
 
+    /// <summary>As <see cref="From"/>, the symbolic name of the passage surveyed last: the route
+    /// flies it from one end to the other. A storyboard's route only; it is made into stations
+    /// where the model is known (<c>StoryboardExpander</c>), from the survey dates of its legs.</summary>
+    public const string Newest = "newest";
+
+    /// <summary>The value of <see cref="Branches"/> that makes a shot a tour of the cave's branches.</summary>
+    public const string AutoBranches = "auto";
+
     /// <summary>Where the route starts; null = <see cref="Entrance"/> (or, in a model with no
     /// entrance, the first dead end of its largest part).</summary>
     public string? From { get; init; }
@@ -200,6 +208,13 @@ public sealed record RouteParams
     /// only when set, so a route without it is the JSON it was.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<double>? Speeds { get; init; }
+
+    /// <summary><see cref="AutoBranches"/> makes the shot a tour of the cave's branches: the main
+    /// passage from <see cref="From"/>, with the side passages worth a visit, within the shot's
+    /// seconds. A storyboard's route only: where the model is known it becomes the tour's shots
+    /// (<c>StoryboardExpander</c>). Written only when set.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Branches { get; init; }
 
     /// <summary>As <see cref="FlythroughParams.LookAheadMeters"/>.</summary>
     public double LookAheadMeters { get; init; } = 6.0;
