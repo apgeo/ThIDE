@@ -15,7 +15,7 @@ using Picture = Therion.Blender.Tests.Player.RenderedPicture;
 
 namespace Therion.Blender.Tests.Player;
 
-public class PlayerAnnotationsBlenderTests
+public partial class PlayerAnnotationsBlenderTests
 {
     /// <summary>The invented small cave, converted, with two invented pictures beside it where a
     /// plan looks for its photos.</summary>
@@ -95,6 +95,8 @@ public class PlayerAnnotationsBlenderTests
         public int? Faces { get; init; }
         public double[][]? Ends { get; init; }
         public double? Width { get; init; }
+        public double[][]? Bounds { get; init; }
+        public double[][]? Rings { get; init; }
         public Dictionary<string, double[]>? Corners { get; init; }
         public int? Tiles { get; init; }
         public int? FrameFaces { get; init; }

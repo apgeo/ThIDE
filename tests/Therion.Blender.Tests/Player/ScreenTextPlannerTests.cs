@@ -501,4 +501,39 @@ public class ScreenTextPlannerTests
         Assert.Contains(ScenePlan.TextsFeature, draft.Features);
         Assert.Empty(ScenePlanValidator.Validate(draft));
     }
+
+    [Fact]
+    public void TheTitleFade_CanBeSplitIntoAFadeInAndAFadeOut_AndKeepsItsMeaningWhenAloneAsItWas()
+    {
+        // In and out apart; the out one is only for a card.
+        var apart = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", Subtitle = "a survey", TitleSeconds = 2, TitleFadeIn = 0.3, TitleFadeOut = 1.5 }));
+        Assert.All(new[] { "title", "subtitle" }, id => Assert.Equal((0.3, 1.5, 3.5), (Item(apart, id).FadeIn, Item(apart, id).FadeOut, Item(apart, id).End)));
+
+        // Either one alone: the other is the old field's, or the default for going.
+        var inOnly = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", TitleSeconds = 2, TitleFadeIn = 0.25 }));
+        Assert.Equal((0.25, ScreenTextPlanner.TitleFadeSeconds), (Item(inOnly, "title").FadeIn, Item(inOnly, "title").FadeOut));
+        var outOnly = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", TitleSeconds = 2, TitleFadeOut = 0.4 }));
+        Assert.Equal((null, 0.4), (Item(outOnly, "title").FadeIn, Item(outOnly, "title").FadeOut));
+        var withOld = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", TitleSeconds = 2, TitleFade = 1, TitleFadeIn = 0 }));
+        Assert.Equal((null, 1.0), (Item(withOld, "title").FadeIn, Item(withOld, "title").FadeOut));
+
+        // A title that stays only fades in.
+        var staying = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", TitleFade = 1, TitleFadeIn = 0.5 }));
+        Assert.Equal((0.5, null), (Item(staying, "title").FadeIn, Item(staying, "title").FadeOut));
+
+        // The field alone is what it was.
+        var old = Texts(Orbit(new OverlaySpec { Title = "Invented Cave", TitleSeconds = 2, TitleFade = 1.5 }));
+        Assert.Equal((1.5, 1.5, 3.5), (Item(old, "title").FadeIn, Item(old, "title").FadeOut, Item(old, "title").End));
+
+        // Written and read, and held to what a card can do.
+        var spec = Orbit(new OverlaySpec { Title = "T", TitleSeconds = 2, TitleFadeIn = 0.5, TitleFadeOut = 1 });
+        string json = SceneSpecSerializer.Write(spec);
+        Assert.Contains("\"titleFadeIn\": 0.5", json);
+        Assert.Equal((0.5, 1.0), (SceneSpecSerializer.Read(json).Labels.Overlays.TitleFadeIn, SceneSpecSerializer.Read(json).Labels.Overlays.TitleFadeOut));
+        Assert.DoesNotContain("titleFadeIn", SceneSpecSerializer.Write(Orbit(new OverlaySpec { Title = "T" })));
+        Assert.Empty(SceneSpecValidator.Validate(PlanFixtures.WithPaths(spec)));
+        var errors = SceneSpecValidator.Validate(PlanFixtures.WithPaths(Orbit(new OverlaySpec { Title = "T", TitleFadeIn = -1, TitleFadeOut = 1 })));
+        Assert.Equal(["labels.overlays.titleFadeIn", "labels.overlays.titleFadeOut"], errors.Select(e => e.Path).Order());
+        Assert.Contains("labels.overlays.titleFadeIn", SceneBuilders.NotDrawnByTheGenerator(spec));
+    }
 }

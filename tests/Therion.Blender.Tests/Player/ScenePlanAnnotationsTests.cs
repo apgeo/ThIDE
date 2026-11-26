@@ -244,8 +244,9 @@ public class ScenePlanAnnotationsTests
         {
             Target = new PlanChangeTarget { Id = "dig" }, Offset = [new PlanVectorKey(0, new CaveVector3(0, 0, 2))],
         })));
-        // Two changes do not show and hide the same one, by its id and by its role.
-        Assert.Equal(["changes[1].visible"], Paths(Changed(Hide(new PlanChangeTarget { Id = "dig" }), Hide(new PlanChangeTarget { Role = "marker" }))));
+        // Two changes do not show and hide the same one in the same way; by its id and by its role is allowed.
+        Assert.Empty(Paths(Changed(Hide(new PlanChangeTarget { Id = "dig" }), Hide(new PlanChangeTarget { Role = "marker" }))));
+        Assert.Equal(["changes[1].visible"], Paths(Changed(Hide(new PlanChangeTarget { Role = "marker" }), Hide(new PlanChangeTarget { Role = "marker" }))));
     }
 
     [Fact]

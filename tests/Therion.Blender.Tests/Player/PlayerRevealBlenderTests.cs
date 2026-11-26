@@ -14,7 +14,7 @@ using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests.Player;
 
-public class PlayerRevealBlenderTests
+public partial class PlayerRevealBlenderTests
 {
     /// <summary>The cheapest render there is: one sample on the CPU.</summary>
     private static readonly EngineSpec Fast = new() { Kind = RenderEngineKind.Cycles, Samples = 1, Denoise = false, Gpu = GpuMode.CpuOnly };
