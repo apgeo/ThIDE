@@ -1,5 +1,29 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-26 — `RenderStoryboardAsync`: a film of several shots
+
+### Additive API
+- **`BlenderRenderService.RenderStoryboardAsync(storyboard, source, options, …)`** implements
+  `IBlenderRenderService.RenderStoryboardAsync` (new, with a default that throws
+  `NotSupportedException`, so another implementation of the interface still compiles). It converts
+  the model once, lowers the storyboard (see Therion.Blender's changes), renders every shot's
+  frames in a Blender of its own into `<frames folder>/s01` onwards, then writes the film from
+  them in one more.
+- `RenderOptions.Draft` drafts every shot; `KeepFrames` and `FramesDirectory` are those of a
+  render in two stages, with the frames folder holding one folder for every shot; `ComposeOnly`
+  writes the film again from them. A shot whose frames are there is passed over by the player, so
+  the same call again goes on where a stopped one was, and renders again only a shot that changed.
+  `Builder = Generator` is refused (`BuilderRefused`).
+- Progress: each shot's ticks say `Shot 2 of 4 (<name>): …` and their fraction is that of all the
+  shots' frames together; the second stage's are `Composing`. A failure names the shot. Each
+  shot's first stage has a log of its own (`job-frames.s01.log`), which `PruneJobFolders` takes
+  for scratch as it does `job-frames.log`.
+- The subtitles of the film (its captions and its shots', in its time) are written beside it.
+- **`PlanOutputs.SpecOf(StoryboardPlan, directory)`** and **`FrameBytes(StoryboardPlan)`**.
+
+### Behaviour changes
+- None for `RenderAsync` and the exports.
+
 ## 2026-11-25 — `ExportAsync`: the player's export
 
 ### Additive API
