@@ -14,6 +14,9 @@ The plan stays **version 1** and the player stays **1.12**: no key is new or cha
   on an 8-core machine, now 6.5 s.
 - A scene saved as a `.blend` names its output with `/` on Windows as well (`//../frames/part_####`,
   not `//..\frames\part_####`), so a file saved on Windows renders where it should elsewhere.
+- A bundle's `render.py` stops with a `THIDE:error` that names the length when the bundle lies too
+  deep for a Windows without long paths (`LongPathsEnabled` 0, the default): its folder at most
+  about 215 characters. Before, Python only said it had no `thide_player`.
 
 ## 2026-11-27 — the render node protocol
 
