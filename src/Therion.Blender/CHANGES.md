@@ -10,7 +10,8 @@ The plan stays **version 1** and the player stays **1.12**: no key is new or cha
 ### The player
 - A render on a GPU (OptiX, CUDA, HIP, oneAPI, Metal) denoises on the GPU too
   (`cycles.denoising_use_gpu`, Blender 4.1 and newer). Started with `--factory-startup`, Blender
-  ran the denoiser on the CPU, which took most of a GPU frame's time at 1920×1080.
+  ran the denoiser on the CPU: 4 of the 10.6 s an OptiX frame of the flythrough took at 1920×1080
+  on an 8-core machine, now 6.5 s.
 - A scene saved as a `.blend` names its output with `/` on Windows as well (`//../frames/part_####`,
   not `//..\frames\part_####`), so a file saved on Windows renders where it should elsewhere.
 
