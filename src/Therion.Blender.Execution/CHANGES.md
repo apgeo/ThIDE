@@ -1,5 +1,14 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-27 — composite presets, estimates of a film
+
+### Additive API
+- `BlenderRenderService.RenderStoryboardAsync` and `EstimateStoryboardAsync` expand a storyboard's
+  symbolic routes (`StoryboardExpander`) from the geometry of their conversion, before lowering it;
+  what the expansion did is in the result's warnings.
+- **`IRenderEstimator`** (`EstimateStoryboardAsync`), implemented by `BlenderRenderService` and by
+  `QueuedRenderService` (which asks the service it wraps, without queueing).
+
 ## 2026-11-27 — large caves, frame ranges, a queue of renders and the render worker
 
 ### Additive API

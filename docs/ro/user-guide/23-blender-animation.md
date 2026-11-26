@@ -891,6 +891,56 @@ storyboardului. Un storyboard este un film: pentru imagini statice sau pentru un
 scenei, randați o singură secvență (`--shot`) sau folosiți o specificație de randare. Schema care
 descrie fișierul se află în depozitul ThIDE (`src/Therion.Blender/storyboard.schema.json`).
 
+## Presetări compuse: un film întreg ca șablon
+
+O **presetare compusă** este un storyboard care se potrivește oricărei peșteri: nu numește nicio
+stație, doar locuri pe care modelul le găsește (intrarea, stația cea mai îndepărtată, galeria
+topografiată ultima) și un tur al galeriilor, iar textele ei spun `{cave}`. La randare, ThIDE
+citește modelul și face din ea filmul acelei peșteri. Trei vin cu ThIDE:
+
+| Presetare compusă | Filmul |
+|---|---|
+| **Showcase** | o orbită în jurul peșterii, apoi galeria principală de la intrare la stația cea mai îndepărtată, apoi o elice în jos |
+| **Grand tour** | o orbită, apoi un [tur al galeriilor](#tururi-ale-galeriilor) principale și al galeriilor laterale care merită (cel mult două minute) și un card de final |
+| **Exploration history** | peștera apărând în ordinea în care a fost topografiată, cu un contor al anilor, apoi un zbor de-a lungul galeriei topografiate ultima, cu toată peștera la vedere |
+
+Într-un fișier storyboard, simbolurile sunt două chei ale unei camere pe traseu:
+
+```json
+{ "name": "Tur", "preset": "Full flythrough", "seconds": 120,
+  "camera": { "template": "Route", "route": { "branches": "auto" } } }
+{ "name": "Găsită ultima", "preset": "Full flythrough", "seconds": 14, "reveal": "hold",
+  "camera": { "template": "Route", "route": { "from": "newest" } } }
+```
+
+`"branches": "auto"` face din secvență un tur al galeriilor peșterii, de la `from` al traseului
+(intrarea, când lipsește), în secundele secvenței, cu aspectul presetării ei; secvențele turului îi
+iau locul. `"from": "newest"` zboară galeria din ultima zi de topografiere, de la capătul ei mai
+apropiat de intrare la celălalt; un model fără date de topografiere zboară în schimb galeria
+principală. Ce s-a făcut apare în avertismentele randării. Presetările compuse proprii stau lângă
+presetările dumneavoastră, ca fișiere `*.composite.json` (un `name`, o `description` și
+`storyboard`).
+
+## Fila Storyboard
+
+Panoul are două file deasupra setărilor. **Scenă** este o singură randare, ca mai sus.
+**Storyboard** este un film din mai multe secvențe:
+
+- **Adaugă secvență** adaugă o secvență din presetarea aleasă sus în panou, după secvența
+  selectată; **Adaugă secvențele** adaugă toate secvențele presetării compuse alese. Fiecare rând
+  arată numele secvenței (tastați ca s-o redenumiți), camera ei (sau *tur*), secundele și cum
+  începe; săgețile o mută, iar ✕ o elimină. Banda de sub listă arată secvențele de-a lungul
+  filmului.
+- Butonul cu numărul unui rând selectează secvența: setările panoului de mai jos o arată atunci,
+  iar orice schimbare făcută acolo se scrie în ea. **Începe cu** alege o tăietură, o trecere prin
+  negru sau o suprapunere și secundele ei. Setările de ieșire (mărimea, cadrele pe secundă,
+  numele fișierului) sunt ale filmului.
+- **Schiță a tuturor** schițează toate secvențele, **Schiță a secvenței** doar pe cea selectată,
+  **Estimare** spune câte cadre, cât timp, cât disc și câtă memorie cere filmul, iar **Randează
+  filmul** arată estimarea și randează. Randările își așteaptă rândul în coada de randare, listată
+  sub butoane cu câte un **Anulează**; o randare în mijlocul căreia ThIDE a fost închis continuă la
+  pornirea următoare și apare ca *reluată*.
+
 ## Tururi ale galeriilor
 
 Un **tur** este un film al peșterii făcut după reguli, nu de mână: galeria principală este

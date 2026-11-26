@@ -246,6 +246,14 @@ thconfig without its `system` lines. Outputs go to a folder in the workspace, or
 that `render_status` names; paths outside the workspace and the project's config folder are refused.
 Stopping the server (or ThIDE) cancels a render still running.
 
+`storyboard` names a storyboard file in the workspace (`*.storyboard.json`, as `write_tour_storyboard`
+writes) and renders that film of several shots instead of one scene: every file it names (photos, HDRI
+images, survey dates) is relative to it and must be in the workspace, the presets its shots name are the
+built-in ones and the user's, and only `model`, `width`, `height`, `baseName`, `outputDirectory`,
+`reExport` and `draft` (a draft of every shot) go with it. A `preset` that is a composite preset renders
+that film of the cave: `list_render_presets` lists them under `composites` (Showcase, Grand tour,
+Exploration history, and the user's own), each with its shots and length.
+
 `export_render_script` takes what `start_render` takes (preset, model, sizes, texts, `annotations`,
 `reveal`, `hdri`) and writes the same scene for someone to render themselves. By default it is the
 player's folder: `scene-plan.json`, the player (`thide_player/`), the meshes and images, a `README.txt`
