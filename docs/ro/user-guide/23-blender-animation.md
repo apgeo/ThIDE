@@ -928,7 +928,7 @@ Panoul are două file deasupra setărilor. **Scenă** este o singură randare, c
 
 - **Adaugă secvență** adaugă o secvență din presetarea aleasă sus în panou, după secvența
   selectată; **Adaugă secvențele** adaugă toate secvențele presetării compuse alese. Fiecare rând
-  arată numele secvenței (tastați ca s-o redenumiți), camera ei (sau *tur*), secundele și cum
+  arată numele secvenței (tastați ca s-o redenumiți), camera ei (sau *parcurs*), secundele și cum
   începe; săgețile o mută, iar ✕ o elimină. Banda de sub listă arată secvențele de-a lungul
   filmului.
 - Butonul cu numărul unui rând selectează secvența: setările panoului de mai jos o arată atunci,
@@ -938,7 +938,7 @@ Panoul are două file deasupra setărilor. **Scenă** este o singură randare, c
 - **Schiță a tuturor** schițează toate secvențele, **Schiță a secvenței** doar pe cea selectată,
   **Estimare** spune câte cadre, cât timp, cât disc și câtă memorie cere filmul, iar **Randează
   filmul** arată estimarea și randează. Randările își așteaptă rândul în coada de randare, listată
-  sub butoane cu câte un **Anulează**; o randare în mijlocul căreia ThIDE a fost închis continuă la
+  sub butoane cu câte un **Renunță**; o randare în mijlocul căreia ThIDE a fost închis continuă la
   pornirea următoare și apare ca *reluată*.
 
 ## Tururi ale galeriilor

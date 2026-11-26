@@ -2517,9 +2517,9 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_UI_EstimateFilm" xml:space="preserve"><value>Estimare</value></data>
   <data name="Blender_UI_RenderFilm" xml:space="preserve"><value>Randează filmul</value></data>
   <data name="Blender_UI_Queue" xml:space="preserve"><value>Coada de randare</value></data>
-  <data name="Blender_UI_QueueCancel" xml:space="preserve"><value>Anulează</value></data>
+  <data name="Blender_UI_QueueCancel" xml:space="preserve"><value>Renunță</value></data>
   <data name="Blender_Storyboard_Estimate" xml:space="preserve"><value>{0} cadre, cam {1}; {2:0.##} GB pe disc, {3:0.##} GB de memorie.</value></data>
-  <data name="Blender_Shot_Tour" xml:space="preserve"><value>tur</value></data>
+  <data name="Blender_Shot_Tour" xml:space="preserve"><value>parcurs</value></data>
   <data name="Blender_Shot_Cut" xml:space="preserve"><value>tăietură</value></data>
   <data name="Blender_Shot_Dip" xml:space="preserve"><value>trecere prin negru {0:0.##} s</value></data>
   <data name="Blender_Shot_Dissolve" xml:space="preserve"><value>suprapunere {0:0.##} s</value></data>
