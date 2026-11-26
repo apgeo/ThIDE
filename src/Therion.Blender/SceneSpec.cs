@@ -135,7 +135,10 @@ public sealed record CameraSpec
     /// <summary>Still-set knobs (<see cref="CameraTemplate.StillSet"/>).</summary>
     public StillSetParams? Stills { get; init; }
 
-    /// <summary>Route knobs (<see cref="CameraTemplate.Route"/>; null ⇒ entrance to farthest).</summary>
+    /// <summary>Route knobs (<see cref="CameraTemplate.Route"/>; null ⇒ entrance to farthest).
+    /// Written only when set, so a spec without a route is the same JSON, and has the same hash,
+    /// as before routes existed.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public RouteParams? Route { get; init; }
 }
 
