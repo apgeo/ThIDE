@@ -7,4 +7,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- IGRF-14 coefficients (IAGA, as distributed by NOAA NCEI): the magnetic declination of a dated survey. -->
+    <EmbeddedResource Include="Igrf\igrf14coeffs.txt" LogicalName="igrf/igrf14coeffs.txt" />
+  </ItemGroup>
+
 </Project>
