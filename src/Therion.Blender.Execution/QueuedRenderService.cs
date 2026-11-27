@@ -1,7 +1,9 @@
 // A render service whose renders wait their turn in a RenderQueue: whoever asks (a panel, an agent)
 // gets the same service, and a second render waits for the first instead of being refused. Exports
 // start no Blender and do not wait. Each render keeps its frames in a folder of the queue's, so that
-// a render a restart cut short goes on with them when the queue starts it again.
+// a render a restart cut short goes on with them when the queue starts it again. The job's record
+// keeps the render's options whole, so that it goes on as it was asked for; the folder goes when
+// the job ends, however it was started.
 
 using Therion.Blender.Sources;
 using Therion.Cave3D;
@@ -13,6 +15,7 @@ public sealed class QueuedRenderService : IBlenderRenderService, IRenderEstimato
 {
     private readonly IBlenderRenderService _inner;
     private readonly string? _framesRoot;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _folders = new(StringComparer.Ordinal);
 
     /// <param name="inner">The service that renders.</param>
     /// <param name="queue">The queue the renders wait in.</param>
@@ -25,6 +28,7 @@ public sealed class QueuedRenderService : IBlenderRenderService, IRenderEstimato
         _inner = inner;
         Queue = queue;
         _framesRoot = framesRoot;
+        Queue.JobEnded += (_, job) => RemoveFolder(job.Id);
     }
 
     public RenderQueue Queue { get; }
@@ -76,20 +80,26 @@ public sealed class QueuedRenderService : IBlenderRenderService, IRenderEstimato
     /// </summary>
     public int ResumeInterrupted()
     {
+        // The jobs' frames folders are the queue's as before: they go when the jobs end.
+        foreach (var job in Queue.Interrupted)
+            if (job.Request.FramesDirectory is { } frames) Own(job.Id, frames, job.Request.KeepFrames);
         var tasks = Queue.Resume(request =>
         {
             if (request.Model is not { } model || !File.Exists(model)) return null;
             var format = model.EndsWith(".3d", StringComparison.OrdinalIgnoreCase) ? CaveSourceFormat.Survex3d : CaveSourceFormat.Lox;
             var source = new RenderSource(
                 new ResolvedModelSource { Path = model, Format = format, Kind = ModelSourceKind.ExternalFile }, request.Leads);
-            var options = new RenderOptions
-            {
-                Draft = request.Draft,
-                KeepFrames = request.KeepFrames,
-                FramesDirectory = request.FramesDirectory,
-                JobName = request.Name,
-                Owner = request.Owner,
-            };
+            // A record from before the options were kept whole has only some of them.
+            var options = request.Options is { } kept
+                ? kept with { FramesDirectory = request.FramesDirectory }
+                : new RenderOptions
+                {
+                    Draft = request.Draft,
+                    KeepFrames = request.KeepFrames,
+                    FramesDirectory = request.FramesDirectory,
+                    JobName = request.Name,
+                    Owner = request.Owner,
+                };
             try
             {
                 if (request.Spec is { } spec)
@@ -110,30 +120,32 @@ public sealed class QueuedRenderService : IBlenderRenderService, IRenderEstimato
         return tasks.Count;
     }
 
-    private async Task<RenderResult> RunAsync(
+    private Task<RenderResult> RunAsync(
         string id, RenderJobRequest request, RenderOptions options,
         Func<IProgress<RenderProgress>?, CancellationToken, Task<RenderResult>> work, IProgress<RenderProgress>? progress, CancellationToken ct)
     {
-        bool ours = _framesRoot is not null && options.FramesDirectory is { } frames && !options.KeepFrames
-                    && Path.GetDirectoryName(frames) is { } parent && IsUnder(parent, _framesRoot);
+        if (options.FramesDirectory is { } frames) Own(id, frames, options.KeepFrames);
+        return Queue.RunAsync(request, work, progress, ct, id);
+    }
+
+    /// <summary>Notes the folder the queue gave the job's frames, to remove it when the job ends;
+    /// frames the caller keeps, or keeps elsewhere, are not the queue's.</summary>
+    private void Own(string id, string frames, bool keepFrames)
+    {
+        if (_framesRoot is not null && !keepFrames && Path.GetDirectoryName(frames) is { } parent && IsUnder(parent, _framesRoot))
+            _folders[id] = parent;
+    }
+
+    /// <summary>The folder the queue gave a job's frames goes once the job has ended; a job that a
+    /// restart cuts short, or that the queue stopped for the next start to go on with, keeps it.</summary>
+    private void RemoveFolder(string id)
+    {
+        if (!_folders.TryRemove(id, out string? folder) || (Queue.IsShutDown && Queue.KeepsJobs)) return;
         try
         {
-            return await Queue.RunAsync(request, work, progress, ct, id).ConfigureAwait(false);
+            if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
         }
-        finally
-        {
-            // The folder the queue gave the frames goes once the job has ended; only a restart
-            // that cut the job short leaves it, for the job to go on with.
-            if (ours)
-            {
-                try
-                {
-                    string folder = Path.GetDirectoryName(options.FramesDirectory!)!;
-                    if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-            }
-        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
     private RenderOptions WithFrames(RenderOptions options, string id)
@@ -150,6 +162,7 @@ public sealed class QueuedRenderService : IBlenderRenderService, IRenderEstimato
         Draft = options.Draft,
         KeepFrames = options.KeepFrames,
         FramesDirectory = placed.FramesDirectory,
+        Options = placed,
     };
 
     private static string NewId() => Guid.NewGuid().ToString("N")[..12];

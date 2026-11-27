@@ -76,14 +76,14 @@ public class BlenderRunnerTests : IDisposable
     [Fact]
     public async Task Success_ReportsDoneDeviceAndCollectsOutput_AndWritesJobLog()
     {
-        WriteOutput("cave.mp4"); // simulate the file Blender wrote
         var lines = new[]
         {
             "THIDE:phase=scene", "THIDE:phase=import", "THIDE:device=OPTIX",
             "THIDE:frame=1/2", "THIDE:frame=2/2", "THIDE:output=" + Path.Combine(_dir, "cave.mp4"), "THIDE:done=1",
         };
         var ticks = new List<RenderProgress>();
-        var runner = Runner(() => new FakeProcess(lines, exitCode: 0));
+        // The file Blender writes, once it has started.
+        var runner = Runner(() => { WriteOutput("cave.mp4"); return new FakeProcess(lines, exitCode: 0); });
 
         var result = await runner.RunAsync(Blender, Job(), new SyncProgress<RenderProgress>(ticks.Add));
 
@@ -263,8 +263,7 @@ public class BlenderRunnerTests : IDisposable
     [Fact]
     public async Task UnknownFreeSpace_ProceedsAnyway()
     {
-        WriteOutput("cave.mp4");
-        var runner = new BlenderRunner(new FakeLauncher(() => new FakeProcess(["THIDE:done=1"], 0)), _ => null);
+        var runner = new BlenderRunner(new FakeLauncher(() => { WriteOutput("cave.mp4"); return new FakeProcess(["THIDE:done=1"], 0); }), _ => null);
         var result = await runner.RunAsync(Blender, Job(), null);
         Assert.True(result.Succeeded);
     }
@@ -310,5 +309,73 @@ public class BlenderRunnerTests : IDisposable
     {
         Assert.False(DiskPreflight.IsSufficient(estimatedBytes: 1000, freeBytes: 1200)); // < 1.5×
         Assert.True(DiskPreflight.IsSufficient(estimatedBytes: 1000, freeBytes: 2000));
+    }
+
+    // ---- what leaves the runner, and Blender with it ----
+
+    private sealed class ThrowingProgress : IProgress<RenderProgress>
+    {
+        public void Report(RenderProgress value) { if (value.Frame is not null) throw new InvalidOperationException("the listener failed"); }
+    }
+
+    [Fact]
+    public async Task ALogThatCannotBeWritten_DoesNotThrowOutOfRunAsync()
+    {
+        var lines = Enumerable.Range(1, 2000).Select(i => $"Fra:{i} Mem:12.3M | a status line of Blender that fills the log quickly").ToArray();
+        var runner = Runner(() => new FakeProcess(lines, 0));
+        var ex = await Record.ExceptionAsync(() => runner.RunAsync(Blender, Job() with { LogFileName = "/dev/full" }));
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task ALogThatCannotBeWritten_LetsTheRenderEnd_AndSaysTheLogIsNotWhole()
+    {
+        if (!File.Exists("/dev/full")) return;
+        var lines = Enumerable.Range(1, 2000).Select(i => $"Fra:{i} Mem:12.3M | a status line of Blender that fills the log quickly")
+            .Concat(["THIDE:frames=2", "THIDE:frame=2/2", "THIDE:done=1"]).ToArray();
+        FakeProcess? process = null;
+        var runner = Runner(() => { WriteOutput("cave.mp4"); return process = new FakeProcess(lines, 0); });
+        var result = await runner.RunAsync(Blender, Job() with { LogFileName = "/dev/full" });
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.False(process!.Killed, "a render that ended was killed");
+        Assert.Contains(result.Warnings, w => w.Contains("could not all be written", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ACancelBeforeTheStart_StartsNoBlender()
+    {
+        var launcher = new FakeLauncher(() => new FakeProcess(["THIDE:done=1"], 0));
+        var runner = new BlenderRunner(launcher, _ => 10_000_000_000L);
+        var result = await runner.RunAsync(Blender, Job(), ct: new CancellationToken(canceled: true));
+        Assert.Equal(RenderFailureKind.Cancelled, result.FailureKind);
+        Assert.Null(launcher.Last);
+    }
+
+    [Fact]
+    public async Task AMovieAnEarlierRenderLeft_IsNotThisRendersOutput()
+    {
+        WriteOutput("cave.mp4");   // there before Blender starts, and Blender writes nothing
+        var runner = Runner(() => new FakeProcess(["THIDE:frames=2", "THIDE:done=1"], 0));
+        var result = await runner.RunAsync(Blender, Job());
+        Assert.Equal(RenderFailureKind.NoOutput, result.FailureKind);
+    }
+
+    [Fact]
+    public async Task FramesBeyondTheRendersOwn_ThatAnEarlierRenderLeft_AreNotCollected()
+    {
+        for (int i = 1; i <= 5; i++) WriteOutput($"cave_{i:0000}.png");   // a longer earlier render
+        var runner = Runner(() => new FakeProcess(["THIDE:frames=3", "THIDE:done=1"], 0));
+        var result = await runner.RunAsync(Blender, Job(frames: 3, kind: OutputKind.FrameSequence));
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.Equal(["cave_0001.png", "cave_0002.png", "cave_0003.png"], result.OutputPaths.Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task AProgressListenerThatThrows_StillKillsBlender()
+    {
+        FakeProcess? process = null;
+        var runner = Runner(() => process = new FakeProcess(["THIDE:frames=3", "THIDE:frame=1/3", "THIDE:frame=2/3", "THIDE:done=1"], 0));
+        try { await runner.RunAsync(Blender, Job(), new ThrowingProgress()); } catch (InvalidOperationException) { }
+        Assert.True(process!.Killed, "Blender was left running");
     }
 }

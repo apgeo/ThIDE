@@ -70,6 +70,9 @@ public partial class App : Application
                 DataContext = services.GetRequiredService<MainWindowViewModel>(),
             };
 
+            // Whatever way the app ends, no Blender it started renders on without it.
+            desktop.Exit += (_, _) => services.GetService<Therion.Blender.Execution.RenderQueue>()?.Shutdown(System.TimeSpan.FromSeconds(5));
+
             // test/agent-only UI automation server; a no-op unless THIDE_UI_AUTOMATION=1.
             if (Services.UiAutomation.UiAutomationHost.IsRequested)
             {

@@ -1663,7 +1663,7 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} nu a putut fi scris: {1} Modificările sunt încă în editor, nesalvate.</value></data>
   <data name="Exit_SaveAll" xml:space="preserve"><value>Salvează tot</value></data>
   <data name="Exit_RenderRunningTitle" xml:space="preserve"><value>Randare Blender în curs</value></data>
-  <data name="Exit_RenderRunningMsg" xml:space="preserve"><value>O randare Blender este încă în curs. Închiderea ThIDE o oprește. Închideți totuși?</value></data>
+  <data name="Exit_RenderRunningMsg" xml:space="preserve"><value>O randare Blender este încă în curs sau așteaptă (a panoului, a unui agent sau una reluată după o repornire). Închiderea ThIDE oprește Blender; fiecare randare continuă de la cadrele ei la următoarea pornire a ThIDE (anulați-o în panoul Blender pentru a renunța la ea). Închideți totuși?</value></data>
   <data name="Exit_StopRenderAndClose" xml:space="preserve"><value>Oprește randarea și închide</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} nu poate conține „{1}” în {2}, codificarea declarată de fișier. Niciun fișier nu a fost modificat.</value></data>
   <data name="Replace_UndoRefused" xml:space="preserve"><value>Nu s-a restaurat nimic: {0} a fost modificat după înlocuire. Niciun fișier nu a fost modificat.</value></data>
@@ -2528,6 +2528,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_Queue_OwnerRestart" xml:space="preserve"><value>reluată</value></data>
   <data name="Blender_Queue_Queued" xml:space="preserve"><value>în așteptare</value></data>
   <data name="Blender_Queue_Running" xml:space="preserve"><value>se randează</value></data>
+  <data name="Blender_Queue_HeldElsewhere" xml:space="preserve"><value>Un alt ThIDE ține coada de randare a acestui calculator. Randările pornite aici rulează în paralel cu ale lui, nu după ele, și nu continuă după o repornire.</value></data>
   <data name="Blender_Status_RestartRendering" xml:space="preserve"><value>O randare întreruptă la închiderea ThIDE continuă; o randare pornită acum o așteaptă.</value></data>
   <data name="Blender_UI_ShotSelect" xml:space="preserve"><value>Selectați secvența ca s-o editați</value></data>
   <data name="Blender_UI_FilmTexts" xml:space="preserve"><value>Filmul</value></data>

@@ -1,5 +1,22 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-27 — the whole options in a job record; a second stage ends with the first
+
+The plan stays **version 1**.
+
+### Breaking changes
+- None.
+
+### Additive API
+- **`RenderJobRequest.Options`** (`RenderOptions?`): the render's options, whole, so that a job
+  started again after a restart is rendered as it was asked for. Null in a record written before;
+  `Draft`, `KeepFrames` and `FramesDirectory` stay and are still written.
+
+### Player
+- A Blender the player starts for a second stage (`another_blender`) is tied to the first on
+  Linux (a parent-death signal), so that killing the first leaves no Blender rendering on its own.
+  `PLAYER_VERSION` is unchanged: what the player renders does not change.
+
 ## 2026-11-27 — render node protocol: receiver check and reason constants
 
 The plan stays **version 1**; the player does not change.

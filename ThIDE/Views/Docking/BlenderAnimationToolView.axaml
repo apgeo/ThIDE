@@ -471,6 +471,9 @@
             <!-- not-found affordance: point the user at Preferences -->
             <TextBlock Text="{l:Loc Blender_Fail_NotFound}" Foreground="#C05050" TextWrapping="Wrap"
                        FontStyle="Italic" IsVisible="{Binding Blender.BlenderMissing}" />
+            <!-- a second ThIDE: the queue is the first one's -->
+            <TextBlock AutomationProperties.AutomationId="Blender.QueueHeldElsewhere" Text="{l:Loc Blender_Queue_HeldElsewhere}"
+                       Foreground="#B08000" TextWrapping="Wrap" IsVisible="{Binding Blender.QueueHeldElsewhere}" />
 
             <!-- outputs -->
             <TextBlock Text="{l:Loc Blender_UI_Outputs}" FontWeight="Bold" IsVisible="{Binding Blender.Outputs.Count}" />

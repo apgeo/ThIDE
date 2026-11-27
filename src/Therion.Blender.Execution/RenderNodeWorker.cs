@@ -37,7 +37,8 @@ public sealed record RenderNodeOptions
     /// <summary>What a bundle may hold at most; a job's own limits can only lower these.</summary>
     public RenderBundleLimits Limits { get; init; } = new();
 
-    /// <summary>The longest a job may run; a job's own limit can only shorten it.</summary>
+    /// <summary>The longest a job may run; a job's own limit can only shorten it. A limit above
+    /// <see cref="RenderWorkerOptions.LongestMaxTime"/> (30 days) is that.</summary>
     public TimeSpan MaxTime { get; init; } = TimeSpan.FromHours(72);
 
     /// <summary>Extra module folders the operator trusts; a bundle cannot add any.</summary>
@@ -57,6 +58,16 @@ public sealed record RenderNodeOptions
 
     /// <summary>The worker's version, sent with each claim.</summary>
     public string? WorkerVersion { get; init; }
+
+    /// <summary>How long a download or an upload may go without a byte moving before it is
+    /// given up (and tried again): a connection that stalls open would otherwise wait for ever
+    /// while the heartbeats keep the lease.</summary>
+    public TimeSpan StallTimeout { get; init; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>How long the scratch folder of a job that did not end here (a lost lease, a
+    /// failure in Blender) is kept, untouched, for the same job to come back and go on with its
+    /// frames; it is removed after.</summary>
+    public TimeSpan KeepScratch { get; init; } = TimeSpan.FromDays(14);
 }
 
 /// <summary>The server refused the node token (401 or 403): the worker stops.</summary>
@@ -124,6 +135,7 @@ public sealed class RenderNodeWorker : IDisposable
         {
             while (!ct.IsCancellationRequested)
             {
+                PruneScratch();
                 var clock = Stopwatch.StartNew();
                 RenderNodeJob? job;
                 try
@@ -149,9 +161,10 @@ public sealed class RenderNodeWorker : IDisposable
                 }
                 jobs++;
                 try { await ProcessAsync(job, ct).ConfigureAwait(false); }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (Exception ex) when (ex is not RenderNodeUnauthorizedException && !(ex is OperationCanceledException && ct.IsCancellationRequested))
                 {
-                    Log($"{job.JobId}: the node could not go on with the job: {Describe(ex)}");
+                    // Whatever one job does, the worker goes on to the next.
+                    Log($"{Clean(job.JobId)}: the node could not go on with the job: {Describe(ex)}");
                 }
                 if (once) break;
             }
@@ -186,6 +199,18 @@ public sealed class RenderNodeWorker : IDisposable
         if (!response.IsSuccessStatusCode) throw new HttpRequestException($"the claim was answered {(int)response.StatusCode}", null, response.StatusCode);
         string body = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
         return RenderNodeProtocol.Read<RenderNodeJob>(body) ?? throw new HttpRequestException("the claim was answered with something that is not a job");
+    }
+
+    private DateTime _pruned;
+
+    /// <summary>Removes the scratch folders of jobs left untouched longer than
+    /// <see cref="RenderNodeOptions.KeepScratch"/>; at most once an hour.</summary>
+    private void PruneScratch()
+    {
+        if (DateTime.UtcNow - _pruned < TimeSpan.FromHours(1)) return;
+        _pruned = DateTime.UtcNow;
+        foreach (var (name, bytes) in ScratchFolders.Prune(_options.Scratch, _options.KeepScratch, RenderNodeProtocol.IsJobId))
+            Log($"{name}: its scratch folder was left untouched for {_options.KeepScratch.TotalDays:0.#} days; removed ({bytes / 1_000_000} MB)");
     }
 
     /// <summary>The jobs whose frames this node still holds, so that the server may give them back to it.</summary>
@@ -260,8 +285,18 @@ public sealed class RenderNodeWorker : IDisposable
             if (record.State == RenderJobState.Succeeded)
             {
                 lease.Report("uploading");
-                string? problem = await UploadAsync(lease, record, outbox).ConfigureAwait(false);
+                var (problem, files) = await UploadAsync(lease, record, outbox).ConfigureAwait(false);
                 if (lease.Stopped is { } late) return await StoppedAsync(lease, late, scratch).ConfigureAwait(false);
+                if (problem is null)
+                {
+                    // The heartbeats end before the job is said to be complete: a server that
+                    // answers a heartbeat of a completed job with 409 would otherwise stop the
+                    // call that completes it. Once the server takes it, the job has succeeded.
+                    lease.StopBeats();
+                    await beats.ConfigureAwait(false);
+                    if (lease.Stopped is { } meanwhile) return await StoppedAsync(lease, meanwhile, scratch).ConfigureAwait(false);
+                    problem = await CompleteAsync(lease, record, files).ConfigureAwait(false);
+                }
                 if (problem is not null)
                 {
                     await FailAsync(lease, RenderNodeFailure.Upload, problem).ConfigureAwait(false);
@@ -280,6 +315,19 @@ public sealed class RenderNodeWorker : IDisposable
             else TryDeleteFolder(Path.Combine(scratch, "bundle"));
             return record;
         }
+        catch (OperationCanceledException) when (lease.Stopped is { } why)
+        {
+            // Stopped while it hashed or wrote a file: as any other stop.
+            return await StoppedAsync(lease, why, scratch).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not RenderNodeUnauthorizedException and not OperationCanceledException)
+        {
+            // A fault of this node's with the job (a disk that fails, a job it cannot handle):
+            // the server hears so, and the worker goes on with the next.
+            await FailAsync(lease, RenderNodeFailure.Error, $"The node could not go on with the job: {Describe(ex)}").ConfigureAwait(false);
+            TryDeleteFolder(Path.Combine(scratch, "bundle"));
+            return null;
+        }
         finally
         {
             lease.End();
@@ -291,6 +339,7 @@ public sealed class RenderNodeWorker : IDisposable
     private string? Check(RenderNodeJob job)
     {
         if (job.Protocol != RenderNodeProtocol.Version) return $"The job is of protocol {job.Protocol}; this worker speaks {RenderNodeProtocol.Version}.";
+        if (job.Bundle is null) return "The job names no bundle.";
         if (job.Attempt < 1) return "The job's attempt is not a number from 1.";
         if (job.Plan is not (RenderNodeProtocol.FullPlan or RenderNodeProtocol.DraftPlan)) return $"The job's plan is '{Clean(job.Plan)}', not full or draft.";
         if (!RenderNodeProtocol.TryContainer(job.Container, out _))
@@ -311,8 +360,12 @@ public sealed class RenderNodeWorker : IDisposable
         MaxWork = Math.Min(_options.Limits.MaxWork, limits.MaxWork ?? double.MaxValue),
     };
 
-    private TimeSpan MaxTime(RenderNodeLimits? limits) =>
-        limits?.MaxHours is { } hours && hours > 0 && TimeSpan.FromHours(hours) < _options.MaxTime ? TimeSpan.FromHours(hours) : _options.MaxTime;
+    private TimeSpan MaxTime(RenderNodeLimits? limits)
+    {
+        var most = BundleJobRunner.Longest(_options.MaxTime);
+        // Compared as hours: a server's number of hours may be beyond any TimeSpan.
+        return limits?.MaxHours is { } hours && hours > 0 && hours < most.TotalHours ? TimeSpan.FromHours(hours) : most;
+    }
 
     // ---- the lease ----
 
@@ -323,6 +376,7 @@ public sealed class RenderNodeWorker : IDisposable
     {
         private readonly CancellationTokenSource _stop = CancellationTokenSource.CreateLinkedTokenSource(worker);
         private readonly CancellationTokenSource _end = new();
+        private readonly CancellationTokenSource _beats = new();
         private readonly Stopwatch _renewed = Stopwatch.StartNew();
         private readonly object _lock = new();
         private RenderNodeHeartbeat _beat = new() { Attempt = job.Attempt, Phase = "claimed" };
@@ -332,6 +386,10 @@ public sealed class RenderNodeWorker : IDisposable
         public int Seconds { get; set; } = Math.Max(3, job.LeaseSeconds);
         public CancellationToken Token => _stop.Token;
         public CancellationToken Ended => _end.Token;
+
+        /// <summary>Cancelled when the heartbeats are to end: when the job ends, or before it is
+        /// said to be complete.</summary>
+        public CancellationToken BeatsEnded => _beats.Token;
 
         /// <summary>Why the job stopped being rendered here; null while it goes on.</summary>
         public Stop? Stopped
@@ -371,8 +429,14 @@ public sealed class RenderNodeWorker : IDisposable
 
         public RenderNodeHeartbeat Beat { get { lock (_lock) return _beat; } }
 
+        public void StopBeats()
+        {
+            try { _beats.Cancel(); } catch (ObjectDisposedException) { }
+        }
+
         public void End()
         {
+            StopBeats();
             try { _end.Cancel(); } catch (ObjectDisposedException) { }
         }
 
@@ -380,6 +444,7 @@ public sealed class RenderNodeWorker : IDisposable
         {
             _stop.Dispose();
             _end.Dispose();
+            _beats.Dispose();
         }
     }
 
@@ -388,16 +453,17 @@ public sealed class RenderNodeWorker : IDisposable
     private async Task HeartbeatsAsync(Lease lease)
     {
         string path = RenderNodeProtocol.HeartbeatPath(lease.Job.JobId);
-        while (!lease.Ended.IsCancellationRequested && lease.Stopped is null)
+        while (!lease.BeatsEnded.IsCancellationRequested && lease.Stopped is null)
         {
             var interval = RenderNodeProtocol.HeartbeatInterval(lease.Seconds, lease.Job.HeartbeatSeconds);
-            try { await Task.Delay(interval, lease.Ended).ConfigureAwait(false); }
+            try { await Task.Delay(interval, lease.BeatsEnded).ConfigureAwait(false); }
             catch (OperationCanceledException) { return; }
             try
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lease.Ended);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lease.BeatsEnded);
                 timeout.CancelAfter(interval);
                 using var response = await SendAsync(() => Post(path, RenderNodeProtocol.Write(lease.Beat)), timeout.Token).ConfigureAwait(false);
+                if (lease.BeatsEnded.IsCancellationRequested) return;
                 if (response.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.NotFound or HttpStatusCode.Gone)
                 {
                     Log($"{lease.Job.JobId}: the server says the job is no longer this node's ({(int)response.StatusCode}); stopping it");
@@ -427,7 +493,7 @@ public sealed class RenderNodeWorker : IDisposable
             }
             catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or IOException)
             {
-                if (lease.Ended.IsCancellationRequested) return;
+                if (lease.BeatsEnded.IsCancellationRequested) return;
                 Log($"{lease.Job.JobId}: heartbeat failed: {Describe(ex)}");
             }
             if (lease.Expired)
@@ -482,21 +548,23 @@ public sealed class RenderNodeWorker : IDisposable
         for (int tries = 1; tries <= Math.Max(1, _options.DownloadTries); tries++)
         {
             if (lease.Stopped is not null) return null;
+            using var stall = new Stall(lease.Token, _options.StallTimeout);
             try
             {
                 TryDelete(zip);
-                using var response = await SendAsync(() => new HttpRequestMessage(HttpMethod.Get, url), lease.Token, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                using var response = await SendAsync(() => new HttpRequestMessage(HttpMethod.Get, url), stall.Token, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
                     using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                     long length = 0;
-                    await using (var source = await response.Content.ReadAsStreamAsync(lease.Token).ConfigureAwait(false))
+                    await using (var source = await response.Content.ReadAsStreamAsync(stall.Token).ConfigureAwait(false))
                     await using (var target = new FileStream(partial, FileMode.Create, FileAccess.Write))
                     {
                         var buffer = new byte[81920];
                         int read;
-                        while ((read = await source.ReadAsync(buffer, lease.Token).ConfigureAwait(false)) > 0)
+                        while ((read = await source.ReadAsync(buffer, stall.Token).ConfigureAwait(false)) > 0)
                         {
+                            stall.Moved();
                             length += read;
                             if (length > bundle.Size) break;
                             sha.AppendData(buffer, 0, read);
@@ -520,7 +588,7 @@ public sealed class RenderNodeWorker : IDisposable
             }
             catch (Exception ex) when (IsPassing(ex, lease.Token))
             {
-                last = Describe(ex);
+                last = stall.Stalled ? stall.Describe() : Describe(ex);
             }
             catch (OperationCanceledException) when (lease.Stopped is not null)
             {
@@ -551,9 +619,9 @@ public sealed class RenderNodeWorker : IDisposable
         };
     }
 
-    /// <summary>Uploads the job's outputs, its log and its status, one PUT each with its SHA-256,
-    /// and says the job is complete; null when the server took it, or why not.</summary>
-    private async Task<string?> UploadAsync(Lease lease, RenderJobRecord record, string outbox)
+    /// <summary>Uploads the job's outputs, its log and its status, one PUT each with its SHA-256;
+    /// null when the server took them all, or why not, and the files it took.</summary>
+    private async Task<(string? Problem, List<RenderNodeFile> Files)> UploadAsync(Lease lease, RenderJobRecord record, string outbox)
     {
         string id = lease.Job.JobId;
         var result = record.Result!;
@@ -573,32 +641,42 @@ public sealed class RenderNodeWorker : IDisposable
             if (RoleOf(name) is not { } role || !RenderNodeProtocol.IsFileName(name) || new FileInfo(path).LinkTarget is not null) continue;
             long size = new FileInfo(path).Length;
             if (lease.Job.Limits?.MaxResultBytes is { } max && size > max)
-                return $"{name} is {size} bytes, more than the {max} the server takes.";
+                return ($"{name} is {size} bytes, more than the {max} the server takes.", files);
             files.Add(new RenderNodeFile { Name = name, Role = role, Size = size, Sha256 = await Sha256Async(path, lease.Token).ConfigureAwait(false) });
         }
         foreach (var file in files)
         {
             string path = Path.Combine(outbox, file.Name);
-            string? problem = await CallAsync(lease, () =>
+            string? problem = await CallAsync(lease, stall =>
             {
+                Stream body = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true);
                 var put = new HttpRequestMessage(HttpMethod.Put, new Uri(_server, RenderNodeProtocol.FilePath(id, file.Name, lease.Job.Attempt)))
                 {
-                    Content = new StreamContent(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true)),
+                    Content = new StreamContent(stall is null ? body : new WatchedStream(body, stall), 81920),
                 };
                 put.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
                 put.Content.Headers.ContentLength = file.Size;
                 put.Headers.TryAddWithoutValidation(RenderNodeProtocol.Sha256Header, file.Sha256);
                 return put;
-            }).ConfigureAwait(false);
-            if (problem is not null) return $"{file.Name}: {problem}";
+            }, stall: true).ConfigureAwait(false);
+            if (problem is not null) return ($"{file.Name}: {problem}", files);
             Log($"{id}: uploaded {file.Name} ({file.Size} bytes)");
         }
+        return (null, files);
+    }
+
+    /// <summary>Says the job is complete, with the files uploaded; null when the server took it,
+    /// or why not. Made after the heartbeats have ended, and not stopped by the worker's stop: the
+    /// results are all there.</summary>
+    private Task<string?> CompleteAsync(Lease lease, RenderJobRecord record, List<RenderNodeFile> files)
+    {
+        var result = record.Result!;
         var complete = new RenderNodeComplete
         {
             Attempt = lease.Job.Attempt, Files = files, Device = result.Device, SecondsPerFrame = result.SecondsPerFrame,
             Seconds = result.Seconds, FrameCount = record.Progress?.FrameCount, Notices = result.Notices,
         };
-        return await CallAsync(lease, () => Post(RenderNodeProtocol.CompletePath(id), RenderNodeProtocol.Write(complete))).ConfigureAwait(false);
+        return CallAsync(lease, () => Post(RenderNodeProtocol.CompletePath(lease.Job.JobId), RenderNodeProtocol.Write(complete)), ignoreStop: true);
     }
 
     /// <summary>Tells the server the job failed. Retried while the lease holds; <paramref name="lenient"/>
@@ -616,15 +694,21 @@ public sealed class RenderNodeWorker : IDisposable
     /// network or the server fails it, for as long as the job is the node's. Null when the server
     /// took it; why not otherwise. Calls are idempotent: the same call made twice does the same.
     /// </summary>
-    private async Task<string?> CallAsync(Lease lease, Func<HttpRequestMessage> make, bool ignoreStop = false)
+    /// <param name="stall">The request's body is a file: a body that stops moving for
+    /// <see cref="RenderNodeOptions.StallTimeout"/> ends the try (and another is made).</param>
+    private Task<string?> CallAsync(Lease lease, Func<HttpRequestMessage> make, bool ignoreStop = false)
+        => CallAsync(lease, _ => make(), ignoreStop, stall: false);
+
+    private async Task<string?> CallAsync(Lease lease, Func<Stall?, HttpRequestMessage> make, bool ignoreStop = false, bool stall = false)
     {
         var token = ignoreStop ? lease.Ended : lease.Token;
         for (int failures = 1; ; failures++)
         {
             string problem;
+            using var guard = stall ? new Stall(token, _options.StallTimeout) : null;
             try
             {
-                using var response = await SendAsync(make, ignoreStop ? CancellationToken.None : token).ConfigureAwait(false);
+                using var response = await SendAsync(() => make(guard), guard?.Token ?? (ignoreStop ? CancellationToken.None : token)).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode) return null;
                 problem = $"answered {(int)response.StatusCode}";
                 if (response.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.NotFound or HttpStatusCode.Gone)
@@ -641,7 +725,7 @@ public sealed class RenderNodeWorker : IDisposable
             }
             catch (Exception ex) when (IsPassing(ex, token))
             {
-                problem = Describe(ex);
+                problem = guard is { Stalled: true } ? guard.Describe() : Describe(ex);
             }
             catch (OperationCanceledException)
             {
@@ -654,6 +738,79 @@ public sealed class RenderNodeWorker : IDisposable
     }
 
     // ---- HTTP ----
+
+    /// <summary>Ends a transfer that moves no byte for a while: a token that is cancelled when
+    /// <see cref="Moved"/> has not been called for the time given, or with the one it is linked to.</summary>
+    private sealed class Stall : IDisposable
+    {
+        private readonly CancellationTokenSource _source;
+        private readonly TimeSpan _after;
+        private readonly CancellationToken _outer;
+
+        public Stall(CancellationToken outer, TimeSpan after)
+        {
+            _outer = outer;
+            _after = after > TimeSpan.Zero ? after : Timeout.InfiniteTimeSpan;
+            _source = CancellationTokenSource.CreateLinkedTokenSource(outer);
+            Moved();
+        }
+
+        public CancellationToken Token => _source.Token;
+
+        /// <summary>It stalled: the token was cancelled by the wait, not by the one it is linked to.</summary>
+        public bool Stalled => _source.IsCancellationRequested && !_outer.IsCancellationRequested;
+
+        public string Describe() => $"nothing moved for {_after.TotalSeconds:0} s";
+
+        /// <summary>Bytes moved: the wait starts again.</summary>
+        public void Moved()
+        {
+            try { _source.CancelAfter(_after); } catch (ObjectDisposedException) { }
+        }
+
+        /// <summary>Done moving (the whole body is sent): the answer may take its time.</summary>
+        public void Done()
+        {
+            try { _source.CancelAfter(Timeout.InfiniteTimeSpan); } catch (ObjectDisposedException) { }
+        }
+
+        public void Dispose() => _source.Dispose();
+    }
+
+    /// <summary>A stream read through, that tells a <see cref="Stall"/> of each read.</summary>
+    private sealed class WatchedStream(Stream inner, Stall stall) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => inner.CanSeek;
+        public override bool CanWrite => false;
+        public override long Length => inner.Length;
+        public override long Position { get => inner.Position; set => inner.Position = value; }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override int Read(byte[] buffer, int offset, int count) => Said(inner.Read(buffer, offset, count));
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+            => Said(await inner.ReadAsync(buffer, ct).ConfigureAwait(false));
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct)
+            => ReadAsync(buffer.AsMemory(offset, count), ct).AsTask();
+
+        private int Said(int read)
+        {
+            if (read > 0) stall.Moved();
+            else stall.Done();
+            return read;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) inner.Dispose();
+            base.Dispose(disposing);
+        }
+    }
 
     private HttpRequestMessage Post(string path, string json) => new(HttpMethod.Post, new Uri(_server, path))
     {
@@ -684,7 +841,7 @@ public sealed class RenderNodeWorker : IDisposable
     private static bool IsPassing(Exception ex, CancellationToken ct) => ex switch
     {
         HttpRequestException { StatusCode: { } status } => IsPassing(status),
-        HttpRequestException or IOException => true,
+        HttpRequestException or IOException or TimeoutException => true,
         OperationCanceledException => !ct.IsCancellationRequested,  // a timeout of the call itself
         _ => false,
     };

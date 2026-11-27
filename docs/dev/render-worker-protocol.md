@@ -188,13 +188,20 @@ The server checks that each file listed is the one it holds (name, size, SHA-256
 3. Unpack and check it as data, as the folder worker does: only the plans and the files they name
    leave the zip; its own player and scripts are never run; Blender runs with `-b --factory-startup`.
 4. Render, with heartbeats. The frames are kept in `<scratch>/<jobId>/frames/`.
-5. Upload the files, then `complete`; or `fail`. The scratch folder is deleted after success, a
-   refused bundle and a cancel; after a lost lease, a time-out or a failure in Blender the frames
-   (and the bundle) stay, so that the same job claimed again on this node goes on from them.
+5. Upload the files, then `complete`; or `fail`. The heartbeats end before `complete` is sent,
+   so a server may answer a heartbeat of a job it has completed with 409 without harm; once
+   `complete` is answered 200 the job has succeeded on the node. A download or an upload that
+   moves no byte for 60 s is given up and tried again. The scratch folder is deleted after
+   success, a refused bundle and a cancel; after a lost lease, a time-out or a failure in Blender
+   the frames (and the bundle) stay, so that the same job claimed again on this node goes on from
+   them, for 14 days untouched.
 6. Claim the next.
 
-A node stopped with Ctrl+C kills Blender, keeps the frames and sends nothing: the job's lease runs
-out on the server, which queues it again.
+A node stopped with Ctrl+C or SIGTERM kills Blender, keeps the frames and sends nothing: the job's
+lease runs out on the server, which queues it again. A node that is killed takes Blender with it
+(on Windows and Linux). A fault of the node's with one job (a disk that fails, a job it cannot
+handle) is sent as `fail` with `error`, and the node goes on with the next claim. A bundle whose
+plans cannot even be read is `refused`, not `error`.
 
 ## On a SilexGIS `ProcessingJob`
 

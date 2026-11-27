@@ -27,7 +27,13 @@ public sealed class BlenderLocator
 
     private readonly IBlenderProbe _probe;
     private readonly Func<IEnumerable<string>> _candidateProvider;
-    private readonly Dictionary<string, BlenderVersion?> _cache = new(StringComparer.OrdinalIgnoreCase);
+    // A version found, by the path and the time the file was written: a Blender upgraded in place
+    // is probed again. A probe that failed is kept for a minute only (a first start that was slow,
+    // a disk that was not there yet), then tried again. Shared by whoever renders.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<(string Path, DateTime WrittenUtc), (BlenderVersion? Version, DateTime ProbedUtc)> _cache = new();
+
+    /// <summary>How long a probe that found no version is believed.</summary>
+    internal static readonly TimeSpan FailedProbeKept = TimeSpan.FromMinutes(1);
 
     /// <param name="probe">Version prober (real runs the exe; fake for tests).</param>
     /// <param name="candidateProvider">Conventional candidate paths; defaults to the per-OS
@@ -91,9 +97,14 @@ public sealed class BlenderLocator
 
     private BlenderVersion? ProbeCached(string path)
     {
-        if (_cache.TryGetValue(path, out var cached)) return cached;
+        DateTime written;
+        try { written = File.GetLastWriteTimeUtc(path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { written = default; }
+        var key = (OperatingSystem.IsWindows() ? path.ToUpperInvariant() : path, written);
+        if (_cache.TryGetValue(key, out var cached) && (cached.Version is not null || DateTime.UtcNow - cached.ProbedUtc < FailedProbeKept))
+            return cached.Version;
         var version = _probe.Probe(path);
-        _cache[path] = version;
+        _cache[key] = (version, DateTime.UtcNow);
         return version;
     }
 
