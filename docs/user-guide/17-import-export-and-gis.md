@@ -115,6 +115,48 @@ survey — a quick way to publish an overview without compiling maps. Table expo
 in HTML/LaTeX for inclusion in documents. From a terminal: `therion-cli report project.thconfig --out
 report.html`.
 
+### The whole project as one .th file
+
+**Tools → Export as a Single .th File…** merges every survey of the project — every file the
+configuration's `source` lines read, and every `input` inside them — into one `.th` file that holds
+**one survey with one centreline**. It is a way to hand the whole cave to someone (or to another
+program) as a single file, or to look at all the data in one place. Files open in the editor are read
+as they are there, unsaved changes included.
+
+- **One station per point.** Stations joined by `equate` become one station, named after the one the
+  project names first; `point@survey` references are resolved the way Therion resolves them. Choose
+  how the names are written: kept as they are (where two surveys use the same name, those stations
+  get their survey's name in front, e.g. `sump_12`), always with the survey's name in front, or
+  numbered 1, 2, 3 …; an optional prefix goes in front of every name. **Also save the list of old and
+  new station names** writes a `.names.csv` next to the file.
+- **Readings in metres and degrees.** `units`, `calibrate`, backsights and topofil counters are worked
+  out; diving, cylindrical-polar and cartesian shots stay in their own style; station-interleaved data
+  becomes from/to rows; passage dimensions (left/right/up/down) are kept.
+- **Magnetic declination.** Each centreline's declination is worked out as Therion does it: the one the
+  centreline or an enclosing survey states (`declination`, `grid-angle`, `survey -declination`), else
+  the IGRF field at the centreline's date and the mean position of the fixed points; undated
+  centrelines take the one of the earliest date in the project. It is added to every compass reading,
+  and the file says `declination 0`, so it compiles the same without any dates. The comment before
+  each part of the file names the declination used. When the fixed points are in a coordinate system
+  ThIDE cannot place on the globe, give the cave's latitude and longitude. A project without fixed
+  points in a global coordinate system gets no date-based declination (Therion applies none either)
+  unless you give its position.
+- **Fewer splays.** Keep a share of each station's splays (in %) and/or at most a number per station.
+  The splays kept are the ones that cover the passage best (spread round the station), not the first
+  ones; a splay that ends at a named station used anywhere else is always kept.
+- **Standalone.** With **Include everything the file needs on its own**, the file also carries the
+  coordinate system and fixed points, the entrances and the other station comments and flags
+  (continuations, springs …), station marks, the dates and the team. Without it, it holds the
+  measurements only: shots, splays, dimensions, shot flags and extended-elevation directions.
+- **Not carried:** drawings (`.th2`), maps, surfaces, data brought in with `import` (a `.3d`), and the
+  configuration's `select` choices. The configuration's output coordinate system (`cs`) cannot be
+  written in a `.th`; the file's header names it.
+
+Compiled by Therion, the merged file gives every station the position it has in the project (to
+Therion's centimetre). From a terminal: `therion-cli flatten project.thconfig --out cave-single.th
+--standalone --splays 50 --max-splays 4 --names cave-single.csv --thconfig single.thconfig`
+(`--thconfig` also writes a configuration that compiles it; `therion-cli --help` lists the options).
+
 ## Drawing with Mapiah
 
 For passage art in `.th2` files, ThIDE integrates the external **Mapiah** visual editor:

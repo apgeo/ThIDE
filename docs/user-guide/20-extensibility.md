@@ -20,6 +20,7 @@ therion-cli report   path/to/project.thconfig --out output/report.html
 therion-cli stats    path/to/project.thconfig    # length/depth/etc.
 therion-cli deps     path/to/project.thconfig --dot   # include graph (Graphviz)
 therion-cli gis      path/to/project.thconfig --format kml --out entrances.kml
+therion-cli flatten  path/to/project.thconfig --out cave-single.th --standalone   # the whole project as one survey, one centreline
 therion-cli new      --list                      # project templates (built-in and imported)
 therion-cli new      single-cave --out ~/caves/pit --var project=pit
 ```
