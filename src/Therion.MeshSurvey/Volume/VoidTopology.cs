@@ -103,58 +103,68 @@ internal static class VoidTopology
 
     internal static int Components26(VoidGrid grid)
     {
-        var seen = new bool[grid.Count];
-        int count = 0;
+        Labels26(grid, out int count);
+        return count;
+    }
+
+    /// <summary>The 26-connected part of every voxel (numbered in voxel order).</summary>
+    internal static int[] Labels26(VoidGrid grid, out int count)
+    {
+        var label = new int[grid.Count];
+        Array.Fill(label, -1);
+        count = 0;
         Span<int> n26 = stackalloc int[26];
         var stack = new Stack<int>();
         for (int s = 0; s < grid.Count; s++)
         {
-            if (seen[s]) continue;
-            count++;
-            seen[s] = true;
+            if (label[s] >= 0) continue;
+            int c = count++;
+            label[s] = c;
             stack.Push(s);
             while (stack.Count > 0)
             {
                 int v = stack.Pop();
                 grid.Neighbours26(v, n26);
                 foreach (int n in n26)
-                    if (n >= 0 && !seen[n]) { seen[n] = true; stack.Push(n); }
+                    if (n >= 0 && label[n] < 0) { label[n] = c; stack.Push(n); }
             }
         }
-        return count;
+        return label;
     }
 
     /// <summary>Components (6-connected) of the rock voxels 26-adjacent to the void: one per wall
     /// surface. A void with an enclosed rock island has one more than it has parts.</summary>
     internal static int RimComponents(VoidGrid grid)
     {
-        var rim = new HashSet<long>(Spatial.MixedLongComparer.Instance);
+        var rim = new VoxelSet();
         for (int id = 0; id < grid.Count; id++)
         {
             var (x, y, z) = grid.Coordinates(id);
             for (int dz = -1; dz <= 1; dz++)
                 for (int dy = -1; dy <= 1; dy++)
                     for (int dx = -1; dx <= 1; dx++)
-                        if (grid.Id(x + dx, y + dy, z + dz) < 0) rim.Add(VoxelKey.Pack(x + dx, y + dy, z + dz));
+                        if (grid.Id(x + dx, y + dy, z + dz) < 0) rim.Add(x + dx, y + dy, z + dz);
         }
-        var seen = new HashSet<long>(Spatial.MixedLongComparer.Instance);
+        var seen = new VoxelSet();
         int count = 0;
-        var stack = new Stack<long>();
-        foreach (long start in rim.Order())
+        var stack = new Stack<(int, int, int)>();
+        foreach (var start in rim.Enumerate())
         {
-            if (!seen.Add(start)) continue;
+            if (!seen.Add(start.X, start.Y, start.Z)) continue;
             count++;
             stack.Push(start);
             while (stack.Count > 0)
             {
-                var (x, y, z) = VoxelKey.Unpack(stack.Pop());
-                foreach (var (dx, dy, dz) in new[] { (-1, 0, 0), (1, 0, 0), (0, -1, 0), (0, 1, 0), (0, 0, -1), (0, 0, 1) })
+                var (x, y, z) = stack.Pop();
+                foreach (var (dx, dy, dz) in Face6)
                 {
-                    long k = VoxelKey.Pack(x + dx, y + dy, z + dz);
-                    if (rim.Contains(k) && seen.Add(k)) stack.Push(k);
+                    int nx = x + dx, ny = y + dy, nz = z + dz;
+                    if (rim.Contains(nx, ny, nz) && seen.Add(nx, ny, nz)) stack.Push((nx, ny, nz));
                 }
             }
         }
         return count;
     }
+
+    private static readonly (int, int, int)[] Face6 = [(-1, 0, 0), (1, 0, 0), (0, -1, 0), (0, 1, 0), (0, 0, -1), (0, 0, 1)];
 }

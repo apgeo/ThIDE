@@ -17,20 +17,35 @@ internal static class Thinning
         int n = grid.Count;
         var alive = new bool[n];
         Array.Fill(alive, true);
-        var queue = new PriorityQueue<int, long>();
+        // A bucket queue on the integer squared distance: O(1) per step, nearest-to-the-wall first,
+        // first-in first-out within a bucket (deterministic: the boundary is queued in voxel order).
+        int maxD = 0;
+        for (int id = 0; id < n; id++) maxD = Math.Max(maxD, grid.SquaredDistance[id]);
+        var buckets = new Queue<int>?[maxD + 1];
+        var queued = new bool[n];
+        int current = int.MaxValue;
+        void Push(int id)
+        {
+            int d = grid.SquaredDistance[id];
+            (buckets[d] ??= new Queue<int>()).Enqueue(id);
+            queued[id] = true;
+            if (d < current) current = d;
+        }
         Span<int> n6 = stackalloc int[6];
         for (int id = 0; id < n; id++)
         {
             grid.Neighbours6(id, n6);
             foreach (int k in n6)
-                if (k < 0) { queue.Enqueue(id, Priority(grid, id)); break; }
+                if (k < 0) { Push(id); break; }
         }
 
-        var queued = new bool[n];
         Span<int> n26 = stackalloc int[26];
         int processed = 0;
-        while (queue.TryDequeue(out int id, out _))
+        while (current <= maxD)
         {
+            var bucket = buckets[current];
+            if (bucket is null || bucket.Count == 0) { current++; continue; }
+            int id = bucket.Dequeue();
             if ((++processed & 0xFFFF) == 0) ct.ThrowIfCancellationRequested();
             queued[id] = false;
             if (!alive[id]) continue;
@@ -47,13 +62,12 @@ internal static class Thinning
             for (int i = 0; i < 26; i++)
             {
                 int k = n26[i];
-                if (k >= 0 && alive[k] && !queued[k]) { queued[k] = true; queue.Enqueue(k, Priority(grid, k)); }
+                if (k >= 0 && alive[k] && !queued[k]) Push(k);
             }
         }
         return alive;
     }
 
-    private static long Priority(VoidGrid grid, int id) => ((long)grid.SquaredDistance[id] << 32) | (uint)id;
 }
 
 /// <summary>The simple-point test for 26-connected objects with a 6-connected background, on the

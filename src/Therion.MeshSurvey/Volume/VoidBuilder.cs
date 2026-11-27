@@ -110,27 +110,36 @@ internal static class VoidBuilder
         ct.ThrowIfCancellationRequested();
 
         // Opening: connections narrower than the passage width become rock; report each cut.
-        var cuts = new List<VoidCut>();
+        VoxelSet? original = null;
         int openingRemoved = 0;
         double openR = vo.MinPassageWidth / (2 * h);
         if (openR >= 1)
         {
-            var original = voidSet.Clone();
+            original = voidSet.Clone();
             voidSet.Erode(openR);
             voidSet.Dilate(openR);
             // Opening is anti-extensive in the continuum; on the grid the ball stamps can add a voxel
             // at a corner, so intersect with the original.
             foreach (var (x, y, z) in voidSet.ToArray()) if (!original.Contains(x, y, z)) voidSet.Remove(x, y, z);
             openingRemoved = (int)(original.Count - voidSet.Count);
-            if (openingRemoved > 0) cuts = FindCuts(original, voidSet, frame);
         }
         ct.ThrowIfCancellationRequested();
 
-        // Components: drop the ones too small to matter.
-        var (kept, components, dropped) = DropSmallComponents(voidSet, h, options.Input.MinComponentVolume);
+        // Parts and cuts are counted on index arrays, not on hashed sets.
+        var opened = new VoidGrid(origin, h, voidSet.ToArray(), distances: false);
+        var label = VoidTopology.Labels26(opened, out int components);
+        var cuts = original is not null && openingRemoved > 0 ? FindCuts(original, voidSet, opened, label, frame) : [];
+        var size = new long[components];
+        foreach (int l in label) size[l]++;
+        double voxelVolume = h * h * h;
+        long largest = size.Length == 0 ? 0 : size.Max();
+        var keep = size.Select(n => n * voxelVolume >= options.Input.MinComponentVolume || n == largest).ToArray();
+        int dropped = keep.Count(k => !k);
         progress?.Report(new MeshSurveyProgress("void", 0.8));
 
-        var grid = new VoidGrid(origin, h, kept.ToArray());
+        var voxels = new List<(int, int, int)>(opened.Count);
+        for (int i = 0; i < opened.Count; i++) if (keep[label[i]]) voxels.Add(opened.Coordinates(i));
+        var grid = new VoidGrid(origin, h, voxels.ToArray());
         var (loops, cavities) = VoidTopology.LoopsAndCavities(grid);
         progress?.Report(new MeshSurveyProgress("void", 1));
         return (grid, new VoidReport
@@ -177,7 +186,7 @@ internal static class VoidBuilder
         var fwn = session.Winding!;
         var bvh = session.Bvh!;
         var voidSet = new VoxelSet();
-        var outside = new HashSet<long>(MixedLongComparer.Instance);
+        var outside = new VoxelSet();
         int evals = 0;
 
         // The shell: every voxel within one voxel of the surface. Two neighbouring voxels outside the
@@ -195,7 +204,7 @@ internal static class VoidBuilder
             candidates.Add((frame.Voxel(centroid - n * offset), frame.Voxel(centroid + n * offset)));
         }
 
-        bool Known((int X, int Y, int Z) v) => voidSet.Contains(v.X, v.Y, v.Z) || outside.Contains(VoxelKey.Pack(v.X, v.Y, v.Z));
+        bool Known((int X, int Y, int Z) v) => voidSet.Contains(v.X, v.Y, v.Z) || outside.Contains(v.X, v.Y, v.Z);
         foreach (var (inner, outer) in candidates)
         {
             ct.ThrowIfCancellationRequested();
@@ -206,7 +215,7 @@ internal static class VoidBuilder
                 var (cx, cy, cz) = start;
                 if (!frame.InRange(cx, cy, cz) || Known(start)) continue;
                 evals++;
-                if (!fwn.IsInside(frame.Center(cx, cy, cz))) { outside.Add(VoxelKey.Pack(cx, cy, cz)); continue; }
+                if (!fwn.IsInside(frame.Center(cx, cy, cz))) { outside.Add(cx, cy, cz); continue; }
                 voidSet.Add(cx, cy, cz);
                 evals += Flood(voidSet, outside, shell, frame, fwn, bvh, start, ct);
                 break;
@@ -216,37 +225,44 @@ internal static class VoidBuilder
         return voidSet;
     }
 
-    /// <summary>Layered flood from an inside voxel. A step between two voxels off the shell needs no
-    /// test; a step touching the shell is accepted when the segment between the centres crosses no
-    /// triangle, else decided by the winding number. Each layer is classified in parallel.</summary>
-    private static int Flood(VoxelSet voidSet, HashSet<long> outside, VoxelSet shell, Frame frame, FastWindingNumber fwn,
+    /// <summary>Flood from an inside voxel. A step between two voxels off the shell needs no test and is
+    /// taken at once; steps touching the shell are collected and decided in parallel batches — accepted
+    /// when the segment between the centres crosses no triangle, else by the winding number.</summary>
+    private static int Flood(VoxelSet voidSet, VoxelSet outside, VoxelSet shell, Frame frame, FastWindingNumber fwn,
         TriangleBvh bvh, (int, int, int) start, CancellationToken ct)
     {
         int evals = 0;
-        var frontier = new List<(int, int, int)> { start };
-        while (frontier.Count > 0)
+        var queue = new Queue<(int, int, int)>();
+        queue.Enqueue(start);
+        var pending = new List<((int, int, int) From, (int, int, int) To)>();
+        var pendingSeen = new VoxelSet();
+        int steps = 0;
+        while (true)
         {
-            ct.ThrowIfCancellationRequested();
-            var next = new List<((int, int, int) From, (int, int, int) To, bool Free)>();
-            var layerSeen = new HashSet<long>(MixedLongComparer.Instance);
-            foreach (var (x, y, z) in frontier)
+            while (queue.Count > 0)
             {
+                if ((++steps & 0xFFFF) == 0) ct.ThrowIfCancellationRequested();
+                var (x, y, z) = queue.Dequeue();
                 bool fromShell = shell.Contains(x, y, z);
                 foreach (var (dx, dy, dz) in Face6)
                 {
                     int nx = x + dx, ny = y + dy, nz = z + dz;
-                    if (!frame.InRange(nx, ny, nz)) continue;
-                    long k = VoxelKey.Pack(nx, ny, nz);
-                    if (voidSet.Contains(nx, ny, nz) || outside.Contains(k) || !layerSeen.Add(k)) continue;
-                    next.Add(((x, y, z), (nx, ny, nz), !fromShell && !shell.Contains(nx, ny, nz)));
+                    if (!frame.InRange(nx, ny, nz) || voidSet.Contains(nx, ny, nz) || outside.Contains(nx, ny, nz)) continue;
+                    if (!fromShell && !shell.Contains(nx, ny, nz))
+                    {
+                        voidSet.Add(nx, ny, nz);
+                        queue.Enqueue((nx, ny, nz));
+                    }
+                    else if (pendingSeen.Add(nx, ny, nz)) pending.Add(((x, y, z), (nx, ny, nz)));
                 }
             }
-            var inside = new bool[next.Count];
+            if (pending.Count == 0) break;
+            ct.ThrowIfCancellationRequested();
+            var inside = new bool[pending.Count];
             int tested = 0;
-            Parallel.For(0, next.Count, () => 0, (i, _, local) =>
+            Parallel.For(0, pending.Count, () => 0, (i, _, local) =>
             {
-                var (from, to, free) = next[i];
-                if (free) { inside[i] = true; return local; }
+                var (from, to) = pending[i];
                 var a = frame.Center(from.Item1, from.Item2, from.Item3);
                 var b = frame.Center(to.Item1, to.Item2, to.Item3);
                 if (!bvh.SegmentHits(a, b)) { inside[i] = true; return local; }
@@ -254,13 +270,15 @@ internal static class VoidBuilder
                 return local + 1;
             }, local => Interlocked.Add(ref tested, local));
             evals += tested;
-            frontier = new List<(int, int, int)>();
-            for (int i = 0; i < next.Count; i++)
+            for (int i = 0; i < pending.Count; i++)
             {
-                var (x, y, z) = next[i].To;
-                if (inside[i]) { voidSet.Add(x, y, z); frontier.Add((x, y, z)); }
-                else outside.Add(VoxelKey.Pack(x, y, z));
+                var (x, y, z) = pending[i].To;
+                if (voidSet.Contains(x, y, z)) continue;
+                if (inside[i]) { voidSet.Add(x, y, z); queue.Enqueue((x, y, z)); }
+                else outside.Add(x, y, z);
             }
+            pending.Clear();
+            pendingSeen = new VoxelSet();
         }
         return evals;
     }
@@ -370,11 +388,10 @@ internal static class VoidBuilder
         return true;
     }
 
-    private static List<VoidCut> FindCuts(VoxelSet original, VoxelSet opened, Frame frame)
+    private static List<VoidCut> FindCuts(VoxelSet original, VoxelSet opened, VoidGrid openedGrid, int[] label, Frame frame)
     {
-        // Label the opened void's components, then each component of what the opening removed; a
-        // removed piece touching two or more opened components was a narrow connection.
-        var label = Label26(opened);
+        // Each piece the opening removed (26-connected) that touches two or more parts of the opened
+        // void was a narrow connection between them.
         var removed = new VoxelSet();
         foreach (var (x, y, z) in original.Enumerate()) if (!opened.Contains(x, y, z)) removed.Add(x, y, z);
         var cuts = new List<VoidCut>();
@@ -398,62 +415,13 @@ internal static class VoidBuilder
                         for (int dx = -1; dx <= 1; dx++)
                         {
                             int nx = x + dx, ny = y + dy, nz = z + dz;
-                            if (label.TryGetValue(VoxelKey.Pack(nx, ny, nz), out int l)) touched.Add(l);
+                            int id = openedGrid.Id(nx, ny, nz);
+                            if (id >= 0) touched.Add(label[id]);
                             else if (removed.Contains(nx, ny, nz) && visited.Add(nx, ny, nz)) queue.Enqueue((nx, ny, nz));
                         }
             }
             if (touched.Count >= 2) cuts.Add(new VoidCut(sum / n, n));
         }
         return cuts;
-    }
-
-    internal static Dictionary<long, int> Label26(VoxelSet set)
-    {
-        var label = new Dictionary<long, int>(MixedLongComparer.Instance);
-        int next = 0;
-        foreach (var (sx, sy, sz) in set.Enumerate())
-        {
-            if (label.ContainsKey(VoxelKey.Pack(sx, sy, sz))) continue;
-            int l = next++;
-            var queue = new Queue<(int, int, int)>();
-            label[VoxelKey.Pack(sx, sy, sz)] = l;
-            queue.Enqueue((sx, sy, sz));
-            while (queue.Count > 0)
-            {
-                var (x, y, z) = queue.Dequeue();
-                for (int dz = -1; dz <= 1; dz++)
-                    for (int dy = -1; dy <= 1; dy++)
-                        for (int dx = -1; dx <= 1; dx++)
-                        {
-                            int nx = x + dx, ny = y + dy, nz = z + dz;
-                            if (!set.Contains(nx, ny, nz)) continue;
-                            long k = VoxelKey.Pack(nx, ny, nz);
-                            if (label.TryAdd(k, l)) queue.Enqueue((nx, ny, nz));
-                        }
-            }
-        }
-        return label;
-    }
-
-    private static (VoxelSet Kept, int Components, int Dropped) DropSmallComponents(VoxelSet set, double h, double minVolume)
-    {
-        var label = Label26(set);
-        int count = label.Count == 0 ? 0 : label.Values.Max() + 1;
-        var size = new long[count];
-        foreach (var l in label.Values) size[l]++;
-        double voxelVolume = h * h * h;
-        var keep = new bool[count];
-        int dropped = 0;
-        long largest = size.Length == 0 ? 0 : size.Max();
-        for (int i = 0; i < count; i++)
-        {
-            keep[i] = size[i] * voxelVolume >= minVolume || size[i] == largest;
-            if (!keep[i]) dropped++;
-        }
-        if (dropped == 0) return (set, count, 0);
-        var kept = new VoxelSet();
-        foreach (var (k, l) in label.OrderBy(e => e.Key))
-            if (keep[l]) { var (x, y, z) = VoxelKey.Unpack(k); kept.Add(x, y, z); }
-        return (kept, count, dropped);
     }
 }

@@ -25,7 +25,7 @@ public sealed class VoidGrid
     /// <summary>Squared distance to the nearest non-void voxel centre, in voxel units (the exact EDT).</summary>
     internal int[] SquaredDistance { get; }
 
-    internal VoidGrid(CaveVector3 origin, double voxelSize, (int X, int Y, int Z)[] voxels)
+    internal VoidGrid(CaveVector3 origin, double voxelSize, (int X, int Y, int Z)[] voxels, bool distances = true)
     {
         Origin = origin;
         VoxelSize = voxelSize;
@@ -46,19 +46,42 @@ public sealed class VoidGrid
             }
             block[(x & 7) | ((y & 7) << 3) | ((z & 7) << 6)] = i;
         }
+        if (!distances)
+        {
+            SquaredDistance = [];
+            Distance = [];
+            return;
+        }
         SquaredDistance = DistanceTransform.Compute(this);
         Distance = new float[voxels.Length];
         for (int i = 0; i < voxels.Length; i++)
             Distance[i] = (float)(Math.Max(0.5, Math.Sqrt(SquaredDistance[i]) - 0.5) * voxelSize);
     }
 
+    // One block remembered per thread: most lookups land in the block of the previous one. The grid is
+    // remembered by a serial number, not a reference, so an old grid is never kept alive by a thread.
+    private static int s_serial;
+    private readonly int _serial = Interlocked.Increment(ref s_serial);
+    [ThreadStatic] private static int t_grid;
+    [ThreadStatic] private static long t_key;
+    [ThreadStatic] private static int[]? t_block;
+
     public (int X, int Y, int Z) Coordinates(int id) => (_x[id], _y[id], _z[id]);
 
     /// <summary>The voxel's index, or -1 when (x, y, z) is not void.</summary>
     public int Id(int x, int y, int z)
     {
-        if (!_blocks.TryGetValue(VoxelKey.Pack(x >> 3, y >> 3, z >> 3), out var block)) return -1;
-        return block[(x & 7) | ((y & 7) << 3) | ((z & 7) << 6)];
+        long key = VoxelKey.Pack(x >> 3, y >> 3, z >> 3);
+        int[]? block;
+        if (t_grid == _serial && t_key == key) block = t_block;
+        else
+        {
+            _blocks.TryGetValue(key, out block);
+            t_grid = _serial;
+            t_key = key;
+            t_block = block;
+        }
+        return block is null ? -1 : block[(x & 7) | ((y & 7) << 3) | ((z & 7) << 6)];
     }
 
     public CaveVector3 Center(int id) => new(
