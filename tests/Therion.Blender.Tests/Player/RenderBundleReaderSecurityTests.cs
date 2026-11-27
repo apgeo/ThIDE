@@ -104,6 +104,26 @@ public sealed class RenderBundleReaderSecurityTests(ITestOutputHelper output) : 
         Assert.False(Directory.Exists(Path.Combine(_dir, "outside")));
     }
 
+    [Theory]
+    [InlineData("output")]
+    [InlineData("directory")]
+    public void APlanThatGivesAKeyTwice_IsRefused(string twice)
+    {
+        string zip = Craft("twice-" + twice);
+        // The plan's text, with its output (or its output's folder) given again, outside.
+        string folder = Path.Combine(_dir, "craft", "twice-" + twice);
+        string plan = File.ReadAllText(Path.Combine(folder, "scene-plan.json"));
+        string outside = JsonValue.Create(Path.Combine(_dir, "outside"))!.ToJsonString();
+        plan = twice == "output"
+            ? plan.TrimEnd().TrimEnd('}') + ",\"output\":{\"kind\":\"still\",\"directory\":" + outside + ",\"baseName\":\"planted\"}}"
+            : plan.Replace("\"directory\":\"out\"", "\"directory\":\"out\",\"directory\":" + outside);
+        Assert.Contains(outside, plan);
+        File.WriteAllText(Path.Combine(folder, "scene-plan.json"), plan);
+        File.Delete(zip);
+        ZipFile.CreateFromDirectory(folder, zip, CompressionLevel.Fastest, includeBaseDirectory: true);
+        Assert.Contains("each key once", Refused(zip, "twice-" + twice).Message);
+    }
+
     [Fact]
     public void AnOutputFolderInsideTheBundle_IsWrittenIntoTheBundlesOwnOutputFolder_WithItsSubtitles()
     {

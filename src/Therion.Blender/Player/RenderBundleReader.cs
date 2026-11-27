@@ -300,29 +300,51 @@ public static partial class RenderBundleReader
     /// <summary>
     /// The plan's text as it is played: its video output in <paramref name="container"/> (when
     /// one is asked for), and its output folder the bundle's own, with the folder the plan said
-    /// (for what lies there in the bundle). A plan that is not JSON of a plan is left as it is,
-    /// for the serializer to refuse.
+    /// (for what lies there in the bundle). What is played is this text, written again: no other
+    /// reading of the plan's own text reaches the player.
     /// </summary>
-    /// <exception cref="RenderBundleRefusedException">The plan's output folder is not inside the bundle.</exception>
+    /// <exception cref="RenderBundleRefusedException">The plan is not one JSON object with each
+    /// key once and an output, or its output folder is not inside the bundle.</exception>
     private static (string Text, string Said) Played(string text, PlanContainer? container, string where)
     {
-        JsonObject? plan;
-        try { plan = JsonNode.Parse(text) as JsonObject; }
-        catch (System.Text.Json.JsonException) { return (text, ""); }
-        if (plan?["output"] is not JsonObject output) return (text, "");
-        string said = "";
-        if (output["directory"] is { } directory)
+        JsonObject plan;
+        JsonObject output;
+        string said;
+        try
         {
-            if (directory.GetValueKind() != System.Text.Json.JsonValueKind.String) return (text, "");
-            said = (string)directory!;
-            if (!ScenePlanValidator.IsPathBesideThePlan(said))
-                throw new RenderBundleRefusedException(
-                    $"{Shown(where)}: the output directory '{Shown(said)}' does not lie inside the bundle; a bundle renders into its own folder.");
+            // Every key once: a key given twice is read one way here and another way elsewhere.
+            plan = JsonNode.Parse(text) as JsonObject ?? throw new RenderBundleRefusedException($"{Shown(where)} is not a JSON object.");
+            Once(plan);
+            output = plan["output"] as JsonObject ?? throw new RenderBundleRefusedException($"{Shown(where)}: the plan has no output.");
+            said = output["directory"] is null ? "."
+                : output["directory"]!.GetValueKind() == System.Text.Json.JsonValueKind.String ? (string)output["directory"]!
+                : throw new RenderBundleRefusedException($"{Shown(where)}: the output directory is not a path.");
         }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or ArgumentException or InvalidOperationException)
+        {
+            throw new RenderBundleRefusedException($"{Shown(where)} cannot be read: it is not JSON of one object with each key once.");
+        }
+        if (!ScenePlanValidator.IsPathBesideThePlan(said))
+            throw new RenderBundleRefusedException(
+                $"{Shown(where)}: the output directory '{Shown(said)}' does not lie inside the bundle; a bundle renders into its own folder.");
         output["directory"] = RenderBundleWriter.OutputDirectory;
         if (container is { } wanted && output["kind"]?.GetValueKind() == System.Text.Json.JsonValueKind.String && (string?)output["kind"] == "video")
             output["container"] = wanted.ToString().ToLowerInvariant();
         return (plan.ToJsonString(), said);
+    }
+
+    /// <summary>Walks every object of <paramref name="node"/>, which makes .NET refuse a key given twice.</summary>
+    private static void Once(JsonNode? node)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                foreach (var (_, value) in obj) Once(value);
+                break;
+            case JsonArray array:
+                foreach (var item in array) Once(item);
+                break;
+        }
     }
 
     private static ScenePlan ReadScene(string text, string where)
