@@ -107,6 +107,12 @@ diagnostic codes, key names (Ctrl, Shift, Enter, Esc) and settings keys in Engli
 | gesture (keyboard) | combinație (de taste) | UI: *Combinație* |
 | breadcrumb | cale de navigare | |
 | trust a folder | a acorda încredere dosarului | |
+| shot (of a film; Blender animation) | secvență | UI: *Adaugă secvență*; a survey shot stays *viză* |
+| storyboard | storyboard | UI: tab *Storyboard* (the English word is kept) |
+| tour (of a cave's branches; Blender animation) | parcurs | UI: *parcurs*; *tur* is not used for it |
+| composite preset | presetare compusă | UI: *Presetare compusă* |
+| side passage | galerie laterală | UI: *Galeriile laterale ale parcursului* |
+| end card | cadru de final | UI: *Cadru de final* |
 
 ## UI strings that clash with this list
 

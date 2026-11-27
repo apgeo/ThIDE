@@ -22,14 +22,21 @@ Blender's interface.
 ## Opening the panel
 
 **Tools → Blender Animation…** opens the panel in the central area. Everything you set there
-describes one *render job*; nothing runs until you press **Render** or **Preview**.
+describes one *render job*; nothing runs until you press a button that starts work: **Render**,
+**Preview**, **Export script…** or **Open in Blender…**, and on the Storyboard tab **Draft all**,
+**Draft shot**, **Estimate**, **Render film** or **List branches**. Each of them finds the model
+first, and the project's model is exported with Therion when its build is out of date (for
+**Estimate** and **List branches** too); **Cancel** stops that.
 
 ## The workflow, step by step
 
-1. **Pick a source.** By default the panel lists the `.lox`/`.3d` models discovered in your
-   project's last compilation (newest first) — choose one from the dropdown. Or tick **Use an external
-   file** and give a path to any `.lox` or `.3d`. If the dropdown is empty, compile your project
-   first (**Compile → Compile**), or use an external file.
+1. **Pick a source.** With a project open, the first entry of the dropdown, chosen at the start, is
+   **Project model (exported with Therion when out of date)**: the project's own model, which ThIDE
+   exports with Therion first when the build is missing or older than the sources. After it come the
+   `.lox`/`.3d` models discovered in your project's last compilation (newest first). Or tick **Use an
+   external file** and give a path to any `.lox` or `.3d`. Without a project, the dropdown lists only
+   the models found; if it is empty, compile your project first (**Compile → Compile**), or use an
+   external file.
 
    > A `.lox` (Therion *loch*) model carries **walls**, so it renders as solid cave passage. A
    > `.3d` (Survex) model is centerline only, so ThIDE synthesizes tubes from the LRUD data.
@@ -61,7 +68,7 @@ describes one *render job*; nothing runs until you press **Render** or **Preview
      of the cave shows through from above: 0 % hides the terrain, 100 % hides the cave under it;
      the default is 40 %. A very large grid is thinned to at most 512 × 512 points.
    - **Light** — the *light rig*: a head lamp on the camera, a sun and sky, three studio lights, or
-     an image all round the scene (*HdriFile*), with its **strength**. See
+     an image all round the scene (*HDRI image*), with its **strength**. See
      [Lighting by an image (HDRI)](#lighting-by-an-image-hdri).
    - **Engine** — *Cycles* (the default, works everywhere) or *EEVEE* (faster, but needs a
      display; on a headless Linux server use Cycles). **Device** picks the GPU backend for
@@ -74,8 +81,8 @@ describes one *render job*; nothing runs until you press **Render** or **Preview
      resolution and file name.
    - **Labels** — turn on station labels and lead markers. *Lead marker size* chooses how big a
      marker is: *Auto* sizes it from its passage in a flythrough and from the whole cave otherwise;
-     *Cave*, *Passage*, *CameraDistance* (about the same size in the picture at any distance, its
-     caption with it) and *HiddenInFlythrough* fix one way. *Labels above* chooses the roof a station label is lifted
+     *By the cave*, *By the passage*, *By camera distance* (about the same size in the picture at any
+     distance, its caption with it) and *Hidden in a flythrough* fix one way. *Labels above* chooses the roof a station label is lifted
      above: the surveyed height first, the walls first, the walls only, or none (on the station).
    - **Annotations** — labels, callouts, markers and photos of your own, loaded from a file: see
      [Annotations](#annotations-labels-callouts-markers-and-photos).
@@ -250,8 +257,8 @@ the clip runs, in an order the survey itself gives:
 
 The preset **Map reveal** reveals by distance. Any other preset takes a reveal in the panel:
 
-- **Reveal the cave by** — *Off* (the whole cave from the first frame), *Distance*, *Order* or
-  *Date*. The fields below it appear once a reveal is chosen.
+- **Reveal the cave by** — *Off* (the whole cave from the first frame), *By distance*, *By survey
+  order* or *By date*. The fields below it appear once a reveal is chosen.
 - **From station** (by distance) — the station the distances are measured from; empty, they are
   measured from the entrances.
 - **Dates file** (by date) — the `.3d` file that has the survey dates, typed or picked with
@@ -393,10 +400,12 @@ picture (an *HDRI*) is laid round the scene, is what the camera sees behind the 
 the cave with its own colours and from its own bright places. ThIDE ships none; many are free to
 download.
 
-**In the panel**, under **Light**: choose *HdriFile* as the **Light rig** and name the image in
+**In the panel**, under **Light**: choose *HDRI image* as the **Light rig** and name the image in
 **HDRI image**, or press **Browse…**, which picks the file and chooses the rig for you. **Light
 strength** says how brightly it shines and **HDRI rotation** turns it. An image that is not
-there, or is neither a `.hdr` nor an `.exr`, is listed under **Fix before rendering**. **Save
+there is listed under **Fix before rendering**, and so is one that is neither a `.hdr` nor an
+`.exr` while the player builds the scene; with *Script generator* as the **Scene builder**, any
+picture Blender reads is accepted. **Save
 preset** keeps the image's path with the rest.
 
 It is also a setting of the render spec, under `lighting`, of the command line, and of the MCP
@@ -450,7 +459,7 @@ Whoever writes scene plans with the library has two more tools for this (see the
 material that is **unlit** (`"unlit": true`), which shows its colours as a screen shows them
 whatever the light, for survey lines and routes that have to read at any distance.
 
-**The *SunSky* rig is the same in every Blender.** Blender 5 has a newer sky model beside the one
+**The *Sun and sky* rig is the same in every Blender.** Blender 5 has a newer sky model beside the one
 of Blender 4, bluer and brighter; the player asks for the sky of Blender 4 in both, so a scene
 looks the same in Blender 4.2, 4.5 and 5.0. (Up to ThIDE's player 1.8 a scene under the sun and
 the sky looked very different in Blender 5.)
@@ -515,7 +524,7 @@ between them:
 - **Player** — the newer builder. ThIDE writes the scene as data (a *scene plan*) and a fixed
   program in Blender plays it. It writes the texts in the second stage, renders previews, and can
   go on with a render that was stopped.
-- **Generator** — the earlier builder, kept as it was for comparison. It is used only when you
+- **Script generator** — the earlier builder, kept as it was for comparison. It is used only when you
   choose it here. It writes one Python script per scene. It draws the title, the scale bar, the
   north arrow and the depth legend as objects in the scene (where a wall can hide them) and does
   not draw a title card, the credits line, captions, the end card, the fades, the
@@ -548,11 +557,14 @@ A preview is always the player's, whatever is chosen here. **Render**, **Export 
   carries the plan, the player, the meshes and the images inside itself: a much larger file that
   renders anywhere, into `out` beside it.
 
-  With the *Generator* chosen as the scene builder, the export is the script generator's instead:
+  With the *Script generator* chosen as the scene builder, the export is the script generator's instead:
   `render.py` with `model.ply` and `scene-meta.json`, without what that builder does not draw (the
   panel lists it). *Self-contained script* then puts the scene's data inside the script, and
   **Embed the meshes in the script** the mesh as well; that second option is for the script
   generator only, since the player's one file always carries its meshes.
+
+  From the command line, `--export <folder>` writes the same: the player's folder, one script with
+  `--one-file`, and the script generator's with `--builder generator` (see below).
 - **Open in Blender…** — opens the scene **Render** would show in Blender's own window, seen
   through its camera, so you can look round it or change it by hand. Nothing is rendered; a
   render you start there writes to the **Render folder**. The player builds the scene, so
@@ -561,7 +573,9 @@ A preview is always the player's, whatever is chosen here. **Render**, **Export 
   stage, and Blender's window shows the scene before that. The panel says so when it opens a
   scene that has texts.
 - **Save preset** — store the current settings as your own preset, the texts and captions
-  included; they appear in the strip alongside the built-ins and persist between sessions.
+  included; they appear in the strip alongside the built-ins and persist between sessions. A
+  built-in preset's name (in any case) is refused, and a disk that cannot be written is said in
+  the panel. On the Storyboard tab it keeps the selected shot's look with the film's output.
 
 ## From the command line
 
@@ -569,7 +583,7 @@ The same engine is available headless through the CLI, for scripting or CI:
 
 ```
 therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.json] \
-                    [--out <dir>] [--export <dir>] [--blender <path>] \
+                    [--out <dir>] [--export <dir> [--one-file]] [--blender <path>] \
                     [--draft] [--builder auto|player|generator] \
                     [--keep-frames] [--compose-only] [--frames <dir>] \
                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] \
@@ -581,7 +595,10 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--route <from>[:<via>...]:<to> [--route-seconds <n>]]
 ```
 
-`--export` writes the script and assets without running Blender; otherwise it renders. Produced
+`--export` writes the scene for Blender without running it, as the panel's **Export script…**
+does: the player's folder by default, one `render.py` that carries it all with `--one-file`, and
+the script generator's `render.py` with its mesh with `--builder generator` (`--readme-language ro`
+writes the folder's README in Romanian). Otherwise it renders. Produced
 file paths are printed to standard output; the exit code is `0` on success, `1` on a render
 failure, `2` on a usage or spec error.
 
@@ -603,7 +620,9 @@ failure, `2` on a usage or spec error.
 - `--route e1:b7:s40` flies the camera from `e1` through `b7` to `s40` along the passages,
   whatever the preset's camera was: see [Flying a route between stations](#flying-a-route-between-stations).
   The route sets the clip's length; `--route-seconds 45` fits it into 45 seconds instead. It goes
-  with `--bundle` too.
+  with `--bundle` too, and with one shot of a storyboard (`--shot`), but not with a whole
+  `--storyboard`, `--composite` or `--tour`, whose shots say their own cameras: the command refuses
+  it there.
 - **Lead markers.** A preset or spec that marks leads (*Full flythrough* does) marks the stations
   the model itself flags as continuations, which a `.lox` file carries (Therion's
   `station <name> "<comment>" continuation`); a `.3d` file has no such flags. `--leads leads.json`
@@ -612,16 +631,16 @@ failure, `2` on a usage or spec error.
   have is left out. It goes with `--bundle` too.
 - `--annotations notes.json` adds the labels, callouts, markers and photos of a file to the
   preset's or the spec's: see
-  [Annotations](#annotations-labels-callouts-markers-and-photos). It goes with `--bundle` too. A
-  script written with `--export` is the script generator's and leaves them out, as it leaves out
-  captions; the command says so.
+  [Annotations](#annotations-labels-callouts-markers-and-photos). It goes with `--bundle` and
+  `--export` too. The script generator's script (`--export` with `--builder generator`) leaves
+  them out, as it leaves out captions; the command says so.
 - `--reveal date`, `--reveal order` or `--reveal distance` shows the cave part by part: see
   [Revealing the cave part by part](#revealing-the-cave-part-by-part). `--reveal-from main.12`
   measures a reveal by distance from that station instead of the entrances; `--reveal-dates
   cave.3d` names the file with the survey dates for a model that has none; `--reveal-seconds 1-9.5`
   says when the reveal starts and when the whole cave is there. Over a preset that reveals
-  already, `--reveal` changes what it reveals by and keeps its times. It goes with `--bundle` too;
-  a script written with `--export` leaves it out, and the command says so.
+  already, `--reveal` changes what it reveals by and keeps its times. It goes with `--bundle` and
+  `--export` too; the script generator's script leaves it out, and the command says so.
 - **A render that was stopped goes on.** A render with texts keeps its frames in
   `<out>/<name>-frames` while it runs. Run the same command again after it was stopped (or after
   the computer was): the frames that are there are kept and only the missing ones are rendered.
@@ -871,7 +890,9 @@ name) and win over the tour's rules; `priority` lists branch numbers, the most w
 the film is over its time, the side passages it names are left out after the others, from the
 bottom of the list up. A storyboard's `language` (`en` or `ro`) is the language of the texts the
 film writes itself, a tour's corner texts and the notes of its leads. Left out, they are in ThIDE's
-language when the panel renders the film, and in English from the command line.
+language when the panel renders the film or an agent renders it through ThIDE's tools (an agent
+can name one, `language`), and in English from the command line (`--tour-language` names one for a
+composite).
 
 ```json
 { "version": 1, "name": "{cave}: my tour", "language": "ro",
@@ -906,14 +927,24 @@ film of several shots:
   name (type to rename it), its camera (or *tour*), its seconds and how it begins; the arrows move
   it and ✕ removes it. The strip under the list shows the shots along the film.
 - The number button of a row selects the shot: the panel's settings below then show it, and every
-  change made there is written into it. **Begins with** chooses a cut, a dip or a dissolve and its
-  seconds. The output settings (size, frame rate, file name) are the film's.
+  change made there to what a shot holds (its camera and length, light, engine, reveal, labels,
+  annotations, title, credits, captions, scale bar, north arrow and depth legend) is written into
+  it. A shot that cannot be rendered as it stands (no length, say) shows its own settings too, to
+  be put right. **Begins with** chooses a cut, a dip or a dissolve and its seconds.
+- What no shot holds is the film's, and is edited there whether a shot is selected or not: the
+  **Terrain** and its opacity, **Fade in** and **Fade out**, the frame rate
+  and the output settings (kind, size, file name); the end card is the film's, below. With no shot
+  selected, the settings show the preset a shot would be added from, and only the film's can be
+  changed.
+- The Storyboard tab never changes the Scene tab's scene: each keeps its own settings, and going
+  from one tab to the other shows them as they were left.
 - **The film**, under the shots: its **Title** (with a **Subtitle**, and **Title card** seconds
   for a title that stands in the middle of the picture before it fades; 0 keeps it at the top),
   its **End card** (with a subtitle and its seconds; blank is none), and the **Language of its
   texts**: the language a tour writes its corner texts and the notes of its leads in. *As the
   interface* follows ThIDE's language (English when a film cannot be written in it). A composite
-  brings its own title, end card and language when it is added to an empty film.
+  brings its own title, end card, language, terrain, fades, frame rate and output when it is added
+  to an empty film, so it renders as it does from the command line or an agent's tools.
 - **Save as composite** keeps the film as a composite preset of your own, under the name and the
   description you type beside it; the list of composites offers it from then on, and the command
   line takes its file (`--composite`). The presets of yours that its shots name are written into
@@ -1120,9 +1151,9 @@ are filled (a synced share, an SFTP drop) is up to you.
 - To stop a job, put an empty `<job>.cancel` beside its zip. Its frames are kept; remove the cancel
   file and it goes on with them. A worker that is stopped (Ctrl+C) also goes on with its frames
   when it starts again.
-- `--once` stops when the inbox is empty; `--blender` names the Blender; `--max-hours`,
-  `--max-triangles` and `--max-bundle-gb` set the limits of a job; `--scratch` is where bundles are
-  unpacked and their frames kept.
+- `--once` stops when the inbox is empty; `--poll <seconds>` (5) is how often it looks in the
+  inbox; `--blender` names the Blender; `--max-hours`, `--max-triangles` and `--max-bundle-gb` set
+  the limits of a job; `--scratch` is where bundles are unpacked and their frames kept.
 
 **Security.** A bundle is data, and the worker treats it so. It never runs the bundle's own
 `render.py`, `render.sh` or `thide_player`: it reads the plans, the meshes and the images, and plays
@@ -1151,8 +1182,8 @@ The server never reaches the machine; the machine calls the server. The protocol
   node token the administrator gives; it must be readable by you only (`chmod 600`), or the
   worker refuses to start. The token is never written to the log.
 - `--node-name` is the name the server shows (the computer's name by default); `--scratch` is where
-  bundles are downloaded and frames kept (one folder for each job); `--poll-seconds` (30) is how
-  long it waits for a job before asking again; `--once` makes one request and renders what it
+  bundles are downloaded and frames kept (one folder for each job); `--poll-seconds` (30; `--poll`
+  is the same option) is how long it waits for a job before asking again; `--once` makes one request and renders what it
   brings. `--blender`, `--modules` and the limits are those of the folder worker; a job's own
   limits can only lower them.
 - The movie is written in the container the job asks for: MP4 (H.264) by default, or WebM, which
@@ -1216,10 +1247,10 @@ own, or a container as above.
 |---|---|
 | *"Blender was not found"* | Install Blender 4.2+, or set its path in **Settings → External Tools**. |
 | *"…too old…"* | Update Blender to 4.2 or newer. |
-| The source dropdown is empty | Compile the project first (**Compile → Compile**), or tick **Use an external file**. |
+| The source dropdown is empty | It is only without a project open (with one, *Project model* comes first and exports the model when needed): compile the project first (**Compile → Compile**), or tick **Use an external file**. |
 | The render failed | Open the **job log** from the notification or the panel — it has Blender's full output. |
 | EEVEE render fails on a server | Switch the engine to **Cycles**. |
-| *"…the player lights a scene with a Radiance .hdr or an OpenEXR .exr image…"*, *"…cannot travel with the plan…"* | The image of the HDRI lighting is another kind of picture, is damaged or is too large (the message says which). Use a `.hdr` or `.exr` file; or set **Scene builder** to *Generator*, which loads whatever picture Blender reads. |
+| *"…the player lights a scene with a Radiance .hdr or an OpenEXR .exr image…"*, *"…cannot travel with the plan…"* | The image of the HDRI lighting is another kind of picture, is damaged or is too large (the message says which). Use a `.hdr` or `.exr` file; or set **Scene builder** to *Script generator*, which loads whatever picture Blender reads. |
 | Every render has the cave's name across the top | The built-in presets write it. Clear the **Title** field (or `--title ""`). |
 | The title is a short code, not the cave's name | It is the name the model has: give the outermost `survey` of your project a `-title`, or type the title you want. |
 | The preview has no terrain | A see-through terrain is left out of previews; the render draws it. |

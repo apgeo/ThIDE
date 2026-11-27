@@ -23,15 +23,22 @@ interfața Blender.
 ## Deschiderea panoului
 
 **Unelte → Animație Blender…** deschide panoul în zona centrală. Tot ce setați acolo descrie o
-singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează** sau **Previzualizare**.
+singură *lucrare de randare*; nimic nu rulează până nu apăsați un buton care pornește o lucrare:
+**Randează**, **Previzualizare**, **Exportă scriptul…** sau **Deschide în Blender…**, iar în fila
+Storyboard **Schiță a tuturor**, **Schiță a secvenței**, **Estimare**, **Randează filmul** sau
+**Arată galeriile**. Fiecare găsește întâi modelul, iar modelul proiectului este exportat cu Therion
+când compilarea lui este depășită (și pentru **Estimare** și **Arată galeriile**); **Renunță**
+oprește acest lucru.
 
 ## Fluxul de lucru, pas cu pas
 
-1. **Alegeți o sursă.** Implicit, panoul listează modelele `.lox`/`.3d` găsite la ultima
-   compilare a proiectului (cele mai noi întâi) — alegeți unul din lista derulantă. Sau bifați
-   **Folosește un fișier extern** și indicați calea către orice `.lox` sau `.3d`. Dacă lista
-   derulantă este goală, compilați mai întâi proiectul (**Compilare → Compilează**) sau folosiți un
-   fișier extern.
+1. **Alegeți o sursă.** Cu un proiect deschis, prima intrare din lista derulantă, aleasă la
+   început, este **Modelul proiectului (exportat cu Therion când e depășit)**: modelul propriu al
+   proiectului, pe care ThIDE îl exportă întâi cu Therion când compilarea lipsește sau este mai
+   veche decât sursele. După ea vin modelele `.lox`/`.3d` găsite la ultima compilare a proiectului
+   (cele mai noi întâi). Sau bifați **Folosește un fișier extern** și indicați calea către orice
+   `.lox` sau `.3d`. Fără proiect, lista derulantă arată doar modelele găsite; dacă este goală,
+   compilați mai întâi proiectul (**Compilare → Compilează**) sau folosiți un fișier extern.
 
    > Un model `.lox` (Therion *loch*) conține **pereți**, deci se randează ca galerie solidă. Un
    > model `.3d` (Survex) conține doar poligonala, deci ThIDE generează tuburi din datele LRUD.
@@ -66,7 +73,7 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
      vede, la 100 % ascunde peștera de sub el; implicit 40 %. O grilă foarte mare e rărită la cel
      mult 512 × 512 puncte.
    - **Lumină** — *sistemul de lumini*: o lampă frontală pe cameră, un soare și un cer, trei
-     lumini de studio sau o imagine de jur împrejurul scenei (*HdriFile*), cu **intensitatea** ei.
+     lumini de studio sau o imagine de jur împrejurul scenei (*Imagine HDRI*), cu **intensitatea** ei.
      Vedeți [Iluminarea cu o imagine (HDRI)](#iluminarea-cu-o-imagine-hdri).
    - **Motor** — *Cycles* (implicit, funcționează peste tot) sau *EEVEE* (mai rapid, dar necesită
      un afișaj; pe un server Linux fără afișaj folosiți Cycles). **Dispozitiv** alege backend-ul
@@ -78,10 +85,10 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
    - **Ieșire** — un videoclip (MP4/MKV/WebM), un șir de imagini PNG numerotate sau o singură imagine;
      plus rezoluția și numele fișierului.
    - **Etichete** — activați etichetele stațiilor și marcajele pistelor. *Mărimea marcajelor*
-     alege cât de mare e un marcaj: *Auto* îl dimensionează după galerie într-un zbor prin peșteră
-     și după toată peștera altfel; *Cave*, *Passage*, *CameraDistance* (cam aceeași mărime în
-     imagine la orice distanță, cu tot cu textul lui) și *HiddenInFlythrough* fixează un singur
-     fel. *Etichete deasupra* alege tavanul deasupra căruia se ridică eticheta unei stații: întâi
+     alege cât de mare e un marcaj: *Automat* îl dimensionează după galerie într-un zbor prin
+     peșteră și după toată peștera altfel; *După peșteră*, *După galerie*, *După distanța camerei*
+     (cam aceeași mărime în imagine la orice distanță, cu tot cu textul lui) și *Ascunse în zbor*
+     fixează un singur fel. *Etichete deasupra* alege tavanul deasupra căruia se ridică eticheta unei stații: întâi
      înălțimea măsurată, întâi pereții, doar pereții sau deloc (pe stație).
    - **Adnotări** — etichete, note cu linie, marcaje și fotografii proprii, încărcate dintr-un
      fișier: vedeți [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii).
@@ -270,8 +277,8 @@ parte cu parte cât rulează clipul, într-o ordine dată chiar de topografie:
 Presetarea **Map reveal** dezvăluie după distanță. Orice altă presetare primește o dezvăluire în
 panou:
 
-- **Dezvăluie peștera după** — *Off* (toată peștera de la primul cadru), *Distance* (după
-  distanță), *Order* (după ordine) sau *Date* (după dată). Câmpurile de sub el apar după ce
+- **Dezvăluie peștera după** — *Fără* (toată peștera de la primul cadru), *După distanță*, *În
+  ordinea ridicării* sau *După dată*. Câmpurile de sub el apar după ce
   alegeți o dezvăluire.
 - **De la stația** (după distanță) — stația de la care se măsoară distanțele; gol, se măsoară de
   la intrări.
@@ -419,11 +426,12 @@ asemenea imagine (un *HDRI*) este așezată de jur împrejurul scenei, este ceea
 spatele peșterii și luminează peștera cu propriile ei culori, din locurile ei luminoase. ThIDE nu
 vine cu niciuna; multe se pot descărca gratuit.
 
-**În panou**, la **Lumină**: alegeți *HdriFile* ca **Sistem de lumini** și numiți imaginea la
+**În panou**, la **Lumină**: alegeți *Imagine HDRI* ca **Sistem de lumini** și numiți imaginea la
 **Imagine HDRI**, sau apăsați **Răsfoiește…**, care alege fișierul și sistemul de lumini în locul
 dumneavoastră. **Intensitatea luminii** spune cât de puternic luminează, iar **Rotire HDRI** o
-rotește. O imagine care nu există sau care nu este nici `.hdr`, nici `.exr` apare la **De corectat
-înainte de randare**. **Salvează** păstrează în presetare calea imaginii, cu restul.
+rotește. O imagine care nu există apare la **De corectat înainte de randare**, la fel una care nu
+este nici `.hdr`, nici `.exr` cât timp scena o construiește playerul; cu *Generator de scripturi*
+drept **Constructor de scenă**, orice imagine pe care o citește Blender este acceptată. **Salvează** păstrează în presetare calea imaginii, cu restul.
 
 Este și o setare a specificației de randare, la `lighting`, a liniei de comandă și a uneltelor MCP
 (`hdri`, `hdriStrength`, `hdriRotation`, pentru o imagine din spațiul de lucru):
@@ -481,7 +489,7 @@ material **neluminat** (`"unlit": true`), care își arată culorile așa cum le
 oricare ar fi lumina, pentru linii topografice și trasee care trebuie să se citească de la orice
 distanță.
 
-**Sistemul de lumini *SunSky* este același în orice Blender.** Blender 5 are un model de cer mai nou pe lângă
+**Sistemul de lumini *Soare și cer* este același în orice Blender.** Blender 5 are un model de cer mai nou pe lângă
 cel din Blender 4, mai albastru și mai luminos; playerul cere în ambele cerul din Blender 4, așa că
 o scenă arată la fel în Blender 4.2, 4.5 și 5.0. (Până la playerul 1.8 al ThIDE, o scenă sub soare
 și cer arăta foarte diferit în Blender 5.)
@@ -548,7 +556,7 @@ ThIDE are două moduri de a construi scena în Blender, iar **Constructor de sce
 - **Player** — constructorul mai nou. ThIDE scrie scena ca date (un *plan de scenă*), iar un
   program fix din Blender o redă. El scrie textele în a doua etapă, randează previzualizările și
   poate continua o randare care a fost oprită.
-- **Generator** — constructorul mai vechi, păstrat așa cum era, pentru comparație. Este folosit
+- **Generator de scripturi** — constructorul mai vechi, păstrat așa cum era, pentru comparație. Este folosit
   doar când îl alegeți aici. Scrie câte un script Python pentru fiecare scenă. Desenează titlul,
   scara grafică, săgeata nordului și legenda adâncimii ca obiecte în scenă (unde un perete le
   poate ascunde) și nu desenează un cadru de titlu, linia de credite, subtitrările, cadrul de
@@ -583,12 +591,15 @@ arată aceeași scenă.
   care conține planul, playerul, rețelele de poligoane și imaginile: un fișier mult mai mare,
   care se randează oriunde, în `out` de lângă el.
 
-  Cu *Generator* ales drept constructor de scenă, exportul este în schimb cel al generatorului de
+  Cu *Generator de scripturi* ales drept constructor de scenă, exportul este în schimb cel al generatorului de
   scripturi: `render.py` cu `model.ply` și `scene-meta.json`, fără ceea ce acel constructor nu
   desenează (panoul le enumeră). *Script autonom* pune atunci datele scenei în script, iar
   **Include rețelele de poligoane în script** și rețeaua de poligoane; această a doua opțiune
   este doar pentru generatorul de scripturi, fiindcă fișierul unic al playerului își conține
   întotdeauna rețelele.
+
+  Din linia de comandă, `--export <dosar>` scrie același lucru: dosarul playerului, un singur
+  script cu `--one-file` și scriptul generatorului cu `--builder generator` (vedeți mai jos).
 - **Deschide în Blender…** — deschide scena pe care ar arăta-o **Randează** în fereastra Blender,
   văzută prin camera ei, ca să vă uitați în jur sau să o modificați manual. Nu se randează nimic;
   o randare pe care o porniți de acolo scrie în **Folder randare**. Scena este construită de
@@ -598,7 +609,9 @@ arată aceeași scenă.
   deschide o scenă care are texte.
 - **Salvează** presetarea — stochează setările curente ca presetare proprie, cu tot cu texte și
   subtitrări; aceasta apare în bandă alături de cele integrate și se păstrează de la o sesiune la
-  alta.
+  alta. Numele unei presetări integrate (în orice formă a literelor) este refuzat, iar un disc pe
+  care nu se poate scrie este semnalat în panou. În fila Storyboard păstrează aspectul secvenței
+  selectate, cu ieșirea filmului.
 
 ## Din linia de comandă
 
@@ -606,7 +619,7 @@ Același motor este disponibil fără interfață grafică prin CLI, pentru scri
 
 ```
 therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.json] \
-                    [--out <dir>] [--export <dir>] [--blender <path>] \
+                    [--out <dir>] [--export <dir> [--one-file]] [--blender <path>] \
                     [--draft] [--builder auto|player|generator] \
                     [--keep-frames] [--compose-only] [--frames <dir>] \
                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] \
@@ -618,7 +631,10 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
                     [--route <from>[:<via>...]:<to> [--route-seconds <n>]]
 ```
 
-`--export` scrie scriptul și resursele fără a rula Blender; altfel randează. Căile fișierelor
+`--export` scrie scena pentru Blender fără a-l rula, cum face **Exportă scriptul…** din panou:
+implicit dosarul playerului, cu `--one-file` un singur `render.py` care le conține pe toate, iar cu
+`--builder generator` scriptul `render.py` al generatorului de scripturi, cu rețeaua lui
+(`--readme-language ro` scrie în română fișierul README al dosarului). Altfel randează. Căile fișierelor
 produse sunt afișate la ieșirea standard; codul de ieșire este `0` la succes, `1` la eșecul
 randării, `2` la o eroare de utilizare sau de specificație.
 
@@ -642,7 +658,9 @@ randării, `2` la o eroare de utilizare sau de specificație.
 - `--route e1:b7:s40` zboară camera de la `e1`, prin `b7`, până la `s40`, de-a lungul galeriilor,
   oricare ar fi camera presetării: vedeți [Zborul pe un traseu între stații](#zborul-pe-un-traseu-între-stații).
   Traseul dă durata clipului; `--route-seconds 45` îl potrivește în schimb în 45 de secunde. Merge
-  și cu `--bundle`.
+  și cu `--bundle` și cu o singură secvență a unui storyboard (`--shot`), dar nu cu un
+  `--storyboard`, un `--composite` sau un `--tour` întreg, ale căror secvențe își spun singure
+  camera: acolo comanda îl refuză.
 - **Marcaje pentru piste.** O presetare sau o specificație care marchează pistele (*Full
   flythrough* o face) marchează stațiile pe care modelul însuși le semnalează drept continuări,
   semnalări pe care le conține un fișier `.lox` (în Therion: `station <nume> "<comentariu>"
@@ -652,16 +670,17 @@ randării, `2` la o eroare de utilizare sau de specificație.
   modelul nu o are este lăsată deoparte. Merge și cu `--bundle`.
 - `--annotations notes.json` adaugă etichetele, notele cu linie, marcajele și fotografiile dintr-un
   fișier la cele ale presetării sau ale specificației: vedeți
-  [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii). Merge și cu `--bundle`. Un
-  script scris cu `--export` este al generatorului de scripturi și le omite, așa cum omite
-  subtitrările; comanda spune acest lucru.
+  [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii). Merge și cu `--bundle` și
+  cu `--export`. Scriptul generatorului de scripturi (`--export` cu `--builder generator`) le
+  omite, așa cum omite subtitrările; comanda spune acest lucru.
 - `--reveal date`, `--reveal order` sau `--reveal distance` arată peștera parte cu parte: vedeți
   [Dezvăluirea peșterii, parte cu parte](#dezvăluirea-peșterii-parte-cu-parte). `--reveal-from
   main.12` măsoară o dezvăluire după distanță de la acea stație, în locul intrărilor;
   `--reveal-dates cave.3d` numește fișierul cu datele topografierii pentru un model care nu le are;
   `--reveal-seconds 1-9.5` spune când începe dezvăluirea și când este acolo toată peștera. Peste o
   presetare care dezvăluie deja, `--reveal` schimbă după ce se dezvăluie și îi păstrează timpii.
-  Merge și cu `--bundle`; un script scris cu `--export` o omite, iar comanda spune acest lucru.
+  Merge și cu `--bundle` și cu `--export`; scriptul generatorului de scripturi o omite, iar comanda
+  spune acest lucru.
 - **O randare care a fost oprită continuă.** O randare cu texte își ține cadrele în
   `<out>/<nume>-frames` cât timp rulează. Rulați din nou aceeași comandă după ce a fost oprită (sau
   după ce a fost oprit calculatorul): cadrele care există sunt păstrate și se randează doar cele
@@ -926,7 +945,9 @@ listează numere de ramificații, cele mai dorite întâi: când filmul depășe
 laterale pe care le numește sunt lăsate deoparte după celelalte, de la coada listei în sus.
 `language` al unui storyboard (`en` sau `ro`) este limba textelor pe care filmul le scrie singur,
 textele din colț ale unui parcurs și notele pistelor lui. Când lipsește, ele sunt în limba ThIDE când
-panoul randează filmul și în engleză din linia de comandă.
+panoul randează filmul sau când un agent îl randează prin uneltele ThIDE (un agent poate numi una,
+`language`), și în engleză din linia de comandă (`--tour-language` numește una pentru o presetare
+compusă).
 
 ```json
 { "version": 1, "name": "{cave}: parcursul meu", "language": "ro",
@@ -963,15 +984,25 @@ Panoul are două file deasupra setărilor. **Scenă** este o singură randare, c
   începe; săgețile o mută, iar ✕ o elimină. Banda de sub listă arată secvențele de-a lungul
   filmului.
 - Butonul cu numărul unui rând selectează secvența: setările panoului de mai jos o arată atunci,
-  iar orice schimbare făcută acolo se scrie în ea. **Începe cu** alege o tăietură, o trecere prin
-  negru sau o suprapunere și secundele ei. Setările de ieșire (mărimea, cadrele pe secundă,
-  numele fișierului) sunt ale filmului.
+  iar orice schimbare făcută acolo la ce ține de o secvență (camera și durata, lumina, motorul,
+  dezvăluirea, etichetele, adnotările, titlul, creditele, subtitrările, scara grafică, săgeata
+  nordului și legenda adâncimii) se scrie în ea. O secvență care nu se poate randa așa cum este
+  (fără durată, de exemplu) își arată tot setările ei, ca să fie corectată. **Începe cu** alege o
+  tăietură, o trecere prin negru sau o suprapunere și secundele ei.
+- Ce nu ține de nicio secvență este al filmului și se editează acolo, fie că este selectată o
+  secvență, fie că nu: **Teren** și opacitatea lui, **Ieșire din negru** și **Intrare în negru**,
+  cadrele pe secundă și setările de ieșire (felul, mărimea, numele fișierului); cadrul de final
+  este al filmului, mai jos. Fără o secvență selectată, setările arată presetarea din care s-ar
+  adăuga o secvență și se pot schimba doar cele ale filmului.
+- Fila Storyboard nu schimbă niciodată scena din fila Scenă: fiecare își păstrează setările, iar
+  trecând de la o filă la alta le găsiți așa cum le-ați lăsat.
 - **Filmul**, sub secvențe: **Titlu** (cu un **Subtitlu** și secundele din **Cadru de titlu**,
   pentru un titlu care stă în mijlocul imaginii înainte să se stingă; 0 îl ține sus), **Cadru de
   final** (cu un subtitlu și secundele lui; gol înseamnă niciunul) și **Limba textelor**: limba în
   care un parcurs își scrie textele din colț și notele pistelor. *Ca interfața* urmează limba ThIDE
   (engleza, când un film nu poate fi scris în ea). O presetare compusă își aduce titlul, cadrul de
-  final și limba când este adăugată unui film gol.
+  final, limba, terenul, trecerile din și în negru, cadrele pe secundă și ieșirea când este
+  adăugată unui film gol, așa că se randează ca din linia de comandă sau prin uneltele unui agent.
 - **Salvează ca presetare compusă** păstrează filmul ca presetare compusă proprie, sub numele și
   descrierea tastate alături; lista presetărilor compuse o oferă de atunci, iar linia de comandă
   îi primește fișierul (`--composite`). Presetările dumneavoastră pe care le numesc secvențele
@@ -1197,9 +1228,10 @@ dosar partajat sincronizat, un dosar SFTP) rămâne la alegerea dumneavoastră.
 - Pentru a opri o lucrare, puneți un fișier gol `<lucrare>.cancel` lângă arhiva ei. Cadrele ei sunt
   păstrate; ștergeți fișierul și lucrarea continuă cu ele. Un executor oprit (Ctrl+C) continuă și
   el cu cadrele lucrării la următoarea pornire.
-- `--once` se oprește când dosarul de intrare este gol; `--blender` numește Blender-ul;
-  `--max-hours`, `--max-triangles` și `--max-bundle-gb` stabilesc limitele unei lucrări;
-  `--scratch` este locul unde pachetele sunt dezarhivate și cadrele păstrate.
+- `--once` se oprește când dosarul de intrare este gol; `--poll <secunde>` (5) spune cât de des se
+  uită în dosarul de intrare; `--blender` numește Blender-ul; `--max-hours`, `--max-triangles` și
+  `--max-bundle-gb` stabilesc limitele unei lucrări; `--scratch` este locul unde pachetele sunt
+  dezarhivate și cadrele păstrate.
 
 **Securitate.** Un pachet este o colecție de date, iar executorul îl tratează ca atare. Nu rulează
 niciodată `render.py`, `render.sh` sau `thide_player` din pachet: citește planurile, rețelele de
@@ -1232,7 +1264,8 @@ serverul. Protocolul este descris în
   niciodată în jurnal.
 - `--node-name` este numele afișat de server (implicit numele calculatorului); `--scratch` este
   locul unde se descarcă pachetele și se păstrează cadrele (câte un dosar pentru fiecare lucrare);
-  `--poll-seconds` (30) este cât așteaptă o lucrare înainte de a întreba din nou; `--once` face o
+  `--poll-seconds` (30; `--poll` este aceeași opțiune) este cât așteaptă o lucrare înainte de a
+  întreba din nou; `--once` face o
   singură cerere și randează ce primește. `--blender`, `--modules` și limitele sunt cele ale
   executorului cu dosare; limitele unei lucrări le pot doar micșora.
 - Filmul este scris în containerul cerut de lucrare: implicit MP4 (H.264) sau WebM, pe care un
@@ -1298,10 +1331,10 @@ un utilizator separat sau un container ca mai sus.
 |---|---|
 | *„Blender nu a fost găsit”* | Instalați Blender 4.2+ sau setați calea în **Setări → Unelte externe**. |
 | *„…prea veche…”* | Actualizați Blender la 4.2 sau mai nou. |
-| Lista derulantă a sursei este goală | Compilați mai întâi proiectul (**Compilare → Compilează**) sau bifați **Folosește un fișier extern**. |
+| Lista derulantă a sursei este goală | Se întâmplă doar fără un proiect deschis (cu unul, *Modelul proiectului* este primul și exportă modelul când e nevoie): compilați mai întâi proiectul (**Compilare → Compilează**) sau bifați **Folosește un fișier extern**. |
 | Randarea a eșuat | Deschideți **jurnalul lucrării** din notificare sau din panou — conține întreaga ieșire a Blender. |
 | Randarea EEVEE eșuează pe un server | Schimbați motorul la **Cycles**. |
-| *„…the player lights a scene with a Radiance .hdr or an OpenEXR .exr image…”*, *„…cannot travel with the plan…”* | Imaginea iluminării HDRI este alt fel de imagine, este deteriorată sau este prea mare (mesajul spune care). Folosiți un fișier `.hdr` sau `.exr`; sau puneți **Constructor de scenă** pe *Generator*, care încarcă orice imagine pe care o citește Blender. |
+| *„…the player lights a scene with a Radiance .hdr or an OpenEXR .exr image…”*, *„…cannot travel with the plan…”* | Imaginea iluminării HDRI este alt fel de imagine, este deteriorată sau este prea mare (mesajul spune care). Folosiți un fișier `.hdr` sau `.exr`; sau puneți **Constructor de scenă** pe *Generator de scripturi*, care încarcă orice imagine pe care o citește Blender. |
 | Fiecare randare are numele peșterii scris sus | Îl scriu presetările integrate. Goliți câmpul **Titlu** (sau `--title ""`). |
 | Titlul este un cod scurt, nu numele peșterii | Este numele pe care îl are modelul: dați celui mai din exterior `survey` al proiectului un `-title` sau scrieți titlul pe care îl vreți. |
 | Previzualizarea nu are teren | Un teren transparent nu apare în previzualizări; randarea îl desenează. |

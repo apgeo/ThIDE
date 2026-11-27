@@ -34,6 +34,15 @@ public class ResxParityTests
             $"Missing in Strings.ro.resx: {string.Join(", ", missingInRo)}; missing in Strings.resx: {string.Join(", ", missingInEn)}");
     }
 
+    [Fact]
+    public void Romanian_writes_s_and_t_with_a_comma_below_never_a_cedilla()
+    {
+        // ş ţ Ş Ţ (U+015F, U+0163, U+015E, U+0162) are the Turkish letters; Romanian has ș ț Ș Ț.
+        var cedilla = Read("Strings.ro.resx").Where(e => e.Value.IndexOfAny(['\u015F', '\u0163', '\u015E', '\u0162']) >= 0)
+            .Select(e => e.Key).Order().ToList();
+        Assert.True(cedilla.Count == 0, $"A cedilla in: {string.Join(", ", cedilla)}");
+    }
+
     [Theory]
     [InlineData("Strings.resx")]
     [InlineData("Strings.ro.resx")]
