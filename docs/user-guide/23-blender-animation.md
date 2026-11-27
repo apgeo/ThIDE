@@ -859,8 +859,10 @@ In a storyboard file, the symbols are two keys of a route camera:
 
 `"branches": "auto"` makes the shot a tour of the cave's branches, from the route's `from` (the
 entrance when it is left out), within the shot's seconds, with the look of its preset; the tour's
-shots take its place. `"from": "newest"` flies the passage of the last survey day, from its end
-nearer the entrance to its other end; a model without survey dates flies the main passage instead.
+shots take its place. Every one of them keeps the shot's annotations (or the storyboard's) beside
+the tour's markers at its leads, and the first keeps the shot's texts. `"from": "newest"` flies the
+passage of the last survey day, from its end nearer an entrance (the nearest, in a cave with
+several) to its other end; a model without survey dates flies the main passage instead.
 What was done is in the render's warnings. Your own composites are kept beside your presets, as
 `*.composite.json` files (a `name`, a `description` and the `storyboard`): **Save as composite** in
 the [Storyboard tab](#the-storyboard-tab) writes one.
