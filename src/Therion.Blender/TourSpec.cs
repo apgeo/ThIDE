@@ -66,6 +66,12 @@ public sealed record TourSpec
     /// <summary>Left out whatever the rules say.</summary>
     public IReadOnlyList<string> Exclude { get; init; } = [];
 
+    /// <summary>Branch ids ("B3"), the one most wanted first. When the tour is over its time and
+    /// side passages have to be left out, those named here go after the others and from the
+    /// bottom of the list up; among the others the worse rank goes first, as without it. Null is
+    /// none (the rank alone).</summary>
+    public IReadOnlyList<string>? Priority { get; init; }
+
     /// <summary>1 visits what hangs on the main passage; 2 also what hangs on those.</summary>
     public int Depth { get; init; } = 1;
 

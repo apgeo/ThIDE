@@ -22,6 +22,29 @@ The plan stays **version 1**; the player does not change.
 - `docs/dev/render-worker-protocol.md`: a server never needs 403 (bad or withdrawn tokens are
   401); the bundle GET answers 409 when the node does not hold the job.
 
+## 2026-11-27 — a composite's tour choices and language
+
+The plan stays **version 1**, the storyboard **version 1**; the player does not change.
+
+### Breaking changes
+- None. `RouteParams` has three more keys and `Storyboard` one, each written only when set, so
+  the JSON of a route or a storyboard without them is what it was. A scene's route that has one of
+  the three is refused by `CameraRoutes.Resolve` (they mean nothing outside a tour).
+
+### Additive API
+- **`RouteParams.Include`, `Exclude`, `Priority`** (and `HasTourChoices`): with `"branches":
+  "auto"`, the side passages a tour shot visits or leaves out by hand, and branch ids in the order
+  they are wanted. `StoryboardValidator` refuses them on a route that is no tour.
+- **`TourSpec.Priority`**: branch ids, the most wanted first. When the tour is over its time, the
+  side passages it names are left out after the others, from the bottom of the list up (within
+  the same kind: a look, a visit by the rules, a visit by hand). An id that names nothing is a
+  notice.
+- **`Storyboard.Language`** (`en`, `ro`; null is the renderer's): the language of the texts the
+  film writes itself. `StoryboardExpander.Expand` takes it over its `language` argument;
+  `StoryboardValidator` refuses another; the schema has the key.
+- **`StoryboardExpander.TourSpecOf(storyboard, index, presets, language)`**: the tour a tour shot
+  stands for, as rules, to make its branch table from (`TourBuilder.Build`).
+
 ## 2026-11-27 — fixes from a Windows machine with a GPU
 
 The plan stays **version 1** and the player stays **1.12**: no key is new or changed.

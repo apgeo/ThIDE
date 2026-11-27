@@ -216,6 +216,27 @@ public sealed record RouteParams
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? Branches { get; init; }
 
+    /// <summary>With <see cref="Branches"/>: the side passages the tour visits whatever its rules
+    /// say, as <see cref="TourSpec.Include"/> names them (a branch id such as "B3", a station in
+    /// it, a survey). Written only when set.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? Include { get; init; }
+
+    /// <summary>With <see cref="Branches"/>: the side passages the tour leaves out whatever its
+    /// rules say (<see cref="TourSpec.Exclude"/>). Written only when set.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? Exclude { get; init; }
+
+    /// <summary>With <see cref="Branches"/>: branch ids, the one most wanted first
+    /// (<see cref="TourSpec.Priority"/>): when the tour is over its time, the side passages are
+    /// left out from the bottom of this list up. Written only when set.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? Priority { get; init; }
+
+    /// <summary>True when the route says something only a tour (<see cref="Branches"/>) reads.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool HasTourChoices => Include is { Count: > 0 } || Exclude is { Count: > 0 } || Priority is { Count: > 0 };
+
     /// <summary>As <see cref="FlythroughParams.LookAheadMeters"/>.</summary>
     public double LookAheadMeters { get; init; } = 6.0;
 

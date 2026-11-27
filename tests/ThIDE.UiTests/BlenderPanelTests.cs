@@ -567,6 +567,44 @@ public class BlenderPanelTests
     }
 
     [UiFact]
+    public async Task The_storyboard_tab_edits_the_films_texts_saves_a_composite_and_lists_a_tours_branches()
+    {
+        if (!OnPath("therion")) return;
+        var dir = await BuiltDemoCaveAsync();
+        await using var app = await ThideApp.StartAsync(dir, "demo.thconfig");
+        await OpenPanelAsync(app, Path.Combine(dir, "renders"));
+        await app.InvokeAsync("#Blender.Tab.Storyboard", "select");
+        await app.WaitAsync("#Blender.AddComposite");
+
+        // The Grand tour: an orbit, then a tour of the branches.
+        // The built-in composites come first: Showcase, then the Grand tour.
+        await app.KeyAsync("#Blender.Composite", "Down");
+        Assert.Contains("Grand tour", await app.TextOfAsync("#Blender.Composite"), StringComparison.Ordinal);
+        await app.InvokeAsync("#Blender.AddComposite");
+        await app.WaitAsync("#Blender.Shot.2.Name");
+        Assert.Equal("{cave}", await app.TextOfAsync("#Blender.FilmTitle"));
+
+        // The tour shot lists its side passages, worked out from the model.
+        await app.InvokeAsync("#Blender.Shot.2.Select");
+        await app.WaitAsync("#Blender.ListBranches;state:enabled");
+        await app.InvokeAsync("#Blender.ListBranches");
+        await app.WaitAsync("#Blender.Branch.1.Visit");
+        Assert.False(string.IsNullOrEmpty(await app.TextOfAsync("#Blender.TourSummary")));
+        Directory.CreateDirectory(ThideApp.ArtifactsDir);
+        await File.WriteAllBytesAsync(Path.Combine(ThideApp.ArtifactsDir, "blender-panel-branches.png"), await app.ScreenshotAsync("#Blender.Storyboard"));
+
+        // The film's texts, and the film kept as a composite that the list then offers.
+        await app.SetTextAsync("#Blender.FilmTitle", "Invented title");
+        await app.SetTextAsync("#Blender.FilmEndCard", "Invented end card");
+        await app.SetTextAsync("#Blender.CompositeName", "Invented film");
+        await app.WaitAsync("#Blender.SaveComposite;state:enabled");
+        await app.InvokeAsync("#Blender.SaveComposite");
+        await app.WaitAsync("role:Text;name~:Invented film");
+        Assert.Contains("Invented film", await app.TextOfAsync("#Blender.Composite"), StringComparison.Ordinal);
+        Assert.Equal("", await app.TextOfAsync("#Blender.CompositeName"));
+    }
+
+    [UiFact]
     public async Task Render_with_the_real_Blender_writes_a_video()
     {
         if (!OnPath("therion") || !OnPath("blender")) return;

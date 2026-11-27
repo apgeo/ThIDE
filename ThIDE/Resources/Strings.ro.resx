@@ -2530,4 +2530,44 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_Queue_Running" xml:space="preserve"><value>se randează</value></data>
   <data name="Blender_Status_RestartRendering" xml:space="preserve"><value>O randare întreruptă la închiderea ThIDE continuă; o randare pornită acum o așteaptă.</value></data>
   <data name="Blender_UI_ShotSelect" xml:space="preserve"><value>Selectați secvența ca s-o editați</value></data>
+  <data name="Blender_UI_FilmTexts" xml:space="preserve"><value>Filmul</value></data>
+  <data name="Blender_UI_FilmTexts_Hint" xml:space="preserve"><value>Titlul și cadrul de final sunt ale filmului; {cave} ține locul numelui peșterii.</value></data>
+  <data name="Blender_UI_FilmTitleSeconds" xml:space="preserve"><value>Cadru de titlu (secunde)</value></data>
+  <data name="Blender_UI_FilmTitleSeconds_Tip" xml:space="preserve"><value>Cât stă titlul în mijlocul imaginii înainte să se stingă; 0 îl ține sus pe tot filmul.</value></data>
+  <data name="Blender_UI_EndCardSubtitle" xml:space="preserve"><value>Subtitlul cadrului de final</value></data>
+  <data name="Blender_UI_FilmLanguage" xml:space="preserve"><value>Limba textelor</value></data>
+  <data name="Blender_UI_FilmLanguage_Tip" xml:space="preserve"><value>Limba în care un parcurs își scrie textele („Galerie laterală B3 · 96 m”, notele pistelor). Ca interfața: limba ThIDE, dacă un film poate fi scris în ea, altfel engleza.</value></data>
+  <data name="Blender_UI_FilmLanguageUi" xml:space="preserve"><value>Ca interfața</value></data>
+  <data name="Blender_UI_FilmLanguageEn" xml:space="preserve"><value>English</value></data>
+  <data name="Blender_UI_FilmLanguageRo" xml:space="preserve"><value>Română</value></data>
+  <data name="Blender_UI_CompositeName" xml:space="preserve"><value>Numele presetării compuse</value></data>
+  <data name="Blender_UI_CompositeDescription" xml:space="preserve"><value>Descriere</value></data>
+  <data name="Blender_UI_SaveComposite" xml:space="preserve"><value>Salvează ca presetare compusă</value></data>
+  <data name="Blender_UI_SaveComposite_Tip" xml:space="preserve"><value>Păstrează filmul ca presetare compusă proprie, lângă presetările dvs.; lista presetărilor compuse o oferă apoi. Presetările dvs. pe care le numesc secvențele sunt scrise în ele.</value></data>
+  <data name="Blender_Composite_NameBuiltIn" xml:space="preserve"><value>O presetare compusă inclusă are acest nume: alegeți altul.</value></data>
+  <data name="Blender_Status_CompositeSaved" xml:space="preserve"><value>Presetarea compusă „{0}” a fost salvată.</value></data>
+  <data name="Blender_UI_Branches" xml:space="preserve"><value>Galeriile laterale ale parcursului</value></data>
+  <data name="Blender_UI_Branches_Hint" xml:space="preserve"><value>Cele mai dorite întâi: când filmul depășește timpul, cele de jos sunt lăsate deoparte primele. Vizitați sau lăsați deoparte una oricum ar decide regulile parcursului.</value></data>
+  <data name="Blender_UI_ListBranches" xml:space="preserve"><value>Arată galeriile</value></data>
+  <data name="Blender_UI_ListBranches_Tip" xml:space="preserve"><value>Citește modelul și calculează parcursul așa cum îl va calcula randarea: galeriile laterale și ce face filmul cu fiecare.</value></data>
+  <data name="Blender_UI_BranchVisit" xml:space="preserve"><value>Vizită</value></data>
+  <data name="Blender_UI_BranchUp" xml:space="preserve"><value>Mai dorită</value></data>
+  <data name="Blender_UI_BranchDown" xml:space="preserve"><value>Mai puțin dorită</value></data>
+  <data name="Blender_Branch_VisitAuto" xml:space="preserve"><value>după reguli</value></data>
+  <data name="Blender_Branch_VisitYes" xml:space="preserve"><value>vizitează</value></data>
+  <data name="Blender_Branch_VisitNo" xml:space="preserve"><value>lasă deoparte</value></data>
+  <data name="Blender_Branch_KindBranch" xml:space="preserve"><value>ramificație</value></data>
+  <data name="Blender_Branch_KindBypass" xml:space="preserve"><value>ocolire</value></data>
+  <data name="Blender_Branch_ModeCut" xml:space="preserve"><value>parcursă, tăietură înapoi · {0:0.#} s</value></data>
+  <data name="Blender_Branch_ModeReturn" xml:space="preserve"><value>parcursă dus-întors · {0:0.#} s</value></data>
+  <data name="Blender_Branch_ModeThrough" xml:space="preserve"><value>parcursă de la un capăt la altul · {0:0.#} s</value></data>
+  <data name="Blender_Branch_ModePeek" xml:space="preserve"><value>o privire de la ramificație · {0:0.#} s</value></data>
+  <data name="Blender_Branch_Continues" xml:space="preserve"><value>; continuă {0:0} m</value></data>
+  <data name="Blender_Branch_DroppedBudget" xml:space="preserve"><value>lăsată deoparte: depășește timpul filmului</value></data>
+  <data name="Blender_Branch_DroppedNotReached" xml:space="preserve"><value>neatinsă: drumul spre ea e scurtat</value></data>
+  <data name="Blender_Branch_WhyShort" xml:space="preserve"><value>lăsată deoparte: prea scurtă</value></data>
+  <data name="Blender_Branch_WhyOverCount" xml:space="preserve"><value>lăsată deoparte: peste numărul pe care îl ia parcursul</value></data>
+  <data name="Blender_Branch_WhyExcluded" xml:space="preserve"><value>lăsată deoparte de mână</value></data>
+  <data name="Blender_Branch_WhySkipped" xml:space="preserve"><value>trecută cu vederea</value></data>
+  <data name="Blender_Tour_Summary" xml:space="preserve"><value>Parcursul: {1:0.#} s, secvențe: {0}; galerii laterale: {2}.</value></data>
 </root>
