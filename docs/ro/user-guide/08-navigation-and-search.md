@@ -7,7 +7,7 @@ vă poate purta prin el după *sens*, nu doar după text. Aici se câștigă mul
 
 ## Paleta de comenzi
 
-**Ctrl+Shift+P** deschide Paleta de comenzi — o singură casetă de căutare pentru orice. Începeți să
+**Ctrl+Shift+P** deschide paleta de comenzi — o singură casetă de căutare pentru orice. Începeți să
 tastați numele unei comenzi (Compilează, Comută Diagnosticele, Formatează documentul, Comută la
 română…); fiecare comandă își arată în dreapta scurtătura curentă. Comenzile sunt grupate pe categorii
 (Fișier, Compilare, Vizualizare, Navigare, Căutare, Editare, Editor, Setări, Documentație, …).
@@ -33,7 +33,7 @@ Paleta servește și drept casetă de salt, prin **prefixe**:
 ## Salt la simbol
 
 - **Salt la simbol în document** și **Salt la simbol în spațiul de lucru** (butoane din bara de
-  instrumente, Paleta de comenzi sau prefixele `@` / `#`). Caută în topografii, stații, schițe și
+  instrumente, paleta de comenzi sau prefixele `@` / `#`). Caută în topografii, stații, schițe și
   hărți.
 - Peșteri foarte mari: numărul de stații listate este limitat, pentru ca aplicația să rămână
   receptivă ([Setări → Performanță](19-settings-and-preferences.md#performanță)).
@@ -47,9 +47,9 @@ Dintr-un identificator din editor (cardul informativ sau clic dreapta):
 | **Salt la definiție** | **F12** / clic / Ctrl+clic / dublu-clic* | Sare la locul unde este declarată o stație/topografie/un fișier. |
 | **Salt la echivalare** | — | Urmează un `equate` până la stația legată. |
 | **Salt la harta care îl agregă** | — | De la o schiță/hartă, sare la harta care o include. |
-| **Găsește referințele** | **Shift+F12** | **Editare → Găsește referințele**, meniul contextual sau cardul de la trecerea cu mouse-ul: deschide o listă cu fiecare folosire a simbolului în tot proiectul (înțelege stațiile și topografiile și răspunde și pentru un cuvânt oarecare); bara de stare vă spune când nu există altă folosire. |
+| **Găsește referințele** | **Shift+F12** | **Editare → Găsește referințele**, meniul contextual sau cardul informativ: deschide o listă cu fiecare folosire a simbolului în tot proiectul (înțelege stațiile și topografiile și răspunde și pentru un cuvânt oarecare); bara de stare vă spune când nu există altă folosire. |
 | **Următoarea apariție în acest fișier** | **Ctrl+Shift+F12** | Mută pe rând cursorul prin celelalte locuri din acest fișier unde apare același cuvânt. |
-| **Vezi definiția** | **Alt+F12** | Vedeți definiția în linie, fără să vă părăsiți locul. |
+| **Vezi definiția** | **Alt+F12** | Arată definiția în linie, fără să părăsiți locul în care vă aflați. |
 | **Salt la blocul pereche** | **Ctrl+]** | Între începutul unui bloc și `end…`-ul său. |
 | **Intră în fișierul inclus** | **Alt+↓** | Deschide fișierul spre care trimite o linie `input`. |
 
@@ -64,11 +64,11 @@ cursorului/navigării — săriți la o definiție, apoi reveniți direct unde e
 
 ## Redenumirea unui simbol peste tot
 
-**F2** (**Editare → Redenumește simbolul…** sau *Redenumește simbolul* din cardul de la trecerea cu
-mouse-ul / din paletă) redenumește o stație/topografie **în fiecare fișier care o referă**. Dacă este
-activată, o **previzualizare** listează mai întâi aparițiile (numărul lor în N fișiere), fiecare ca
-linia cu vechiul nume tăiat și cel nou îngroșat, pe care le puteți inspecta cu dublu-clic înainte de a
-aplica. Previzualizarea se activează/dezactivează în
+**F2** (**Editare → Redenumește simbolul…** sau *Redenumește simbolul* din cardul informativ / din
+paletă) redenumește o stație/topografie **în fiecare fișier care face referire la ea**. Dacă este
+activată, o **previzualizare** listează mai întâi aparițiile (numărul lor în N fișiere), fiecare
+afișată ca linia respectivă, cu vechiul nume tăiat și cel nou îngroșat; faceți dublu-clic pe una pentru
+a o inspecta înainte de a aplica. Previzualizarea se activează/dezactivează în
 [Setări → Editor](19-settings-and-preferences.md#editor). Stațiile pot fi redenumite și din grila
 Măsurători (clic dreapta → *Redenumește stația…*).
 
@@ -77,7 +77,7 @@ anulare al acelui fișier. Un fișier care **nu este deschis este rescris pe dis
 care să fie anulat — așa că redenumirea în ansamblu este înregistrată în
 [anularea la nivelul spațiului de lucru](05-interface-tour.md#anularea-unei-unelte-care-a-scris-în-mai-multe-fișiere):
 **Editare → Anulează modificarea din mai multe fișiere** (după o redenumire apare ca *Anulează:
-Redenumire*) readuce fiecare fișier. Dacă un fișier nu poate fi scris, nu se redenumește nimic, iar
+Redenumire*) readuce toate fișierele la starea anterioară. Dacă un fișier nu poate fi scris, nu se redenumește nimic, iar
 mesajul îl numește.
 
 ## Căutare și înlocuire
@@ -86,7 +86,7 @@ mesajul îl numește.
   a majusculelor, cuvânt întreg și expresii regulate.
 - **În mai multe fișiere:** **Căutare → Caută în fișiere…** (**Ctrl+Shift+F**) și **Căutare →
   Înlocuiește în fișiere…** (**Ctrl+Shift+H**) — alegeți un **director** și o **mască** de nume de
-  fișier, cu aceleași opțiuni de potrivire. Un **Înlocuiește tot** în mai multe fișiere care atinge mai
+  fișier, cu aceleași opțiuni de potrivire. Un **Înlocuiește tot** care atinge mai
   mult de un fișier cere mai întâi confirmarea, apoi scrie fișierele închise direct pe disc și poate fi
   **anulat/refăcut** ca o singură operație (butoanele din dialog și din notificare sau **Editare →
   Anulează modificarea din mai multe fișiere**).
