@@ -920,6 +920,87 @@ public sealed class BlenderRenderToolsTests : IDisposable
         Assert.Equal(RouteParams.AutoBranches, _blender.Renderer.LastStoryboard.Shots[1].Camera!.Route!.Branches);
     }
 
+    // ---- a film's language, a preset beside a storyboard, the builder and the image -------------
+
+    [Fact]
+    public async Task An_agents_composite_film_says_the_language_of_its_tour_texts()
+    {
+        var (render, status) = await ToolsAsync();
+        var started = await render.StartRender(preset: "grand tour", model: "out/cave.3d");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        // Neither the film nor the agent names one: the host's (the fake has no interface: English).
+        Assert.Equal("en", _blender.Renderer.LastStoryboard!.Language);
+
+        started = await render.StartRender(preset: "Grand tour", model: "out/cave.3d", language: "ro");
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+        Assert.Equal("ro", _blender.Renderer.LastStoryboard!.Language);
+    }
+
+    [Fact]
+    public async Task A_language_that_is_not_known_or_that_goes_with_one_scene_is_refused()
+    {
+        var (render, _) = await ToolsAsync();
+        var unknown = await render.StartRender(preset: "Grand tour", model: "out/cave.3d", language: "fr");
+        Assert.Equal(ToolErrorCodes.InvalidArgument, unknown.Error!.Code);
+        Assert.Contains("en, ro", unknown.Error.Message);
+        var scene = await render.StartRender(model: "out/cave.3d", language: "ro");
+        Assert.Equal(ToolErrorCodes.InvalidArgument, scene.Error!.Code);
+        Assert.Contains("storyboard", scene.Error.Message);
+        Assert.Empty(_blender.Requests);
+    }
+
+    [Fact]
+    public async Task A_storyboard_with_a_scene_preset_is_refused_not_ignored()
+    {
+        Directory.CreateDirectory(_fixture.PathTo("films"));
+        StoryboardSerializer.WriteFile(new Storyboard
+        {
+            Shots = [new ShotSpec { Name = "One", Preset = "Orbit showcase", Seconds = 2 }],
+            Output = new OutputSpec { Kind = OutputKind.Video, Width = 320, Height = 240, BaseName = "film" },
+        }, _fixture.PathTo("films", "one.storyboard.json"));
+        var (render, _) = await ToolsAsync();
+        var started = await render.StartRender(preset: "Map reveal", storyboard: "films/one.storyboard.json", model: "out/cave.3d");
+        Assert.False(started.Ok, "preset 'Map reveal' was silently ignored beside a storyboard");
+        Assert.Contains("Map reveal", started.Error!.Message);
+        Assert.Empty(_blender.Requests);
+    }
+
+    [Fact]
+    public async Task The_script_generator_lights_a_scene_by_any_picture()
+    {
+        Directory.CreateDirectory(_fixture.PathTo("skies"));
+        File.WriteAllBytes(_fixture.PathTo("skies", "evening.png"), [1, 2, 3]);
+        var (render, status) = await ToolsAsync();
+
+        var player = await render.StartRender(model: "out/cave.3d", hdri: "skies/evening.png");
+        Assert.Equal(ToolErrorCodes.InvalidArgument, player.Error!.Code);
+        Assert.Contains("builder: generator", player.Error.Message);
+
+        var generator = await render.StartRender(model: "out/cave.3d", hdri: "skies/evening.png", builder: "generator");
+        Assert.True(generator.Ok, generator.Error?.Message);
+        await FinishedAsync(status, generator.Data!.JobId);
+        Assert.EndsWith("evening.png", _blender.Renderer.LastSpec!.Lighting.HdriPath);
+    }
+
+    [Fact]
+    public async Task A_tour_language_that_is_not_known_is_refused_before_the_model_is_read()
+    {
+        var host = new WorkspaceHost();
+        await host.LoadAsync(_fixture.Thconfig);
+        var tools = new BlenderTourWriteTools(host, _blender);
+        var result = await tools.WriteTourStoryboard("films/t.storyboard.json", language: "fr");
+        Assert.False(result.Ok);
+        Assert.Contains("fr", result.Error!.Message);
+        var preset = await tools.WriteTourStoryboard("films/t.storyboard.json", preset: "No such look");
+        Assert.False(preset.Ok);
+        Assert.Contains("No such look", preset.Error!.Message);
+        var deep = await tools.WriteTourStoryboard("films/t.storyboard.json", depth: TourSpec.MaxDepth + 1);
+        Assert.Contains($"1 to {TourSpec.MaxDepth}", deep.Error!.Message);
+        Assert.Empty(_blender.Requests);
+    }
+
     // ---- fakes ----------------------------------------------------------------------------------
 
     private sealed class FakeBlenderHost(string workspaceModel, string jobRoot) : IBlenderRenderHost

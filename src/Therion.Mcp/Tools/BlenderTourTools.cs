@@ -104,7 +104,9 @@ internal sealed record TourArguments(
         }
         if (TourSeconds < 0 || BranchSeconds < 0 || MinLength < 0 || !double.IsFinite(TourSeconds + BranchSeconds + MinLength))
             return (null, "tourSeconds, branchSeconds and minLength are not negative.");
-        if (Depth is < 0 or > 16) return (null, "depth is 1 or more.");
+        if (Depth is < 0 or > TourSpec.MaxDepth) return (null, $"depth is 1 to {TourSpec.MaxDepth} (0 keeps the default, 1).");
+        if (!string.IsNullOrWhiteSpace(Language) && !TourBuilder.Languages.Contains(Language, StringComparer.Ordinal))
+            return (null, $"Unknown language '{Language}'. Use one of: {string.Join(", ", TourBuilder.Languages)}.");
         var via = (Via ?? []).Where(v => !string.IsNullOrWhiteSpace(v)).ToList();
         return (spec with
         {
@@ -138,6 +140,12 @@ internal static class TourPlans
 
         var (spec, problem) = arguments.ToSpec();
         if (spec is null) return Refuse(ToolErrorCodes.InvalidArgument, problem!);
+        // Checked before the model is read: reading it may run Therion first.
+        var presets = BlenderStatusTools.Presets(blender);
+        RenderPreset? Preset(string name) => presets.FirstOrDefault(p => p.Name == name);
+        if (Preset(spec.Preset) is null)
+            return Refuse(ToolErrorCodes.InvalidArgument,
+                $"Unknown preset '{spec.Preset}'. Use one of: {string.Join(", ", presets.Select(p => $"\"{p.Name}\""))}.");
 
         ModelSourceRequest request;
         if (!string.IsNullOrWhiteSpace(arguments.Model))
@@ -158,8 +166,6 @@ internal static class TourPlans
         try
         {
             var source = await blender.AcquireAsync(request, ct).ConfigureAwait(false);
-            var presets = BlenderStatusTools.Presets(blender);
-            RenderPreset? Preset(string name) => presets.FirstOrDefault(p => p.Name == name);
             var tour = await Task.Run(
                 () => TourBuilder.Build(GeometryStage.Build(CaveModelReader.ReadFile(source.Model.Path)), spec, source.Leads, Preset), ct).ConfigureAwait(false);
             if (StoryboardValidator.Validate(tour.Storyboard, Preset) is { Count: > 0 } errors)

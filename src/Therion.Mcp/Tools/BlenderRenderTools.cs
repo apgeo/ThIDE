@@ -2,6 +2,7 @@ using System.ComponentModel;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using Therion.Blender;
+using Therion.Blender.Plan;
 using Therion.Blender.Sources;
 using Therion.Cave3D.Parsing;
 
@@ -71,17 +72,19 @@ public sealed partial class BlenderRenderTools(IWorkspaceHost host, IBlenderRend
                + "output, or, when that is missing or older than the sources, a fresh export by Therion of "
                + "the model alone (the thconfig's system commands are left out). Outputs go to "
                + "outputDirectory in the workspace, or to a temporary folder that render_status names. "
-               + "draft: true renders a quick preview first (seconds, not minutes): look at it before the "
-               + "long render. title, credits, endCard and captions are written over the picture; a movie "
+               + "draft: true renders only a quick preview instead (seconds, not minutes): look at it, then start "
+               + "the long render. title, credits, endCard and captions are written over the picture; a movie "
                + "with captions also gets them as .srt and .vtt subtitles. annotations names a JSON file of "
                + "labels, callouts, markers and photos that stand in the scene. reveal shows the cave part "
                + "by part while the clip runs: by survey date, survey order or distance from an entrance. "
                + "hdri lights the scene by an image all round it, which is also its background. storyboard renders a "
                + "film of several shots from a storyboard file instead of one scene, and a preset that is a composite "
-               + "(list_render_presets, composites) renders its film of this cave.")]
+               + "(list_render_presets, composites) renders its film of this cave; language is the language of the "
+               + "texts such a film writes itself.")]
     public async Task<ToolResult<RenderJobStatus>> StartRender(
-        [Description("Preset name from list_render_presets. Defaults to \"Orbit showcase\".")]
-        string preset = DefaultPreset,
+        [Description("Preset name from list_render_presets. Defaults to \"Orbit showcase\". A composite preset renders "
+                   + "its film; beside a storyboard only a composite's name is refused too, as two films.")]
+        string? preset = null,
         [Description("Workspace-relative .lox or .3d to render. Omit for the project's own model.")]
         string? model = null,
         [Description("video, frames, or still. Defaults to the preset's.")]
@@ -149,10 +152,21 @@ public sealed partial class BlenderRenderTools(IWorkspaceHost host, IBlenderRend
         double? hdriRotation = null,
         [Description(StoryboardHelp)]
         string? storyboard = null,
+        [Description(FilmLanguageHelp)]
+        string? language = null,
         CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
         if (error is not null) return ToolResult<RenderJobStatus>.Failure(error);
+
+        // Which builder first: it says which images an HDRI may be.
+        var chosen = SceneBuilder.Auto;
+        if (!string.IsNullOrWhiteSpace(builder) && !ToolEnums.TryParse(builder, out chosen))
+            return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument,
+                $"Unknown builder '{builder}'. Use one of: {ToolEnums.Names<SceneBuilder>()}.");
+        if (!string.IsNullOrWhiteSpace(language) && !TourBuilder.Languages.Contains(language.Trim(), StringComparer.Ordinal))
+            return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument,
+                $"Unknown language '{language}'. Use one of: {string.Join(", ", TourBuilder.Languages)}.");
 
         // A film of several shots: from a storyboard file, or a composite preset made into this cave's.
         var composite = Composite(preset);
@@ -169,20 +183,25 @@ public sealed partial class BlenderRenderTools(IWorkspaceHost host, IBlenderRend
             if (!string.IsNullOrWhiteSpace(storyboard) && composite is not null)
                 return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument,
                     $"'{composite.Name}' is a composite preset, a film of its own: name it or a storyboard file, not both.");
-            return StartFilm(snapshot!.Root, storyboard, composite, model, width, height, outputDirectory, baseName, reExport, draft, builder);
+            // A scene preset's look is no storyboard's: its shots name their own presets.
+            if (!string.IsNullOrWhiteSpace(storyboard) && !string.IsNullOrWhiteSpace(preset))
+                return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument,
+                    $"A storyboard's shots name their presets: '{preset}' would be left unused. Leave preset out, or name it in a shot.");
+            return StartFilm(snapshot!.Root, storyboard, composite, model, width, height, outputDirectory, baseName, reExport, draft, builder,
+                string.IsNullOrWhiteSpace(language) ? null : language.Trim());
         }
+        if (!string.IsNullOrWhiteSpace(language))
+            return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument,
+                "language is the language of the texts a film writes itself: it goes with a storyboard or a composite preset. "
+                + "One scene's texts are the ones you give.");
 
-        var (plan, refused) = Plan(snapshot!.Root, preset, model, outputKind, width, height, durationSeconds,
+        var (plan, refused) = Plan(snapshot!.Root, preset ?? DefaultPreset, model, outputKind, width, height, durationSeconds,
             samples, outputDirectory, baseName, reExport, needsDirectory: false,
             new RenderTexts(title, credits, endCard, endCardSeconds, captions), annotations,
-            new RenderReveal(reveal, revealFrom, revealDates), new RenderLight(hdri, hdriStrength, hdriRotation));
+            new RenderReveal(reveal, revealFrom, revealDates), new RenderLight(hdri, hdriStrength, hdriRotation), chosen);
         if (refused is not null) return ToolResult<RenderJobStatus>.Failure(refused);
 
-        // Which builder, and whether it can build this scene, before a job is started for it.
-        var chosen = SceneBuilder.Auto;
-        if (!string.IsNullOrWhiteSpace(builder) && !ToolEnums.TryParse(builder, out chosen))
-            return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument,
-                $"Unknown builder '{builder}'. Use one of: {ToolEnums.Names<SceneBuilder>()}.");
+        // Whether the builder can build this scene, before a job is started for it.
         var options = new RenderOptions { Builder = chosen, Draft = draft };
         if (SceneBuilders.Choose(plan!.Spec, options).Refusal is { } refusal)
             return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument, refusal);
@@ -327,16 +346,17 @@ public sealed partial class BlenderRenderTools(IWorkspaceHost host, IBlenderRend
         if (error is not null) return ToolResult<RenderScriptExport>.Failure(error);
         var root = snapshot!.Root;
 
-        var (plan, refused) = Plan(root, preset, model, outputKind, width, height, durationSeconds,
-            samples, outputDirectory, baseName, reExport, needsDirectory: true,
-            new RenderTexts(title, credits, endCard, endCardSeconds, captions), annotations,
-            new RenderReveal(reveal, revealFrom, revealDates), new RenderLight(hdri, hdriStrength, hdriRotation));
-        if (refused is not null) return ToolResult<RenderScriptExport>.Failure(refused);
-
         var chosen = SceneBuilder.Auto;
         if (!string.IsNullOrWhiteSpace(builder) && !ToolEnums.TryParse(builder, out chosen))
             return ToolResult<RenderScriptExport>.Failure(ToolErrorCodes.InvalidArgument,
                 $"Unknown builder '{builder}'. Use one of: {ToolEnums.Names<SceneBuilder>()}.");
+
+        var (plan, refused) = Plan(root, preset, model, outputKind, width, height, durationSeconds,
+            samples, outputDirectory, baseName, reExport, needsDirectory: true,
+            new RenderTexts(title, credits, endCard, endCardSeconds, captions), annotations,
+            new RenderReveal(reveal, revealFrom, revealDates), new RenderLight(hdri, hdriStrength, hdriRotation), chosen);
+        if (refused is not null) return ToolResult<RenderScriptExport>.Failure(refused);
+
         var options = new ExportOptions { Builder = chosen, SingleFile = oneFile };
 
         int reported = 0;
@@ -401,7 +421,13 @@ public sealed partial class BlenderRenderTools(IWorkspaceHost host, IBlenderRend
 
     private const string HdriHelp =
         "Workspace-relative image the scene is lit by, laid all round it and seen behind the cave (an HDRI): a "
-        + "Radiance .hdr or an OpenEXR .exr file. Omit to keep the preset's lighting.";
+        + "Radiance .hdr or an OpenEXR .exr file (with builder: generator, any picture Blender reads). Omit to keep "
+        + "the preset's lighting.";
+
+    private const string FilmLanguageHelp =
+        "With a storyboard or a composite preset: the language of the texts the film writes itself (a tour's corner "
+        + "texts and the notes of its leads), en or ro. Omit for the film's own, else ThIDE's interface language, as "
+        + "its Blender panel does.";
 
     private const string HdriStrengthHelp =
         "With an hdri image: how brightly it shines; 1 is the image as it is. Omit to keep the preset's.";
@@ -418,7 +444,7 @@ public sealed partial class BlenderRenderTools(IWorkspaceHost host, IBlenderRend
         string root, string preset, string? model, string? outputKind, int width, int height,
         double durationSeconds, int samples, string? outputDirectory, string? baseName, bool reExport,
         bool needsDirectory, RenderTexts? texts = null, string? annotations = null, RenderReveal? reveal = null,
-        RenderLight? light = null)
+        RenderLight? light = null, SceneBuilder builder = SceneBuilder.Auto)
     {
         static (RenderPlan?, ToolError?) Refuse(string code, string message) => (null, new ToolError(code, message));
 
@@ -558,9 +584,11 @@ public sealed partial class BlenderRenderTools(IWorkspaceHost host, IBlenderRend
                     return Refuse(ToolErrorCodes.PathOutsideWorkspace, reason);
                 if (!File.Exists(image))
                     return Refuse(ToolErrorCodes.FileNotFound, $"No such file: {light.Image}");
-                if (!Therion.Blender.Plan.PlanEnvironmentImage.HasExtension(image))
+                // The player lights a scene by a .hdr or an .exr; the script generator loads any picture.
+                if (builder != SceneBuilder.Generator && !Therion.Blender.Plan.PlanEnvironmentImage.HasExtension(image))
                     return Refuse(ToolErrorCodes.InvalidArgument,
-                        $"'{light.Image}' is not an image a scene is lit by: name a Radiance .hdr or an OpenEXR .exr file.");
+                        $"'{light.Image}' is not an image the player lights a scene by: name a Radiance .hdr or an OpenEXR .exr file, "
+                        + "or build the scene with builder: generator, which loads any picture.");
                 lighting = lighting with { Rig = LightingRig.HdriFile, HdriPath = image };
             }
             else if (lighting.Rig != LightingRig.HdriFile)

@@ -35,6 +35,9 @@ public sealed class McpBlenderRenderHost(
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return []; }
     }
 
+    /// <summary>The interface's language, as the panel writes a film's own texts in it.</summary>
+    public string FilmLanguage => ViewModels.BlenderAnimationViewModel.InterfaceFilmLanguage;
+
     public Task<RenderSource> AcquireAsync(ModelSourceRequest request, CancellationToken ct = default) =>
         sources.AcquireAsync(request, ct);
 }

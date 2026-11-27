@@ -22,6 +22,13 @@ public interface IBlenderRenderHost
     IReadOnlyList<CompositePreset> UserComposites() => [];
 
     /// <summary>
+    /// The language a film's own texts (a tour's corner texts, the notes of its leads) are written in when
+    /// neither the film nor the agent names one: the host's interface language, as its own panel does
+    /// (<c>en</c> or <c>ro</c>); English for a host without one.
+    /// </summary>
+    string FilmLanguage => "en";
+
+    /// <summary>
     /// The model a render reads and the workspace leads to mark in it: the file
     /// <paramref name="request"/> names, or else the workspace's newest model (re-exported with Therion
     /// when the request allows it and the model is missing or older than the sources).

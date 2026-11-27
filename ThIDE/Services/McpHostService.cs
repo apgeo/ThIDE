@@ -82,6 +82,7 @@ public sealed class McpHostService : IMcpHostService
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly string _discoveryPath;
     private WebApplication? _app;
+    private bool _blenderOffered;   // the running server offers the Blender tools
     private int? _port;
     private McpEndpoint? _endpoint;
     private bool _disposed;
@@ -152,6 +153,14 @@ public sealed class McpHostService : IMcpHostService
         {
             if (wanted && _app is null) await StartCoreAsync(ct).ConfigureAwait(false);
             else if (!wanted && _app is not null) await StopCoreAsync().ConfigureAwait(false);
+            else if (wanted && BlenderWanted != _blenderOffered)
+            {
+                // The Blender module was turned on or off: the tools agents see follow it, which takes a
+                // new server (a tool list is fixed when one starts). Agents reconnect through the endpoint file.
+                _log.Info($"MCP server: restarting {(BlenderWanted ? "with" : "without")} the Blender render tools.");
+                await StopCoreAsync().ConfigureAwait(false);
+                await StartCoreAsync(ct).ConfigureAwait(false);
+            }
         }
         finally
         {
@@ -216,8 +225,10 @@ public sealed class McpHostService : IMcpHostService
             // The Build pane's gate, so an agent's run_build and the user's F5 / compile-on-save never
             // run Therion on the same project at once.
             if (_compileGate is not null) builder.Services.AddSingleton(_compileGate);
-            // The Blender panel's renderer and model sources: its presence adds the render tools.
-            if (_blender is not null) builder.Services.AddSingleton(_blender);
+            // The Blender panel's renderer and model sources: its presence adds the render tools. Only while
+            // the Blender module is on: turned off, agents cannot render either.
+            bool blender = BlenderWanted;
+            if (blender) builder.Services.AddSingleton(_blender!);
 
             // The workspace tools read the running IDE (T-03.2): the live session model with unsaved
             // buffers overlaid, marshalled onto the UI thread. A fresh host per server start, registered as
@@ -253,6 +264,7 @@ public sealed class McpHostService : IMcpHostService
             await app.StartAsync(ct).ConfigureAwait(false);
 
             _app = app;
+            _blenderOffered = blender;
             _port = port;
             _endpoint = new McpEndpoint(
                 port, token, Environment.ProcessId,
@@ -297,6 +309,10 @@ public sealed class McpHostService : IMcpHostService
     }
 
     // ---- helpers ----------------------------------------------------------------------------
+
+    /// <summary>True when the server is to offer the Blender render tools: the host can render and the
+    /// Blender module is on (Preferences).</summary>
+    private bool BlenderWanted => _blender is not null && _settings.Current.EnableBlenderAnimation;
 
     private string? SeedWorkspacePath()
     {

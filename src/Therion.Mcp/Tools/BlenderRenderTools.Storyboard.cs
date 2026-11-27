@@ -29,7 +29,7 @@ public sealed partial class BlenderRenderTools
 
     private ToolResult<RenderJobStatus> StartFilm(
         string root, string? file, CompositePreset? composite, string? model, int width, int height, string? outputDirectory,
-        string? baseName, bool reExport, bool draft, string? builder)
+        string? baseName, bool reExport, bool draft, string? builder, string? language)
     {
         static ToolResult<RenderJobStatus> Refuse(string code, string message) => ToolResult<RenderJobStatus>.Failure(code, message);
 
@@ -93,7 +93,9 @@ public sealed partial class BlenderRenderTools
         if (width > 0) output = output with { Width = width };
         if (height > 0) output = output with { Height = height };
         if (!string.IsNullOrWhiteSpace(baseName)) output = output with { BaseName = baseName.Trim() };
-        storyboard = storyboard with { Output = output };
+        // The language of the texts the film writes itself: the agent's, the film's own, else the host's
+        // interface language, as its panel does.
+        storyboard = storyboard with { Output = output, Language = language ?? storyboard.Language ?? blender.FilmLanguage };
         if (StoryboardValidator.Validate(storyboard with { Output = output with { OutputDirectory = directory.Length > 0 ? directory : "out" } })
             is { Count: > 0 } sized)
             return Refuse(ToolErrorCodes.InvalidArgument,
