@@ -6,6 +6,7 @@
 using Therion.Blender.Emit;
 using Therion.Blender.Execution;
 using Therion.Blender.Plan;
+using Therion.Blender.Player;
 using Therion.Blender.Sources;
 using Therion.Blender.Tests.SceneProbe;
 using Therion.Cave3D;
@@ -163,6 +164,53 @@ public class LargeSystemsTests
         var reveal = Assert.Single(plan.Changes!, c => c.Reveal is not null);
         Assert.Equal(new PlanChangeTarget { Role = ScenePlanBuilder.WallsRole }, reveal.Target);
         Assert.Empty(ScenePlanValidator.Validate(plan));
+    }
+
+    /// <summary>The large invented cave with a survey day for every leg, a week apart.</summary>
+    internal static CaveModel LargeDated()
+        => RevealFixtures.Dated(InventedCave.Build(InventedCaveSize.Large), (_, i) => new DateOnly(1960, 1, 1).AddDays(7 * i));
+
+    [Fact]
+    public void ARevealByDate_OfTheWallsInParts_HasItsCounterOnTheWalls_AndIsValidAndBundled()
+    {
+        var spec = SceneSpecTests.ValidSpec() with { Reveal = new RevealSpec { By = RevealBy.Date } };
+        var geometry = GeometryStage.Build(LargeDated(), new GeometryOptions { Reveal = new RevealOptions { Source = RevealSource.Date } });
+        var parts = Files(WallParts.Split(geometry));
+        Assert.True(parts.Count > 5, $"{parts.Count} parts");
+
+        // The plan: the counter (on by default for a reveal by date) names what the change reveals.
+        var plan = ScenePlanBuilder.FromSpec(WithParts(spec, parts), CameraFraming.FromGeometry(geometry), SceneMeta.Build(geometry));
+        var reveal = Assert.Single(plan.Changes!, c => c.Reveal is not null);
+        var counter = Assert.Single(plan.Texts!.Items, i => i.Counter is not null);
+        Assert.Equal(new PlanChangeTarget { Role = ScenePlanBuilder.WallsRole }, reveal.Target);
+        Assert.Equal(reveal.Target, counter.Counter!.Target);
+        Assert.Empty(ScenePlanValidator.Validate(plan));
+        // One mesh: the counter names the model by id, as before.
+        var whole = ScenePlanBuilder.FromSpec(WithParts(spec, []), CameraFraming.FromGeometry(geometry), SceneMeta.Build(geometry));
+        Assert.Equal(new PlanChangeTarget { Id = ScenePlanBuilder.ModelId }, Assert.Single(whole.Texts!.Items, i => i.Counter is not null).Counter!.Target);
+
+        // The bundle, from the model file, with the parts the size of the cave asks for.
+        string dir = Path.Combine(Path.GetTempPath(), $"thide-large-dated-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            string path = Path.Combine(dir, "cave.3d");
+            File.WriteAllBytes(path, RevealFixtures.As3d(LargeDated()));
+            var source = new ResolvedModelSource { Path = path, Format = CaveSourceFormat.Survex3d, Kind = ModelSourceKind.ExternalFile };
+            var content = RenderBundleWriter.FromModel(source, spec, Path.Combine(dir, "work"), draft: true, parts: null);
+            Assert.True(content.Plan.Models.Count(m => m.Role == ScenePlanBuilder.WallsRole) > 5);
+            Assert.Equal(new PlanChangeTarget { Role = ScenePlanBuilder.WallsRole },
+                Assert.Single(content.Plan.Texts!.Items, i => i.Counter is not null).Counter!.Target);
+            string zip = Path.Combine(dir, "large.zip");
+            RenderBundleWriter.WriteZip(content, zip);
+            var unpacked = RenderBundleReader.Unpack(zip, Path.Combine(dir, "unpacked"));
+            Assert.Empty(ScenePlanValidator.Validate(unpacked.Scene));
+            Assert.Contains(unpacked.Scene.Texts!.Items, i => i.Counter?.Target?.Role == ScenePlanBuilder.WallsRole);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
     }
 
     [Fact]

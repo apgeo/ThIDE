@@ -1,5 +1,72 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-27 — fixes in the core: a counter over walls in parts, routes, tours, names
+
+The plan stays **version 1** and this is player **1.13**. No plan key is new or changed; the player
+refuses some hand-written plans it used to read wrongly (below).
+
+### Breaking changes
+- None in the API. Checks refuse a little more (see *Validation*): a base name with `:`, `?`, `*`,
+  `<`, `>`, `|`, `"` or a control character, or a Windows device name (`CON`, `nul.x`), and a job
+  id, result file name, SHA-256, module name or role with a line break after it.
+
+### Fixed
+- **A reveal by date of a large cave can be rendered and bundled.** With the walls in parts
+  (`SourceSpec.Parts`, which `RenderOptions.Parts` gives a large cave by default), the reveal is
+  keyed by the role `walls`, but its counter (on by default for a reveal by date) still named the
+  model `CaveModel`: the plan failed its own check and `PlayerWriter` and the bundle writer
+  threw. The counter now names what the reveal reveals. **New:** `RevealPlanner.Plan(spec, meta,
+  frameCount, PlanChangeTarget target)` (the `string modelId` overload stays and names the id).
+  A bundle written before this fix for such a cave was never written (it threw), so there is
+  nothing to rewrite.
+- **A route timed `Natural` sets the clip's length in `ScenePlanBuilder.FromSpec`** (and
+  `Notices`), so the render service, its export and `RenderBundleWriter.FromModel` give the length
+  the CLI gives. Before, only the CLI and the storyboard's lowering measured the route; elsewhere
+  it was fitted to the spec's duration. Calling `CameraRoutes.WithNaturalDuration` before, as the
+  CLI does, still works and gives the same plan.
+- **`StoryboardExpander.InlinePresets`** keeps a user's route preset timed `Natural` as it is: the
+  shot gets no `seconds` from the preset (which would have fitted the route to the preset's
+  duration), so a queued render that is restarted gives the same film.
+- **`StoryboardExpander.Expand`**: every shot of a tour keeps the tour shot's own `annotations` (or
+  the storyboard's defaults) beside the tour's lead markers; before, a tour shot's annotations were
+  dropped, and the lead markers took the place of the defaults. The tour's first shot keeps the
+  tour shot's texts (or its labels' overlays) and adds the tour's corner line and corner captions
+  to them; before, the tour's corner texts replaced them. The passage surveyed last (`"from":
+  "newest"`) is flown from its end nearer any entrance, not only the first, and its stations are
+  named by the route's own lookup (`CameraRoutes.NamesOf`).
+- A held reveal (`ShotReveal.Hold`) starts from the value the player shows on the last frame of
+  the shot before, by the player's rule: `smooth` keys eased, and the second of the keys on one
+  frame. Today's reveals have two linear keys, so no film changes.
+
+### Validation
+- **The base name** (`SceneSpecValidator`, `ScenePlanValidator`, `MoviePlanValidator`) is checked
+  by one rule on every platform: no character Windows refuses (`< > : " / \ | ? *`) or control
+  character, and no Windows device name. Before, a plan checked on Linux took `a:b` and failed on
+  a Windows node. `RenderBundleWriter.FolderName` keeps the same rule.
+- **Names end where the string ends.** `RenderNodeProtocol.IsJobId`, `IsFileName`, `IsSha256`,
+  the module names and roles of `ScenePlanValidator` and the roles of `SceneSpecValidator` no
+  longer take a line break after the name (.NET's `$` matched before a final `\n`).
+  `RenderNodeProtocol.Validate` holds the schema's patterns to ECMA-262's end of input, as the
+  schema means them. The schema itself is unchanged.
+- **Times far from the clip.** `ScenePlanValidator.FrameAt` holds a time too far for a frame
+  number to `int.MaxValue` (or `int.MinValue`) on every runtime, so a camera pose 10⁸ s in is
+  "after the last frame" instead of overflowing to a negative frame; change keys far after the
+  clip keep their order.
+- **A counter's own keys** (`counter.keys`) are checked by frame, as a change's keys are and as the
+  player keys them: a later key on the same frame is `constant`, three at most. Before, `[{t: 0},
+  {t: 0.01}]` at 30 fps passed in C# and stopped the player.
+- `TourBuilder` names the cap of `TourSeconds` and `BranchSeconds`: "more than 0 and at most 86400
+  seconds".
+
+### Player 1.13
+- A counter's `target` is matched to a change by its id and role, as C# matches it:
+  `{"id": "m", "role": null}` names the change of `{"id": "m"}`.
+- A plan with `NaN`, `Infinity` or a number too large for a float (`1e999`) is refused when it is
+  read ("the plan is not valid JSON"); before, it failed later with a less helpful message.
+- A module name with a line break after it is not a module name.
+- A dip of one frame is the colour on the first frame of the shot it leads to only, as the
+  movie's timing has it (the comment said otherwise; the picture is unchanged).
+
 ## 2026-11-27 — render node protocol: receiver check and reason constants
 
 The plan stays **version 1**; the player does not change.

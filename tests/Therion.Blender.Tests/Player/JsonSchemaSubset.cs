@@ -134,7 +134,7 @@ internal static class JsonSchemaSubset
                     break;
 
                 case "pattern":
-                    if (value.ValueKind == JsonValueKind.String && !Regex.IsMatch(value.GetString()!, k.GetString()!, RegexOptions.ECMAScript))
+                    if (value.ValueKind == JsonValueKind.String && !Regex.IsMatch(value.GetString()!, RenderNodeValidator.AsEcma(k.GetString()!), RegexOptions.ECMAScript))
                         errors.Add($"{path}: '{value.GetString()}' does not match {k.GetString()}");
                     break;
 

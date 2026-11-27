@@ -75,7 +75,7 @@ public static class SceneSpecValidator
             Bad("materials.proceduralScale", $"Procedural scale must be within (0, {MaxProceduralScale}].");
         if (spec.Materials.BumpStrength is < 0 or > MaxBumpStrength || double.IsNaN(spec.Materials.BumpStrength))
             Bad("materials.bumpStrength", $"Bump strength must be within 0–{MaxBumpStrength}.");
-        if (!IsUnitColor(spec.Materials.BaseColor))
+        if (!PlanRules.IsUnitColor(spec.Materials.BaseColor))
             Bad("materials.baseColor", "Colour channels must be within 0–1.");
 
         // ---- surface ----
@@ -123,9 +123,8 @@ public static class SceneSpecValidator
             Bad("output.outputDirectory", "An output directory is required.");
         if (string.IsNullOrWhiteSpace(spec.Output.BaseName))
             Bad("output.baseName", "A base file name is required.");
-        else if (spec.Output.BaseName.AsSpan().IndexOfAny('/', '\\') >= 0
-                 || spec.Output.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            Bad("output.baseName", "The base name must be a plain file name (no separators or reserved characters).");
+        else if (!PlanRules.IsPlainBaseName(spec.Output.BaseName))
+            Bad("output.baseName", PlanRules.BaseNameMessage);
 
         return errors;
     }
@@ -161,7 +160,7 @@ public static class SceneSpecValidator
         if (!(labels.Leads.MarkerScale > 0) || double.IsNaN(labels.Leads.MarkerScale))
             bad("labels.leads.markerScale", "Lead marker scale must be positive.");
 
-        if (!IsUnitColor(labels.Color))
+        if (!PlanRules.IsUnitColor(labels.Color))
             bad("labels.color", "Label colour channels must be within 0–1.");
 
         var overlays = labels.Overlays;
@@ -242,7 +241,7 @@ public static class SceneSpecValidator
             bad("reveal.end", "The reveal ends after it starts.");
         if (!(reveal.Edge >= 0 && reveal.Edge <= MaxRevealEdge))
             bad("reveal.edge", $"The edge is a share of the reveal, within 0–{MaxRevealEdge}.");
-        if (!IsUnitColor(reveal.GlowColor))
+        if (!PlanRules.IsUnitColor(reveal.GlowColor))
             bad("reveal.glowColor", "Colour channels must be within 0–1.");
     }
 
@@ -264,7 +263,7 @@ public static class SceneSpecValidator
             }
             if (!ids.Add(a.IdAt(i)))
                 bad(path + ".id", $"The id '{a.IdAt(i)}' is used twice.");
-            if (a.Role is not null && !System.Text.RegularExpressions.Regex.IsMatch(a.Role, "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"))
+            if (a.Role is not null && !System.Text.RegularExpressions.Regex.IsMatch(a.Role, @"^[a-z][a-z0-9]*(-[a-z0-9]+)*\z"))
                 bad(path + ".role", "A role is lower-case letters and digits, in words joined by '-'.");
             if (!Enum.IsDefined(a.Kind))
             {
@@ -301,7 +300,7 @@ public static class SceneSpecValidator
             }
             if (photo && a.Color is not null)
                 bad(path + ".color", "A photo has the colours of its image.");
-            if (a.Color is { } color && !IsUnitColor(color))
+            if (a.Color is { } color && !PlanRules.IsUnitColor(color))
                 bad(path + ".color", "Colour channels must be within 0–1.");
             if (a.Size is { } size && !(size > 0 && double.IsFinite(size)))
                 bad(path + ".size", "The size must be positive.");
@@ -336,12 +335,6 @@ public static class SceneSpecValidator
     private static bool IsImageName(string path)
         => path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
            || path.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsUnitColor(ColorRgb c)
-    {
-        static bool Ok(double v) => !double.IsNaN(v) && v is >= 0 and <= 1;
-        return Ok(c.R) && Ok(c.G) && Ok(c.B);
-    }
 
     private static void ValidateCameraTemplate(SceneSpec spec, Action<string, string> bad)
     {

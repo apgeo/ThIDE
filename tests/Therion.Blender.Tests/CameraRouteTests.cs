@@ -5,6 +5,7 @@
 // whose sizes are known exactly.
 
 using Therion.Blender.Emit;
+using Therion.Blender.Plan;
 using Therion.Blender.Tests.SceneProbe;
 using Therion.Cave3D;
 using Therion.CaveGeometry;
@@ -310,6 +311,40 @@ public class CameraRouteTests
 
         var fitted = Spec(route with { Timing = RouteTiming.Fit }, 30, 4);
         Assert.Same(fitted, CameraRoutes.WithNaturalDuration(fitted, framing));
+    }
+
+    [Fact]
+    public void ANaturalRoute_SetsTheLengthOfThePlan_AndOfTheBundle_WhateverTheSpecSays()
+    {
+        var framing = Small();
+        var route = new RouteParams { Timing = RouteTiming.Natural, EndHoldSeconds = 1 };
+        var timed = CameraRoutes.WithNaturalDuration(Spec(route, 10, 4), framing);
+        int frames = SceneSpecValidator.FrameCount(timed);
+        Assert.NotEqual(SceneSpecValidator.FrameCount(Spec(route, 10, 4)), frames);
+
+        Assert.Equal(frames, ScenePlanBuilder.FromSpec(Spec(route, 10, 4), framing).Timeline.FrameCount);
+        Assert.Equal(frames, ScenePlanBuilder.FromSpec(timed, framing).Timeline.FrameCount);
+        // Fitted, the spec's length stays.
+        var fit = Spec(route with { Timing = RouteTiming.Fit }, 10, 4);
+        Assert.Equal(SceneSpecValidator.FrameCount(fit), ScenePlanBuilder.FromSpec(fit, framing).Timeline.FrameCount);
+
+        string dir = Path.Combine(Path.GetTempPath(), $"thide-natural-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            string lox = Path.Combine(dir, "small.lox");
+            Therion.Cave3D.Parsing.LoxWriter.WriteFile(InventedCave.Build(InventedCaveSize.Small), lox);
+            var source = new Therion.Blender.Sources.ResolvedModelSource
+            {
+                Path = lox, Format = CaveSourceFormat.Lox, Kind = Therion.Blender.Sources.ModelSourceKind.ExternalFile,
+            };
+            var content = Therion.Blender.Player.RenderBundleWriter.FromModel(source, Spec(route, 10, 4), Path.Combine(dir, "work"));
+            Assert.Equal(frames, content.Plan.Timeline.FrameCount);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
     }
 
     [Fact]
