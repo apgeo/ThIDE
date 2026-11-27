@@ -52,7 +52,7 @@ public class AgentBuildTrustMatrixTests
         "get_declination", "get_diagnostics", "get_file_outline", "get_open_documents", "get_setting",
         "get_ui_state", "goto_definition", "goto_symbol", "import_survey", "list_commands", "list_files",
         "list_leads", "list_render_presets", "list_settings", "list_stations", "list_survey_info", "list_symbols", "list_todos",
-        "load_workspace", "open_file", "plan_tour", "project_metadata_get", "project_metadata_set", "query_legs",
+        "load_workspace", "mesh_survey_check_leg", "mesh_survey_inspect", "mesh_survey_run", "open_file", "plan_tour", "project_metadata_get", "project_metadata_set", "query_legs",
         "read_file", "rename_symbol", "render_status", "reset_layout", "scaffold_th2", "scaffold_topodroid_project",
         "search_thbook", "server_info", "set_active_thconfig", "set_layout", "set_lead_status", "set_setting",
         "show_in_3d", "show_toast", "structural_analysis", "survey_graph", "survey_stats", "workspace_info",

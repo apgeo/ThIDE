@@ -48,6 +48,8 @@ public class CatalogE2eTests
     [
         "get_declination",   // needs a WMM.COF that does not ship
         "load_workspace",    // would replace the fixture the sweep runs against
+        "mesh_survey_inspect",   // needs a 3-D model, which the fixture has none of (MeshSurveyToolsTests)
+        "mesh_survey_check_leg", // the same
     ];
 
     /// <summary>Tools that can write. None of these may be annotated read-only.</summary>
@@ -60,6 +62,7 @@ public class CatalogE2eTests
         "scaffold_th2",
         "scaffold_topodroid_project",
         "import_survey",
+        "mesh_survey_run",
         "export_gis",
         "export_tables",
         "generate_report",
