@@ -3,6 +3,11 @@
 // first instead of being refused. The jobs are kept as records (RenderJobRecord) in a small file,
 // so that after a restart the jobs that had not ended are known, and whoever keeps the queue can
 // start them again; their frames are still there, so they go on where they stopped.
+//
+// One queue at a time keeps the file: it holds a lock file beside it for as long as it lives. A
+// second queue made on the same file (a second ThIDE of the same user) finds it held, and keeps
+// its jobs in memory only: it neither starts again the jobs the first is running nor writes over
+// its file.
 
 using Therion.Blender;
 
@@ -18,10 +23,14 @@ public sealed class RenderQueue : IDisposable
     /// first is gone.</summary>
     public const string RestartOwner = "restart";
 
+    /// <summary>The suffix of the lock file kept beside the state file.</summary>
+    public const string LockSuffix = ".lock";
+
     private readonly object _lock = new();
     private readonly List<Entry> _entries = [];   // in the order they were queued
     private readonly string? _stateFile;
     private readonly List<RenderJobRecord> _interrupted;
+    private FileStream? _held;
     private Entry? _running;
     private DateTimeOffset _written;
     private bool _disposed;
@@ -30,18 +39,29 @@ public sealed class RenderQueue : IDisposable
     {
         public RenderJobRecord Record = record;
         public readonly TaskCompletionSource Turn = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public readonly TaskCompletionSource Ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public readonly CancellationTokenSource Cancel = new();
         public Action? Moved;
     }
 
     /// <param name="stateFile">The file the jobs are kept in; null keeps them in memory alone.
     /// What the file holds when the queue is made is read: the jobs that had not ended are
-    /// <see cref="Interrupted"/>.</param>
+    /// <see cref="Interrupted"/>. When another queue holds the file (<see cref="HeldElsewhere"/>),
+    /// it is neither read nor written.</param>
     public RenderQueue(string? stateFile = null)
     {
-        _stateFile = stateFile;
         _interrupted = [];
-        if (stateFile is null || !File.Exists(stateFile)) return;
+        if (stateFile is null) return;
+        switch (TryHold(stateFile, out _held))
+        {
+            case false:
+                HeldElsewhere = true;
+                return;
+            case null:
+                break;   // no lock can be made there: the file is kept as it was before there was one
+        }
+        _stateFile = stateFile;
+        if (!File.Exists(stateFile)) return;
         IReadOnlyList<RenderJobRecord> jobs;
         try { jobs = RenderJobFile.Restarted(RenderJobFile.Read(File.ReadAllText(stateFile))); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return; }
@@ -49,6 +69,37 @@ public sealed class RenderQueue : IDisposable
         foreach (var ended in jobs.Where(j => j.IsFinished).TakeLast(KeptEnded))
             _entries.Add(new Entry(ended));
     }
+
+    /// <summary>Takes the lock beside <paramref name="stateFile"/>: true when this queue holds it,
+    /// false when another does, null when no lock can be made there.</summary>
+    private static bool? TryHold(string stateFile, out FileStream? held)
+    {
+        held = null;
+        string path = Path.GetFullPath(stateFile) + LockSuffix;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            // FileShare.None: on Windows a share lock, elsewhere an advisory lock (flock); either
+            // goes with the process, however it ends, so a lock is never left behind.
+            held = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            return true;
+        }
+        catch (UnauthorizedAccessException) { return null; }
+        catch (IOException) when (File.Exists(path)) { return false; }
+        catch (IOException) { return null; }
+    }
+
+    /// <summary>Another queue (another ThIDE) keeps the state file this queue was made on: this
+    /// one keeps its jobs in memory only, starts again none of the file's, and its jobs do not go
+    /// on after a restart.</summary>
+    public bool HeldElsewhere { get; }
+
+    /// <summary>The queue keeps its jobs in a file, so that those a restart cuts short (or
+    /// <see cref="Shutdown"/> stops) go on at the next start.</summary>
+    public bool KeepsJobs => _stateFile is not null;
+
+    /// <summary>Whether the queue was shut down (<see cref="Shutdown"/>, <see cref="Dispose"/>).</summary>
+    public bool IsShutDown { get { lock (_lock) return _disposed; } }
 
     /// <summary>The queue changed: a job was queued, started, moved on or ended. Raised on the
     /// thread that changed it.</summary>
@@ -114,7 +165,7 @@ public sealed class RenderQueue : IDisposable
             if (_running is null) Start(entry);
         }
         Save(force: true);
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
 
         void Waiting()
         {
@@ -132,7 +183,7 @@ public sealed class RenderQueue : IDisposable
             using (linked.Token.Register(() => entry.Turn.TrySetCanceled()))
                 await entry.Turn.Task.ConfigureAwait(false);
             linked.Token.ThrowIfCancellationRequested();
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
             var relay = new Relay(tick =>
             {
                 if (tick.SecondsPerFrame is { } s) perFrame = s;
@@ -171,8 +222,9 @@ public sealed class RenderQueue : IDisposable
     /// <summary>
     /// Starts again every job a restart cut short (<see cref="Interrupted"/>), in their order,
     /// each through <paramref name="replay"/>, which turns a request into its render. A job whose
-    /// request cannot be replayed (null from <paramref name="replay"/>'s caller) is dropped.
-    /// Returns the jobs' tasks; each ends as the job does and never throws.
+    /// request cannot be replayed (null from <paramref name="replay"/>) ends as failed, with why
+    /// when its model is no longer there. Returns the started jobs' tasks; each ends as the job
+    /// does and never throws.
     /// </summary>
     public IReadOnlyList<Task> Resume(Func<RenderJobRequest, Func<IProgress<RenderProgress>?, CancellationToken, Task<RenderResult>>?> replay)
     {
@@ -180,17 +232,33 @@ public sealed class RenderQueue : IDisposable
         List<RenderJobRecord> jobs;
         lock (_lock)
         {
+            if (_disposed) return [];
             jobs = [.. _interrupted];
             _interrupted.Clear();
         }
         var tasks = new List<Task>();
+        var dropped = new List<RenderJobRecord>();
         foreach (var job in jobs)
         {
-            if (replay(job.Request) is not { } work) continue;
+            if (replay(job.Request) is not { } work)
+            {
+                string why = job.Request.Model is { } model && !File.Exists(model)
+                    ? $"The render could not go on after the restart: the model is no longer at {model}."
+                    : "The render could not go on after the restart: what it was asked to render can no longer be read.";
+                var ended = job.Ended(RenderJobResult.Failure(RenderNodeFailure.Error, why), DateTimeOffset.UtcNow);
+                lock (_lock) _entries.Add(new Entry(ended));
+                dropped.Add(ended);
+                continue;
+            }
             // Queued here, one after the other, so that they keep their order.
             tasks.Add(Swallow(RunAsync(job.Request with { Owner = RestartOwner }, work, null, CancellationToken.None, job.Id)));
         }
         Save(force: true);
+        if (dropped.Count > 0)
+        {
+            RaiseChanged();
+            foreach (var job in dropped) RaiseEnded(job);
+        }
         return tasks;
     }
 
@@ -200,22 +268,49 @@ public sealed class RenderQueue : IDisposable
         catch (Exception) { }  // the job's record says how it ended
     }
 
-    /// <summary>Cancels every job that has not ended.</summary>
-    public void Dispose()
+    /// <summary>
+    /// Stops every job that has not ended (Blender with the running one) and lets the state file
+    /// go, for closing the application. A queue that keeps its jobs in a file
+    /// (<see cref="KeepsJobs"/>) leaves them in it as they stood, so that the next queue made on
+    /// the file starts them again (<see cref="Interrupted"/>) and they go on with their frames; in
+    /// memory they end as cancelled. Waits at most <paramref name="wait"/> for the running job's
+    /// work to return. Returns how many jobs it stopped. Nothing can be queued after.
+    /// </summary>
+    public int Shutdown(TimeSpan wait)
     {
         List<Entry> open;
+        Entry? running;
         lock (_lock)
         {
-            if (_disposed) return;
+            if (_disposed) return 0;
+            // The file as it stands now is what the next start goes on from; the cancels below
+            // end the jobs in memory only.
+            Save(force: true);
             _disposed = true;
             open = _entries.Where(e => !e.Record.IsFinished).ToList();
+            running = _running;
         }
         foreach (var entry in open)
         {
             try { entry.Cancel.Cancel(); }
             catch (ObjectDisposedException) { }
         }
+        if (running is not null && wait > TimeSpan.Zero)
+        {
+            try { running.Ended.Task.Wait(wait); }
+            catch (AggregateException) { }
+        }
+        lock (_lock)
+        {
+            _held?.Dispose();
+            _held = null;
+        }
+        return open.Count;
     }
+
+    /// <summary><see cref="Shutdown"/> without waiting: stops every job that has not ended; a
+    /// queue kept in a file keeps them in it for the next start.</summary>
+    public void Dispose() => Shutdown(TimeSpan.Zero);
 
     private void Start(Entry entry)
     {
@@ -242,9 +337,36 @@ public sealed class RenderQueue : IDisposable
             moved = _entries.Where(e => e.Record.State == RenderJobState.Queued && e.Moved is not null).Select(e => e.Moved!).ToList();
         }
         Save(force: true);
-        foreach (var report in moved) report();
-        Changed?.Invoke(this, EventArgs.Empty);
-        JobEnded?.Invoke(this, entry.Record);
+        entry.Ended.TrySetResult();
+        foreach (var report in moved)
+        {
+            try { report(); }
+            catch (Exception) { }   // a listener's fault is not the queue's
+        }
+        RaiseChanged();
+        RaiseEnded(entry.Record);
+    }
+
+    /// <summary>Raises <see cref="Changed"/>: a handler that throws stops neither the others nor
+    /// the queue (a job left running for ever, with every later one waiting behind it).</summary>
+    private void RaiseChanged()
+    {
+        if (Changed is not { } handlers) return;
+        foreach (EventHandler handler in handlers.GetInvocationList())
+        {
+            try { handler(this, EventArgs.Empty); }
+            catch (Exception) { }
+        }
+    }
+
+    private void RaiseEnded(RenderJobRecord record)
+    {
+        if (JobEnded is not { } handlers) return;
+        foreach (EventHandler<RenderJobRecord> handler in handlers.GetInvocationList())
+        {
+            try { handler(this, record); }
+            catch (Exception) { }
+        }
     }
 
     /// <summary>Keeps the jobs in the state file: at once for a change of state, at most once a
@@ -255,6 +377,7 @@ public sealed class RenderQueue : IDisposable
         string text;
         lock (_lock)
         {
+            if (_disposed) return;   // the file keeps the jobs as they stood when the queue shut down
             var now = DateTimeOffset.UtcNow;
             if (!force && now - _written < TimeSpan.FromSeconds(1)) return;
             _written = now;

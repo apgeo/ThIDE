@@ -137,4 +137,25 @@ public class BlenderLocatorTests
     [InlineData(6, 0, 0, true)]
     public void A_release_newer_than_the_tested_one_gets_a_warning(int major, int minor, int patch, bool warns)
         => Assert.Equal(warns, BlenderLocator.UntestedVersionWarning(new BlenderVersion(major, minor, patch)) is not null);
+
+    private sealed class SlowFirstProbe : IBlenderProbe
+    {
+        public int Calls;
+        public BlenderVersion? Probe(string path) => ++Calls == 1 ? null : new BlenderVersion(4, 5, 0);
+    }
+
+    [Fact]
+    public void AProbeThatFailedOnce_IsTriedAgain_OnceItIsNoLongerBelieved()
+    {
+        // A first start that was too slow (a virus scan, a cold disk) is not "no Blender" for ever.
+        var probe = new SlowFirstProbe();
+        var locator = new BlenderLocator(probe, () => ["/opt/slow/blender"]);
+        Assert.Equal(BlenderLocateStatus.NotFound, locator.Locate().Status);
+        Assert.Equal(BlenderLocateStatus.NotFound, locator.Locate().Status);   // believed for a while
+        Assert.Equal(1, probe.Calls);
+        locator.FailedProbeKept = TimeSpan.Zero;
+        Assert.Equal(BlenderLocateStatus.Found, locator.Locate().Status);
+        Assert.Equal(BlenderLocateStatus.Found, locator.Locate().Status);
+        Assert.Equal(2, probe.Calls);   // a version found is kept
+    }
 }

@@ -1088,7 +1088,7 @@ Panoul are două file deasupra setărilor. **Scenă** este o singură randare, c
   selectată, **Estimare** spune câte cadre, cât timp, cât spațiu pe disc și câtă memorie cere filmul, iar **Randează
   filmul** arată estimarea și randează. Randările își așteaptă rândul în coada de randare, listată
   sub butoane, fiecare cu un buton **Renunță**; o randare în mijlocul căreia ThIDE a fost închis continuă la
-  pornirea următoare și apare ca *reluată*.
+  pornirea următoare și apare ca *reluată* (vedeți *O randare odată* mai jos).
 
 ## Parcursuri pe ramuri
 
@@ -1274,6 +1274,21 @@ unui agent care s-a terminat apare în istoricul panoului. Dacă ThIDE se opreș
 randări (nu când aceasta este anulată), randarea continuă cu cadrele ei la următoarea pornire a
 ThIDE.
 
+- **Închiderea ThIDE cât timp randări rulează sau așteaptă** (a panoului, a unui agent sau una
+  reluată după o repornire) cere mai întâi confirmarea. Închiderea oprește Blender, iar fiecare
+  dintre aceste randări continuă de la cadrele ei la următoarea pornire a ThIDE. Pentru a renunța
+  la o randare, anulați-o în coadă înainte de închidere.
+- Niciun Blender nu supraviețuiește ThIDE: dacă ThIDE se blochează sau este oprit forțat, Blender
+  se oprește odată cu el (pe Windows și Linux; pe macOS doar când ThIDE se închide normal).
+- Un film randat prin coadă își păstrează cadrele până când este gata, ca să poată continua: se
+  face în două etape (cadrele, apoi filmul din ele), ceea ce cere spațiu pe disc pentru cadre cât
+  timp randează. O imagine, o schiță și o randare cu generatorul de scripturi se fac într-o
+  singură etapă și reîncep de la primul cadru.
+- **Un al doilea ThIDE** al aceluiași utilizator, pornit cât timp rulează primul, nu folosește
+  coada primului: panoul spune asta. Randările lui rulează în paralel cu ale primului, nu după
+  ele, și nu continuă după o repornire. Închideți al doilea ThIDE ca să aveți din nou o singură
+  coadă.
+
 ## Executorul de randări
 
 `therion-cli render-worker` randează [pachetele de
@@ -1289,12 +1304,26 @@ dosar partajat sincronizat, un dosar SFTP) rămâne la alegerea dumneavoastră.
   cadru și timpul rămas. La final, dosarul de ieșire conține `<lucrare>.mp4` (sau imaginile),
   subtitrările și `<lucrare>.log`.
 - Pentru a opri o lucrare, puneți un fișier gol `<lucrare>.cancel` lângă arhiva ei. Cadrele ei sunt
-  păstrate; ștergeți fișierul și lucrarea continuă cu ele. Un executor oprit (Ctrl+C) continuă și
-  el cu cadrele lucrării la următoarea pornire.
+  păstrate; ștergeți fișierul și lucrarea continuă cu ele. Un executor oprit (Ctrl+C sau SIGTERM
+  de la un manager de servicii) oprește Blender și continuă cu cadrele lucrării la următoarea
+  pornire. Un executor oprit forțat sau blocat ia Blender cu el (pe Windows și Linux). Un film se
+  randează în două etape, ca să existe cadre de la care să continue.
+- O arhivă este luată după ce a sosit de tot: una care nu poate fi încă citită ca arhivă zip și în
+  care s-a scris în ultimele 10 minute este lăsată să sosească. Mai bine, încărcați-o ca
+  `<lucrare>.zip.part` și redenumiți-o `<lucrare>.zip` când este completă. O arhivă pe care
+  executorul nu o poate șterge după lucrare (un dosar partajat doar pentru citire) nu este
+  randată din nou decât dacă se schimbă.
+- Doi executori pot folosi același dosar de intrare pe același calculator sau pe un dosar
+  partajat în rețea: fiecare ține `<lucrare>.zip.lock` lângă arhiva pe care o randează, iar
+  celălalt o sare. Un dosar sincronizat (Dropbox, Syncthing) nu poate deosebi două calculatoare:
+  dați fiecărui calculator propriul dosar de intrare.
+- Dosarul de lucru al unei lucrări care nu s-a încheiat aici (a eșuat în Blender sau a depășit
+  timpul) este păstrat pentru același pachet trimis din nou și șters după 14 zile neatins.
 - `--once` se oprește când dosarul de intrare este gol; `--poll <secunde>` (5) spune cât de des se
-  uită în dosarul de intrare; `--blender` numește Blender-ul; `--max-hours`, `--max-triangles` și
-  `--max-bundle-gb` stabilesc limitele unei lucrări; `--scratch` este locul unde pachetele sunt
-  dezarhivate și cadrele păstrate.
+  uită în dosarul de intrare; `--blender` numește Blender-ul;
+  `--max-hours` (cel mult 720, adică 30 de zile), `--max-triangles` și `--max-bundle-gb` stabilesc
+  limitele unei lucrări;
+  `--scratch` este locul unde pachetele sunt dezarhivate și cadrele păstrate.
 
 **Securitate.** Un pachet este o colecție de date, iar executorul îl tratează ca atare. Nu rulează
 niciodată `render.py`, `render.sh` sau `thide_player` din pachet: citește planurile, rețelele de
@@ -1360,7 +1389,9 @@ serverul. Protocolul este descris în
   rezervării, 40 s pentru o rezervare de 2 minute). După o cădere a rețelei se reîncearcă, cu
   pauze tot mai lungi; dacă serverul nu poate fi contactat pe durata unei rezervări întregi, lucrarea este
   oprită, iar serverul o dă altcuiva. Cadrele ei rămân: dacă aceeași lucrare revine la acest
-  calculator, continuă de la ele. Un token refuzat de server oprește executorul (codul de ieșire 3).
+  calculator, continuă de la ele, timp de 14 zile. O descărcare sau o încărcare în care nu se mișcă
+  nimic timp de 60 s este încercată din nou. Un token refuzat de server oprește executorul (codul
+  de ieșire 3).
 
 **Pregătirea unui calculator cu placă grafică.**
 

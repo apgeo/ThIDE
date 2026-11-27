@@ -120,6 +120,19 @@ public sealed class BlenderRunner
         if (job.ScriptArguments.Count > 0) args = [.. args, "--", .. job.ScriptArguments];
         var parser = new RenderProgressParser(job.FrameCount);
 
+        // A render cancelled before it starts starts no Blender.
+        if (ct.IsCancellationRequested)
+            return new RenderResult
+            {
+                Succeeded = false,
+                FailureKind = RenderFailureKind.Cancelled,
+                ErrorMessage = "The render was cancelled.",
+                Duration = stopwatch.Elapsed,
+            };
+        // What the output folder holds before Blender starts: a movie or a still that is there
+        // unchanged after it is an earlier render's, not this one's.
+        var before = OutputCollector.Snapshot(job.Output);
+
         IBlenderProcess process;
         try
         {
@@ -143,7 +156,11 @@ public sealed class BlenderRunner
         }
 
         bool cancelled = false;
+        // Set once Blender's output has ended: until then, whatever leaves this method (a cancel,
+        // a progress listener that throws) leaves Blender to be killed, never running unseen.
+        bool exited = false;
         var tail = new Queue<string>(TailLines);
+        var log = new JobLog(jobLogPath);
         int exitCode = -1;
         try
         {
@@ -152,22 +169,19 @@ public sealed class BlenderRunner
                 cancelled = true;
                 process.KillTree();
             });
-            await using (var log = CreateLog(jobLogPath))
+            try
             {
-                try
+                await foreach (var line in process.ReadLinesAsync(ct).ConfigureAwait(false))
                 {
-                    await foreach (var line in process.ReadLinesAsync(ct).ConfigureAwait(false))
-                    {
-                        if (log is not null) await log.WriteLineAsync(line).ConfigureAwait(false);
-                        KeepTail(tail, line);
-                        if (parser.Consume(line) is { } tick) progress?.Report(tick);
-                    }
+                    await log.WriteLineAsync(line).ConfigureAwait(false);
+                    KeepTail(tail, line);
+                    if (parser.Consume(line) is { } tick) progress?.Report(tick);
                 }
-                catch (OperationCanceledException)
-                {
-                    cancelled = true;
-                }
-                if (log is not null) await log.FlushAsync().ConfigureAwait(false);
+                exited = true;
+            }
+            catch (OperationCanceledException)
+            {
+                cancelled = true;
             }
             if (cancelled || ct.IsCancellationRequested)
             {
@@ -178,18 +192,29 @@ public sealed class BlenderRunner
         }
         finally
         {
+            if (!exited)
+            {
+                process.KillTree();
+                await process.WaitForExitAsync(KillWait).ConfigureAwait(false);
+            }
+            await log.DisposeAsync().ConfigureAwait(false);
             process.Dispose();
         }
 
         stopwatch.Stop();
-        return Classify(parser, cancelled || ct.IsCancellationRequested, exitCode, tail, jobLogPath, job, stopwatch.Elapsed, progress);
+        // A cancel that comes after Blender said it was done and exited cleanly is too late: the
+        // render is made.
+        bool late = parser.Done && exitCode == 0 && !parser.Cancelled;
+        return Classify(parser, (cancelled || ct.IsCancellationRequested) && !late, exitCode, tail, jobLogPath, job, stopwatch.Elapsed, progress, before, log.Problem);
     }
 
     private static RenderResult Classify(
         RenderProgressParser parser, bool cancelled, int exitCode, Queue<string> tail,
-        string jobLogPath, RenderJob job, TimeSpan duration, IProgress<RenderProgress>? progress)
+        string jobLogPath, RenderJob job, TimeSpan duration, IProgress<RenderProgress>? progress,
+        IReadOnlyDictionary<string, (long, DateTime)> before, string? logProblem)
     {
         var warnings = new List<string>(parser.Warnings);
+        if (logProblem is not null) warnings.Add(logProblem);
         int frames = parser.FrameCount ?? job.FrameCount;
         var outputs = ImmutableArray<string>.Empty;
 
@@ -225,7 +250,7 @@ public sealed class BlenderRunner
         {
             // Render finished — read back and verify the output files (BA-B11).
             progress?.Report(new RenderProgress(RenderPhase.CollectingOutputs, "Collecting outputs", Device: parser.Device));
-            var collection = OutputCollector.Collect(job.Output, frames);
+            var collection = OutputCollector.Collect(job.Output, frames, before);
             if (!collection.HasOutputs)
             {
                 kind = RenderFailureKind.NoOutput;
@@ -259,10 +284,63 @@ public sealed class BlenderRunner
         };
     }
 
-    private static StreamWriter? CreateLog(string path)
+    /// <summary>Blender's output, teed to the job's log. A log that cannot be written (a full
+    /// disk) is not worth stopping a render for: what is lost of it is said in a warning.</summary>
+    private sealed class JobLog : IAsyncDisposable
     {
-        try { return new StreamWriter(path, append: false) { AutoFlush = false }; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+        private readonly string _path;
+        private StreamWriter? _writer;
+        private string? _problem;
+
+        public JobLog(string path)
+        {
+            _path = path;
+            _writer = Open(path, out _problem);
+        }
+
+        /// <summary>Why the log is not whole; null when it is.</summary>
+        public string? Problem => _problem;
+
+        private static StreamWriter? Open(string path, out string? problem)
+        {
+            problem = null;
+            try { return new StreamWriter(path, append: false) { AutoFlush = false }; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                problem = $"Blender's output could not be written to {path}: {ex.Message}";
+                return null;
+            }
+        }
+
+        public async Task WriteLineAsync(string line)
+        {
+            if (_writer is null) return;
+            try { await _writer.WriteLineAsync(line).ConfigureAwait(false); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Lost(ex); }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_writer is null) return;
+            try { await _writer.FlushAsync().ConfigureAwait(false); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Lost(ex); }
+            finally { Close(); }
+        }
+
+        private void Lost(Exception ex)
+        {
+            _problem ??= $"Blender's output could not all be written to {_path}: {ex.Message}";
+            Close();
+        }
+
+        private void Close()
+        {
+            var writer = _writer;
+            _writer = null;
+            // What the writer still holds cannot be written either.
+            try { writer?.Dispose(); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
     }
 
     private static void KeepTail(Queue<string> tail, string line)
@@ -272,7 +350,10 @@ public sealed class BlenderRunner
     }
 }
 
-/// <summary>Real <see cref="IBlenderProcessLauncher"/> over System.Diagnostics.Process.</summary>
+/// <summary>Real <see cref="IBlenderProcessLauncher"/> over System.Diagnostics.Process. The Blender
+/// it starts is tied to this process: on Windows it is in a Job Object that ends it (and what it
+/// started) when this process ends, however it ends; on Linux it gets a parent-death signal when
+/// setpriv is there to give it one. Disposing the process ends one that is still running.</summary>
 public sealed class RealBlenderProcessLauncher : IBlenderProcessLauncher
 {
     public IBlenderProcess Start(string executablePath, IReadOnlyList<string> arguments, string workingDirectory)
@@ -290,6 +371,7 @@ public sealed class RealBlenderProcessLauncher : IBlenderProcessLauncher
         };
         foreach (var arg in arguments) psi.ArgumentList.Add(arg);
         psi.Environment["PYTHONIOENCODING"] = "utf-8"; // non-ASCII station names (R-08)
+        BlenderProcessTie.TieToParent(psi);
 
         var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
         return new RealBlenderProcess(process);
@@ -298,6 +380,7 @@ public sealed class RealBlenderProcessLauncher : IBlenderProcessLauncher
     private sealed class RealBlenderProcess : IBlenderProcess
     {
         private readonly Process _process;
+        private readonly IDisposable? _job;
         private readonly Channel<string> _lines = Channel.CreateUnbounded<string>(
             new UnboundedChannelOptions { SingleReader = true });
         private int _openStreams = 2; // stdout + stderr
@@ -307,7 +390,8 @@ public sealed class RealBlenderProcessLauncher : IBlenderProcessLauncher
             _process = process;
             _process.OutputDataReceived += OnData;
             _process.ErrorDataReceived += OnData;
-            _process.Start();
+            BlenderProcessTie.Start(_process);
+            _job = BlenderProcessTie.Job(_process);
             _process.BeginOutputReadLine();
             _process.BeginErrorReadLine();
         }
@@ -348,6 +432,11 @@ public sealed class RealBlenderProcessLauncher : IBlenderProcessLauncher
             catch (InvalidOperationException) { /* never started or already disposed */ }
         }
 
-        public void Dispose() => _process.Dispose();
+        public void Dispose()
+        {
+            KillTree();
+            _job?.Dispose();
+            _process.Dispose();
+        }
     }
 }

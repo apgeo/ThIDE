@@ -1669,7 +1669,7 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} could not be written: {1} Your edits are still in the editor, unsaved.</value></data>
   <data name="Exit_SaveAll" xml:space="preserve"><value>Save all</value></data>
   <data name="Exit_RenderRunningTitle" xml:space="preserve"><value>Blender render running</value></data>
-  <data name="Exit_RenderRunningMsg" xml:space="preserve"><value>A Blender render is still running. Closing ThIDE stops it. Close anyway?</value></data>
+  <data name="Exit_RenderRunningMsg" xml:space="preserve"><value>A Blender render is still running or waiting (the panel's, an agent's, or one that went on after a restart). Closing ThIDE stops Blender; each render goes on from its frames the next time ThIDE starts (cancel it in the Blender panel to drop it). Close anyway?</value></data>
   <data name="Exit_StopRenderAndClose" xml:space="preserve"><value>Stop render and close</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nothing replaced: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
   <data name="Replace_UndoRefused" xml:space="preserve"><value>Nothing restored: {0} was changed after the replace. No file was changed.</value></data>
@@ -2534,6 +2534,7 @@ This cannot be undone.</value></data>
   <data name="Blender_Queue_OwnerRestart" xml:space="preserve"><value>resumed</value></data>
   <data name="Blender_Queue_Queued" xml:space="preserve"><value>waiting</value></data>
   <data name="Blender_Queue_Running" xml:space="preserve"><value>rendering</value></data>
+  <data name="Blender_Queue_HeldElsewhere" xml:space="preserve"><value>Another ThIDE holds the render queue of this computer. Renders started here run beside its renders, not after them, and do not go on after a restart.</value></data>
   <data name="Blender_Status_RestartRendering" xml:space="preserve"><value>A render ThIDE was closed in the middle of goes on; a render started now waits for it.</value></data>
   <data name="Blender_UI_ShotSelect" xml:space="preserve"><value>Select the shot to edit it</value></data>
   <data name="Blender_UI_FilmTexts" xml:space="preserve"><value>The film</value></data>

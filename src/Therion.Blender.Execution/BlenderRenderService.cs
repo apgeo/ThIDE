@@ -402,8 +402,9 @@ public sealed class BlenderRenderService : IBlenderRenderService, IRenderEstimat
 
     /// <summary>
     /// The player's path: convert, lower the spec to a scene plan, write the plan and the player
-    /// into the job folder, and play it. A plan with texts, and any render whose frames are asked
-    /// for, takes two stages: the frames into the frames folder, then the output from them.
+    /// into the job folder, and play it. A plan with texts, any render whose frames are asked for,
+    /// and a movie whose frames are given a folder take two stages: the frames into the frames
+    /// folder, then the output from them.
     /// </summary>
     private async Task<RenderResult> RenderWithPlayerAsync(
         SceneSpec spec, RenderSource source, RenderOptions options, BlenderInstallation blender, string jobDir, string outputDir,
@@ -419,7 +420,10 @@ public sealed class BlenderRenderService : IBlenderRenderService, IRenderEstimat
         if (options.FrameRange is { } range)
             return await RenderRangeAsync(plan, playerJob, range, options.FramesDirectory!, blender, jobDir, notices, paced, ct).ConfigureAwait(false);
 
-        bool twoStages = plan.HasTexts || options.KeepFrames || options.ComposeOnly;
+        // A movie whose frames are given a folder (a queue that goes on with them after a
+        // restart) takes two stages too: in one, the frames would not be kept to go on with.
+        bool twoStages = plan.HasTexts || options.KeepFrames || options.ComposeOnly
+                         || (options.FramesDirectory is not null && !options.Draft && plan.Output.Kind == PlanOutputKind.Video);
         RenderResult result;
         string? framesDir = null;
         if (!twoStages)
@@ -552,7 +556,7 @@ public sealed class BlenderRenderService : IBlenderRenderService, IRenderEstimat
 
     /// <summary>The two stages of one render as one result: the second's verdict and outputs,
     /// the first's device, the time and the warnings of both.</summary>
-    private static RenderResult Merge(RenderResult frames, RenderResult composed) => new()
+    internal static RenderResult Merge(RenderResult frames, RenderResult composed) => new()
     {
         Succeeded = composed.Succeeded,
         FailureKind = composed.FailureKind,

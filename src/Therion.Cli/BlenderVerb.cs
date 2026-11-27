@@ -31,8 +31,9 @@ public static partial class BlenderVerb
     /// Runs the verb. <paramref name="args"/> is the full CLI argv (args[0] == "blender").
     /// Produced file paths go to <paramref name="stdout"/>; progress/errors to
     /// <paramref name="stderr"/>. Returns 0 (ok) / 1 (render failure) / 2 (usage/spec error).
+    /// <paramref name="ct"/> stops a render, and Blender with it.
     /// </summary>
-    public static async Task<int> RunAsync(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr)
+    public static async Task<int> RunAsync(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr, CancellationToken ct = default)
     {
         if (args.Count < 2 || args[1].StartsWith("--", StringComparison.Ordinal))
         {
@@ -82,7 +83,7 @@ public static partial class BlenderVerb
         if (written) return 0;
         if (tour is not null) storyboard = tour.Storyboard;
         if (storyboard is not null && shot is null)
-            return await StoryboardAsync(args, source, format, storyboard, stdout, stderr, tour).ConfigureAwait(false);
+            return await StoryboardAsync(args, source, format, storyboard, stdout, stderr, tour, ct).ConfigureAwait(false);
 
         if (!TryBuildSpec(args, stderr, storyboard, shot, out var spec)) return 2;
         if (!TryTimeRoute(source, stderr, ref spec)) return 2;
@@ -156,7 +157,7 @@ public static partial class BlenderVerb
             }
             return await BundleAsync(
                     work => RenderBundleWriter.FromModel(model, spec, work, draft, leads: leads, parts: BlenderRenderService.PartsOf(parts)), bundle, draft, language, plans,
-                    Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
+                    Option(args, "--out"), Option(args, "--blender"), stdout, stderr, ct)
                 .ConfigureAwait(false);
         }
 
@@ -185,7 +186,7 @@ public static partial class BlenderVerb
                     return 2;
                 }
                 var export = await service.ExportAsync(
-                        spec, renderSource, exportDir, new ExportOptions { Builder = builder, SingleFile = Flag(args, "--one-file"), Language = readme }, progress)
+                        spec, renderSource, exportDir, new ExportOptions { Builder = builder, SingleFile = Flag(args, "--one-file"), Language = readme }, progress, ct)
                     .ConfigureAwait(false);
                 foreach (string notice in export.Notices) stderr.WriteLine($"warning: {notice}");
                 if (export.LeftOut.Count > 0)
@@ -211,12 +212,12 @@ public static partial class BlenderVerb
             };
             if (Flag(args, "--estimate"))
             {
-                var estimate = await service.EstimateAsync(spec, renderSource, options).ConfigureAwait(false);
+                var estimate = await service.EstimateAsync(spec, renderSource, options, ct).ConfigureAwait(false);
                 stdout.WriteLine(estimate.Describe());
                 if (estimate.TooManyTriangles) stderr.WriteLine($"warning: more than {RenderEstimate.WarnTriangles / 1_000_000} million triangles in one scene");
                 return 0;
             }
-            var result = await service.RenderAsync(spec, renderSource, options, progress).ConfigureAwait(false);
+            var result = await service.RenderAsync(spec, renderSource, options, progress, ct).ConfigureAwait(false);
             foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
             if (result.Builder == SceneBuilder.Generator && result.NotCarried.Count > 0)
                 stderr.WriteLine($"built by the script generator: the player does not carry {string.Join(", ", result.NotCarried)}");
@@ -308,7 +309,7 @@ public static partial class BlenderVerb
     private static async Task<int> BundleAsync(
         Func<string, RenderBundleContent> make, string bundle, bool draft, string language,
         RenderPlans plans, string? outDir,
-        string? blenderOverride, TextWriter stdout, TextWriter stderr)
+        string? blenderOverride, TextWriter stdout, TextWriter stderr, CancellationToken ct = default)
     {
         bool zip = bundle.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
         string work = TempFolder("thide-bundle-");
@@ -390,7 +391,7 @@ public static partial class BlenderVerb
                 ScriptArguments = ["--plan", Path.Combine(folder, file)],
                 ExtraBytes = frameBytes,
             };
-            var result = await new BlenderRunner(new RealBlenderProcessLauncher()).RunAsync(blender, job, progress).ConfigureAwait(false);
+            var result = await new BlenderRunner(new RealBlenderProcessLauncher()).RunAsync(blender, job, progress, ct).ConfigureAwait(false);
             if (!result.Succeeded)
             {
                 stderr.WriteLine($"error: render of {file} failed ({result.FailureKind}): {result.ErrorMessage}");
@@ -576,7 +577,7 @@ public static partial class BlenderVerb
     /// </summary>
     private static async Task<int> StoryboardAsync(
         IReadOnlyList<string> args, string source, CaveSourceFormat format, Storyboard storyboard, TextWriter stdout, TextWriter stderr,
-        Tour? tour = null)
+        Tour? tour = null, CancellationToken ct = default)
     {
         if (SceneOptions.FirstOrDefault(o => Flag(args, o)) is { } said)
         {
@@ -644,7 +645,7 @@ public static partial class BlenderVerb
                         return tour is null ? content : content with { ReadmeSections = [.. content.ReadmeSections, TourReadme(tour, language)] };
                     },
                     bundle, draft, language, plans,
-                    Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
+                    Option(args, "--out"), Option(args, "--blender"), stdout, stderr, ct)
                 .ConfigureAwait(false);
         }
 
@@ -668,12 +669,12 @@ public static partial class BlenderVerb
         {
             if (Flag(args, "--estimate"))
             {
-                var estimate = await service.EstimateStoryboardAsync(storyboard, new RenderSource(model, leads), options).ConfigureAwait(false);
+                var estimate = await service.EstimateStoryboardAsync(storyboard, new RenderSource(model, leads), options, ct).ConfigureAwait(false);
                 stdout.WriteLine(estimate.Describe());
                 if (estimate.TooManyTriangles) stderr.WriteLine($"warning: more than {RenderEstimate.WarnTriangles / 1_000_000} million triangles in one scene");
                 return 0;
             }
-            var result = await service.RenderStoryboardAsync(storyboard, new RenderSource(model, leads), options, progress).ConfigureAwait(false);
+            var result = await service.RenderStoryboardAsync(storyboard, new RenderSource(model, leads), options, progress, ct).ConfigureAwait(false);
             foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
             if (result.Succeeded)
             {

@@ -70,10 +70,17 @@ public partial class MainWindow : Window
             () => DataContext is MainWindowViewModel { HasUnsavedDocuments: true },
             () => DataContext is MainWindowViewModel vm ? vm.ConfirmCloseAsync() : System.Threading.Tasks.Task.FromResult(true),
             Close,
-            jobRunning: () => AppServices.Provider.GetService<BlenderAnimationViewModel>() is { IsJobRunning: true },
+            // Every render in the queue counts, whoever started it (the panel, an agent, a restart).
+            jobRunning: () => AppServices.Provider.GetService<BlenderAnimationViewModel>() is { IsJobRunning: true }
+                              || AppServices.Provider.GetService<Therion.Blender.Execution.RenderQueue>()?.Jobs.Any(j => !j.IsFinished) == true,
             confirmStopJobAsync: () => new ConfirmDialog(ThIDE.Resources.Tr.Get("Exit_RenderRunningTitle"),
                 ThIDE.Resources.Tr.Get("Exit_RenderRunningMsg"), ThIDE.Resources.Tr.Get("Exit_StopRenderAndClose")).ShowAsync(this),
-            stopJob: () => AppServices.Provider.GetService<BlenderAnimationViewModel>()?.StopJob());
+            // The queue first: it stops Blender and keeps its renders for the next start to go on with.
+            stopJob: () =>
+            {
+                AppServices.Provider.GetService<Therion.Blender.Execution.RenderQueue>()?.Shutdown(System.TimeSpan.FromSeconds(5));
+                AppServices.Provider.GetService<BlenderAnimationViewModel>()?.StopJob();
+            });
         // Ctrl+Tab document switching is registered in the tunnel phase so it fires before any
         // focused child (the dock tab-strip, toolbar, menu, editor) can swallow it — otherwise it
         // only works while the editor is focused and dies once focus lands on the toolbar (#4).

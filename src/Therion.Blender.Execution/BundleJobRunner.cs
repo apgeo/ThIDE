@@ -50,6 +50,13 @@ internal sealed class BundleJobRunner(
 
     public const string LogSuffix = ".log";
 
+    /// <summary>The longest a job may be allowed to run; a longer limit is this.</summary>
+    public static TimeSpan LongestTime => RenderWorkerOptions.LongestMaxTime;
+
+    /// <summary><paramref name="limit"/>, at most <see cref="LongestTime"/>; a limit of zero or
+    /// less is that too.</summary>
+    public static TimeSpan Longest(TimeSpan limit) => limit <= TimeSpan.Zero || limit > LongestTime ? LongestTime : limit;
+
     /// <summary>
     /// Renders <paramref name="job"/>, starting from <paramref name="record"/>; tells
     /// <paramref name="status"/> how far it got, once a second at most. Never throws for the
@@ -62,13 +69,14 @@ internal sealed class BundleJobRunner(
         string bundleDir = Path.Combine(job.Scratch, "bundle");
         string framesDir = Path.Combine(job.Scratch, PlanOutputs.FramesFolderName);
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancel);
-        stop.CancelAfter(job.MaxTime);
+        var maxTime = Longest(job.MaxTime);
+        stop.CancelAfter(maxTime);
 
         RenderJobResult result;
         bool cancelled = false, refused = false;
         try
         {
-            var bundle = RenderBundleReader.Unpack(job.ZipPath, bundleDir, job.Limits, job.Choice);
+            var bundle = Unpack(job, bundleDir);
             PlayerWriter.WritePlayer(bundle.Scenes, bundleDir);
             var locate = locator.Locate(blender?.Invoke());
             if (!locate.IsUsable)
@@ -101,8 +109,21 @@ internal sealed class BundleJobRunner(
         }
         bool timedOut = cancelled && !cancel.IsCancellationRequested;
         if (timedOut)
-            result = RenderJobResult.Failure(RenderNodeFailure.TimedOut, $"The render ran longer than the {job.MaxTime.TotalHours:0.#} h allowed; its frames are kept.");
+            result = RenderJobResult.Failure(RenderNodeFailure.TimedOut, $"The render ran longer than the {maxTime.TotalHours:0.#} h allowed; its frames are kept.");
         return new BundleJobOutcome(record.Ended(result, DateTimeOffset.UtcNow, cancelled && result.FailureKind == "cancelled"), refused, timedOut);
+    }
+
+    /// <summary>Unpacks and checks the bundle. A bundle is data from elsewhere: whatever reading it
+    /// throws, other than the disk failing under it, is a bundle that is refused (a plan the
+    /// checks cannot even read, such as one with null where a section is), never a fault of the
+    /// worker's that another try would get past.</summary>
+    private static UnpackedBundle Unpack(BundleJob job, string bundleDir)
+    {
+        try { return RenderBundleReader.Unpack(job.ZipPath, bundleDir, job.Limits, job.Choice); }
+        catch (Exception ex) when (ex is not (RenderBundleRefusedException or IOException or UnauthorizedAccessException or OperationCanceledException or OutOfMemoryException))
+        {
+            throw new RenderBundleRefusedException($"The bundle cannot be read: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     /// <summary>Plays the bundle: each scene's first stage (every segment of a film in a Blender
@@ -153,7 +174,26 @@ internal sealed class BundleJobRunner(
 
         var scene = bundle.Scene;
         var sceneOutput = PlanOutputs.SpecOf(scene, Path.Combine(bundle.Folder, scene.Output.Directory));
-        // One stage, or two when the scene has texts: the player starts the second itself.
+        if (scene.Output.Kind == PlanOutputKind.Video)
+        {
+            // A movie takes two stages, texts or not: its frames stay in the scratch folder, so
+            // that a job stopped or cut short goes on from them when it is taken again.
+            var frames = await runner.RunAsync(installation,
+                new RenderJob(script, bundle.Folder, PlanOutputs.StageFrameCount(scene), PlanOutputs.FramesOf(scene, framesDir))
+                {
+                    ScriptArguments = ["--plan", top, "--stage", "frames", "--frames", framesDir, .. modules],
+                    ExtraBytes = DiskPreflight.EstimateBytes(scene.OutputFrameCount, sceneOutput.Width, sceneOutput.Height, sceneOutput.Kind),
+                    LogFileName = "job-frames.log",
+                }, paced, ct).ConfigureAwait(false);
+            if (!frames.Succeeded) return (frames, perFrame);
+            var composed = await runner.RunAsync(installation,
+                new RenderJob(script, bundle.Folder, scene.OutputFrameCount, sceneOutput)
+                {
+                    ScriptArguments = ["--plan", top, "--stage", "compose", "--frames", framesDir, .. modules],
+                }, progress, ct).ConfigureAwait(false);
+            return (BlenderRenderService.Merge(frames, composed), perFrame);
+        }
+        // Stills and frames: one stage, or two when the scene has texts (the player starts the second itself).
         var result = await runner.RunAsync(installation,
             new RenderJob(script, bundle.Folder, scene.OutputFrameCount, sceneOutput)
             {
@@ -198,11 +238,13 @@ internal sealed class BundleJobRunner(
     private static void CopyLog(BundleJob job, string bundleDir)
     {
         var logs = Directory.EnumerateFiles(bundleDir, "job*.log").Order(StringComparer.Ordinal).ToList();
-        using var target = new StreamWriter(Path.Combine(job.Outbox, job.Id + LogSuffix), append: false);
+        using var target = new FileStream(Path.Combine(job.Outbox, job.Id + LogSuffix), FileMode.Create, FileAccess.Write);
         foreach (string log in logs)
         {
-            target.WriteLine($"==== {Path.GetFileName(log)}");
-            target.Write(File.ReadAllText(log));
+            // Streamed: the log of a render of days can be large.
+            target.Write(System.Text.Encoding.UTF8.GetBytes($"==== {Path.GetFileName(log)}{Environment.NewLine}"));
+            using var source = File.OpenRead(log);
+            source.CopyTo(target);
         }
     }
 
@@ -232,4 +274,48 @@ internal sealed class BundleJobRunner(
     }
 
     private static string Camel(RenderFailureKind kind) => char.ToLowerInvariant(kind.ToString()[0]) + kind.ToString()[1..];
+}
+
+/// <summary>The scratch folders of a worker's jobs, one per job.</summary>
+internal static class ScratchFolders
+{
+    /// <summary>What a job keeps in its scratch folder: the bundle unpacked and its zip, the
+    /// frames, and the results on their way.</summary>
+    private static readonly HashSet<string> JobEntries = new(StringComparer.Ordinal)
+    {
+        "bundle", PlanOutputs.FramesFolderName, "out", "bundle.zip", "bundle.zip.part",
+    };
+
+    /// <summary>
+    /// Removes the job folders under <paramref name="scratch"/> (those whose name
+    /// <paramref name="isJob"/> takes) in which nothing was written for longer than
+    /// <paramref name="keep"/>: the frames of a job that did not end here and never came back.
+    /// Returns each one removed with the bytes it held. A folder that cannot be removed now is
+    /// tried again next time. A folder that holds anything but what a job keeps there is not a
+    /// job's, and is left alone (a scratch folder named by mistake).
+    /// </summary>
+    public static IReadOnlyList<(string Name, long Bytes)> Prune(string scratch, TimeSpan keep, Func<string, bool> isJob)
+    {
+        var removed = new List<(string, long)>();
+        if (keep <= TimeSpan.Zero || !Directory.Exists(scratch)) return removed;
+        var before = DateTime.UtcNow - keep;
+        IEnumerable<DirectoryInfo> folders;
+        try { folders = new DirectoryInfo(scratch).EnumerateDirectories().Where(d => isJob(d.Name)).ToList(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return removed; }
+        foreach (var folder in folders)
+        {
+            try
+            {
+                if (folder.EnumerateFileSystemInfos().Any(e => !JobEntries.Contains(e.Name))) continue;
+                var entries = folder.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).ToList();
+                var newest = entries.Select(e => e.LastWriteTimeUtc).Append(folder.LastWriteTimeUtc).Max();
+                if (newest >= before) continue;
+                long bytes = entries.OfType<FileInfo>().Sum(f => f.Length);
+                folder.Delete(recursive: true);
+                removed.Add((folder.Name, bytes));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+        return removed;
+    }
 }
