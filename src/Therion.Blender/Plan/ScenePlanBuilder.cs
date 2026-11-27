@@ -76,7 +76,9 @@ public static class ScenePlanBuilder
     /// <summary>
     /// Lowers <paramref name="spec"/> to a plan. Throws <see cref="ArgumentException"/> when the
     /// spec is invalid, or when its camera template cannot be planned from
-    /// <paramref name="framing"/> (a flythrough of a model without a centreline).
+    /// <paramref name="framing"/> (a flythrough of a model without a centreline). A route timed
+    /// <see cref="RouteTiming.Natural"/> gives the clip its length here
+    /// (<see cref="CameraRoutes.WithNaturalDuration"/>); the spec's duration is not used then.
     /// </summary>
     /// <param name="framing">The model's bounds and centreline. Every template needs it here,
     /// the static one too: a plan holds the pose, not the rule for finding it.</param>
@@ -103,6 +105,8 @@ public static class ScenePlanBuilder
                 "The render spec is invalid: " + string.Join("; ", errors.Select(e => $"{e.Path}: {e.Message}")),
                 nameof(spec));
         spec = TextPlaceholders.Resolve(spec, meta);
+        // A route that sets its own time gives the clip its length, whoever plans it.
+        spec = CameraRoutes.WithNaturalDuration(spec, framing);
 
         var camera = CameraPlanner.PlanPoses(spec, framing);
         var planCamera = Camera(camera, spec.Animation.Fps);
@@ -119,9 +123,10 @@ public static class ScenePlanBuilder
         var annotations = AnnotationPlanner.Plan(spec.Annotations, meta, framing.LocalBounds, planCamera, timeline);
         annotations = WithoutCulledParts(annotations, spec.Source.Parts, walls);
         if (annotations.Changes.Count > 0) changes = [.. changes ?? [], .. annotations.Changes];
-        var (reveal, counter) = RevealPlanner.Plan(spec, meta, camera.FrameCount, ModelId);
-        // The reveal values travel with the vertices of every part: one change reveals them all.
-        if (reveal is not null && spec.Source.Parts.Count > 0) reveal = reveal with { Target = new PlanChangeTarget { Role = WallsRole } };
+        // The reveal values travel with the vertices of every part: one change reveals them all,
+        // and the counter of the reveal names what the change reveals.
+        var revealed = spec.Source.Parts.Count > 0 ? new PlanChangeTarget { Role = WallsRole } : new PlanChangeTarget { Id = ModelId };
+        var (reveal, counter) = RevealPlanner.Plan(spec, meta, camera.FrameCount, revealed);
         if (reveal is not null) changes = [.. changes ?? [], reveal];
         if (counter is not null) texts = (texts ?? new PlanScreenTexts()) with { Items = [.. texts?.Items ?? [], counter] };
         var features = ScenePlan.BasicFeatures;
@@ -366,6 +371,7 @@ public static class ScenePlanBuilder
     public static IReadOnlyList<string> Notices(SceneSpec spec, SceneMeta? meta = null, CameraFraming? framing = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
+        if (framing is not null) spec = CameraRoutes.WithNaturalDuration(spec, framing);
         var notices = new List<string>();
         if (framing is not null && spec.Annotations.Any(a => a is { From: not null } or { To: not null } or { Within: not null }))
         {

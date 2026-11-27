@@ -175,13 +175,26 @@ def text_of(plan_path):
 
 
 def plan_of(plan_text):
-    """The plan of a text, checked as far as the core relies on it."""
+    """The plan of a text, checked as far as the core relies on it. JSON has no NaN and no
+    infinity: Python's reader takes NaN, Infinity and a number too large for a float (1e999) as
+    one, and the plan is refused here instead of somewhere in Blender."""
     try:
-        plan = json.loads(plan_text)
+        plan = json.loads(plan_text, parse_constant=not_a_json_number, parse_float=finite_float)
     except ValueError as error:
         raise api.PlanError("the plan is not valid JSON: %s" % error)
     check(plan)
     return plan
+
+
+def not_a_json_number(name):
+    raise ValueError("%s is not a JSON number" % name)
+
+
+def finite_float(text):
+    value = float(text)
+    if value != value or value in (float("inf"), float("-inf")):
+        raise ValueError("%s is too large a number" % text)
+    return value
 
 
 def frames_of(plan, modules, ctx, frames_dir, inputs):

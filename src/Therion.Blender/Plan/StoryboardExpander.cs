@@ -10,6 +10,7 @@
 // known (a render queue that starts it again after a restart).
 
 using System.Globalization;
+using Therion.Blender.Emit;
 using Therion.Blender.Presets;
 using Therion.Blender.Sources;
 using Therion.Cave3D;
@@ -89,7 +90,12 @@ public static class StoryboardExpander
                             // A tour shows the whole cave, or what the shot says of the reveal.
                             Reveal = t.Reveal ?? shot!.Reveal ?? (storyboard.Defaults.Reveal is null ? null : ShotReveal.None),
                             In = j == 0 ? shot!.In : t.In,
-                            Texts = j == 0 ? t.Texts ?? shot!.Texts : t.Texts,
+                            // The first shot of the tour has the texts of the tour shot, with the
+                            // tour's corner lines added.
+                            Texts = j == 0 ? WithTourCorner(shot!.Texts ?? shot.Labels?.Overlays, t.Texts) : t.Texts,
+                            // The tour's markers at its leads, with the shot's own annotations
+                            // (or the storyboard's) on every shot of the tour.
+                            Annotations = Joined(t.Annotations, shot!.Annotations ?? storyboard.Defaults.Annotations),
                         });
                     }
                     tours.Add(tour);
@@ -124,11 +130,14 @@ public static class StoryboardExpander
             Shots = storyboard.Shots.Select(shot =>
             {
                 if (shot?.Preset is not { } name || BuiltInPresets.ByName(name) is not null || presets(name)?.Spec is not { } spec) return shot!;
+                var camera = shot.Camera ?? spec.Camera;
+                // A route that sets its own time keeps it: a shot that said a length would fit it.
+                bool natural = camera is { Template: CameraTemplate.Route, Route.Timing: RouteTiming.Natural };
                 return shot with
                 {
                     Preset = null,
-                    Seconds = shot.Seconds ?? spec.Animation.DurationSeconds,
-                    Camera = shot.Camera ?? spec.Camera,
+                    Seconds = shot.Seconds ?? (natural ? null : spec.Animation.DurationSeconds),
+                    Camera = camera,
                     Engine = shot.Engine ?? spec.Engine,
                     Materials = shot.Materials ?? spec.Materials,
                     Lighting = shot.Lighting ?? spec.Lighting,
@@ -142,6 +151,23 @@ public static class StoryboardExpander
     }
 
     private enum Kind { Tour, Newest }
+
+    /// <summary>The texts a shot had, with the corner lines of the tour's first shot: the shot's
+    /// own corner line, if it has one, stays, and the corner captions are both of them.</summary>
+    private static OverlaySpec? WithTourCorner(OverlaySpec? own, OverlaySpec? tour)
+        => own is null ? tour
+            : tour is null ? own
+            : own with { Corner = own.Corner ?? tour.Corner, CornerCaptions = [.. own.CornerCaptions, .. tour.CornerCaptions] };
+
+    /// <summary>The shot's annotations, then the tour's; one of the tour's that has the id of
+    /// one of the shot's is left out. Null when there are none.</summary>
+    private static IReadOnlyList<AnnotationSpec>? Joined(IReadOnlyList<AnnotationSpec>? tour, IReadOnlyList<AnnotationSpec>? own)
+    {
+        if (tour is not { Count: > 0 }) return own;
+        if (own is not { Count: > 0 }) return tour;
+        var ids = own.Select((a, i) => a?.IdAt(i)).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        return [.. own, .. tour.Where((a, i) => !ids.Contains(a.IdAt(own.Count + i)))];
+    }
 
     private static RouteParams? RouteOf(ShotSpec shot, Func<string, RenderPreset?> presets)
     {
@@ -243,23 +269,17 @@ public static class StoryboardExpander
                 double d = (model.Stations[stations[i]].Position - model.Stations[stations[j]].Position).Length;
                 if (d > best) (best, a, b) = (d, stations[i], stations[j]);
             }
-        if (model.Stations.FirstOrDefault(s => (s.Flags & CaveStationFlags.Entrance) != 0) is { } entrance
-            && (model.Stations[b].Position - entrance.Position).Length < (model.Stations[a].Position - entrance.Position).Length)
-            (a, b) = (b, a);
+        // From the one nearer an entrance, whichever entrance that is.
+        var entrances = model.Stations.Where(s => (s.Flags & CaveStationFlags.Entrance) != 0).Select(s => s.Position).ToList();
+        double ToEntrance(int s) => entrances.Min(e => (model.Stations[s].Position - e).Length);
+        if (entrances.Count > 0 && ToEntrance(b) < ToEntrance(a)) (a, b) = (b, a);
 
-        string from = NameOf(model, a), to = NameOf(model, b);
+        // Named as a route finds them again.
+        var framing = new CameraFraming { LocalBounds = geometry.LocalBounds, Centerline = geometry.Centerline, Model = model };
+        var names = CameraRoutes.NamesOf(framing, [a, b]);
+        string from = names[0], to = names[1];
         int year = (int)Math.Floor(last);
         return (route with { From = from, To = to, Via = [], Stations = [] },
             $"flies the passage surveyed last ({year.ToString(CultureInfo.InvariantCulture)}), {from} to {to}.");
-    }
-
-    /// <summary>How a route names a station: by its name, or as name@survey where the name alone
-    /// is in more than one place.</summary>
-    private static string NameOf(CaveModel model, int station)
-    {
-        var s = model.Stations[station];
-        bool alone = model.Stations.Where(o => o.Name == s.Name).Select(o => o.Position).Distinct().Count() == 1;
-        if (alone || s.SurveyId is not { } id) return s.Name;
-        return model.Surveys.FirstOrDefault(v => v.Id == id) is { } survey ? $"{s.Name}@{survey.Name}" : s.Name;
     }
 }

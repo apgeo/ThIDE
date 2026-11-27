@@ -958,9 +958,12 @@ citește modelul și face din ea filmul acelei peșteri. Trei vin cu ThIDE:
 
 `"branches": "auto"` face din secvență un parcurs pe ramurile peșterii, de la `from` al traseului
 (intrarea, când lipsește), în secundele secvenței, cu aspectul presetării ei; secvențele parcursului
-îi iau locul. `"from": "newest"` zboară de-a lungul galeriei din ultima zi de topografiere, de la capătul ei mai
-apropiat de intrare la celălalt; un model fără date de topografiere zboară în schimb de-a lungul
-galeriei principale. Ce s-a făcut apare în avertismentele randării. Presetările compuse proprii stau lângă
+îi iau locul. Fiecare dintre ele păstrează adnotările secvenței (sau pe ale storyboardului) alături
+de marcajele parcursului la pistele lui, iar prima păstrează și textele secvenței.
+`"from": "newest"` zboară de-a lungul galeriei din ultima zi de topografiere, de la capătul ei mai
+apropiat de o intrare (cea mai apropiată, într-o peșteră cu mai multe) la celălalt; un model fără
+date de topografiere zboară în schimb de-a lungul galeriei principale. Ce s-a făcut apare în
+avertismentele randării. Presetările compuse proprii stau lângă
 presetările dumneavoastră, ca fișiere `*.composite.json` (un `name`, o `description` și
 `storyboard`): **Salvează ca presetare compusă** din [fila Storyboard](#fila-storyboard) scrie una.
 
