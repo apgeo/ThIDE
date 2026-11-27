@@ -207,9 +207,6 @@ public sealed record SkeletonOptions
 
     /// <summary>Strength of the axis smoothing (0 = none).</summary>
     public double Smoothing { get; init; } = 1.0;
-
-    /// <summary>Wide, low passages (bedding planes) are treated like chambers with the axis policy.</summary>
-    public bool DetectBeddingPlanes { get; init; } = true;
 }
 
 public sealed record MainlineOptions
