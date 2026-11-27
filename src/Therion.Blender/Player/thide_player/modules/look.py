@@ -98,6 +98,10 @@ def use_cycles(scene, look):
         try:
             if enable_gpu(backend):
                 cycles.device = "GPU"
+                # The denoiser runs on the CPU unless told otherwise (Blender 4.1 and newer can
+                # run it on the GPU); on a card it took about 40 % of a 1920×1080 frame.
+                if hasattr(cycles, "denoising_use_gpu"):
+                    cycles.denoising_use_gpu = True
                 api.report("device", backend)
                 return
         except Exception:

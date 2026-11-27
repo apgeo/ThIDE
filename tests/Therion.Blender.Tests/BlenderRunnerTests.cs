@@ -39,6 +39,17 @@ public class BlenderRunnerTests : IDisposable
 
         public int ExitCode => Killed ? -1 : exitCode;
         public void KillTree() => Killed = true;
+
+        /// <summary>Whether the runner waited for the process to be gone, and whether it had been
+        /// killed by then.</summary>
+        public bool WaitedAfterKill { get; private set; }
+
+        public Task WaitForExitAsync(TimeSpan timeout)
+        {
+            WaitedAfterKill = Killed;
+            return Task.CompletedTask;
+        }
+
         public void Dispose() { }
     }
 
@@ -176,6 +187,24 @@ public class BlenderRunnerTests : IDisposable
         Assert.Equal(RenderFailureKind.Crashed, result.FailureKind);
         Assert.Contains("139", result.ErrorMessage);
         Assert.Contains("Segmentation fault", result.ErrorMessage);
+        Assert.DoesNotContain("OpenGL", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ACrashAfterBlenderFoundNoOpenGl_SaysWhatNeedsIt_AndWhereToRenderInstead()
+    {
+        // What a Windows Blender prints when it draws (a draft, EEVEE) outside a desktop session.
+        var lines = new[]
+        {
+            "THIDE:device=WORKBENCH", "THIDE:frames=4",
+            "Implementation unexpectedly missing WGL_ARB_extensions_string.  Probably a libepoxy bug.",
+            "Error   : EXCEPTION_ACCESS_VIOLATION", "Warning: No OpenGL vendor detected.",
+        };
+        var result = await Runner(() => new FakeProcess(lines, exitCode: 11)).RunAsync(Blender, Job(), null);
+
+        Assert.Equal(RenderFailureKind.Crashed, result.FailureKind);
+        Assert.Contains(BlenderRunner.NoOpenGlHint, result.ErrorMessage);
+        Assert.Contains("EXCEPTION_ACCESS_VIOLATION", result.ErrorMessage);
     }
 
     [Fact]
@@ -212,6 +241,9 @@ public class BlenderRunnerTests : IDisposable
         Assert.Equal(RenderFailureKind.Cancelled, result.FailureKind);
         Assert.False(result.Succeeded);
         Assert.True(((FakeProcess)launcher.Last!).Killed);
+        // Gone before the result comes back: a job that goes on with its frames at once finds
+        // nothing of it locked (Windows locks what a dying process still holds).
+        Assert.True(((FakeProcess)launcher.Last!).WaitedAfterKill);
     }
 
     [Fact]
@@ -246,6 +278,31 @@ public class BlenderRunnerTests : IDisposable
         long frames = DiskPreflight.EstimateBytes(240, 1920, 1080, OutputKind.FrameSequence);
         Assert.True(frames > video);
         Assert.True(video > 0);
+    }
+
+    [Fact]
+    public void Estimate_FrameSequenceScalesWithResolution_FromTwoMegabytesAt1080p()
+    {
+        long margin = DiskPreflight.FixedMarginBytes;
+        long hd = DiskPreflight.EstimateBytes(100, 1920, 1080, OutputKind.FrameSequence) - margin;
+        Assert.InRange(hd, 199_999_000L, 200_001_000L);
+        long uhd = DiskPreflight.EstimateBytes(100, 3840, 2160, OutputKind.FrameSequence) - margin;
+        Assert.InRange(uhd, hd * 4 - 1000, hd * 4 + 1000);
+            }
+
+    [Fact]
+    public void Estimate_HasAFloorPerFrame_AndAFixedMargin()
+    {
+        long tiny = DiskPreflight.EstimateBytes(10, 16, 16, OutputKind.FrameSequence);
+        Assert.InRange(tiny, 32_640_000L - 10, 32_640_000L + 10);
+    }
+
+    [Fact]
+    public void Estimate_AMeasuredSampleThatWasRefused_NowFits()
+    {
+        // 1080p at 1.77 MB a frame, 1000 frames, 6.6 GB free: the old 5 MB a frame refused this.
+        long estimate = DiskPreflight.EstimateBytes(1000, 1920, 1080, OutputKind.FrameSequence);
+        Assert.True(DiskPreflight.IsSufficient(estimate, 6_639_000_000));
     }
 
     [Fact]

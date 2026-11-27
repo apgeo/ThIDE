@@ -141,6 +141,73 @@
                               ItemsSource="{Binding Blender.TransitionKinds}" SelectedItem="{Binding Blender.SelectedShot.TransitionKind, FallbackValue={x:Null}}" />
                 </DockPanel>
                 <TextBlock Text="{l:Loc Blender_UI_EditsShot}" TextWrapping="Wrap" FontStyle="Italic" IsVisible="{Binding Blender.HasSelectedShot}" />
+                <!-- the side passages of a tour shot -->
+                <StackPanel AutomationProperties.AutomationId="Blender.Branches" Spacing="4" IsVisible="{Binding Blender.IsTourShot}">
+                    <DockPanel>
+                        <Button AutomationProperties.AutomationId="Blender.ListBranches" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_ListBranches}" Margin="6,0,0,0"
+                                ToolTip.Tip="{l:Loc Blender_UI_ListBranches_Tip}" Command="{Binding Blender.ListBranchesCommand}" />
+                        <TextBlock Text="{l:Loc Blender_UI_Branches}" FontWeight="Bold" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock Text="{l:Loc Blender_UI_Branches_Hint}" TextWrapping="Wrap" FontSize="11" Opacity="0.7" IsVisible="{Binding Blender.HasTourBranches}" />
+                    <TextBlock AutomationProperties.AutomationId="Blender.TourSummary" Text="{Binding Blender.TourSummary}" IsVisible="{Binding Blender.HasTourBranches}" />
+                    <ItemsControl AutomationProperties.AutomationId="Blender.BranchRows" AutomationProperties.Name="{l:Loc Blender_UI_Branches}" ItemsSource="{Binding Blender.TourBranches}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vmm:TourBranchRowViewModel">
+                                <Grid ColumnDefinitions="40,70,50,55,*,120,Auto,Auto" Margin="0,1">
+                                    <TextBlock Grid.Column="0" Text="{Binding Id}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Kind}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Junction}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Junction}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Length}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Outcome}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Outcome}"
+                                               FontStyle="{Binding Chosen, Converter={x:Static local:SelectedShotBrush.LeftOut}}" />
+                                    <ComboBox Grid.Column="5" AutomationProperties.AutomationId="{Binding VisitId}" AutomationProperties.Name="{l:Loc Blender_UI_BranchVisit}" HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding VisitChoices}" SelectedItem="{Binding VisitChoice}" />
+                                    <Button Grid.Column="6" AutomationProperties.AutomationId="{Binding UpId}" AutomationProperties.Name="{l:Loc Blender_UI_BranchUp}" Content="&#x2191;" Padding="6,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_BranchUp}" Command="{Binding $parent[ItemsControl].DataContext.Blender.MoveBranchUpCommand}" CommandParameter="{Binding}" />
+                                    <Button Grid.Column="7" AutomationProperties.AutomationId="{Binding DownId}" AutomationProperties.Name="{l:Loc Blender_UI_BranchDown}" Content="&#x2193;" Padding="6,0"
+                                            ToolTip.Tip="{l:Loc Blender_UI_BranchDown}" Command="{Binding $parent[ItemsControl].DataContext.Blender.MoveBranchDownCommand}" CommandParameter="{Binding}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl AutomationProperties.AutomationId="Blender.TourNotices" ItemsSource="{Binding Blender.TourNotices}" Opacity="0.8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="11" /></DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <!-- the film as a whole: its title, its end card, the language of its own texts -->
+                <TextBlock Text="{l:Loc Blender_UI_FilmTexts}" FontWeight="Bold" />
+                <TextBlock Text="{l:Loc Blender_UI_FilmTexts_Hint}" TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_Title}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmTitle" AutomationProperties.Name="{l:Loc Blender_UI_Title}" Text="{Binding Blender.FilmTitle}" /></DockPanel>
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_Subtitle}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmSubtitle" AutomationProperties.Name="{l:Loc Blender_UI_Subtitle}" Text="{Binding Blender.FilmSubtitle}" /></DockPanel>
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_FilmTitleSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmTitleSeconds" AutomationProperties.Name="{l:Loc Blender_UI_FilmTitleSeconds}" HorizontalAlignment="Left" Width="70"
+                             ToolTip.Tip="{l:Loc Blender_UI_FilmTitleSeconds_Tip}" Text="{Binding Blender.FilmTitleSeconds}" /></DockPanel>
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_EndCard}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmEndCard" AutomationProperties.Name="{l:Loc Blender_UI_EndCard}" ToolTip.Tip="{l:Loc Blender_UI_EndCard_Tip}"
+                             Text="{Binding Blender.FilmEndCardText}" /></DockPanel>
+                <DockPanel IsEnabled="{Binding Blender.HasFilmEndCard}"><TextBlock Text="{l:Loc Blender_UI_EndCardSubtitle}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmEndCardSubtitle" AutomationProperties.Name="{l:Loc Blender_UI_EndCardSubtitle}" Text="{Binding Blender.FilmEndCardSubtitle}" /></DockPanel>
+                <DockPanel IsEnabled="{Binding Blender.HasFilmEndCard}"><TextBlock Text="{l:Loc Blender_UI_EndCardSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmEndCardSeconds" AutomationProperties.Name="{l:Loc Blender_UI_EndCardSeconds}" HorizontalAlignment="Left" Width="70"
+                             Text="{Binding Blender.FilmEndCardSeconds}" /></DockPanel>
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_FilmLanguage}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <ComboBox AutomationProperties.AutomationId="Blender.FilmLanguage" AutomationProperties.Name="{l:Loc Blender_UI_FilmLanguage}" HorizontalAlignment="Stretch"
+                              ToolTip.Tip="{l:Loc Blender_UI_FilmLanguage_Tip}" ItemsSource="{Binding Blender.FilmLanguages}" SelectedItem="{Binding Blender.SelectedFilmLanguage}" /></DockPanel>
+                <!-- the film kept as a composite preset of the user's -->
+                <DockPanel>
+                    <Button AutomationProperties.AutomationId="Blender.SaveComposite" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_SaveComposite}" Margin="6,0,0,0"
+                            ToolTip.Tip="{l:Loc Blender_UI_SaveComposite_Tip}" Command="{Binding Blender.SaveCompositeCommand}" />
+                    <TextBox AutomationProperties.AutomationId="Blender.CompositeName" AutomationProperties.Name="{l:Loc Blender_UI_CompositeName}"
+                             Watermark="{l:Loc Blender_UI_CompositeName}" Text="{Binding Blender.NewCompositeName}" />
+                </DockPanel>
+                <TextBox AutomationProperties.AutomationId="Blender.CompositeDescription" AutomationProperties.Name="{l:Loc Blender_UI_CompositeDescription}"
+                         Watermark="{l:Loc Blender_UI_CompositeDescription}" Text="{Binding Blender.NewCompositeDescription}" />
+                <TextBlock Text="{Binding Blender.CompositeNameProblem}" Foreground="#C05050" TextWrapping="Wrap"
+                           IsVisible="{Binding Blender.CompositeNameProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <ItemsControl AutomationProperties.AutomationId="Blender.StoryboardBlockers" ItemsSource="{Binding Blender.StoryboardBlockers}" Foreground="#C05050">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" /></DataTemplate>

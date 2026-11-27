@@ -146,12 +146,12 @@ public sealed class RenderQueue : IDisposable
         }
         catch (OperationCanceledException)
         {
-            End(entry, RenderJobResult.Failure("cancelled", "The render was cancelled."), cancelled: true);
+            End(entry, RenderJobResult.Failure(RenderNodeFailure.Cancelled, "The render was cancelled."), cancelled: true);
             throw;
         }
         catch (Exception ex)
         {
-            End(entry, RenderJobResult.Failure("error", ex.Message));
+            End(entry, RenderJobResult.Failure(RenderNodeFailure.Error, ex.Message));
             throw;
         }
     }

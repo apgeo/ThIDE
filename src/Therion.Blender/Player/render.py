@@ -18,6 +18,17 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+# The player's deepest file, and the frames of a film's shot, lie about 45 characters below this
+# folder. A Windows without long paths (the default) reads no path longer than 260 characters:
+# Python would then only say that it has no thide_player.
+DEEPEST = os.path.join(HERE, "thide_player", "modules", "textured_materials.py")
+if len(DEEPEST) > 260 and not os.path.isfile(DEEPEST):
+    print("THIDE:error=the path of this folder is too long for Windows (%d characters, at most %d): "
+          "move it to a folder with a shorter path, such as C:\\render" % (len(HERE), 260 - len(DEEPEST) + len(HERE)),
+          flush=True)
+    sys.exit(64)
+
 sys.path.insert(0, HERE)
 sys.dont_write_bytecode = True  # leave the folder as it was written
 

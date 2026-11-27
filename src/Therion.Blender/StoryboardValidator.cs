@@ -31,6 +31,8 @@ public static class StoryboardValidator
             Bad("fps", $"Fps must be within {SceneSpecValidator.MinFps}–{SceneSpecValidator.MaxFps}.");
             return errors;
         }
+        if (storyboard.Language is { } language && !TourBuilder.Languages.Contains(language, StringComparer.Ordinal))
+            Bad("language", $"The film's texts are written in one of: {string.Join(", ", TourBuilder.Languages)}.");
         if (film && storyboard.Output.Kind == OutputKind.Still)
             Bad("output.kind", "A film is a video or numbered frames; one shot alone can be a still.");
 
@@ -58,6 +60,8 @@ public static class StoryboardValidator
             }
             if (shot.Preset is { } preset && presets(preset) is null)
                 Bad(path + ".preset", $"Unknown preset '{preset}'.");
+            if (shot.Camera?.Route is { Branches: null, HasTourChoices: true })
+                Bad(path + ".camera.route", "include, exclude and priority choose the side passages of a tour: they go with \"branches\": \"auto\".");
             if (shot.Reveal is { Mode: ShotRevealMode.Hold } && i == 0)
                 Bad(path + ".reveal", "The first shot has no shot before it to hold the reveal of.");
 

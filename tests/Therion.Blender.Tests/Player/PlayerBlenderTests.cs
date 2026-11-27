@@ -807,8 +807,10 @@ public class PlayerBlenderTests
         var opened = await PlayerRunner.ProbeBlendAsync(blend, options);
         var built = await PlayerRunner.ProbeAsync(job.ScriptPath, options);
 
-        // The output is named from where the file lies, so the folder can be moved.
-        Assert.Equal("//../frames/part_####", opened.Scene.OutputPath);
+        // The output is named from where the file lies, so the folder can be moved. Blender reads
+        // the path back with this system's separator, whichever system saved it.
+        char sep = Path.DirectorySeparatorChar;
+        Assert.Equal($"//..{sep}frames{sep}part_####", opened.Scene.OutputPath);
         Assert.Equal(built.Scene with { OutputPath = "" }, opened.Scene with { OutputPath = "", Resolution = built.Scene.Resolution });
         Assert.Equal(built.Scene.Resolution, opened.Scene.Resolution);
         Assert.Equal(built.Objects.Select(o => (o.Name, o.Role, o.Type, o.Parent, o.Vertices, o.Polygons, o.Energy)),

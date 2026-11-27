@@ -113,6 +113,65 @@ public sealed class RenderNodeTests : IDisposable
         Assert.False(RenderNodeProtocol.TryContainer("WEBM", out _));
     }
 
+    [Fact]
+    public void TheFailureConstants_AreTheSchemasEnum_InItsOrder()
+    {
+        string[] constants =
+        [
+            RenderNodeFailure.Refused, RenderNodeFailure.BadJob, RenderNodeFailure.Checksum, RenderNodeFailure.Download,
+            RenderNodeFailure.Upload, RenderNodeFailure.Cancelled, RenderNodeFailure.TimedOut, RenderNodeFailure.BlenderNotFound,
+            RenderNodeFailure.BlenderTooOld, RenderNodeFailure.DiskSpace, RenderNodeFailure.ScriptError, RenderNodeFailure.Crashed,
+            RenderNodeFailure.NoOutput, RenderNodeFailure.Error,
+        ];
+        var defs = JsonNode.Parse(RenderNodeProtocol.Schema)!["$defs"]!;
+        Assert.Equal(defs["fail"]!["properties"]!["reason"]!["enum"]!.AsArray().Select(n => (string)n!), constants);
+        Assert.Equal(constants, RenderNodeFailure.All);
+    }
+
+    [Fact]
+    public void Validate_AcceptsAGoodMessage_AndEveryMessageTheLibraryWrites()
+    {
+        foreach (object message in Messages)
+        {
+            string json = message switch
+            {
+                RenderNodeClaim m => RenderNodeProtocol.Write(m), RenderNodeJob m => RenderNodeProtocol.Write(m),
+                RenderNodeHeartbeat m => RenderNodeProtocol.Write(m), RenderNodeHeartbeatReply m => RenderNodeProtocol.Write(m),
+                RenderNodeComplete m => RenderNodeProtocol.Write(m), RenderNodeFail m => RenderNodeProtocol.Write(m), _ => "",
+            };
+            Assert.Empty(RenderNodeProtocol.Validate(Def(message), json));
+        }
+        Assert.Empty(RenderNodeProtocol.Validate("fail", """{"attempt":1,"reason":"diskSpace","message":"full","retryable":true}"""));
+    }
+
+    [Fact]
+    public void Validate_ReportsAMissingRequiredProperty()
+    {
+        var problems = RenderNodeProtocol.Validate("fail", """{"attempt":1,"reason":"error","retryable":true}""");
+        Assert.Contains(problems, p => p.Contains("'message' is missing"));
+        Assert.NotEmpty(RenderNodeProtocol.Validate("fail", """{"attempt":1,"reason":"nonsense","message":"x","retryable":true}"""));
+        Assert.NotEmpty(RenderNodeProtocol.Validate("fail", "not json"));
+    }
+
+    [Fact]
+    public void Validate_AcceptsUnknownProperties_WhereTheSchemaIsClosed()
+    {
+        const string json = """{"attempt":1,"reason":"error","message":"x","retryable":true,"addedLater":{"a":1}}""";
+        Assert.Empty(RenderNodeProtocol.Validate("fail", json));
+        // The schema itself stays closed: it describes what a sender writes.
+        Assert.NotEmpty(JsonSchemaSubset.Validate(SchemaOf("fail"), json));
+        const string job = """{"protocol":1,"jobId":"7","attempt":1,"leaseSeconds":120,"plan":"full","extra":true,"bundle":{"url":"b","size":1,"sha256":"%","more":1}}""";
+        Assert.Empty(RenderNodeProtocol.Validate("job", job.Replace("%", new string('f', 64))));
+    }
+
+    [Fact]
+    public void Validate_RefusesAnotherProtocolVersion_AndAnUnknownKind()
+    {
+        var problems = RenderNodeProtocol.Validate("claim", """{"protocol":2,"node":"n","blenderVersions":[],"containers":["mp4"],"keptJobs":[],"waitSeconds":0}""");
+        Assert.Contains(problems, p => p.Contains("$.protocol") && p.Contains("must be 1"));
+        Assert.Throws<ArgumentException>(() => RenderNodeProtocol.Validate("bundle", "{}"));
+    }
+
     [Theory]
     [InlineData("https://render.example.org/api/v1/render-nodes", true)]
     [InlineData("http://127.0.0.1:8080/nodes", true)]

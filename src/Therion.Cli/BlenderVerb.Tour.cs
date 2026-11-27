@@ -39,13 +39,15 @@ public static partial class BlenderVerb
         string? file = Option(args, "--tour-file");
         if (!Flag(args, "--tour") && file is null && !Flag(args, "--tour-file"))
         {
-            if (TourOptions.FirstOrDefault(o => Flag(args, o)) is not { } alone) return true;
+            // A composite's tours are written in the language it is given.
+            bool composite = Flag(args, "--composite");
+            if (TourOptions.FirstOrDefault(o => Flag(args, o) && !(composite && o == "--tour-language")) is not { } alone) return true;
             stderr.WriteLine($"error: {alone} goes with a tour (--tour, or --tour-file <tour.json>).");
             return false;
         }
-        if (hasStoryboard || Option(args, "--spec") is not null || Option(args, "--export") is not null)
+        if (hasStoryboard || Flag(args, "--composite") || Option(args, "--spec") is not null || Option(args, "--export") is not null)
         {
-            stderr.WriteLine("error: --tour makes a storyboard of its own: it does not go with --storyboard, --spec or --export.");
+            stderr.WriteLine("error: --tour makes a storyboard of its own: it does not go with --storyboard, --composite, --spec or --export.");
             return false;
         }
 

@@ -862,7 +862,39 @@ entrance when it is left out), within the shot's seconds, with the look of its p
 shots take its place. `"from": "newest"` flies the passage of the last survey day, from its end
 nearer the entrance to its other end; a model without survey dates flies the main passage instead.
 What was done is in the render's warnings. Your own composites are kept beside your presets, as
-`*.composite.json` files (a `name`, a `description` and the `storyboard`).
+`*.composite.json` files (a `name`, a `description` and the `storyboard`): **Save as composite** in
+the [Storyboard tab](#the-storyboard-tab) writes one.
+
+A tour shot's route can also say which side passages the tour visits. `include` and `exclude` take
+what `--include` and `--exclude` take (a branch's number such as `B3`, a station in it, a survey's
+name) and win over the tour's rules; `priority` lists branch numbers, the most wanted first: when
+the film is over its time, the side passages it names are left out after the others, from the
+bottom of the list up. A storyboard's `language` (`en` or `ro`) is the language of the texts the
+film writes itself, a tour's corner texts and the notes of its leads. Left out, they are in ThIDE's
+language when the panel renders the film, and in English from the command line.
+
+```json
+{ "version": 1, "name": "{cave}: my tour", "language": "ro",
+  "texts": { "title": "{cave}", "titleSeconds": 3, "endCard": { "text": "Invented Caving Club" } },
+  "shots": [
+    { "name": "Outside", "preset": "Orbit showcase", "seconds": 10 },
+    { "name": "Tour", "preset": "Full flythrough", "seconds": 120, "in": { "kind": "Dip", "seconds": 0.6 },
+      "camera": { "template": "Route",
+                  "route": { "branches": "auto", "exclude": ["B3"], "priority": ["B5", "B1"] } } } ] }
+```
+
+**From the command line**, `--composite` makes a composite into the model's film and renders,
+drafts or bundles it as `--storyboard` does a storyboard. It takes a built-in composite by its name
+(in any case), or the file of one: those you saved in the panel are in your presets folder
+(`%AppData%\ThIDE\blender-presets` on Windows, `~/.config/ThIDE/blender-presets` on Linux).
+`--tour-language ro` writes its tours' texts in Romanian, whatever the composite says; `--shot N`
+renders one of its shots alone.
+
+```
+therion-cli blender cave.lox --composite "Grand tour" --draft
+therion-cli blender cave.lox --composite ~/.config/ThIDE/blender-presets/my-tour.composite.json --bundle film.zip
+therion-cli blender cave.lox --composite Showcase --tour-language ro --out renders
+```
 
 ## The Storyboard tab
 
@@ -876,6 +908,28 @@ film of several shots:
 - The number button of a row selects the shot: the panel's settings below then show it, and every
   change made there is written into it. **Begins with** chooses a cut, a dip or a dissolve and its
   seconds. The output settings (size, frame rate, file name) are the film's.
+- **The film**, under the shots: its **Title** (with a **Subtitle**, and **Title card** seconds
+  for a title that stands in the middle of the picture before it fades; 0 keeps it at the top),
+  its **End card** (with a subtitle and its seconds; blank is none), and the **Language of its
+  texts**: the language a tour writes its corner texts and the notes of its leads in. *As the
+  interface* follows ThIDE's language (English when a film cannot be written in it). A composite
+  brings its own title, end card and language when it is added to an empty film.
+- **Save as composite** keeps the film as a composite preset of your own, under the name and the
+  description you type beside it; the list of composites offers it from then on, and the command
+  line takes its file (`--composite`). The presets of yours that its shots name are written into
+  them, so the composite renders the same where they are not known; where the film is written is
+  left to whoever renders it. A built-in composite's name is refused; a composite of yours with the
+  same name is replaced.
+- **A tour shot** (*tour* in the list, as in the Grand tour) has a table of its side passages.
+  **List branches** reads the model and works the tour out as the render will: each side passage
+  with its number, whether it is a branch or a bypass, its junction, its length and what the film
+  does about it (flown in and cut back, flown in and back, flown through, a look, or why it is left
+  out: too short, more than the tour takes, over the film's time). The list is in the order the
+  side passages are wanted, the best ranked first. **Visit** says *by the rules*, *visit* or
+  *leave out* for each, and the arrows move one up or down: when the film is over its time, the
+  side passages at the bottom are left out first. Every change is written into the shot's route
+  (`include`, `exclude`, `priority`, as [above](#composite-presets-a-whole-film-as-a-template)) and
+  the table is worked out again; the notes under it say what the tour left out or cut short.
 - **Draft all** drafts every shot, **Draft shot** the selected one alone, **Estimate** says how
   many frames, how long, how much disk and memory the film takes, and **Render film** shows that
   estimate and renders. The renders wait their turn in the render queue, listed under the buttons
@@ -984,13 +1038,16 @@ tour.json`; an option given beside it wins):
   "trunk": "farthest", "start": "e1",
   "minLength": 30, "maxCount": 8, "include": ["B2"], "exclude": ["B7"],
   "mode": "cut", "modes": { "B5": "return", "B9": "peek" },
+  "priority": ["B5", "B1"],
   "tourSeconds": 180, "branchSeconds": 20,
   "preset": "Full flythrough", "language": "en",
   "output": { "width": 1920, "height": 1080, "baseName": "cave-tour" }
 }
 ```
 
-`preset` (`--preset`) is where the film takes its materials, lighting and render engine from; they
+`priority` lists branch numbers, the most wanted first: over the time, the side passages it names
+are left out after the others, from the bottom of the list up (a look still before a visit, and a
+visit chosen by hand last). `preset` (`--preset`) is where the film takes its materials, lighting and render engine from; they
 are written into the storyboard's `defaults`, where you can change them for every shot at once.
 `--bundle` writes the tour as a [render bundle](#a-render-bundle-to-render-on-another-machine),
 with the table and the notes in its README. An agent has the same through the tools `plan_tour`
@@ -1111,13 +1168,21 @@ The server never reaches the machine; the machine calls the server. The protocol
 1. Install Blender 4.2 or newer from [blender.org](https://www.blender.org/download/) (the LTS
    versions are the tested ones), check the download against the SHA-256 the site lists, and unpack
    it, for example into `/opt/blender`. Check that it sees the card: in Blender's preferences, or
-   by rendering a draft with the folder worker.
+   by rendering a small bundle with Cycles with the folder worker: its `<job>.log` says
+   `THIDE:device=OPTIX` or `CUDA` (on an NVIDIA card), `HIP`, `ONEAPI` or `METAL`, and `CPU` when no
+   card could be used.
 2. Build `therion-cli` from ThIDE's source with the .NET SDK:
    `dotnet publish src/Therion.Cli -c Release -o /opt/thide-cli`.
 3. Make a user of its own for the worker (`useradd --system --create-home thide-render`), put the
    token file in its home with `chmod 600`, and start the worker as that user, for example from a
    systemd service with `Restart=on-failure`, `--blender /opt/blender/blender` and
    `--scratch /var/lib/thide-render`.
+4. On **Windows**, Blender can draw with OpenGL only inside a signed-in desktop session. A worker
+   started as a service, by a scheduled task that runs whether the user is signed in or not, or
+   over SSH renders Cycles on the card, but not a draft (the solid view) and not EEVEE: Blender
+   stops there, and the job's error says why. To render those too, start the worker in the
+   session of a user who is signed in (a scheduled task "at log on", run only when the user is
+   signed in), and keep that session from locking.
 
 For a container, write a recipe that downloads Blender while the image is built (from
 blender.org, checking its SHA-256) and build the image on the machine that runs it. Do not publish

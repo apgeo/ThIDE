@@ -162,7 +162,7 @@ public sealed record RenderJobRecord
     /// <summary>The job, ended: its state from the result, unless it was cancelled.</summary>
     public RenderJobRecord Ended(RenderJobResult result, DateTimeOffset at, bool cancelled = false) => this with
     {
-        State = cancelled || result.FailureKind == "cancelled" ? RenderJobState.Cancelled
+        State = cancelled || result.FailureKind == RenderNodeFailure.Cancelled ? RenderJobState.Cancelled
             : result.Succeeded ? RenderJobState.Succeeded : RenderJobState.Failed,
         EndedUtc = at,
         Result = result,
