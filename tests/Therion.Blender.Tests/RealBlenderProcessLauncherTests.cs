@@ -51,12 +51,12 @@ public sealed class RealBlenderProcessLauncherTests : IDisposable
     }
 
     [Fact]
-    public void OnLinux_TheProcessIsStartedWithAParentDeathSignal()
+    public async Task OnLinux_TheProcessIsStartedWithAParentDeathSignal()
     {
         if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/setpriv")) return;
         // setpriv itself in Blender's place says what it was started with.
         using var process = new RealBlenderProcessLauncher().Start("/usr/bin/setpriv", ["--dump"], _dir);
-        var lines = AllLines(process).GetAwaiter().GetResult();
+        var lines = await AllLines(process);
         Assert.Contains(lines, l => l.StartsWith("Parent death signal:", StringComparison.Ordinal) && l.Contains("KILL", StringComparison.Ordinal));
     }
 
