@@ -504,6 +504,26 @@ public partial class PlayerRevealBlenderTests
     }
 
     [BlenderFact]
+    public async Task ACounterWhoseTargetSaysNoRole_CountsTheRevealOfItsId_AsTheValidatorSays()
+    {
+        var spec = Clip(8, new RevealSpec { By = RevealBy.Distance, CounterFormat = "{} m" });
+        var assets = RevealFixtures.Prepare("reveal-counter-no-role", InventedCave.Build(InventedCaveSize.Small), spec, asLox: true);
+        var plan = PlayerRunner.PlanFor(assets, spec);
+        var job = PlayerWriter.WriteJob(plan, PlayerRunner.NewCase("reveal-counter-no-role"), Files(assets, plan));
+        string text = File.ReadAllText(job.PlanPath);
+        const string counter = "\"counter\": { \"target\": { \"id\": \"CaveModel\" }";
+        Assert.Contains(counter, text);
+        // Written by hand: "role": null is no role, to the reader and the validator as to the player.
+        string handWritten = text.Replace(counter, "\"counter\": { \"target\": { \"id\": \"CaveModel\", \"role\": null }");
+        Assert.Empty(ScenePlanValidator.Validate(ScenePlanSerializer.Read(handWritten)));
+        File.WriteAllText(job.PlanPath, handWritten);
+
+        var (exitCode, log) = await PlayerRunner.RunAsync(job.ScriptPath, "--build-only");
+        Assert.True(exitCode == 0, $"exit code {exitCode}: {PlayerRunner.Reported(log, "error").FirstOrDefault()}\n  logs: {job.Folder}");
+        Assert.Equal(["1"], PlayerRunner.Reported(log, "built"));
+    }
+
+    [BlenderFact]
     public async Task WhatCannotBeRevealed_IsRefusedByName()
     {
         // A cave converted without reveal values, a label, an edge without a reveal, a counter

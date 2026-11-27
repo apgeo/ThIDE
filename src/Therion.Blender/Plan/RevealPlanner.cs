@@ -140,17 +140,27 @@ public static class RevealPlanner
     /// </summary>
     /// <param name="frameCount">The frames of the clip.</param>
     public static (PlanChange? Change, PlanScreenItem? Counter) Plan(SceneSpec spec, SceneMeta? meta, int frameCount, string modelId)
+        => Plan(spec, meta, frameCount, new PlanChangeTarget { Id = modelId });
+
+    /// <summary>
+    /// The change that reveals what <paramref name="target"/> names (the model by id, or the
+    /// walls in parts by their role), and the counter of a reveal by date, which names the same
+    /// target; both null when there is nothing to reveal by (see <see cref="Notice"/>).
+    /// </summary>
+    /// <param name="frameCount">The frames of the clip.</param>
+    public static (PlanChange? Change, PlanScreenItem? Counter) Plan(SceneSpec spec, SceneMeta? meta, int frameCount, PlanChangeTarget target)
     {
         ArgumentNullException.ThrowIfNull(spec);
+        ArgumentNullException.ThrowIfNull(target);
         if (Values(spec, meta) is not { } values) return (null, null);
         var reveal = spec.Reveal!;
         int fps = spec.Animation.Fps;
 
-        var change = Change(new PlanChangeTarget { Id = modelId }, values.Min, values.Max, reveal.Start, reveal.End ?? (frameCount - 1) / (double)fps,
+        var change = Change(target, values.Min, values.Max, reveal.Start, reveal.End ?? (frameCount - 1) / (double)fps,
             reveal.Edge, reveal.Glow, reveal.GlowColor, fps);
         PlanScreenItem? counter = null;
         if (reveal.Counter && (reveal.By == RevealBy.Date || reveal.CounterFormat is not null))
-            counter = Counter(new PlanChangeTarget { Id = modelId }, values.Min, values.Max, reveal.CounterFormat ?? ScenePlanValidator.CounterPlace,
+            counter = Counter(target, values.Min, values.Max, reveal.CounterFormat ?? ScenePlanValidator.CounterPlace,
                 reveal.CounterDecimals);
         return (change, counter);
     }

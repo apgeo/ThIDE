@@ -61,7 +61,7 @@ public sealed class RenderNodeTests : IDisposable
         RenderNodeHeartbeatReply => "heartbeatReply", RenderNodeComplete => "complete", _ => "fail",
     };
 
-    private static string SchemaOf(string def)
+    internal static string SchemaOf(string def)
     {
         var schema = JsonNode.Parse(RenderNodeProtocol.Schema)!.AsObject();
         schema["$ref"] = "#/$defs/" + def;

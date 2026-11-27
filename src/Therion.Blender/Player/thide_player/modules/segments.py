@@ -217,10 +217,11 @@ class MovieFrames:
                                          first - part["out"], first + part["into"] - 1)
                 strip.color = as_shown(part["colour"])
                 strip.blend_type = "CROSS"
-                # The colour alone on the last frame of the one segment and the first of the other.
-                keys = [(first - 1, 1.0), (first, 1.0)]
+                # The colour alone on the last frame of the one segment and the first of the other;
+                # of a dip that takes one frame (out 0, into 1), on the first of the other only.
+                keys = [(first, 1.0)]
                 if part["out"] > 0:
-                    keys.insert(0, (first - 1 - part["out"], 0.0))
+                    keys[:0] = [(first - 1 - part["out"], 0.0), (first - 1, 1.0)]
                 keys.append((first + part["into"], 0.0))
                 key(strip, keys)
         api.set_interpolation(scene, "LINEAR")

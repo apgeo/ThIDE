@@ -37,9 +37,10 @@ public enum RouteTiming
     /// it, holds and turns kept, the travel sped up or slowed down.</summary>
     Fit,
     /// <summary>The route sets the clip's duration: travel at the speed the passages give, plus
-    /// the holds and turns. Where the duration is filled in before planning
-    /// (<c>CameraRoutes.WithNaturalDuration</c>); a planner given a duration fits the flight to
-    /// it.</summary>
+    /// the holds and turns. The duration is filled in before planning
+    /// (<c>CameraRoutes.WithNaturalDuration</c>, which <c>ScenePlanBuilder.FromSpec</c> and the
+    /// storyboard's lowering call); the generated script's camera planner, given a duration,
+    /// fits the flight to it.</summary>
     Natural,
 }
 

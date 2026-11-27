@@ -20,7 +20,7 @@ import traceback
 from . import api
 
 BUILT_IN = "thide_player.modules"
-NAME = re.compile(r"^[a-z][a-z0-9_]*$")
+NAME = re.compile(r"[a-z][a-z0-9_]*\Z")
 
 
 class Registry:

@@ -74,7 +74,7 @@ public static class MoviePlanValidator
                     if (kind == PlanTransitionKind.Dip) (goes, comes) = (length / 2, length - length / 2);
                     else (goes, comes) = (length, length);
                 }
-                if (segment.In?.Color is { } color && !(color.R is >= 0 and <= 1 && color.G is >= 0 and <= 1 && color.B is >= 0 and <= 1))
+                if (segment.In?.Color is { } color && !PlanRules.IsUnitColor(color))
                     Bad(path + ".in.color", "Colour channels must be within 0–1.");
                 if (first != end + 1 - overlap)
                     Bad(path + ".start", $"The segment starts on frame {first}; after the one before it, it starts on frame {end + 1 - overlap}.");
@@ -97,9 +97,8 @@ public static class MoviePlanValidator
             Bad("output.directory", "An output directory is required ('.' is the plan's own folder).");
         if (string.IsNullOrWhiteSpace(movie.Output.BaseName))
             Bad("output.baseName", "A base file name is required.");
-        else if (movie.Output.BaseName.AsSpan().IndexOfAny('/', '\\') >= 0
-                 || movie.Output.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            Bad("output.baseName", "The base name must be a plain file name (no separators or reserved characters).");
+        else if (!PlanRules.IsPlainBaseName(movie.Output.BaseName))
+            Bad("output.baseName", PlanRules.BaseNameMessage);
         return errors;
     }
 }
