@@ -116,6 +116,27 @@ public sealed class LargeSystemsBlenderTests(ITestOutputHelper output)
         }
     }
 
+    [BlenderFact]
+    public async Task ABundleOfALargeCave_InParts_RevealedByDate_RendersWithItsCounter()
+    {
+        string root = PlayerRunner.NewCase("parts-dated-bundle");
+        string model = Path.Combine(root, "cave.3d");
+        File.WriteAllBytes(model, RevealFixtures.As3d(LargeSystemsTests.LargeDated()));
+        var source = new ResolvedModelSource { Path = model, Format = CaveSourceFormat.Survex3d, Kind = ModelSourceKind.ExternalFile };
+        var spec = Orbit(3, 96, 64) with { Reveal = new RevealSpec { By = RevealBy.Date } };
+        var content = RenderBundleWriter.FromModel(source, spec, Path.Combine(root, "work"), draft: true, parts: null);
+        Assert.True(content.Plan.Models.Count(m => m.Role == ScenePlanBuilder.WallsRole) > 5);
+        Assert.Contains(content.Draft!.Texts!.Items, i => i.Counter?.Target?.Role == ScenePlanBuilder.WallsRole);
+
+        string folder = Path.Combine(root, "bundle");
+        RenderBundleWriter.WriteFolder(content, folder);
+        var (exitCode, log) = await PlayerRunner.RunAsync(Path.Combine(folder, "render.py"),
+            "--plan", Path.Combine(folder, RenderBundleWriter.DraftPlanFileName), "--stage", "all");
+        Assert.True(exitCode == 0, $"exit code {exitCode}: {PlayerRunner.Reported(log, "error").FirstOrDefault()}\n  logs: {root}");
+        Assert.Equal(["1"], PlayerRunner.Reported(log, "done"));
+        Assert.Equal(3, Directory.GetFiles(Path.Combine(folder, RenderBundleWriter.OutputDirectory), "*.png").Length);
+    }
+
     // ---- frame ranges ----
 
     /// <summary>The medium cave with its leads as markers that grow with their distance from the

@@ -343,18 +343,14 @@ public static class RenderBundleWriter
     {
         var safe = new StringBuilder(name.Length);
         foreach (char c in name)
-            safe.Append(c < ' ' || "<>:\"/\\|?*".Contains(c) ? '_' : c);
+            safe.Append(PlanRules.IsRefusedInAName(c) ? '_' : c);
         // Windows drops dots and spaces at the end of a name; they are taken off here, so that
         // the folder has the same name everywhere.
         string result = safe.ToString().Trim().TrimEnd('.', ' ');
         if (result.Length == 0) return "render-bundle";
         string stem = result.Split('.')[0];
-        return ReservedOnWindows.Contains(stem.TrimEnd(' ')) ? stem + "_" + result[stem.Length..] : result;
+        return PlanRules.IsReservedOnWindows(result) ? stem + "_" + result[stem.Length..] : result;
     }
-
-    private static readonly HashSet<string> ReservedOnWindows = new(
-        ["CON", "PRN", "AUX", "NUL", .. Enumerable.Range(1, 9).SelectMany(i => new[] { $"COM{i}", $"LPT{i}" })],
-        StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Writes the bundle into a folder, as unpacking its zip would. Files of the same names are

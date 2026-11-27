@@ -60,6 +60,8 @@ describes one *render job*; nothing runs until you press **Render** or **Preview
      shadow, and the camera still frames the cave. **Terrain opacity**, beside it, sets how much
      of the cave shows through from above: 0 % hides the terrain, 100 % hides the cave under it;
      the default is 40 %. A very large grid is thinned to at most 512 × 512 points.
+     **Terrain cut-away** opens the terrain over the cave so that the cave is seen beneath it: see
+     [Opening the terrain over the cave](#opening-the-terrain-over-the-cave).
    - **Light** — the *light rig*: a head lamp on the camera, a sun and sky, three studio lights, or
      an image all round the scene (*HdriFile*), with its **strength**. See
      [Lighting by an image (HDRI)](#lighting-by-an-image-hdri).
@@ -98,7 +100,9 @@ describes one *render job*; nothing runs until you press **Render** or **Preview
    same scene: half the size, in Blender's solid view (no lights, no shadows), a fraction of a
    second per frame where the real render may take a minute. Use it to check the camera move,
    the framing and the texts before the long render. The draft is saved beside the render with
-   `-draft` added to its name. A terrain that is see-through is left out of a draft, which says so.
+   `-draft` added to its name. A terrain that is see-through is left out of a draft, which says so;
+   a solid terrain with a cut-away has its hole cut along its faces, without the soft edge and the
+   rim.
 
 5. **Render.** Progress shows the phase and, while Blender renders, the frame count (or a spinner
    for phases without a percentage). Long renders are normal; **Cancel** stops Blender cleanly.
@@ -426,6 +430,44 @@ therion-cli blender cave.lox --hdri skies/evening.hdr --hdri-rotation 90 --hdri-
   [bundle](#a-render-bundle-to-render-on-another-machine) (its `hdri` folder), so a bundle renders
   on another machine without it.
 - A preview draws no image: its background is a plain grey, as strong as the image is set.
+
+## Opening the terrain over the cave
+
+When the terrain is drawn, it can be **opened over the cave**, so that a film from above shows the
+surface and, through a hole in it, the cave beneath. Choose the shape in **Terrain cut-away**:
+
+- *Off* (the default): no hole.
+- *Footprint*: the cave's outline seen from above — every place within **Cut-away margin** of the
+  centreline. The terrain round the cave stays, and the hole follows every passage.
+- *Circle*: a round hole that holds the whole cave, and the margin more.
+
+**Cut-away margin (metres)** is how far the hole reaches past the cave (15 m by default): from the
+centreline for a footprint, so make it wider than the widest passage; beyond the cave for a circle.
+**Cut-away opens over (seconds)** makes the hole open while the clip runs, growing out from the cave over
+that many seconds from the start; at 0 it is open from the first frame.
+
+The hole has a **soft edge** (4 m by default) and a **darker rim** on the ground round it, so the
+opening reads as a cut and not as a stain. The terrain itself is not changed: its material lets
+the cave through, the same in Cycles and in EEVEE. It is best with **Terrain opacity** at 100 %:
+the terrain then hides everything but what the hole shows. A cave with no centreline gets a circle,
+and the render says so. A preview cuts the hole along the terrain's faces, without the soft edge
+and the rim.
+
+In a render spec or a storyboard the cut-away is `surface.cutaway`:
+
+```json
+"surface": {
+  "mode": "Textured", "opacity": 1,
+  "cutaway": { "shape": "Footprint", "margin": 20, "edge": 4, "rim": 0.6, "openAt": 2, "openSeconds": 3 }
+}
+```
+
+`shape` is `Footprint` or `Circle`; `margin` and `edge` are in metres; `rim` is how dark the rim
+is, from 0 (none) to 1; `openAt` is when the hole starts to open and `openSeconds` how long it
+takes (both 0 by default: open throughout; `openAt` alone opens it at once at that time). In a
+storyboard the surface is one for the whole film (`defaults.surface`), and every shot opens the
+hole again in its own time. The cut-away is drawn by the player only: the script generator
+(**Scene builder** *Generator*) draws the terrain without it.
 
 ## A cave seen from far away: the lamp's reach
 
@@ -872,8 +914,10 @@ In a storyboard file, the symbols are two keys of a route camera:
 
 `"branches": "auto"` makes the shot a tour of the cave's branches, from the route's `from` (the
 entrance when it is left out), within the shot's seconds, with the look of its preset; the tour's
-shots take its place. `"from": "newest"` flies the passage of the last survey day, from its end
-nearer the entrance to its other end; a model without survey dates flies the main passage instead.
+shots take its place. Every one of them keeps the shot's annotations (or the storyboard's) beside
+the tour's markers at its leads, and the first keeps the shot's texts. `"from": "newest"` flies the
+passage of the last survey day, from its end nearer an entrance (the nearest, in a cave with
+several) to its other end; a model without survey dates flies the main passage instead.
 What was done is in the render's warnings. Your own composites are kept beside your presets, as
 `*.composite.json` files (a `name`, a `description` and the `storyboard`): **Save as composite** in
 the [Storyboard tab](#the-storyboard-tab) writes one.

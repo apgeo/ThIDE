@@ -222,8 +222,10 @@ def counted(ctx, item, where):
         if not isinstance(target, dict) or (target.get("id") is None) == (target.get("role") is None):
             raise api.PlanError('%s.counter.target: a target is an "id" or a "role"' % where)
         curve = None
+        named = (target.get("id"), target.get("role"))
         for index, change in enumerate(ctx.plan.get("changes") or []):
-            if change.get("reveal") and change.get("target") == target:
+            other = change.get("target")
+            if change.get("reveal") and isinstance(other, dict) and (other.get("id"), other.get("role")) == named:
                 curve = curve_of(change["reveal"], "changes[%d].reveal" % index)
         if curve is None:
             raise api.PlanError(

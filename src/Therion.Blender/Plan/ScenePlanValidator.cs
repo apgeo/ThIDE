@@ -90,9 +90,8 @@ public static partial class ScenePlanValidator
             Bad("output.directory", "An output directory is required ('.' is the plan's own folder).");
         if (string.IsNullOrWhiteSpace(plan.Output.BaseName))
             Bad("output.baseName", "A base file name is required.");
-        else if (plan.Output.BaseName.AsSpan().IndexOfAny('/', '\\') >= 0
-                 || plan.Output.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            Bad("output.baseName", "The base name must be a plain file name (no separators or reserved characters).");
+        else if (!PlanRules.IsPlainBaseName(plan.Output.BaseName))
+            Bad("output.baseName", PlanRules.BaseNameMessage);
 
         // ---- the scene as a Blender file ----
         if (plan.Blend is { } blend)
@@ -214,7 +213,7 @@ public static partial class ScenePlanValidator
                 {
                     if (colors.Count != points.Count)
                         bad(at + ".colors", "A strip has a colour for every point or none.");
-                    if (colors.Any(color => !IsUnitColor(color)))
+                    if (colors.Any(color => !PlanRules.IsUnitColor(color)))
                         bad(at + ".colors", "Colour channels must be within 0–1.");
                 }
                 if (strip.Reveal is { } reveal)
@@ -315,7 +314,7 @@ public static partial class ScenePlanValidator
                 bad(path + ".id", "A material needs an id.");
             else if (look.Materials.Take(i).Any(m => m.Id == material.Id))
                 bad(path + ".id", $"The id '{material.Id}' is used twice.");
-            if (!IsUnitColor(material.Color))
+            if (!PlanRules.IsUnitColor(material.Color))
                 bad(path + ".color", "Colour channels must be within 0–1.");
             if (!(material.Roughness >= 0 && material.Roughness <= 1))
                 bad(path + ".roughness", "Roughness must be within 0–1.");
@@ -364,7 +363,7 @@ public static partial class ScenePlanValidator
                 bad("look.world.backdrop", "How bright the world is seen is not negative.");
             if (!Enum.IsDefined(world.Kind))
                 bad("look.world.kind", "A world is a colour, a sky or an image.");
-            if (world.Kind == PlanWorldKind.Color && !(world.Color is { } color && IsUnitColor(color)))
+            if (world.Kind == PlanWorldKind.Color && !(world.Color is { } color && PlanRules.IsUnitColor(color)))
                 bad("look.world.color", "A plain world needs a colour with channels within 0–1.");
             if (world.Kind == PlanWorldKind.Image)
             {
@@ -411,7 +410,7 @@ public static partial class ScenePlanValidator
                 else if (model.Material is not null || !worn.Add(name))
                     bad($"{path}.models[{k}]", $"The model '{name}' has another material already.");
             }
-            if (!IsUnitColor(material.Color))
+            if (!PlanRules.IsUnitColor(material.Color))
                 bad(path + ".color", "Colour channels must be within 0–1.");
             if (!(material.Roughness >= 0 && material.Roughness <= 1))
                 bad(path + ".roughness", "Roughness must be within 0–1.");
@@ -426,6 +425,50 @@ public static partial class ScenePlanValidator
                 else if (!HasImageExtension(image))
                     bad(path + ".image", "An image file is a .png or a .jpg.");
             }
+            if (material.Cutaway is { } cut) ValidateCutaway(cut, path + ".cutaway", bad);
+        }
+    }
+
+    private static void ValidateCutaway(PlanCutaway cut, string path, Action<string, string> bad)
+    {
+        if (cut.Lines is not { Count: > 0 })
+            bad(path + ".lines", "A cut-away needs at least one line.");
+        else
+        {
+            int points = 0;
+            for (int l = 0; l < cut.Lines.Count; l++)
+            {
+                var line = cut.Lines[l];
+                if (line is not { Count: > 0 })
+                {
+                    bad($"{path}.lines[{l}]", "A line is a list of one point or more.");
+                    continue;
+                }
+                points += line.Count;
+                for (int p = 0; p < line.Count; p++)
+                    if (!IsFinite(line[p]))
+                    {
+                        bad($"{path}.lines[{l}][{p}]", "A point must be finite.");
+                        break;
+                    }
+            }
+            if (points > PlanCutaway.MaxPoints)
+                bad(path + ".lines", $"A cut-away's lines have at most {PlanCutaway.MaxPoints} points; these have {points}.");
+        }
+        if (!(cut.Radius > 0) || !double.IsFinite(cut.Radius))
+            bad(path + ".radius", "The radius of a cut-away is a distance above 0.");
+        if (!(cut.Edge >= 0) || !double.IsFinite(cut.Edge))
+            bad(path + ".edge", "The edge of a cut-away is a distance, not negative.");
+        if (!(cut.Open >= 0 && cut.Open <= 1))
+            bad(path + ".open", "How open a cut-away is must be within 0–1.");
+        if (cut.Rim is { } rim)
+        {
+            if (!PlanRules.IsUnitColor(rim.Color))
+                bad(path + ".rim.color", "Colour channels must be within 0–1.");
+            if (!(rim.Width > 0) || !double.IsFinite(rim.Width))
+                bad(path + ".rim.width", "The width of a rim is a distance above 0.");
+            if (!(rim.Strength >= 0 && rim.Strength <= 1))
+                bad(path + ".rim.strength", "The strength of a rim must be within 0–1.");
         }
     }
 
@@ -443,7 +486,7 @@ public static partial class ScenePlanValidator
         }
         void Glow(ColorRgb color, double strength, string path)
         {
-            if (!IsUnitColor(color))
+            if (!PlanRules.IsUnitColor(color))
                 bad(path + ".color", "Colour channels must be within 0–1.");
             if (!(strength >= 0) || !double.IsFinite(strength))
                 bad(path + ".strength", "The strength of the glow is not negative.");
@@ -580,7 +623,7 @@ public static partial class ScenePlanValidator
                 bad(path + ".offset", "The offset must be finite.");
             if (a.LineWidth is not null && !Positive(a.LineWidth))
                 bad(path + ".lineWidth", "The width of the line must be positive.");
-            if (a.Color is { } color && !IsUnitColor(color))
+            if (a.Color is { } color && !PlanRules.IsUnitColor(color))
                 bad(path + ".color", "Colour channels must be within 0–1.");
             if (a.Strength is { } strength && (!(strength >= 0) || !double.IsFinite(strength)))
                 bad(path + ".strength", "The strength of the glow is not negative.");
@@ -654,7 +697,7 @@ public static partial class ScenePlanValidator
                     if (a.Frame is { } frame)
                     {
                         if (!Positive(frame.Width)) bad(path + ".frame.width", "The width of a frame must be positive.");
-                        if (!IsUnitColor(frame.Color)) bad(path + ".frame.color", "Colour channels must be within 0–1.");
+                        if (!PlanRules.IsUnitColor(frame.Color)) bad(path + ".frame.color", "Colour channels must be within 0–1.");
                     }
                     if (a.LineWidth is not null && !offset)
                         bad(path + ".lineWidth", "A photo has a line to its anchor only when it stands away from it: give it an offset.");
@@ -682,6 +725,7 @@ public static partial class ScenePlanValidator
         // The things the sections of this library make. A module from elsewhere may make more,
         // which only the player can know: a plan with one is not held to this list.
         var draped = (plan.TexturedMaterials ?? []).Where(m => m is not null).SelectMany(m => m.Models).ToHashSet(StringComparer.Ordinal);
+        var cutAway = (plan.TexturedMaterials ?? []).Where(m => m is { Cutaway: not null }).SelectMany(m => m.Models).ToHashSet(StringComparer.Ordinal);
         var things = new List<Thing>();
         foreach (var model in plan.Models)
             things.Add(new Thing(model.Id, model.Role ?? "model", ThingKind.Model,
@@ -713,7 +757,7 @@ public static partial class ScenePlanValidator
                 bad(path, "A change is missing.");
                 continue;
             }
-            bool ofATarget = change is not { Visible: null, Opacity: null, Tint: null, Scale: null, Offset: null, Energy: null, Reveal: null };
+            bool ofATarget = change is not { Visible: null, Opacity: null, Tint: null, Scale: null, Offset: null, Energy: null, Reveal: null, Cutaway: null };
             if (!ofATarget && change is { WorldColor: null, WorldStrength: null, WorldBackdrop: null, WorldRotation: null })
                 bad(path, "A change needs the keys of at least one property.");
 
@@ -722,7 +766,7 @@ public static partial class ScenePlanValidator
             if (change.Target is not { } target)
             {
                 if (ofATarget)
-                    bad(path + ".target", "A change of visibility, opacity, tint, scale, offset, energy or reveal needs a target.");
+                    bad(path + ".target", "A change of visibility, opacity, tint, scale, offset, energy, reveal or cut-away needs a target.");
             }
             else
             {
@@ -791,7 +835,7 @@ public static partial class ScenePlanValidator
             if (change.Visible is { } visible)
             {
                 Once("visible");
-                Times(visible.Select(k => (k.T, PlanEasing.Constant)).ToList(), path + ".visible", oneToAFrame: true);
+                Times(plan, visible.Select(k => (k.T, PlanEasing.Constant)).ToList(), path + ".visible", bad, oneToAFrame: true);
                 for (int k = 0; k < visible.Count; k++)
                 {
                     if (k > 0 && visible[k].Value == visible[k - 1].Value)
@@ -812,7 +856,7 @@ public static partial class ScenePlanValidator
             {
                 Once("opacity");
                 NeedsMaterial("opacity");
-                Times(opacity.Select(k => (k.T, k.Easing)).ToList(), path + ".opacity");
+                Times(plan, opacity.Select(k => (k.T, k.Easing)).ToList(), path + ".opacity", bad);
                 for (int k = 0; k < opacity.Count; k++)
                     if (!(opacity[k].Value >= 0 && opacity[k].Value <= 1))
                         bad($"{path}.opacity[{k}].value", "Opacity must be within 0–1.");
@@ -821,10 +865,10 @@ public static partial class ScenePlanValidator
             {
                 Once("tint");
                 NeedsMaterial("tint");
-                Times(tint.Select(k => (k.T, k.Easing)).ToList(), path + ".tint");
+                Times(plan, tint.Select(k => (k.T, k.Easing)).ToList(), path + ".tint", bad);
                 for (int k = 0; k < tint.Count; k++)
                 {
-                    if (!IsUnitColor(tint[k].Color))
+                    if (!PlanRules.IsUnitColor(tint[k].Color))
                         bad($"{path}.tint[{k}].color", "Colour channels must be within 0–1.");
                     if (!(tint[k].Strength >= 0 && tint[k].Strength <= 1))
                         bad($"{path}.tint[{k}].strength", "The strength of a tint must be within 0–1.");
@@ -836,7 +880,7 @@ public static partial class ScenePlanValidator
             {
                 Once("scale");
                 OfAModel("scale", "Only a model is scaled; the size of '{0}' is that of its own section.");
-                Times(scale.Select(k => (k.T, k.Easing)).ToList(), path + ".scale");
+                Times(plan, scale.Select(k => (k.T, k.Easing)).ToList(), path + ".scale", bad);
                 for (int k = 0; k < scale.Count; k++)
                     if (!(IsFinite(scale[k].Value) && scale[k].Value.X > 0 && scale[k].Value.Y > 0 && scale[k].Value.Z > 0))
                         bad($"{path}.scale[{k}].value", "The scale must be positive along every axis.");
@@ -845,7 +889,7 @@ public static partial class ScenePlanValidator
             {
                 Once("offset");
                 OfAModel("offset", "Only a model is moved; where '{0}' stands is said in its own section.");
-                Times(offset.Select(k => (k.T, k.Easing)).ToList(), path + ".offset");
+                Times(plan, offset.Select(k => (k.T, k.Easing)).ToList(), path + ".offset", bad);
                 for (int k = 0; k < offset.Count; k++)
                     if (!IsFinite(offset[k].Value))
                         bad($"{path}.offset[{k}].value", "The offset must be finite.");
@@ -855,7 +899,7 @@ public static partial class ScenePlanValidator
                 Once("energy");
                 if (targets.FirstOrDefault(t => t.Kind != ThingKind.Light) is { } unlit)
                     bad(path + ".energy", $"Only a light of the look has an energy; '{unlit.Id}' is not one.");
-                Times(energy.Select(k => (k.T, k.Easing)).ToList(), path + ".energy");
+                Times(plan, energy.Select(k => (k.T, k.Easing)).ToList(), path + ".energy", bad);
                 for (int k = 0; k < energy.Count; k++)
                     if (!(energy[k].Value >= 0) || !double.IsFinite(energy[k].Value))
                         bad($"{path}.energy[{k}].value", "A light's energy is not negative.");
@@ -872,10 +916,21 @@ public static partial class ScenePlanValidator
                         && targets.FirstOrDefault(t => t.Revealed == false) is { } bare)
                         bad(path + ".reveal", $"The line '{bare.Id}' has no reveal values; give every point of its strips one ('reveal').");
                 }
-                Times(reveal.Select(k => (k.T, k.Easing)).ToList(), path + ".reveal");
+                Times(plan, reveal.Select(k => (k.T, k.Easing)).ToList(), path + ".reveal", bad);
                 for (int k = 0; k < reveal.Count; k++)
                     if (!double.IsFinite(reveal[k].Value))
                         bad($"{path}.reveal[{k}].value", "The threshold must be finite.");
+            }
+            if (change.Cutaway is { } cutaway)
+            {
+                Once("cutaway");
+                if (NotOfALight("cutaway") && knowsTheScene
+                    && targets.FirstOrDefault(t => t.Kind != ThingKind.Model || !cutAway.Contains(t.Id)) is { } uncut)
+                    bad(path + ".cutaway", $"'{uncut.Id}' has no cut-away; give the textured material it wears a 'cutaway'.");
+                Times(plan, cutaway.Select(k => (k.T, k.Easing)).ToList(), path + ".cutaway", bad);
+                for (int k = 0; k < cutaway.Count; k++)
+                    if (!(cutaway[k].Value >= 0 && cutaway[k].Value <= 1))
+                        bad($"{path}.cutaway[{k}].value", "How open a cut-away is must be within 0–1.");
             }
             if (change.RevealFront is { } front)
             {
@@ -887,7 +942,7 @@ public static partial class ScenePlanValidator
                     bad(path + ".revealFront.edge", "The edge is a distance in the units of the reveal values, not negative.");
                 if (front.Glow is { } glow)
                 {
-                    if (!IsUnitColor(glow.Color))
+                    if (!PlanRules.IsUnitColor(glow.Color))
                         bad(path + ".revealFront.glow.color", "Colour channels must be within 0–1.");
                     if (!(glow.Strength >= 0) || !double.IsFinite(glow.Strength))
                         bad(path + ".revealFront.glow.strength", "The strength of a glow is not negative.");
@@ -900,10 +955,10 @@ public static partial class ScenePlanValidator
                 OneOfTheWorld("worldColor", "colour");
                 if (plan.Look.World is not { Kind: PlanWorldKind.Color })
                     bad(path + ".worldColor", "The world's colour changes only when look.world is of the kind 'color'.");
-                Times(world.Select(k => (k.T, k.Easing)).ToList(), path + ".worldColor");
+                Times(plan, world.Select(k => (k.T, k.Easing)).ToList(), path + ".worldColor", bad);
                 for (int k = 0; k < world.Count; k++)
                 {
-                    if (!IsUnitColor(world[k].Value))
+                    if (!PlanRules.IsUnitColor(world[k].Value))
                         bad($"{path}.worldColor[{k}].value", "Colour channels must be within 0–1.");
                     if (!Enum.IsDefined(world[k].Mix))
                         bad($"{path}.worldColor[{k}].mix", "A colour is mixed as 'linear' or as 'srgb'.");
@@ -914,7 +969,7 @@ public static partial class ScenePlanValidator
                 OneOfTheWorld("worldBackdrop", "backdrop");
                 if (plan.Look.World is null)
                     bad(path + ".worldBackdrop", "How bright the world is seen changes only when the look has a world.");
-                Times(backdrop.Select(k => (k.T, k.Easing)).ToList(), path + ".worldBackdrop");
+                Times(plan, backdrop.Select(k => (k.T, k.Easing)).ToList(), path + ".worldBackdrop", bad);
                 for (int k = 0; k < backdrop.Count; k++)
                     if (!(backdrop[k].Value >= 0) || !double.IsFinite(backdrop[k].Value))
                         bad($"{path}.worldBackdrop[{k}].value", "How bright the world is seen is not negative.");
@@ -924,7 +979,7 @@ public static partial class ScenePlanValidator
                 OneOfTheWorld("worldRotation", "rotation");
                 if (plan.Look.World is not { Kind: PlanWorldKind.Image })
                     bad(path + ".worldRotation", "The world's image turns only when look.world is of the kind 'image'.");
-                Times(turned.Select(k => (k.T, k.Easing)).ToList(), path + ".worldRotation");
+                Times(plan, turned.Select(k => (k.T, k.Easing)).ToList(), path + ".worldRotation", bad);
                 for (int k = 0; k < turned.Count; k++)
                     if (!double.IsFinite(turned[k].Value))
                         bad($"{path}.worldRotation[{k}].value", "The turn of the world's image is a number of degrees.");
@@ -934,48 +989,51 @@ public static partial class ScenePlanValidator
                 OneOfTheWorld("worldStrength", "strength");
                 if (plan.Look.World is null)
                     bad(path + ".worldStrength", "The world's strength changes only when the look has a world.");
-                Times(strength.Select(k => (k.T, k.Easing)).ToList(), path + ".worldStrength");
+                Times(plan, strength.Select(k => (k.T, k.Easing)).ToList(), path + ".worldStrength", bad);
                 for (int k = 0; k < strength.Count; k++)
                     if (!(strength[k].Value >= 0) || !double.IsFinite(strength[k].Value))
                         bad($"{path}.worldStrength[{k}].value", "The world's strength is not negative.");
             }
         }
+    }
 
-        // The keys of one property: at least one, in rising order of time. A key may lie after
-        // the clip (the clip then ends on the way to it) and before it (the clip then begins on
-        // the way from it). Three may fall on one frame: a move's end, the jump that follows it
-        // and where the way on starts from; of a property that is only switched, one.
-        void Times(IReadOnlyList<(double T, PlanEasing Easing)> keys, string path, bool oneToAFrame = false)
+    // The keys of one property (of a change, or of a counter): at least one, in rising order of
+    // time, by the frames the player puts them on. A key may lie after the clip (the clip then
+    // ends on the way to it) and before it (the clip then begins on the way from it). Three may
+    // fall on one frame: a move's end, the jump that follows it and where the way on starts
+    // from; of a property that is only switched, one. The frames are counted as doubles, so that
+    // keys far from the clip are still in their order.
+    private static void Times(ScenePlan plan, IReadOnlyList<(double T, PlanEasing Easing)> keys, string path, Action<string, string> bad, bool oneToAFrame = false)
+    {
+        if (keys.Count == 0)
         {
-            if (keys.Count == 0)
+            bad(path, "At least one key is needed.");
+            return;
+        }
+        double last = double.NegativeInfinity;
+        int onLast = 0;
+        for (int k = 0; k < keys.Count; k++)
+        {
+            double t = keys[k].T;
+            if (!double.IsFinite(t))
             {
-                bad(path, "At least one key is needed.");
-                return;
+                bad($"{path}[{k}].t", "A time is in seconds from the start of the clip; one before it is negative.");
+                continue;
             }
-            int last = int.MinValue, onLast = 0;
-            for (int k = 0; k < keys.Count; k++)
-            {
-                double t = keys[k].T;
-                if (!double.IsFinite(t))
-                {
-                    bad($"{path}[{k}].t", "A time is in seconds from the start of the clip; one before it is negative.");
-                    continue;
-                }
-                if (!Enum.IsDefined(keys[k].Easing))
-                    bad($"{path}[{k}].easing", "An easing is 'linear', 'smooth' or 'constant'.");
-                int frame = FrameAt(t, plan.Timeline.Fps);
-                if (frame < last)
-                    bad($"{path}[{k}].t", "Keys are in rising order of time.");
-                else if (frame > last)
-                    onLast = 1;
-                else if (oneToAFrame)
-                    bad($"{path}[{k}].t", $"Keys are in rising order of time, each on a frame of its own ({plan.Timeline.Fps} fps).");
-                else if (++onLast > 3)
-                    bad($"{path}[{k}].t", $"No more than three keys fall on one frame ({plan.Timeline.Fps} fps).");
-                else if (keys[k].Easing != PlanEasing.Constant)
-                    bad($"{path}[{k}].easing", "A later key on a frame is a jump: its easing is 'constant'.");
-                last = Math.Max(last, frame);
-            }
+            if (!Enum.IsDefined(keys[k].Easing))
+                bad($"{path}[{k}].easing", "An easing is 'linear', 'smooth' or 'constant'.");
+            double frame = 1 + Math.Round(t * plan.Timeline.Fps);
+            if (frame < last)
+                bad($"{path}[{k}].t", "Keys are in rising order of time.");
+            else if (frame > last)
+                onLast = 1;
+            else if (oneToAFrame)
+                bad($"{path}[{k}].t", $"Keys are in rising order of time, each on a frame of its own ({plan.Timeline.Fps} fps).");
+            else if (++onLast > 3)
+                bad($"{path}[{k}].t", $"No more than three keys fall on one frame ({plan.Timeline.Fps} fps).");
+            else if (keys[k].Easing != PlanEasing.Constant)
+                bad($"{path}[{k}].easing", "A later key on a frame is a jump: its easing is 'constant'.");
+            last = Math.Max(last, frame);
         }
     }
 
@@ -1057,7 +1115,7 @@ public static partial class ScenePlanValidator
                 }
             }
 
-            if (item.Color is { } color && !IsUnitColor(color))
+            if (item.Color is { } color && !PlanRules.IsUnitColor(color))
                 bad(path + ".color", "Colour channels must be within 0–1.");
             if (item.Opacity is { } opacity && !(opacity >= 0 && opacity <= 1))
                 bad(path + ".opacity", "Opacity must be within 0–1.");
@@ -1087,17 +1145,12 @@ public static partial class ScenePlanValidator
                         bad(path + ".counter", "A counter has a target or keys of its own, not both.");
                     if (keys.Count == 0)
                         bad(path + ".counter.keys", "The keys of a counter are at least one.");
-                    double before = double.NegativeInfinity;
+                    else
+                        // By frame, as the player keys them: as the keys of a change.
+                        Times(plan, keys.Select(k => (k.T, k.Easing)).ToList(), path + ".counter.keys", bad);
                     for (int k = 0; k < keys.Count; k++)
-                    {
-                        if (!double.IsFinite(keys[k].T) || !(keys[k].T >= before))
-                            bad($"{path}.counter.keys[{k}].t", "Keys are in rising order of time.");
-                        else if (keys[k].T == before && keys[k].Easing != PlanEasing.Constant)
-                            bad($"{path}.counter.keys[{k}].easing", "A later key at the same time is a jump; its easing is 'constant'.");
-                        if (double.IsFinite(keys[k].T)) before = Math.Max(before, keys[k].T);
                         if (!double.IsFinite(keys[k].Value))
                             bad($"{path}.counter.keys[{k}].value", "The threshold must be finite.");
-                    }
                 }
                 else if (byId == byRole)
                     bad(path + ".counter.target", "A target is an id or a role, one of the two.");
@@ -1124,13 +1177,22 @@ public static partial class ScenePlanValidator
                 bad($"{path}[{i}].at", "A stop lies within 0–1.");
             else if (i > 0 && !(stops[i].At > stops[i - 1].At))
                 bad($"{path}[{i}].at", "Stops are in rising order.");
-            if (!IsUnitColor(stops[i].Color))
+            if (!PlanRules.IsUnitColor(stops[i].Color))
                 bad($"{path}[{i}].color", "Colour channels must be within 0–1.");
         }
     }
 
-    /// <summary>The frame a time falls on, as the player works it out: time 0 is frame 1.</summary>
-    public static int FrameAt(double seconds, int fps) => 1 + (int)Math.Round(seconds * fps);
+    /// <summary>The frame a time falls on, as the player works it out: time 0 is frame 1. A
+    /// time too far from the start for a frame number is held to the first or last number there
+    /// is (<see cref="int.MinValue"/>, <see cref="int.MaxValue"/>), on every runtime; so is a
+    /// time that is not a number, to the first.</summary>
+    public static int FrameAt(double seconds, int fps)
+    {
+        double frame = 1 + Math.Round(seconds * fps);
+        return double.IsNaN(frame) || frame <= int.MinValue ? int.MinValue
+            : frame >= int.MaxValue ? int.MaxValue
+            : (int)frame;
+    }
 
     /// <summary>A relative path that does not climb out of the folder it starts in.</summary>
     internal static bool IsPathBesideThePlan(string? path)
@@ -1151,11 +1213,9 @@ public static partial class ScenePlanValidator
 
     private static bool IsFinite(CaveVector3 v) => double.IsFinite(v.X) && double.IsFinite(v.Y) && double.IsFinite(v.Z);
 
-    private static bool IsUnitColor(ColorRgb c) => c.R is >= 0 and <= 1 && c.G is >= 0 and <= 1 && c.B is >= 0 and <= 1;
-
-    [GeneratedRegex("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^[a-z][a-z0-9_]*\z", RegexOptions.CultureInvariant)]
     private static partial Regex ModuleName();
 
-    [GeneratedRegex("^[a-z][a-z0-9]*(-[a-z0-9]+)*$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^[a-z][a-z0-9]*(-[a-z0-9]+)*\z", RegexOptions.CultureInvariant)]
     private static partial Regex RoleName();
 }

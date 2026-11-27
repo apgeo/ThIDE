@@ -72,13 +72,13 @@ public static partial class RenderNodeProtocol
     /// <summary>A SHA-256 as the protocol writes it: 64 lower-case hex digits.</summary>
     public static bool IsSha256(string? hex) => hex is not null && Sha256Pattern().IsMatch(hex);
 
-    [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")]
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z")]
     private static partial Regex JobIdPattern();
 
-    [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")]
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z")]
     private static partial Regex FileNamePattern();
 
-    [GeneratedRegex("^[0-9a-f]{64}$")]
+    [GeneratedRegex(@"^[0-9a-f]{64}\z")]
     private static partial Regex Sha256Pattern();
 
     /// <summary>

@@ -32,7 +32,7 @@ process and never reaches the node; it answers the node's calls.
 | Auth | `Authorization: Bearer <node token>` on every call to the server's own origin (scheme, host, port), and to no other. The token comes from the first line of `--token-file`. On Linux and macOS the worker refuses a token file that is a link, that is not the user's own, that its group or others may read or write (`chmod 600`), or that lies in a folder anyone may write without the sticky bit. On Windows it refuses one whose access list lets anyone but the user, SYSTEM and the Administrators read or change it |
 | Bodies | JSON, UTF-8, `application/json`; property names in camelCase; absent values are left out, never `null`. Receivers ignore properties they do not know. The node reads at most 1 MiB of an answer (`RenderNodeWorker.MaxAnswerBytes`); a longer one fails the call as a network error does |
 | Version | `protocol: 1` in a claim and in the job the server gives. A server that does not speak the claim's version answers 400; a job of another version is failed with `badJob` |
-| Job id | `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`, not ending in a dot, and not a device name of Windows (`NUL`, `CON`, `PRN`, `AUX`, `COM0`–`COM9`, `LPT0`–`LPT9`, with or without an extension): it names the node's scratch folder and the result files on every system. The server's row id (`"1234"`) is fine |
+| Job id | `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$` (ECMA-262: `$` is the end of the string, so a line break after the id is refused), not ending in a dot, and not a device name of Windows (`NUL`, `CON`, `PRN`, `AUX`, `COM0`–`COM9`, `LPT0`–`LPT9`, with or without an extension; the worker checks these, the schema's pattern does not): it names the node's scratch folder and the result files on every system. The server's row id (`"1234"`) is fine |
 | Attempt | the server's try count for the job, from 1, given with the claim; every later call names it. A call for an attempt that is no longer the current one is answered **409** |
 | Idempotency | every call may be retried with the same job id and attempt: a heartbeat renews again, a PUT of a file replaces the same bytes, a second `complete` or `fail` for an attempt already ended is answered 200 (or 409) and changes nothing |
 
@@ -146,7 +146,7 @@ Only files the worker names are sent, and only after a render that succeeded:
 | `<jobId>.log` | `log`: Blender's output |
 | `<jobId>.status.json` | `status`: the job's record (state, result, device, seconds per frame, notices; file names, not the node's paths) |
 
-Names match `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`. One PUT per file; there are no chunked uploads
+Names match `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`, to the end of the string (nothing, not even a line break, after the name). One PUT per file; there are no chunked uploads
 in version 1, so the server's request size limit must allow the largest movie it takes.
 
 ### `POST jobs/{jobId}/complete` — the job succeeded

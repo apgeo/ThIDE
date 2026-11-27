@@ -195,9 +195,9 @@ public static class TourBuilder
         ArgumentNullException.ThrowIfNull(spec);
         presets ??= BuiltInPresets.ByName;
         if (!(spec.TourSeconds > 0) || spec.TourSeconds > SceneSpecValidator.MaxDurationSeconds)
-            throw new ArgumentException("The tour's time is a positive number of seconds.", "tour.tourSeconds");
+            throw new ArgumentException($"The tour's time is more than 0 and at most {SceneSpecValidator.MaxDurationSeconds:0} seconds.", "tour.tourSeconds");
         if (!(spec.BranchSeconds > 0) || spec.BranchSeconds > SceneSpecValidator.MaxDurationSeconds)
-            throw new ArgumentException("A side passage's time is a positive number of seconds.", "tour.branchSeconds");
+            throw new ArgumentException($"A side passage's time is more than 0 and at most {SceneSpecValidator.MaxDurationSeconds:0} seconds.", "tour.branchSeconds");
         if (spec.Fps is < SceneSpecValidator.MinFps or > SceneSpecValidator.MaxFps)
             throw new ArgumentException($"Fps must be within {SceneSpecValidator.MinFps}–{SceneSpecValidator.MaxFps}.", "tour.fps");
         if (!Languages.Contains(spec.Language, StringComparer.Ordinal))

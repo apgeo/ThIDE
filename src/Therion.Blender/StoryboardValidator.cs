@@ -120,7 +120,7 @@ public static class StoryboardValidator
                 Bad(path + ".seconds", "A dip or a dissolve takes at least one frame.");
             else if (timing[i].Goes > counts[i - 1] - timing[i - 1].Comes || timing[i].Comes > counts[i])
                 Bad(path + ".seconds", "The transition is longer than the shots it joins.");
-            if (!IsUnitColor(transition.Color))
+            if (!PlanRules.IsUnitColor(transition.Color))
                 Bad(path + ".color", "Colour channels must be within 0–1.");
         }
         if (storyboard.Texts is { } over && errors.Count == 0)
@@ -137,6 +137,4 @@ public static class StoryboardValidator
         }
         return errors;
     }
-
-    private static bool IsUnitColor(ColorRgb c) => c.R is >= 0 and <= 1 && c.G is >= 0 and <= 1 && c.B is >= 0 and <= 1;
 }

@@ -444,6 +444,16 @@ public class TourBuilderTests
     }
 
     [Fact]
+    public void ATourTimeAboveTheCap_IsRefused_WithTheCapNamed()
+    {
+        var tooLong = Assert.Throws<ArgumentException>(() => TourBuilder.Build(Cave.Value, new TourSpec { TourSeconds = 1e7 }));
+        Assert.Equal(("tour.tourSeconds", "The tour's time is more than 0 and at most 86400 seconds."), (tooLong.ParamName, tooLong.Message.Split(" (Parameter")[0]));
+        var side = Assert.Throws<ArgumentException>(() => TourBuilder.Build(Cave.Value, new TourSpec { BranchSeconds = 86_401 }));
+        Assert.Equal("A side passage's time is more than 0 and at most 86400 seconds.", side.Message.Split(" (Parameter")[0]);
+        Assert.NotNull(TourBuilder.Build(Cave.Value, new TourSpec { BranchSeconds = 86_400 }));
+    }
+
+    [Fact]
     public void ATourFile_IsReadAndWritten_AndAKeyThatIsNotKnownIsRefused()
     {
         var spec = new TourSpec

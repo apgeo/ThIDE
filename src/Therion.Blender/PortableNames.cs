@@ -14,16 +14,6 @@ namespace Therion.Blender;
 /// <summary>What a file name must be to mean the same file everywhere, and text made fit to print.</summary>
 public static class PortableNames
 {
-    private static readonly HashSet<string> Devices = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$",
-        "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "COM¹", "COM²", "COM³",
-        "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "LPT¹", "LPT²", "LPT³",
-    };
-
-    /// <summary>The characters Windows refuses in a name, besides the separators.</summary>
-    private const string Reserved = "<>:\"|?*";
-
     /// <summary>
     /// Whether <paramref name="name"/> (one part of a path, no separator) names the same file on
     /// Windows, macOS and Linux: not a device name of Windows with or without an extension, not
@@ -33,11 +23,7 @@ public static class PortableNames
     {
         if (string.IsNullOrEmpty(name) || name is "." or "..") return false;
         if (name[^1] is '.' or ' ') return false;
-        foreach (char c in name)
-            if (char.IsControl(c) || Reserved.Contains(c) || c is '/' or '\\') return false;
-        int dot = name.IndexOf('.');
-        string stem = (dot < 0 ? name : name[..dot]).TrimEnd(' ');
-        return !Devices.Contains(stem);
+        return !name.Any(c => char.IsControl(c) || PlanRules.IsRefusedInAName(c)) && !PlanRules.IsReservedOnWindows(name);
     }
 
     /// <summary>Whether every part of a relative path with forward slashes is
