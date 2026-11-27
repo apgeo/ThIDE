@@ -132,38 +132,6 @@
                     </ItemsControl>
                 </Border>
                 <TextBlock FontSize="11" Opacity="0.7" IsVisible="{Binding Blender.Shots.Count}" Text="{Binding Blender.FilmSeconds, StringFormat='{}{0:0.#} s'}" />
-                <!-- the film as a whole: its title, its end card, the language of its own texts -->
-                <TextBlock Text="{l:Loc Blender_UI_FilmTexts}" FontWeight="Bold" />
-                <TextBlock Text="{l:Loc Blender_UI_FilmTexts_Hint}" TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
-                <DockPanel><TextBlock Text="{l:Loc Blender_UI_Title}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                    <TextBox AutomationProperties.AutomationId="Blender.FilmTitle" AutomationProperties.Name="{l:Loc Blender_UI_Title}" Text="{Binding Blender.FilmTitle}" /></DockPanel>
-                <DockPanel><TextBlock Text="{l:Loc Blender_UI_Subtitle}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                    <TextBox AutomationProperties.AutomationId="Blender.FilmSubtitle" AutomationProperties.Name="{l:Loc Blender_UI_Subtitle}" Text="{Binding Blender.FilmSubtitle}" /></DockPanel>
-                <DockPanel><TextBlock Text="{l:Loc Blender_UI_FilmTitleSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                    <TextBox AutomationProperties.AutomationId="Blender.FilmTitleSeconds" AutomationProperties.Name="{l:Loc Blender_UI_FilmTitleSeconds}" HorizontalAlignment="Left" Width="70"
-                             ToolTip.Tip="{l:Loc Blender_UI_FilmTitleSeconds_Tip}" Text="{Binding Blender.FilmTitleSeconds}" /></DockPanel>
-                <DockPanel><TextBlock Text="{l:Loc Blender_UI_EndCard}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                    <TextBox AutomationProperties.AutomationId="Blender.FilmEndCard" AutomationProperties.Name="{l:Loc Blender_UI_EndCard}" ToolTip.Tip="{l:Loc Blender_UI_EndCard_Tip}"
-                             Text="{Binding Blender.FilmEndCardText}" /></DockPanel>
-                <DockPanel IsEnabled="{Binding Blender.HasFilmEndCard}"><TextBlock Text="{l:Loc Blender_UI_EndCardSubtitle}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                    <TextBox AutomationProperties.AutomationId="Blender.FilmEndCardSubtitle" AutomationProperties.Name="{l:Loc Blender_UI_EndCardSubtitle}" Text="{Binding Blender.FilmEndCardSubtitle}" /></DockPanel>
-                <DockPanel IsEnabled="{Binding Blender.HasFilmEndCard}"><TextBlock Text="{l:Loc Blender_UI_EndCardSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                    <TextBox AutomationProperties.AutomationId="Blender.FilmEndCardSeconds" AutomationProperties.Name="{l:Loc Blender_UI_EndCardSeconds}" HorizontalAlignment="Left" Width="70"
-                             Text="{Binding Blender.FilmEndCardSeconds}" /></DockPanel>
-                <DockPanel><TextBlock Text="{l:Loc Blender_UI_FilmLanguage}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                    <ComboBox AutomationProperties.AutomationId="Blender.FilmLanguage" AutomationProperties.Name="{l:Loc Blender_UI_FilmLanguage}" HorizontalAlignment="Stretch"
-                              ToolTip.Tip="{l:Loc Blender_UI_FilmLanguage_Tip}" ItemsSource="{Binding Blender.FilmLanguages}" SelectedItem="{Binding Blender.SelectedFilmLanguage}" /></DockPanel>
-                <!-- the film kept as a composite preset of the user's -->
-                <DockPanel>
-                    <Button AutomationProperties.AutomationId="Blender.SaveComposite" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_SaveComposite}" Margin="6,0,0,0"
-                            ToolTip.Tip="{l:Loc Blender_UI_SaveComposite_Tip}" Command="{Binding Blender.SaveCompositeCommand}" />
-                    <TextBox AutomationProperties.AutomationId="Blender.CompositeName" AutomationProperties.Name="{l:Loc Blender_UI_CompositeName}"
-                             Watermark="{l:Loc Blender_UI_CompositeName}" Text="{Binding Blender.NewCompositeName}" />
-                </DockPanel>
-                <TextBox AutomationProperties.AutomationId="Blender.CompositeDescription" AutomationProperties.Name="{l:Loc Blender_UI_CompositeDescription}"
-                         Watermark="{l:Loc Blender_UI_CompositeDescription}" Text="{Binding Blender.NewCompositeDescription}" />
-                <TextBlock Text="{Binding Blender.CompositeNameProblem}" Foreground="#C05050" TextWrapping="Wrap"
-                           IsVisible="{Binding Blender.CompositeNameProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <!-- how the selected shot begins -->
                 <DockPanel IsVisible="{Binding Blender.HasSelectedShot}">
                     <TextBlock Text="{l:Loc Blender_UI_ShotTransition}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
@@ -208,6 +176,38 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
+                <!-- the film as a whole: its title, its end card, the language of its own texts -->
+                <TextBlock Text="{l:Loc Blender_UI_FilmTexts}" FontWeight="Bold" />
+                <TextBlock Text="{l:Loc Blender_UI_FilmTexts_Hint}" TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_Title}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmTitle" AutomationProperties.Name="{l:Loc Blender_UI_Title}" Text="{Binding Blender.FilmTitle}" /></DockPanel>
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_Subtitle}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmSubtitle" AutomationProperties.Name="{l:Loc Blender_UI_Subtitle}" Text="{Binding Blender.FilmSubtitle}" /></DockPanel>
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_FilmTitleSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmTitleSeconds" AutomationProperties.Name="{l:Loc Blender_UI_FilmTitleSeconds}" HorizontalAlignment="Left" Width="70"
+                             ToolTip.Tip="{l:Loc Blender_UI_FilmTitleSeconds_Tip}" Text="{Binding Blender.FilmTitleSeconds}" /></DockPanel>
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_EndCard}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmEndCard" AutomationProperties.Name="{l:Loc Blender_UI_EndCard}" ToolTip.Tip="{l:Loc Blender_UI_EndCard_Tip}"
+                             Text="{Binding Blender.FilmEndCardText}" /></DockPanel>
+                <DockPanel IsEnabled="{Binding Blender.HasFilmEndCard}"><TextBlock Text="{l:Loc Blender_UI_EndCardSubtitle}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmEndCardSubtitle" AutomationProperties.Name="{l:Loc Blender_UI_EndCardSubtitle}" Text="{Binding Blender.FilmEndCardSubtitle}" /></DockPanel>
+                <DockPanel IsEnabled="{Binding Blender.HasFilmEndCard}"><TextBlock Text="{l:Loc Blender_UI_EndCardSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox AutomationProperties.AutomationId="Blender.FilmEndCardSeconds" AutomationProperties.Name="{l:Loc Blender_UI_EndCardSeconds}" HorizontalAlignment="Left" Width="70"
+                             Text="{Binding Blender.FilmEndCardSeconds}" /></DockPanel>
+                <DockPanel><TextBlock Text="{l:Loc Blender_UI_FilmLanguage}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <ComboBox AutomationProperties.AutomationId="Blender.FilmLanguage" AutomationProperties.Name="{l:Loc Blender_UI_FilmLanguage}" HorizontalAlignment="Stretch"
+                              ToolTip.Tip="{l:Loc Blender_UI_FilmLanguage_Tip}" ItemsSource="{Binding Blender.FilmLanguages}" SelectedItem="{Binding Blender.SelectedFilmLanguage}" /></DockPanel>
+                <!-- the film kept as a composite preset of the user's -->
+                <DockPanel>
+                    <Button AutomationProperties.AutomationId="Blender.SaveComposite" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_SaveComposite}" Margin="6,0,0,0"
+                            ToolTip.Tip="{l:Loc Blender_UI_SaveComposite_Tip}" Command="{Binding Blender.SaveCompositeCommand}" />
+                    <TextBox AutomationProperties.AutomationId="Blender.CompositeName" AutomationProperties.Name="{l:Loc Blender_UI_CompositeName}"
+                             Watermark="{l:Loc Blender_UI_CompositeName}" Text="{Binding Blender.NewCompositeName}" />
+                </DockPanel>
+                <TextBox AutomationProperties.AutomationId="Blender.CompositeDescription" AutomationProperties.Name="{l:Loc Blender_UI_CompositeDescription}"
+                         Watermark="{l:Loc Blender_UI_CompositeDescription}" Text="{Binding Blender.NewCompositeDescription}" />
+                <TextBlock Text="{Binding Blender.CompositeNameProblem}" Foreground="#C05050" TextWrapping="Wrap"
+                           IsVisible="{Binding Blender.CompositeNameProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <ItemsControl AutomationProperties.AutomationId="Blender.StoryboardBlockers" ItemsSource="{Binding Blender.StoryboardBlockers}" Foreground="#C05050">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" /></DataTemplate>

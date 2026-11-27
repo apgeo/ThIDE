@@ -2569,5 +2569,5 @@ This cannot be undone.</value></data>
   <data name="Blender_Branch_WhyOverCount" xml:space="preserve"><value>left out: more than the tour takes</value></data>
   <data name="Blender_Branch_WhyExcluded" xml:space="preserve"><value>left out by hand</value></data>
   <data name="Blender_Branch_WhySkipped" xml:space="preserve"><value>passed by</value></data>
-  <data name="Blender_Tour_Summary" xml:space="preserve"><value>{0} shots, {1:0.#} s; {2} side passages.</value></data>
+  <data name="Blender_Tour_Summary" xml:space="preserve"><value>The tour: {1:0.#} s; shots: {0}; side passages: {2}.</value></data>
 </root>

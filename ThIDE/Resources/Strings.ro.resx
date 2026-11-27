@@ -2569,5 +2569,5 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_Branch_WhyOverCount" xml:space="preserve"><value>lăsată deoparte: peste numărul pe care îl ia parcursul</value></data>
   <data name="Blender_Branch_WhyExcluded" xml:space="preserve"><value>lăsată deoparte de mână</value></data>
   <data name="Blender_Branch_WhySkipped" xml:space="preserve"><value>trecută cu vederea</value></data>
-  <data name="Blender_Tour_Summary" xml:space="preserve"><value>{0} secvențe, {1:0.#} s; {2} galerii laterale.</value></data>
+  <data name="Blender_Tour_Summary" xml:space="preserve"><value>Parcursul: {1:0.#} s, secvențe: {0}; galerii laterale: {2}.</value></data>
 </root>
