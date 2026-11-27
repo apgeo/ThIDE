@@ -447,6 +447,12 @@
   <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>Suprafața terenului unui model .lox, deasupra peșterii. Off: fără. Solid: într-o singură culoare. Textured: cu imaginea suprafeței așezată pe el (într-o singură culoare când modelul nu are imagine). Văzut de sus e transparent, cât spune Opacitatea terenului, ca peștera să se vadă dedesubt; văzut de jos nu se vede. Camera încadrează tot peștera.</value></data>
   <data name="Blender_UI_SurfaceOpacity" xml:space="preserve"><value>Opacitatea terenului</value></data>
   <data name="Blender_UI_SurfaceOpacity_Tip" xml:space="preserve"><value>Cât de opac e terenul văzut de sus: la 0 % nu se vede, la 100 % ascunde peștera de sub el. Implicit 40 %.</value></data>
+  <data name="Blender_UI_Cutaway" xml:space="preserve"><value>Decupaj în teren</value></data>
+  <data name="Blender_UI_Cutaway_Tip" xml:space="preserve"><value>Deschide terenul deasupra peșterii, ca peștera să se vadă dedesubt. Off: fără gol. Footprint: conturul peșterii văzut de sus, până la Marginea decupajului de la poligonală. Circle: un gol rotund care cuprinde toată peștera. Golul are o margine estompată și o bordură mai întunecată pe teren; plasa terenului nu se schimbă. Arată cel mai bine cu Opacitatea terenului la 100 %. O previzualizare arată golul ca o tăietură pe fețele terenului.</value></data>
+  <data name="Blender_UI_CutawayMargin" xml:space="preserve"><value>Marginea decupajului (metri)</value></data>
+  <data name="Blender_UI_CutawayMargin_Tip" xml:space="preserve"><value>Cât de departe trece golul de peșteră, în metri: de la poligonală pentru Footprint, dincolo de peșteră pentru Circle. Implicit 15 m.</value></data>
+  <data name="Blender_UI_CutawayOpenSeconds" xml:space="preserve"><value>Deschiderea decupajului (secunde)</value></data>
+  <data name="Blender_UI_CutawayOpenSeconds_Tip" xml:space="preserve"><value>În câte secunde se deschide golul de la începutul clipului, crescând dinspre peșteră în afară. La 0 e deschis din primul cadru.</value></data>
   <data name="Blender_UI_Render" xml:space="preserve"><value>Randează</value></data>
   <data name="Blender_UI_Export" xml:space="preserve"><value>Exportă scriptul…</value></data>
   <data name="Blender_UI_ExportDir" xml:space="preserve"><value>Folder export</value></data>

@@ -911,6 +911,31 @@ public class PlayerBlenderTests
         }
     }
 
+    [BlenderFact]
+    public async Task ANumberJsonDoesNotHave_OrAModuleNameWithALineBreak_IsRefused_BeforeAnythingIsBuilt()
+    {
+        var (_, job) = PlayerRunner.WriteJob("refuse-not-json-numbers", Small.Value, Orbit);
+        string planText = File.ReadAllText(job.PlanPath);
+        Assert.Matches("\"fps\": \\d+", planText);
+
+        foreach (var (number, why) in new[]
+        {
+            ("NaN", "NaN is not a JSON number"), ("Infinity", "Infinity is not a JSON number"),
+            ("-Infinity", "-Infinity is not a JSON number"), ("1e999", "1e999 is too large a number"),
+        })
+        {
+            File.WriteAllText(job.PlanPath, System.Text.RegularExpressions.Regex.Replace(planText, "\"fps\": \\d+", "\"fps\": " + number));
+            var (error, log) = await Refused(job);
+            Assert.StartsWith("the plan is not valid JSON: " + why, error);
+            Assert.Empty(PlayerRunner.Reported(log, "phase"));
+        }
+
+        Assert.Contains("\"camera_track\",", planText);
+        File.WriteAllText(job.PlanPath, planText.Replace("\"camera_track\",", "\"camera_track\\n\","));
+        var (named, _) = await Refused(job);
+        Assert.StartsWith("features: \"camera_track \" is not a module name", named);
+    }
+
     // ---- modules from outside the player ----
 
     private static ScenePlan WithMarkers(ScenePlan plan) => plan with

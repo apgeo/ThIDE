@@ -704,4 +704,14 @@ public class StoryboardTests
             }, new MemoryStream(), "film"));
         Assert.Contains("output directory", refused.Message);
     }
+
+    [Fact]
+    public void ADipOfOneFrame_ShowsItsColourOnTheFirstFrameOfTheShotItLeadsTo_Only()
+    {
+        // 10 fps: a dip of 0.1 s takes one frame. The shot before keeps all of its frames (the
+        // player's colour strip starts on the next shot's first frame), the next one gives one.
+        var storyboard = new Storyboard { Fps = 10, Shots = [Shot("One", 1), Shot("Two", 1, Dip(0.1))], Output = new OutputSpec { BaseName = "film" } };
+        var timing = StoryboardPlanner.Timing(storyboard, [11, 11]);
+        Assert.Equal(new ShotTiming(12, 11, 0, 0, 1), timing[1]);
+    }
 }

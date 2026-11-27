@@ -19,8 +19,8 @@ public class CompositePresetTests
     private static readonly Lazy<GeometryResult> DatedTiny = new(() => GeometryStage.Build(
         RevealFixtures.Dated(TourCave.BuildTiny(), (_, i) => i >= 8 ? new DateOnly(2001, 5, 1) : new DateOnly(1990, 8, 1))));
 
-    private static StoryboardPlan Lower(Storyboard storyboard, GeometryResult geometry)
-        => StoryboardPlanner.Lower(storyboard, new SourceSpec { PlyPath = "model.ply" }, CameraFraming.FromGeometry(geometry));
+    private static StoryboardPlan Lower(Storyboard storyboard, GeometryResult geometry, Func<string, RenderPreset?>? presets = null)
+        => StoryboardPlanner.Lower(storyboard, new SourceSpec { PlyPath = "model.ply" }, CameraFraming.FromGeometry(geometry), presets: presets);
 
     [Fact]
     public void TheBuiltInComposites_AreValidStoryboards_WithSymbolsOnly()
@@ -80,6 +80,22 @@ public class CompositePresetTests
         Assert.Contains(expanded.Notices, n => n.Contains("2001", StringComparison.Ordinal));
         var film = Lower(expanded.Storyboard, DatedTiny.Value);
         Assert.Equal(2, film.Segments.Count);
+    }
+
+    [Fact]
+    public void ThePassageSurveyedLast_IsFlownFromTheEndNearerAnyEntrance()
+    {
+        // s0 – s1 – … – s5 along x, an entrance at either end; the last day's legs are s3 – s4 – s5,
+        // at the second entrance.
+        DateOnly early = new(1990, 1, 1), late = new(2001, 1, 1);
+        var model = RevealFixtures.Cave(
+            Enumerable.Range(0, 6).Select(i => new Therion.Cave3D.CaveVector3(10.0 * i, 0, 0)).ToList(),
+            Enumerable.Range(0, 5).Select(i => (i, i + 1, Therion.Cave3D.CaveShotFlags.None, (DateOnly?)(i >= 3 ? late : early))).ToList(),
+            0, 5);
+        var expanded = StoryboardExpander.Expand(BuiltInComposites.ExplorationHistory().Storyboard, GeometryStage.Build(model));
+        var route = expanded.Storyboard.Shots[1].Camera!.Route!;
+        Assert.Equal(("s5", "s3"), (route.From, route.To));
+        Assert.Contains(expanded.Notices, n => n.EndsWith("(2001), s5 to s3.", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -166,6 +182,41 @@ public class CompositePresetTests
             Assert.Equal(
                 SceneSpecSerializer.Write(StoryboardPlanner.ShotSpec(storyboard, i, Find)),
                 SceneSpecSerializer.Write(StoryboardPlanner.ShotSpec(inlined, i)));
+    }
+
+    [Fact]
+    public void AUsersRoutePreset_ThatSetsItsOwnTime_WrittenIntoTheShots_KeepsItsTime()
+    {
+        var mine = BuiltInPresets.HelixDescent() with { Name = "Walk in", BuiltIn = false };
+        mine = mine with
+        {
+            Spec = mine.Spec with
+            {
+                Camera = new CameraSpec { Template = CameraTemplate.Route, Route = new RouteParams { Timing = RouteTiming.Natural } },
+                Animation = mine.Spec.Animation with { DurationSeconds = 7 },
+            },
+        };
+        RenderPreset? Find(string name) => name == mine.Name ? mine : BuiltInPresets.ByName(name);
+        var storyboard = new Storyboard
+        {
+            Shots = [new ShotSpec { Name = "In", Preset = "Walk in" }, new ShotSpec { Name = "Fitted", Preset = "Walk in", Seconds = 5 }],
+        };
+        var inlined = StoryboardExpander.InlinePresets(storyboard, Find);
+        Assert.Null(inlined.Shots[0].Seconds);
+        Assert.Equal(5, inlined.Shots[1].Seconds);
+        Assert.Empty(StoryboardValidator.Validate(inlined));
+
+        // The route sets the shot's time, before and after; a shot that says its time fits the route to it.
+        var framing = CameraFraming.FromGeometry(Tiny.Value);
+        SceneSpec Timed(Storyboard s, int i, Func<string, RenderPreset?>? presets = null)
+            => CameraRoutes.WithNaturalDuration(StoryboardPlanner.ShotSpec(s, i, presets), framing);
+        Assert.Equal(RouteTiming.Natural, Timed(inlined, 0).Camera.Route!.Timing);
+        Assert.Equal(RouteTiming.Fit, Timed(inlined, 1).Camera.Route!.Timing);
+        for (int i = 0; i < 2; i++)
+            Assert.Equal(SceneSpecSerializer.Write(Timed(storyboard, i, Find)), SceneSpecSerializer.Write(Timed(inlined, i)));
+        Assert.Equal(
+            Lower(storyboard with { Shots = [storyboard.Shots[0]] }, Tiny.Value, Find).Movie.Timeline.FrameCount,
+            Lower(inlined with { Shots = [inlined.Shots[0]] }, Tiny.Value).Movie.Timeline.FrameCount);
     }
 
     [Fact]

@@ -82,7 +82,7 @@ internal static class RenderNodeValidator
                     if (value.ValueKind == JsonValueKind.String && value.GetString()!.Length < k.GetInt32()) errors.Add($"{path}: shorter than {k.GetInt32()} characters");
                     break;
                 case "pattern":
-                    if (value.ValueKind == JsonValueKind.String && !Regex.IsMatch(value.GetString()!, k.GetString()!, RegexOptions.ECMAScript))
+                    if (value.ValueKind == JsonValueKind.String && !Regex.IsMatch(value.GetString()!, AsEcma(k.GetString()!), RegexOptions.ECMAScript))
                         errors.Add($"{path}: '{value.GetString()}' does not match {k.GetString()}");
                     break;
                 default:
@@ -90,6 +90,36 @@ internal static class RenderNodeValidator
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// A schema pattern as .NET reads it with ECMA-262's end of input. Without the multiline
+    /// flag, ECMA-262's <c>$</c> matches at the end only; .NET's matches before a final line
+    /// break as well, so that <c>"job-1\n"</c> would pass <c>^…$</c>. Every <c>$</c> outside a
+    /// character class is held to the end.
+    /// </summary>
+    internal static string AsEcma(string pattern)
+    {
+        var text = new System.Text.StringBuilder(pattern.Length + 8);
+        bool inClass = false;
+        for (int i = 0; i < pattern.Length; i++)
+        {
+            char c = pattern[i];
+            if (c == '\\' && i + 1 < pattern.Length)
+            {
+                text.Append(c).Append(pattern[++i]);
+                continue;
+            }
+            if (inClass) inClass = c != ']';
+            else if (c == '[') inClass = true;
+            else if (c == '$')
+            {
+                text.Append("$(?!\n)");
+                continue;
+            }
+            text.Append(c);
+        }
+        return text.ToString();
     }
 
     private static bool IsType(JsonElement v, string type) => type switch

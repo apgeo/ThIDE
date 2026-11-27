@@ -407,20 +407,38 @@ public static class StoryboardPlanner
         _ => null,
     };
 
-    /// <summary>The value a reveal's keys give on a frame, as the player keys them: evenly from
-    /// key to key, each on the frame its time falls on.</summary>
-    private static double ValueAt(IReadOnlyList<PlanNumberKey> keys, int frame, int fps)
+    /// <summary>The value a reveal's keys give on a frame, as the player keys them. Each key is
+    /// on the frame its time falls on. Of two or three keys on one frame the second is the
+    /// frame's value, and the last is where the way on starts from. Between frames the value
+    /// goes as the next key's easing says: evenly, smoothly (3x² − 2x³), or not at all until the
+    /// jump. Before the first key it is the first key's value, after the last the last frame's.</summary>
+    internal static double ValueAt(IReadOnlyList<PlanNumberKey> keys, int frame, int fps)
     {
-        for (int k = 1; k < keys.Count; k++)
+        var frames = new List<(double Frame, PlanNumberKey First, double Shown, double From)>();
+        for (int k = 0; k < keys.Count;)
         {
-            int a = ScenePlanValidator.FrameAt(keys[k - 1].T, fps), b = ScenePlanValidator.FrameAt(keys[k].T, fps);
-            if (frame <= a) return keys[k - 1].Value;
-            if (frame < b)
-                return keys[k].Easing == PlanEasing.Constant
-                    ? keys[k - 1].Value
-                    : Rounded(keys[k - 1].Value + (keys[k].Value - keys[k - 1].Value) * (frame - a) / (b - a));
+            double at = 1 + Math.Round(keys[k].T * fps);
+            int n = 1;
+            while (k + n < keys.Count && 1 + Math.Round(keys[k + n].T * fps) == at) n++;
+            frames.Add((at, keys[k], n > 1 ? keys[k + 1].Value : keys[k].Value, keys[k + n - 1].Value));
+            k += n;
         }
-        return keys[^1].Value;
+        if (frames.Count == 0) return 0;
+        if (frame < frames[0].Frame) return frames[0].First.Value;
+        for (int i = 0; i < frames.Count; i++)
+        {
+            if (frame == frames[i].Frame) return frames[i].Shown;
+            if (i + 1 < frames.Count && frame < frames[i + 1].Frame)
+            {
+                var (start, from) = (frames[i].Frame, frames[i].From);
+                var next = frames[i + 1].First;
+                if (next.Easing == PlanEasing.Constant) return from;
+                double x = (frame - start) / (frames[i + 1].Frame - start);
+                if (next.Easing == PlanEasing.Smooth) x = x * x * (3 - 2 * x);
+                return Rounded(from + (next.Value - from) * x);
+            }
+        }
+        return frames[^1].Shown;
     }
 
     /// <summary>The notices of every shot, each with its shot named; one that every shot has is

@@ -3,6 +3,7 @@
 // priority), the language of the texts the film writes itself, and a composite saved with a title
 // and an end card read back as it was written.
 
+using Therion.Blender.Emit;
 using Therion.Blender.Plan;
 using Therion.Blender.Presets;
 using Therion.Blender.Tests.SceneProbe;
@@ -48,6 +49,46 @@ public class CompositeChoicesTests
         Assert.Equal(("excluded", "skip"), (Row(tour, "B3").Why, Row(tour, "B3").Mode));
         Assert.Equal("included", Row(tour, "B6").Why);
         Assert.NotEqual("skip", Row(tour, "B6").Mode);
+    }
+
+    [Fact]
+    public void ATourShot_KeepsItsOwnAnnotations_OrTheDefaults_OnEveryShotOfTheTour_BesideItsLeads()
+    {
+        var everywhere = new AnnotationSpec { Id = "everywhere", At = new Therion.Cave3D.CaveVector3(0, 0, 0), Text = "everywhere" };
+        var mine = new AnnotationSpec { Id = "mine", At = new Therion.Cave3D.CaveVector3(1, 0, 0), Text = "mine" };
+        var film = GrandTour();
+        film = film with { Defaults = film.Defaults with { Annotations = [everywhere] } };
+
+        var shots = StoryboardExpander.Expand(film, Cave.Value).Storyboard.Shots.Skip(1).ToList();
+        Assert.True(shots.Count > 3, $"{shots.Count} shots");
+        Assert.Contains(shots, s => s.Annotations!.Any(a => a.Role == "lead"));
+        Assert.All(shots, s => Assert.Equal("everywhere", s.Annotations![0].Id));
+
+        // The tour shot's own annotations take the place of the defaults, on every shot of the tour.
+        film = film with { Shots = [film.Shots[0], film.Shots[1] with { Annotations = [mine] }] };
+        var own = StoryboardExpander.Expand(film, Cave.Value).Storyboard;
+        shots = own.Shots.Skip(1).ToList();
+        Assert.All(shots, s => Assert.Equal(["mine"], s.Annotations!.Where(a => a.Role is null).Select(a => a.Id)));
+        Assert.Equal(
+            StoryboardExpander.Expand(GrandTour(), Cave.Value).Storyboard.Shots.Skip(1).Select(s => (s.Annotations ?? []).Count),
+            shots.Select(s => s.Annotations!.Count - 1));
+        Assert.Empty(StoryboardValidator.Validate(own));
+        _ = StoryboardPlanner.Lower(own, new SourceSpec { PlyPath = "model.ply" }, CameraFraming.FromGeometry(Cave.Value));
+    }
+
+    [Fact]
+    public void ATourCutShort_KeepsTheTextsOfItsShot_WithTheTourCorner()
+    {
+        var film = GrandTour();
+        var texts = new OverlaySpec { Title = "Mine", CornerCaptions = [new CaptionSpec { Start = 0, End = 1, Text = "first" }] };
+        film = film with { Shots = [film.Shots[0], film.Shots[1] with { Seconds = 3, Texts = texts }] };
+        var expanded = StoryboardExpander.Expand(film, Cave.Value);
+        var tourFirst = Assert.Single(expanded.Tours).Storyboard.Shots[0];
+        var first = expanded.Storyboard.Shots[1];
+        Assert.Equal("Mine", first.Texts!.Title);
+        Assert.Equal(["first", .. (tourFirst.Texts?.CornerCaptions ?? []).Select(c => c.Text)], first.Texts.CornerCaptions.Select(c => c.Text));
+        Assert.NotNull(tourFirst.Texts);   // cut short, the tour's one shot says how far the passage goes on
+        Assert.Equal(tourFirst.Texts!.Corner, first.Texts.Corner);
     }
 
     [Fact]
