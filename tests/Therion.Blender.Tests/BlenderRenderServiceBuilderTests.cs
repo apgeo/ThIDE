@@ -678,7 +678,7 @@ public class BlenderRenderServiceBuilderTests : IDisposable
         };
         long movie = DiskPreflight.EstimateBytes(1000, 1920, 1080, OutputKind.Video);
         long frames = DiskPreflight.EstimateBytes(1000, 1920, 1080, OutputKind.FrameSequence);
-        Assert.True(frames > movie * 5);
+        Assert.True(frames > movie * 4);
         // Room for the movie three times over, and not for its frames.
         long free = movie * 3;
 

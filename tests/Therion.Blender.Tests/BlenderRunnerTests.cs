@@ -281,6 +281,31 @@ public class BlenderRunnerTests : IDisposable
     }
 
     [Fact]
+    public void Estimate_FrameSequenceScalesWithResolution_FromTwoMegabytesAt1080p()
+    {
+        long margin = DiskPreflight.FixedMarginBytes;
+        long hd = DiskPreflight.EstimateBytes(100, 1920, 1080, OutputKind.FrameSequence) - margin;
+        Assert.InRange(hd, 199_999_000L, 200_001_000L);
+        long uhd = DiskPreflight.EstimateBytes(100, 3840, 2160, OutputKind.FrameSequence) - margin;
+        Assert.InRange(uhd, hd * 4 - 1000, hd * 4 + 1000);
+            }
+
+    [Fact]
+    public void Estimate_HasAFloorPerFrame_AndAFixedMargin()
+    {
+        long tiny = DiskPreflight.EstimateBytes(10, 16, 16, OutputKind.FrameSequence);
+        Assert.InRange(tiny, 32_640_000L - 10, 32_640_000L + 10);
+    }
+
+    [Fact]
+    public void Estimate_AMeasuredSampleThatWasRefused_NowFits()
+    {
+        // 1080p at 1.77 MB a frame, 1000 frames, 6.6 GB free: the old 5 MB a frame refused this.
+        long estimate = DiskPreflight.EstimateBytes(1000, 1920, 1080, OutputKind.FrameSequence);
+        Assert.True(DiskPreflight.IsSufficient(estimate, 6_639_000_000));
+    }
+
+    [Fact]
     public void IsSufficient_AppliesSafetyFactor()
     {
         Assert.False(DiskPreflight.IsSufficient(estimatedBytes: 1000, freeBytes: 1200)); // < 1.5×

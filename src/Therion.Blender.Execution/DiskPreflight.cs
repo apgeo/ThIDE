@@ -10,9 +10,19 @@ public static class DiskPreflight
     /// <summary>Extra headroom multiplier over the estimate before a render is allowed.</summary>
     public const double SafetyFactor = 1.5;
 
+    /// <summary>Bytes a PNG frame takes at 1080p: a measured 1.77 MB, rounded up.</summary>
+    public const double FrameBytesAt1080p = 2_000_000;
+
+    /// <summary>Least a PNG frame is counted at, however small the picture.</summary>
+    public const double MinFrameBytes = 64_000;
+
+    /// <summary>Fixed allowance for the files around the frames (the movie, logs, the job folder).</summary>
+    public const long FixedMarginBytes = 32_000_000;
+
     /// <summary>
     /// A rough upper estimate of bytes the render will write: a frame sequence keeps every
-    /// PNG (heavy), a video is FFmpeg-compressed (light), a single still is one image.
+    /// PNG (about 2 MB at 1080p, scaled by pixel count, never under a floor, plus a small
+    /// fixed margin), a video is FFmpeg-compressed (light), a single still is one image.
     /// Deliberately generous — the point is to catch "nowhere near enough", not to be exact.
     /// </summary>
     public static long EstimateBytes(int frameCount, int width, int height, OutputKind kind)
@@ -21,13 +31,17 @@ public static class DiskPreflight
         long frames = Math.Max(1, frameCount);
         double perFrame = kind switch
         {
-            OutputKind.FrameSequence => pixels * 4 * 0.6, // compressed RGBA PNG
-            OutputKind.Still => pixels * 4 * 0.6,
+            OutputKind.FrameSequence => PngFrameBytes(pixels),
+            OutputKind.Still => PngFrameBytes(pixels),
             OutputKind.Video => pixels * 0.2,             // H.264-ish per frame
             _ => pixels * 0.5,
         };
-        return (long)(perFrame * frames);
+        long margin = kind is OutputKind.FrameSequence or OutputKind.Still ? FixedMarginBytes : 0;
+        return (long)(perFrame * frames) + margin;
     }
+
+    private static double PngFrameBytes(long pixels) =>
+        Math.Max(MinFrameBytes, FrameBytesAt1080p * pixels / (1920.0 * 1080.0));
 
     /// <summary>True when <paramref name="freeBytes"/> comfortably covers the estimate.</summary>
     public static bool IsSufficient(long estimatedBytes, long freeBytes, double safetyFactor = SafetyFactor)
