@@ -536,11 +536,16 @@ public class BlenderPanelTests
         await app.MenuAsync("Tools > Blender Animation…");
         await app.WaitAsync("#Blender.Render");
         await app.SetTextAsync("#Blender.RenderDirectory", Path.Combine(dir, "renders"));
+        await app.SetTextAsync("#Blender.Title", "Invented scene");
 
         // The scene's own buttons give way to the film's.
         await app.InvokeAsync("#Blender.Tab.Storyboard", "select");
         await app.WaitAsync("#Blender.AddComposite");
         Assert.False(await app.ExistsAsync("#Blender.Render;state:showing"));
+        // With no shot selected, what a shot holds cannot be edited; the film's settings can.
+        await app.WaitAsync("#Blender.ChooseShotHint;state:showing");
+        Assert.False(await app.ExistsAsync("#Blender.Samples;state:enabled"));
+        Assert.True(await app.ExistsAsync("#Blender.Width;state:enabled"));
         await app.InvokeAsync("#Blender.AddComposite");
         await app.WaitAsync("#Blender.Shot.3.Name");
         Assert.Equal(["Outside", "Main passage", "Way out"],
@@ -551,6 +556,8 @@ public class BlenderPanelTests
         await app.InvokeAsync("#Blender.Shot.3.Select");
         await app.WaitAsync("#Blender.DraftShot;state:enabled");
         Assert.Contains("Helix", await app.TextOfAsync("#Blender.CameraTemplate"), StringComparison.Ordinal);
+        await app.WaitAsync("#Blender.Samples;state:enabled");
+        Assert.NotEqual("Invented scene", await app.TextOfAsync("#Blender.Title"));
 
         await app.InvokeAsync("#Blender.Shot.3.Up");
         await app.WaitAsync("#Blender.Shot.2.Name");
@@ -564,6 +571,9 @@ public class BlenderPanelTests
 
         await app.InvokeAsync("#Blender.Tab.Scene", "select");
         await app.WaitAsync("#Blender.Render;state:showing");
+        // The scene is as it was left: the film did not change it.
+        Assert.Equal("Invented scene", await app.TextOfAsync("#Blender.Title"));
+        Assert.True(await app.ExistsAsync("#Blender.Samples;state:enabled"));
     }
 
     [UiFact]
