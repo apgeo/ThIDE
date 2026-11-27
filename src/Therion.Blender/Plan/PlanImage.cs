@@ -46,6 +46,17 @@ public static class PlanImage
         return Check(stream);
     }
 
+    /// <summary>What an image is by what it holds, whatever its name says, with no limit on its
+    /// size: for the images of textured materials, which are as large as the terrain they drape.</summary>
+    /// <exception cref="PlanImageException">It is neither a PNG nor a JPEG, or its size cannot be read.</exception>
+    public static (PlanImageFormat Format, int Width, int Height) Identify(Stream stream)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        var head = ReadHead(stream);
+        if (head.Width < 1 || head.Height < 1) throw new PlanImageException("the image has no size");
+        return head;
+    }
+
     /// <summary>Reads the head of an image from where <paramref name="stream"/> stands and
     /// checks it. A stream that cannot say how long it is is read to its end.</summary>
     /// <exception cref="PlanImageException">As for <see cref="Check(string)"/>.</exception>

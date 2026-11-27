@@ -224,15 +224,17 @@ public static partial class AnnotationPlanner
     }
 
     /// <summary>A file's own name, with every character but letters, digits, '.', '-' and '_'
-    /// made a '_': a name every file system and every zip takes.</summary>
+    /// made a '_': a name every file system and every zip takes (not a device name of Windows,
+    /// such as <c>con.jpg</c>, and no dot at its end).</summary>
     private static string SafeFileName(string path)
     {
         string name = path[(path.LastIndexOfAny(['/', '\\']) + 1)..];
         var safe = new char[name.Length];
         for (int i = 0; i < name.Length; i++)
             safe[i] = char.IsAsciiLetterOrDigit(name[i]) || name[i] is '.' or '-' or '_' ? name[i] : '_';
-        string result = new string(safe).TrimStart('.');
-        return result.Length == 0 || result[0] == '.' ? "photo" + result : result;
+        string result = new string(safe).Trim('.');
+        result = result.Length == 0 || result[0] == '.' ? "photo" + result : result;
+        return PortableNames.IsPortable(result) ? result : "photo-" + result;
     }
 
     /// <summary>

@@ -5,9 +5,11 @@ namespace Therion.Blender;
 
 internal static class PlanRules
 {
-    /// <summary>The names Windows keeps for its devices, with or without an extension.</summary>
+    /// <summary>The names Windows keeps for its devices, with or without an extension (COM0 and
+    /// LPT0, and the superscript digits, as Windows 11 keeps them too).</summary>
     private static readonly HashSet<string> ReservedOnWindows = new(
-        ["CON", "PRN", "AUX", "NUL", .. Enumerable.Range(1, 9).SelectMany(i => new[] { $"COM{i}", $"LPT{i}" })],
+        ["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$",
+         .. "0123456789¹²³".SelectMany(d => new[] { $"COM{d}", $"LPT{d}" })],
         StringComparer.OrdinalIgnoreCase);
 
     /// <summary>A character that some file system refuses in a name: a control character, or one

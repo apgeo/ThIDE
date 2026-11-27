@@ -27,7 +27,9 @@ public sealed record RenderWorkerOptions
     /// <summary>The folder the results go to.</summary>
     public required string Outbox { get; init; }
 
-    /// <summary>Where the bundles are unpacked and their frames are kept while they render.</summary>
+    /// <summary>Where the bundles are unpacked and their frames are kept while they render. It
+    /// must be the user's alone (<see cref="PrivateFolders.Ensure"/>);
+    /// <see cref="PrivateFolders.Of"/>("render-worker") by default in the CLI.</summary>
     public required string Scratch { get; init; }
 
     /// <summary>What a bundle may hold at most.</summary>
@@ -109,10 +111,11 @@ public sealed class RenderWorker
     /// looking again every <see cref="RenderWorkerOptions.Poll"/>; with <paramref name="once"/>,
     /// until the inbox has none left. Returns how many jobs it took.
     /// </summary>
+    /// <exception cref="UnsafeFolderException">The scratch folder is not the user's alone.</exception>
     public async Task<int> RunAsync(bool once, CancellationToken ct)
     {
         Directory.CreateDirectory(_options.Outbox);
-        Directory.CreateDirectory(_options.Scratch);
+        PrivateFolders.Ensure(_options.Scratch);
         int taken = 0;
         while (!ct.IsCancellationRequested)
         {
@@ -220,7 +223,7 @@ public sealed class RenderWorker
     {
         string id = JobId(zipPath);
         Directory.CreateDirectory(_options.Outbox);
-        Directory.CreateDirectory(_options.Scratch);
+        PrivateFolders.Ensure(_options.Scratch);
         var record = new RenderJobRecord
         {
             Id = id,
@@ -245,7 +248,8 @@ public sealed class RenderWorker
         var outcome = await _core.RunAsync(job, record, WriteStatus, stop.Token).ConfigureAwait(false);
         record = outcome.Record;
         WriteStatus(record);
-        _log?.Invoke($"{id}: {record.State.ToString().ToLowerInvariant()}{(record.Result?.Error is { } error ? ": " + error : "")}");
+        // On one line, without the control characters a bundle's names may hold.
+        _log?.Invoke(PortableNames.Printable($"{id}: {record.State.ToString().ToLowerInvariant()}{(record.Result?.Error is { } error ? ": " + error : "")}", 4000));
 
         // A job that ended is done with: its zip goes, and so does its scratch unless it failed in
         // Blender or ran out of time (its frames stay, for the same bundle sent again to go on

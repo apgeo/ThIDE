@@ -132,7 +132,9 @@ internal sealed class BundleJobRunner(
         UnpackedBundle bundle, BlenderInstallation installation, string framesDir, IProgress<RenderProgress> progress, CancellationToken ct)
     {
         string script = Path.Combine(bundle.Folder, PlayerFiles.EntryFileName);
-        var modules = moduleFolders.SelectMany(f => new[] { "--modules", Path.GetFullPath(f) }).ToArray();
+        // The player's options of every stage of a bundle: whatever its plans name stays in its
+        // folder (--confine), and the module folders are the operator's alone.
+        string[] modules = ["--confine", .. moduleFolders.SelectMany(f => new[] { "--modules", Path.GetFullPath(f) })];
         string top = Path.Combine(bundle.Folder, ScenePlanSerializer.FileName);
         double? perFrame = null;
         var paced = new BlenderRenderService.Paced(new Relay(p =>

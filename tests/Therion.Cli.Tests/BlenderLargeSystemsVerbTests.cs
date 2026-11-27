@@ -80,6 +80,26 @@ public sealed class BlenderLargeSystemsVerbTests : IDisposable
     }
 
     [Theory]
+    [InlineData("folder")]
+    [InlineData("server")]
+    public async Task TheWorker_RefusesAScratchFolderOthersMayWrite(string mode)
+    {
+        if (OperatingSystem.IsWindows()) return;
+        // As another user would leave a scratch folder in a shared temp folder: open to all.
+        string scratch = Directory.CreateDirectory(Path.Combine(_dir, "open-scratch")).FullName;
+        File.SetUnixFileMode(scratch, (UnixFileMode)0x1FF);
+        string inbox = Directory.CreateDirectory(Path.Combine(_dir, "in")).FullName;
+        using var server = new Therion.Blender.Tests.FakeRenderServer();
+        string[] args = mode == "folder"
+            ? ["render-worker", "--inbox", inbox, "--outbox", Path.Combine(_dir, "out"), "--once", "--scratch", scratch]
+            : ["render-worker", "--server", server.Url.ToString(), "--token-file", Token("t0ken"), "--once", "--scratch", scratch, "--blender", "/nowhere/blender"];
+        var (code, _, error) = await Run(args);
+        Assert.Equal(2, code);
+        Assert.Contains("the scratch folder cannot be used: Others may write the folder", error);
+        Assert.Empty(server.Requests);
+    }
+
+    [Theory]
     [InlineData("render-worker --server https://render.example.org/nodes", "needs both --server <url> and --token-file <file>")]
     [InlineData("render-worker --server http://render.example.org/nodes --token-file TOKEN", "plain HTTP is allowed to this machine only")]
     [InlineData("render-worker --server nodes --token-file TOKEN", "not an absolute URL")]

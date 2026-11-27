@@ -98,6 +98,7 @@ public class BlenderPanelSceneControlsTests : IDisposable
         {
             UseExternalFile = true,
             ExternalFilePath = "m.lox",
+            GuiFolder = Path.Combine(_root, "blender-gui"),
         };
 
     private string Write(string name, string text)
@@ -612,7 +613,7 @@ public class BlenderPanelSceneControlsTests : IDisposable
         Assert.Equal((SceneBuilder.Auto, true, false), (service.LastExportOptions!.Builder, service.LastExportOptions.Interactive, service.LastExportOptions.SingleFile));
         Assert.Equal(Path.Combine(_root, "renders"), service.LastExportSpec!.Output.OutputDirectory);
         Assert.Equal(vm.CurrentSpec.Labels, service.LastExportSpec.Labels);
-        Assert.StartsWith(Path.Combine(Path.GetTempPath(), "ThIDE", "blender-gui"), service.LastExportDirectory);
+        Assert.StartsWith(Path.Combine(_root, "blender-gui"), service.LastExportDirectory);
         Assert.Equal(Path.Combine(service.LastExportDirectory!, "render.py"), gui.Launched);
         Assert.Equal(["--build-only"], gui.Arguments);
         Assert.Equal(Tr.Get("Blender_Status_OpenedInBlender"), vm.StatusMessage);
@@ -643,6 +644,7 @@ public class BlenderPanelSceneControlsTests : IDisposable
             UseExternalFile = true,
             ExternalFilePath = "m.lox",
             ExportDirectory = Path.Combine(_root, "exports"),
+            GuiFolder = Path.Combine(_root, "blender-gui"),
         };
 
         await vm.ExportScriptCommand.ExecuteAsync(null);

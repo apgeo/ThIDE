@@ -124,7 +124,7 @@ public class BlenderRunnerTests : IDisposable
 
         Assert.Equal(Blender.Path, launcher.Exe);
         Assert.Equal(
-            ["-b", "--factory-startup", "--python-exit-code", "64", "--python", Path.Combine(_dir, "render.py")],
+            ["-b", "--factory-startup", "--disable-autoexec", "--python-exit-code", "64", "--python", Path.Combine(_dir, "render.py")],
             launcher.Args);
     }
 
@@ -136,7 +136,7 @@ public class BlenderRunnerTests : IDisposable
         await runner.RunAsync(Blender, Job() with { ScriptArguments = ["--plan", "scene-plan.draft.json"] }, null);
 
         Assert.Equal(
-            ["-b", "--factory-startup", "--python-exit-code", "64", "--python", Path.Combine(_dir, "render.py"),
+            ["-b", "--factory-startup", "--disable-autoexec", "--python-exit-code", "64", "--python", Path.Combine(_dir, "render.py"),
              "--", "--plan", "scene-plan.draft.json"],
             launcher.Args);
     }

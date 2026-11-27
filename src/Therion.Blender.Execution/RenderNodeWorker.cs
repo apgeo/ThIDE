@@ -6,8 +6,12 @@
 // RenderNodeProtocol's (docs/dev/render-worker-protocol.md).
 //
 // The node token goes to the server's own origin only, over HTTPS (plain HTTP to this machine
-// only), and into no log. A job that the server cancels, or whose lease is lost, stops Blender's
-// process tree; a job taken again on the same node goes on with the frames under its scratch folder.
+// only, and never through a proxy), and into no log. A bundle comes from the server's own origin
+// only: a server cannot make the node fetch from its own machine or its network. A job that the
+// server cancels, or whose lease is lost, stops Blender's process tree; a job taken again on the
+// same node goes on with the frames under its scratch folder, which is the user's alone. What the
+// node tells the server of a failure names no path of the node, and no length or address of what
+// it reached; what it prints is one line, without the control characters a bundle could bring.
 
 using System.Diagnostics;
 using System.Net;
@@ -31,7 +35,8 @@ public sealed record RenderNodeOptions
     public string NodeName { get; init; } = Environment.MachineName;
 
     /// <summary>Where the bundles are downloaded and unpacked and their frames are kept: one
-    /// folder for each job, named after its id.</summary>
+    /// folder for each job, named after its id. It must be the user's alone
+    /// (<see cref="PrivateFolders.Ensure"/>); <see cref="PrivateFolders.Of"/>("render-node") by default in the CLI.</summary>
     public required string Scratch { get; init; }
 
     /// <summary>What a bundle may hold at most; a job's own limits can only lower these.</summary>
@@ -92,7 +97,8 @@ public sealed class RenderNodeWorker : IDisposable
 
     /// <param name="blender">The operator's Blender, if named.</param>
     /// <param name="log">Hears one line for each thing the worker does; never the token.</param>
-    /// <param name="handler">The HTTP handler, for tests; a handler that follows no redirect otherwise.</param>
+    /// <param name="handler">The HTTP handler, for tests; otherwise <see cref="Handler"/>: one
+    /// that follows no redirect and uses no proxy for plain HTTP or for this machine.</param>
     public RenderNodeWorker(BlenderLocator locator, BlenderRunner runner, RenderNodeOptions options,
         Func<string?>? blender = null, Action<string>? log = null, HttpMessageHandler? handler = null)
     {
@@ -110,7 +116,37 @@ public sealed class RenderNodeWorker : IDisposable
         // The endpoints are relative to the server URL, which is a folder.
         string url = options.Server.AbsoluteUri;
         _server = new Uri(url.EndsWith('/') ? url : url + "/");
-        _http = new HttpClient(handler ?? new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan };
+        _http = new HttpClient(handler ?? Handler(HttpClient.DefaultProxy))
+        {
+            Timeout = Timeout.InfiniteTimeSpan,
+            // The answers of the server's calls are small JSON; the bundle is streamed, not buffered.
+            MaxResponseContentBufferSize = MaxAnswerBytes,
+        };
+    }
+
+    /// <summary>The most of an answer of the server that is read into memory (a job, a heartbeat's reply).</summary>
+    public const int MaxAnswerBytes = 1024 * 1024;
+
+    /// <summary>The worker's HTTP handler: it follows no redirect, and it uses
+    /// <paramref name="proxy"/> (the environment's) for HTTPS to other machines only. A proxy
+    /// never sees a call to this machine, or a call in plain HTTP: either would hand it the node
+    /// token in the clear.</summary>
+    internal static SocketsHttpHandler Handler(IWebProxy? proxy) => new()
+    {
+        AllowAutoRedirect = false,
+        UseProxy = proxy is not null,
+        Proxy = proxy is null ? null : new NoProxyInTheClear(proxy),
+    };
+
+    /// <summary>A proxy that is bypassed for plain HTTP and for this machine.</summary>
+    internal sealed class NoProxyInTheClear(IWebProxy inner) : IWebProxy
+    {
+        public ICredentials? Credentials { get => inner.Credentials; set => inner.Credentials = value; }
+
+        public Uri? GetProxy(Uri destination) => IsBypassed(destination) ? null : inner.GetProxy(destination);
+
+        public bool IsBypassed(Uri host)
+            => host.Scheme != Uri.UriSchemeHttps || RenderNodeProtocol.IsThisMachine(host) || inner.IsBypassed(host);
     }
 
     public void Dispose() => _http.Dispose();
@@ -123,9 +159,10 @@ public sealed class RenderNodeWorker : IDisposable
     /// cancelled or the server refuses the token; with <paramref name="once"/>, makes one claim
     /// and renders what it brings. A failed claim is made again after a wait that grows.
     /// </summary>
+    /// <exception cref="UnsafeFolderException">The scratch folder is not the user's alone.</exception>
     public async Task<RenderNodeRun> RunAsync(bool once, CancellationToken ct)
     {
-        Directory.CreateDirectory(_options.Scratch);
+        PrivateFolders.Ensure(_options.Scratch);
         var locate = _locator.Locate(_blender?.Invoke());
         string[] versions = locate.IsUsable ? [locate.Installation!.Version.ToString()] : [];
         if (!locate.IsUsable) Log($"no usable Blender: {locate.Detail}");
@@ -285,6 +322,7 @@ public sealed class RenderNodeWorker : IDisposable
             if (record.State == RenderJobState.Succeeded)
             {
                 lease.Report("uploading");
+                record = Redacted(record, outbox);
                 var (problem, files) = await UploadAsync(lease, record, outbox).ConfigureAwait(false);
                 if (lease.Stopped is { } late) return await StoppedAsync(lease, late, scratch).ConfigureAwait(false);
                 if (problem is null)
@@ -350,6 +388,9 @@ public sealed class RenderNodeWorker : IDisposable
         if (string.IsNullOrWhiteSpace(job.Bundle.Url) || !Uri.TryCreate(_server, job.Bundle.Url, out var url))
             return "The bundle's address is not one.";
         if (!RenderNodeProtocol.IsAllowedAddress(url, out string? problem)) return $"The bundle's address cannot be used: {problem}.";
+        // A bundle from anywhere else would let the server make the node fetch what the server
+        // cannot reach (this machine's services, its network) and learn from how that went.
+        if (!RenderNodeProtocol.IsSameOrigin(_server, url)) return "The bundle's address is not on the server's own origin; a node downloads bundles from its server only.";
         return null;
     }
 
@@ -383,7 +424,7 @@ public sealed class RenderNodeWorker : IDisposable
         private Stop? _why;
 
         public RenderNodeJob Job => job;
-        public int Seconds { get; set; } = Math.Max(3, job.LeaseSeconds);
+        public int Seconds { get; set; } = RenderNodeProtocol.LeaseSeconds(job.LeaseSeconds);
         public CancellationToken Token => _stop.Token;
         public CancellationToken Ended => _end.Token;
 
@@ -474,7 +515,7 @@ public sealed class RenderNodeWorker : IDisposable
                 {
                     lease.Renewed();
                     var reply = RenderNodeProtocol.Read<RenderNodeHeartbeatReply>(await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false));
-                    if (reply?.LeaseSeconds is { } seconds && seconds >= 3) lease.Seconds = seconds;
+                    if (reply?.LeaseSeconds is { } seconds && seconds >= 3) lease.Seconds = RenderNodeProtocol.LeaseSeconds(seconds);
                     if (reply?.Action == RenderNodeProtocol.Cancel)
                     {
                         Log($"{lease.Job.JobId}: cancelled by the server");
@@ -575,8 +616,10 @@ public sealed class RenderNodeWorker : IDisposable
                     if (length != bundle.Size || hex != bundle.Sha256)
                     {
                         TryDelete(partial);
+                        // The lengths stay here: the server knows what it sent.
+                        Log($"{job.JobId}: the bundle downloaded is {(length > bundle.Size ? "larger than" : length + " bytes, not")} the {bundle.Size} bytes the job says, or its SHA-256 is another");
                         return length != bundle.Size
-                            ? $"{RenderNodeFailure.Checksum}:The bundle downloaded is {(length > bundle.Size ? "larger than" : length + " bytes, not")} the {bundle.Size} bytes the job says."
+                            ? $"{RenderNodeFailure.Checksum}:The bundle downloaded is not the size the job says."
                             : $"{RenderNodeFailure.Checksum}:The bundle downloaded does not have the SHA-256 the job says.";
                     }
                     File.Move(partial, zip, overwrite: true);
@@ -600,7 +643,11 @@ public sealed class RenderNodeWorker : IDisposable
                 await Wait(RenderNodeProtocol.Backoff(tries, _options.FirstBackoff, _options.MaxBackoff, Random.Shared.NextDouble()), lease.Token, quiet: true).ConfigureAwait(false);
         }
         TryDelete(partial);
-        return $"The bundle could not be downloaded: {last}.";
+        // The status the server answered is its own; what the network said (an address, a
+        // reason) stays in the node's log.
+        return last is not null && last.StartsWith("the download was answered ", StringComparison.Ordinal)
+            ? $"The bundle could not be downloaded: {last}."
+            : "The bundle could not be downloaded: the connection failed or timed out.";
     }
 
     // ---- the result ----
@@ -683,6 +730,8 @@ public sealed class RenderNodeWorker : IDisposable
     /// for a job the server already ended (an answer of 409 is then as good as a yes).</summary>
     private async Task FailAsync(Lease lease, string reason, string message, bool lenient = false)
     {
+        // The node's own paths (its scratch, its user's home) are not the server's business.
+        message = PortableNames.Printable(Redact(message), MaxMessageLength);
         Log($"{lease.Job.JobId}: failed ({reason}): {message}");
         var fail = new RenderNodeFail { Attempt = Math.Max(1, lease.Job.Attempt), Reason = reason, Message = message, Retryable = RenderNodeFailure.IsRetryable(reason) };
         string? problem = await CallAsync(lease, () => Post(RenderNodeProtocol.FailPath(lease.Job.JobId), RenderNodeProtocol.Write(fail)), ignoreStop: true).ConfigureAwait(false);
@@ -861,8 +910,53 @@ public sealed class RenderNodeWorker : IDisposable
         catch (OperationCanceledException) when (quiet) { }
     }
 
-    /// <summary>One line for the log, the token never in it.</summary>
-    private void Log(string line) => _log?.Invoke(line.Replace(_options.Token, "***", StringComparison.Ordinal));
+    /// <summary>One line for the log, the token never in it, and none of the control characters
+    /// text from a bundle or a server may hold (they could rewrite the operator's terminal or
+    /// forge a line of the log).</summary>
+    private void Log(string line) => _log?.Invoke(PortableNames.Printable(line.Replace(_options.Token, "***", StringComparison.Ordinal), 4000));
+
+    /// <summary>The longest failure message sent to the server.</summary>
+    private const int MaxMessageLength = 2000;
+
+    /// <summary><paramref name="text"/> with the node's own paths in it replaced: the scratch
+    /// folder by <c>&lt;scratch&gt;</c>, the user's home by <c>~</c>.</summary>
+    internal string Redact(string text)
+    {
+        var options = System.Text.RegularExpressions.RegexOptions.CultureInvariant
+                      | (OperatingSystem.IsWindows() ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : 0);
+        // A path where it ends: /home/ann is not the start of /home/anna.
+        foreach (var (path, shown) in Redactions())
+            text = System.Text.RegularExpressions.Regex.Replace(text, System.Text.RegularExpressions.Regex.Escape(path) + @"(?=$|[\\/\s'"":;,)\]])", shown, options);
+        return text;
+    }
+
+    private IEnumerable<(string Path, string Shown)> Redactions()
+    {
+        string scratch = Path.GetFullPath(_options.Scratch).TrimEnd(Path.DirectorySeparatorChar);
+        yield return (scratch, "<scratch>");
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).TrimEnd(Path.DirectorySeparatorChar);
+        if (home.Length > 1) yield return (home, "~");
+    }
+
+    /// <summary>What of a job's record and log goes to the server, with the node's paths replaced
+    /// (<see cref="Redact"/>): its error and notices, and its log in the outbox, rewritten.</summary>
+    private RenderJobRecord Redacted(RenderJobRecord record, string outbox)
+    {
+        string log = Path.Combine(outbox, record.Id + RenderWorker.LogSuffix);
+        if (File.Exists(log))
+        {
+            string redacted = log + ".redacted";
+            using (var reader = new StreamReader(log, Encoding.UTF8))
+            using (var writer = new StreamWriter(redacted, append: false, new UTF8Encoding(false)))
+                for (string? line; (line = reader.ReadLine()) is not null;) writer.WriteLine(Redact(line));
+            File.Move(redacted, log, overwrite: true);
+        }
+        if (record.Result is not { } result) return record;
+        return record with
+        {
+            Result = result with { Error = result.Error is { } error ? Redact(error) : null, Notices = result.Notices.Select(Redact).ToList() },
+        };
+    }
 
     /// <summary>Text from the server on one line, shortened.</summary>
     private static string Clean(string? text)
@@ -889,19 +983,19 @@ public static class RenderNodeToken
 {
     /// <summary>
     /// The token in <paramref name="path"/>: its first line, trimmed. Refused (with why) when the
-    /// file is missing, is a link, others may read or write it (on Unix: no permission for
-    /// "others"), or the token is empty or holds a space or a control character.
+    /// file is missing, is a link, or someone else may read or change it
+    /// (<see cref="PrivateFolders.SecretFileProblem"/>: on Linux and macOS the user's own file
+    /// with no permission for its group or for others, in a folder not everyone may write; on
+    /// Windows a file whose access list lets none but the user, the system and the administrators
+    /// in), or the token is empty or holds a space or a control character.
     /// </summary>
     public static bool TryRead(string path, out string token, out string? problem)
     {
         token = "";
-        problem = null;
+        problem = PrivateFolders.SecretFileProblem(path, "the token file");
+        if (problem is not null) return false;
         var info = new FileInfo(path);
-        if (!info.Exists) problem = "the token file is not there";
-        else if (info.LinkTarget is not null) problem = "the token file is a link";
-        else if (!OperatingSystem.IsWindows() && (File.GetUnixFileMode(path) & (UnixFileMode.OtherRead | UnixFileMode.OtherWrite)) != 0)
-            problem = "others may read the token file; make it readable by its owner only (chmod 600)";
-        else if (info.Length > 4096) problem = "the token file is larger than a token";
+        if (info.Length > 4096) problem = "the token file is larger than a token";
         else
         {
             string first = File.ReadLines(path).FirstOrDefault()?.Trim() ?? "";

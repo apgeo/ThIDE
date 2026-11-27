@@ -387,13 +387,18 @@ public sealed class RenderNodeTests : IDisposable
     }
 
     [Fact]
-    public async Task ABundleOnAnotherOrigin_IsDownloadedWithoutTheToken()
+    public async Task ABundleOnAnotherOrigin_IsNotDownloaded_AndTheJobFails()
     {
+        // localhost is another origin than 127.0.0.1, though the same server here.
         _server.Offer("102", Bundle(), host: "localhost");
-        using var worker = Worker(new FakeBlender());
+        var blender = new FakeBlender();
+        using var worker = Worker(blender);
         await worker.RunAsync(once: true, CancellationToken.None);
-        Assert.Single(_server.Completed);
-        Assert.Contains(_server.Requests, r => r is { Request: "GET /bundles/102.zip", Token: false });
+        var (_, fail) = Assert.Single(_server.Failed);
+        Assert.Equal(RenderNodeFailure.BadJob, fail.Reason);
+        Assert.Contains("not on the server's own origin", fail.Message);
+        Assert.DoesNotContain(_server.Requests, r => r.Request.StartsWith("GET ", StringComparison.Ordinal));
+        Assert.Equal(0, blender.Started);
     }
 
     [Fact]

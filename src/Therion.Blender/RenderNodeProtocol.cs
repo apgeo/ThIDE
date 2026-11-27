@@ -61,8 +61,10 @@ public static partial class RenderNodeProtocol
     }
 
     /// <summary>A job id is a safe file name: letters, digits, '.', '_' and '-', 1 to 64 of them,
-    /// starting with a letter or a digit.</summary>
-    public static bool IsJobId(string? id) => id is not null && JobIdPattern().IsMatch(id);
+    /// starting with a letter or a digit, not ending in a dot, and not a name Windows gives a
+    /// device (<c>NUL</c>, <c>CON</c>, <c>COM1</c>…, whatever follows a dot): it names a folder and
+    /// files on every node.</summary>
+    public static bool IsJobId(string? id) => id is not null && JobIdPattern().IsMatch(id) && PortableNames.IsPortable(id);
 
     /// <summary>A result file's name: the job id, maybe a frame number, and one of the result extensions.</summary>
     public static bool IsFileName(string? name) => name is not null && FileNamePattern().IsMatch(name);
@@ -81,7 +83,7 @@ public static partial class RenderNodeProtocol
 
     /// <summary>
     /// Whether the worker may talk to <paramref name="uri"/>: HTTPS, or plain HTTP to this machine
-    /// (a loopback address or <c>localhost</c>) only. A node token never crosses a network in the clear.
+    /// only (<see cref="IsThisMachine"/>). A node token never crosses a network in the clear.
     /// </summary>
     public static bool IsAllowedAddress(Uri uri, out string? problem)
     {
@@ -91,14 +93,45 @@ public static partial class RenderNodeProtocol
         else if (!string.IsNullOrEmpty(uri.UserInfo)) problem = "the address carries a user name or password";
         else if (uri.Scheme == Uri.UriSchemeHttps) return true;
         else if (uri.Scheme != Uri.UriSchemeHttp) problem = $"'{uri.Scheme}' is not HTTP or HTTPS";
-        else if (IsLoopback(uri)) return true;
-        else problem = "plain HTTP is allowed to this machine only; use HTTPS";
+        else if (IsThisMachine(uri)) return true;
+        else problem = "plain HTTP is allowed to this machine only (127.0.0.1, ::1 or localhost); use HTTPS";
         return false;
     }
 
-    private static bool IsLoopback(Uri uri) =>
-        uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)
-        || (IPAddress.TryParse(uri.Host.Trim('[', ']'), out var address) && IPAddress.IsLoopback(address));
+    /// <summary>Whether <paramref name="uri"/> names this machine: a loopback address written as
+    /// such (127.0.0.0/8, ::1), or <c>localhost</c>. A name a resolver could answer otherwise
+    /// (<c>loopback</c>, <c>localhost.</c>, a name under a search domain) is not.</summary>
+    public static bool IsThisMachine(Uri uri)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+        if (!uri.IsAbsoluteUri) return false;
+        // .NET reads the host "loopback" as "localhost": the name as it was written is the one held.
+        if (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+            return string.Equals(WrittenHost(uri.OriginalString), "localhost", StringComparison.OrdinalIgnoreCase);
+        return uri.HostNameType is UriHostNameType.IPv4 or UriHostNameType.IPv6
+               && IPAddress.TryParse(uri.Host.Trim('[', ']'), out var address) && IPAddress.IsLoopback(address);
+    }
+
+    /// <summary>The host of an absolute URL as it is written in it.</summary>
+    private static string WrittenHost(string url)
+    {
+        int start = url.IndexOf("://", StringComparison.Ordinal);
+        if (start < 0) return "";
+        start += 3;
+        int end = url.IndexOfAny(['/', '\\', '?', '#'], start);
+        string authority = end < 0 ? url[start..] : url[start..end];
+        authority = authority[(authority.LastIndexOf('@') + 1)..];
+        if (authority.StartsWith('[')) return authority;
+        int colon = authority.LastIndexOf(':');
+        return colon < 0 ? authority : authority[..colon];
+    }
+
+    /// <summary>The longest lease the worker takes from a server: a day. A longer one is a day,
+    /// and one shorter than 3 s is 3 s.</summary>
+    public const int MaxLeaseSeconds = 24 * 3600;
+
+    /// <summary>A lease the server gives, held to 3 s to <see cref="MaxLeaseSeconds"/>.</summary>
+    public static int LeaseSeconds(int seconds) => Math.Clamp(seconds, 3, MaxLeaseSeconds);
 
     /// <summary>Whether <paramref name="uri"/> is on the server's own origin (scheme, host and
     /// port): the only place the node token is sent to.</summary>
@@ -122,7 +155,7 @@ public static partial class RenderNodeProtocol
     /// missed; the server's own when it names a shorter one; never under a second.</summary>
     public static TimeSpan HeartbeatInterval(int leaseSeconds, int? heartbeatSeconds)
     {
-        double third = Math.Max(1, leaseSeconds) / 3.0;
+        double third = Math.Clamp(leaseSeconds, 1, MaxLeaseSeconds) / 3.0;
         double seconds = heartbeatSeconds is { } s && s > 0 && s <= third ? s : third;
         return TimeSpan.FromSeconds(Math.Max(1, seconds));
     }
