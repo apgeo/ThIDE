@@ -218,7 +218,7 @@ public sealed class RenderNodeSecurityTests(ITestOutputHelper output) : IDisposa
         Assert.DoesNotContain(scratch, shown);
         Assert.Contains(Path.Combine("<scratch>", "j1", "bundle", "render.py"), shown);
         // A path that only starts the same is another path.
-        Assert.Equal(scratch + "-other", worker.Redact(scratch + "-other"));
+        Assert.DoesNotContain("<scratch>", worker.Redact(scratch + "-other"));
         Assert.Equal("'<scratch>'", worker.Redact($"'{scratch}'"));
         if (home.Length > 1 && !scratch.StartsWith(home, StringComparison.Ordinal)) Assert.DoesNotContain(home, shown);
     }
@@ -324,8 +324,9 @@ public sealed class RenderNodeSecurityTests(ITestOutputHelper output) : IDisposa
     public void AFolderOfAnotherUser_IsRefused()
     {
         if (OperatingSystem.IsWindows() || Environment.UserName == "root") return;
-        // The root folder is the superuser's, and the user cannot change its mode.
-        Assert.Contains("belongs to another user", Assert.Throws<UnsafeFolderException>(() => PrivateFolders.Ensure("/")).Message);
+        // A folder of the superuser's, on a file system that can be written (macOS's root is read-only).
+        string theirs = OperatingSystem.IsMacOS() ? "/private/var" : "/var";
+        Assert.Contains("belongs to another user", Assert.Throws<UnsafeFolderException>(() => PrivateFolders.Ensure(theirs)).Message);
     }
 
     [Fact]

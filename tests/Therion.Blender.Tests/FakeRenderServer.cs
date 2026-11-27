@@ -12,16 +12,38 @@ namespace Therion.Blender.Tests;
 
 internal sealed class FakeRenderServer : IDisposable
 {
-    private readonly HttpListener _listener = new();
+    private readonly HttpListener _listener;
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _loop;
 
-    public FakeRenderServer()
+    /// <summary>How many ports are tried before the server gives up.</summary>
+    public const int PortTries = 10;
+
+    public FakeRenderServer() : this(FreePort) { }
+
+    /// <param name="port">Picks a port to listen on. The port is free when it is picked, but
+    /// something else may take it before the listener starts: a fresh port, and a fresh
+    /// listener, are then tried.</param>
+    internal FakeRenderServer(Func<int> port)
     {
-        Port = FreePort();
-        _listener.Prefixes.Add($"http://127.0.0.1:{Port}/");
-        _listener.Prefixes.Add($"http://localhost:{Port}/");
-        _listener.Start();
+        for (int tries = 1; ; tries++)
+        {
+            var listener = new HttpListener();
+            int candidate = port();
+            listener.Prefixes.Add($"http://127.0.0.1:{candidate}/");
+            listener.Prefixes.Add($"http://localhost:{candidate}/");
+            try
+            {
+                listener.Start();
+                _listener = listener;
+                Port = candidate;
+                break;
+            }
+            catch (HttpListenerException) when (tries < PortTries)
+            {
+                try { listener.Close(); } catch (HttpListenerException) { }
+            }
+        }
         _loop = Task.Run(LoopAsync);
     }
 
@@ -74,7 +96,7 @@ internal sealed class FakeRenderServer : IDisposable
         return job;
     }
 
-    private static int FreePort()
+    internal static int FreePort()
     {
         var probe = new TcpListener(IPAddress.Loopback, 0);
         probe.Start();
@@ -202,7 +224,9 @@ internal sealed class FakeRenderServer : IDisposable
     public void Dispose()
     {
         _stop.Cancel();
-        try { _listener.Stop(); _listener.Close(); } catch (ObjectDisposedException) { }
+        // On Linux, closing a listener looks its port up again, and can bind it anew to do so: a
+        // port someone else has taken since then makes Close throw, with nothing left to free.
+        try { _listener.Stop(); _listener.Close(); } catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException) { }
         try { _loop.Wait(TimeSpan.FromSeconds(5)); } catch (AggregateException) { }
         _stop.Dispose();
     }

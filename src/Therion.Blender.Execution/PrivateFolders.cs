@@ -171,7 +171,8 @@ public static class PrivateFolders
         => path.StartsWith(root, comparison) && (path.Length == root.Length || path[root.Length] == Path.DirectorySeparatorChar);
 
     /// <summary>Only the owner of a file (or the superuser) may change its mode: setting it to
-    /// <paramref name="mode"/> tells whether the user owns it.</summary>
+    /// <paramref name="mode"/> tells whether the user owns it. On a read-only file system (a
+    /// container's mounted secret) nobody can change or swap it, and it counts as the user's.</summary>
     [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
     private static bool IsOwn(string path, UnixFileMode mode)
     {
@@ -181,6 +182,7 @@ public static class PrivateFolders
             return true;
         }
         catch (UnauthorizedAccessException) { return false; }
+        catch (IOException) { return true; }
     }
 
     /// <summary>A folder anyone may write in, without the sticky bit that keeps each to their own.</summary>
