@@ -1,5 +1,27 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-27 — render node protocol: receiver check and reason constants
+
+The plan stays **version 1**; the player does not change.
+
+### Breaking changes
+- None.
+
+### Additive API
+- **`RenderNodeProtocol.Validate(messageKind, json)`** holds a received body to
+  `render-node.schema.json` as a receiver should: unknown properties are accepted (the schema's
+  closed objects describe what a sender writes), anything else the schema says is checked,
+  `protocol` other than 1 included. It returns the problems, empty when the body is good, and
+  throws `ArgumentException` for a `messageKind` not in the new `RenderNodeProtocol.MessageKinds`.
+  A server no longer needs to strip `additionalProperties` from its copy of the schema.
+- **`RenderNodeFailure`** has a constant for every reason: `BlenderNotFound`, `BlenderTooOld`,
+  `DiskSpace`, `ScriptError`, `Crashed`, `NoOutput` and `Error` join the seven it had. The values
+  are unchanged.
+
+### Documentation
+- `docs/dev/render-worker-protocol.md`: a server never needs 403 (bad or withdrawn tokens are
+  401); the bundle GET answers 409 when the node does not hold the job.
+
 ## 2026-11-27 — a composite's tour choices and language
 
 The plan stays **version 1**, the storyboard **version 1**; the player does not change.
@@ -22,6 +44,7 @@ The plan stays **version 1**, the storyboard **version 1**; the player does not 
   `StoryboardValidator` refuses another; the schema has the key.
 - **`StoryboardExpander.TourSpecOf(storyboard, index, presets, language)`**: the tour a tour shot
   stands for, as rules, to make its branch table from (`TourBuilder.Build`).
+
 ## 2026-11-27 — fixes from a Windows machine with a GPU
 
 The plan stays **version 1** and the player stays **1.12**: no key is new or changed.

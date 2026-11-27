@@ -273,7 +273,7 @@ public sealed class RenderNodeWorker : IDisposable
                 return record;
             }
 
-            string reason = record.Result?.FailureKind is { } kind && RenderNodeFailure.All.Contains(kind) ? kind : "error";
+            string reason = record.Result?.FailureKind is { } kind && RenderNodeFailure.All.Contains(kind) ? kind : RenderNodeFailure.Error;
             await FailAsync(lease, reason, record.Result?.Error ?? "The render failed.").ConfigureAwait(false);
             // A refused bundle is done with; a render that failed keeps its frames for another try here.
             if (outcome.Refused) TryDeleteFolder(scratch);

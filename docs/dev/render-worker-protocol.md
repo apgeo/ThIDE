@@ -9,6 +9,18 @@ process and never reaches the node; it answers the node's calls.
   `RenderNodeHeartbeat`, `RenderNodeHeartbeatReply`, `RenderNodeComplete`, `RenderNodeFail`,
   `RenderNodeFailure`).
 - JSON schema: `src/Therion.Blender/render-node.schema.json`, one `$defs` entry for each message.
+  Its objects are closed (`additionalProperties: false`): it describes what a sender writes. A
+  receiver must not hold incoming bodies to that, because it ignores unknown properties; use
+  `RenderNodeProtocol.Validate(messageKind, json)` (below) instead.
+- Receiver-side check: `RenderNodeProtocol.Validate(string messageKind, string json)` returns the
+  problems of a body (empty when it is good). `messageKind` is one of
+  `RenderNodeProtocol.MessageKinds`: `claim`, `job`, `heartbeat`, `heartbeatReply`, `complete`,
+  `fail`; any other value throws `ArgumentException`. It holds the body to the schema with unknown
+  properties accepted; a missing required property, a wrong type or value, a `protocol` other than
+  1 or text that is not JSON is a problem (each names its path, e.g. `$.protocol: must be 1`).
+  A server calls it on a claim, heartbeat, complete and fail it receives, and answers 400 when the
+  list is not empty. It is a plain function of the two strings, with no reference to the
+  execution assembly.
 - The worker: `src/Therion.Blender.Execution/RenderNodeWorker.cs`.
 
 ## Basics
@@ -25,6 +37,9 @@ process and never reaches the node; it answers the node's calls.
 | Idempotency | every call may be retried with the same job id and attempt: a heartbeat renews again, a PUT of a file replaces the same bytes, a second `complete` or `fail` for an attempt already ended is answered 200 (or 409) and changes nothing |
 
 ### What the node does with an answer
+
+A server never needs to answer **403**: a token that is bad, unknown or withdrawn is **401**. The
+node treats 403 like 401, but there is no case in the protocol that calls for it.
 
 | Answer | Claim | Heartbeat | Upload, complete, fail |
 |---|---|---|---|
@@ -84,6 +99,9 @@ The zip, streamed. The node writes it to its scratch folder, stops reading past 
 fails the job with `checksum` (retryable) when the size or the SHA-256 differ. It tries 5 times
 on network errors and 5xx before failing with `download`. A bundle that the node already holds
 from an earlier try, with the same size and SHA-256, is not downloaded again.
+
+The server answers **409** when the node does not hold the job (it was not leased to it, or it
+was taken back); the node then counts the lease as lost and does not retry the download.
 
 ### `POST jobs/{jobId}/heartbeat` — progress; renews the lease
 

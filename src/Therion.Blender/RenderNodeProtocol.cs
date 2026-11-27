@@ -155,6 +155,24 @@ public static partial class RenderNodeProtocol
 
     /// <summary>The JSON schema of the messages (its <c>$defs</c> name each one).</summary>
     public static string Schema => LoadedSchema.Value;
+
+    /// <summary>The names of the messages <see cref="Validate"/> knows: the schema's <c>$defs</c>
+    /// that are bodies.</summary>
+    public static IReadOnlyList<string> MessageKinds { get; } =
+        ["claim", "job", "heartbeat", "heartbeatReply", "complete", "fail"];
+
+    /// <summary>Holds a message to the schema as a receiver should: a property the schema does not
+    /// know is accepted (the protocol says receivers ignore them); a missing required property, a
+    /// wrong type or value, or another <c>protocol</c> version is a problem.</summary>
+    /// <param name="messageKind">One of <see cref="MessageKinds"/>.</param>
+    /// <param name="json">The body received.</param>
+    /// <returns>The problems, each with the path of the value; empty when the message is good.</returns>
+    /// <exception cref="ArgumentException"><paramref name="messageKind"/> is not a message.</exception>
+    public static IReadOnlyList<string> Validate(string messageKind, string json)
+    {
+        if (!MessageKinds.Contains(messageKind)) throw new ArgumentException($"'{messageKind}' is not a render node message.", nameof(messageKind));
+        return RenderNodeValidator.Validate(Schema, messageKind, json);
+    }
 }
 
 /// <summary>The reasons a node gives when a job fails.</summary>
@@ -183,16 +201,37 @@ public static class RenderNodeFailure
     /// <summary>The job ran longer than its limit; its frames stay on the node.</summary>
     public const string TimedOut = "timedOut";
 
-    /// <summary>The kinds of the render's own failure, as the worker names them.</summary>
+    /// <summary>There is no Blender on the node, or the one named cannot be started.</summary>
+    public const string BlenderNotFound = "blenderNotFound";
+
+    /// <summary>The node's Blender is older than the player needs.</summary>
+    public const string BlenderTooOld = "blenderTooOld";
+
+    /// <summary>The node's disk is too full for the render.</summary>
+    public const string DiskSpace = "diskSpace";
+
+    /// <summary>The player failed on the plans.</summary>
+    public const string ScriptError = "scriptError";
+
+    /// <summary>Blender stopped without finishing.</summary>
+    public const string Crashed = "crashed";
+
+    /// <summary>The render ended without writing the movie or still the plan asks for.</summary>
+    public const string NoOutput = "noOutput";
+
+    /// <summary>The node failed in some other way.</summary>
+    public const string Error = "error";
+
+    /// <summary>Every reason, in the order of the schema's enum.</summary>
     public static IReadOnlyList<string> All { get; } =
     [
         Refused, BadJob, Checksum, Download, Upload, Cancelled, TimedOut,
-        "blenderNotFound", "blenderTooOld", "diskSpace", "scriptError", "crashed", "noOutput", "error",
+        BlenderNotFound, BlenderTooOld, DiskSpace, ScriptError, Crashed, NoOutput, Error,
     ];
 
     /// <summary>Whether another try (on this node or another) may go better: a hint to the server.</summary>
-    public static bool IsRetryable(string reason) => reason is Checksum or Download or Upload or "blenderNotFound"
-        or "blenderTooOld" or "diskSpace" or "crashed" or "error";
+    public static bool IsRetryable(string reason) => reason is Checksum or Download or Upload or BlenderNotFound
+        or BlenderTooOld or DiskSpace or Crashed or Error;
 }
 
 /// <summary>A node asks for a job: <c>POST claim</c>.</summary>
