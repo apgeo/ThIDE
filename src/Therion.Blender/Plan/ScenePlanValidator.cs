@@ -463,7 +463,7 @@ public static partial class ScenePlanValidator
             bad(path + ".open", "How open a cut-away is must be within 0–1.");
         if (cut.Rim is { } rim)
         {
-            if (!IsUnitColor(rim.Color))
+            if (!PlanRules.IsUnitColor(rim.Color))
                 bad(path + ".rim.color", "Colour channels must be within 0–1.");
             if (!(rim.Width > 0) || !double.IsFinite(rim.Width))
                 bad(path + ".rim.width", "The width of a rim is a distance above 0.");
@@ -927,7 +927,7 @@ public static partial class ScenePlanValidator
                 if (NotOfALight("cutaway") && knowsTheScene
                     && targets.FirstOrDefault(t => t.Kind != ThingKind.Model || !cutAway.Contains(t.Id)) is { } uncut)
                     bad(path + ".cutaway", $"'{uncut.Id}' has no cut-away; give the textured material it wears a 'cutaway'.");
-                Times(cutaway.Select(k => (k.T, k.Easing)).ToList(), path + ".cutaway");
+                Times(plan, cutaway.Select(k => (k.T, k.Easing)).ToList(), path + ".cutaway", bad);
                 for (int k = 0; k < cutaway.Count; k++)
                     if (!(cutaway[k].Value >= 0 && cutaway[k].Value <= 1))
                         bad($"{path}.cutaway[{k}].value", "How open a cut-away is must be within 0–1.");
