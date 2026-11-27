@@ -52,6 +52,9 @@ public sealed class BlenderLocator
         // gate (bpy.app.version < 4.2) is the real guard, so we don't reject a path they chose.
         if (!string.IsNullOrWhiteSpace(overridePath))
         {
+            if (IsBatchFile(overridePath))
+                return new BlenderLocateResult(BlenderLocateStatus.NotFound, null,
+                    $"{overridePath} is a batch file: Windows passes its arguments through cmd.exe, which would read characters of a plan's file names as commands. Name blender.exe itself.");
             if (ProbeCached(overridePath) is { } probed)
                 return probed >= MinimumVersion
                     ? new BlenderLocateResult(BlenderLocateStatus.Found, new BlenderInstallation(overridePath, probed))
@@ -88,6 +91,13 @@ public sealed class BlenderLocator
         return new BlenderLocateResult(
             BlenderLocateStatus.NotFound, null, "No Blender executable was found. Set its path in Preferences ▸ External tools.");
     }
+
+    /// <summary>Whether <paramref name="path"/> is a Windows batch file (<c>.cmd</c>, <c>.bat</c>),
+    /// which is never started as Blender: Windows hands its arguments to cmd.exe, which takes
+    /// <c>&amp;</c>, <c>^</c> and <c>%</c> in them as its own.</summary>
+    public static bool IsBatchFile(string path)
+        => OperatingSystem.IsWindows()
+           && (path.TrimEnd(' ', '.').EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || path.TrimEnd(' ', '.').EndsWith(".bat", StringComparison.OrdinalIgnoreCase));
 
     private BlenderVersion? ProbeCached(string path)
     {

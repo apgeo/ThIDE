@@ -38,12 +38,13 @@ public static class RenderWorkerVerb
         {
             Inbox = Path.GetFullPath(inbox),
             Outbox = Path.GetFullPath(outbox),
-            Scratch = Path.GetFullPath(Option(args, "--scratch") ?? Path.Combine(Path.GetTempPath(), "thide-render-worker")),
+            Scratch = Scratch(args, "render-worker"),
             Limits = limits,
             MaxTime = maxTime,
             ModuleFolders = modules,
             Poll = poll,
         };
+        if (!Private(args, options.Scratch, stderr)) return 2;
         string? blender = Option(args, "--blender");
         var worker = new RenderWorker(
             new BlenderLocator(new ProcessBlenderProbe()), new BlenderRunner(new RealBlenderProcessLauncher()), options,
@@ -99,13 +100,14 @@ public static class RenderWorkerVerb
             Server = url,
             Token = token,
             NodeName = Option(args, "--node-name") ?? Environment.MachineName,
-            Scratch = Path.GetFullPath(Option(args, "--scratch") ?? Path.Combine(Path.GetTempPath(), "thide-render-node")),
+            Scratch = Scratch(args, "render-node"),
             Limits = limits,
             MaxTime = maxTime,
             ModuleFolders = modules,
             Poll = TimeSpan.FromSeconds(seconds ?? 30),
             WorkerVersion = typeof(RenderWorkerVerb).Assembly.GetName().Version?.ToString(),
         };
+        if (!Private(args, options.Scratch, stderr)) return 2;
         string? blender = Option(args, "--blender");
         using var worker = new RenderNodeWorker(
             new BlenderLocator(new ProcessBlenderProbe()), new BlenderRunner(new RealBlenderProcessLauncher()), options,
@@ -113,6 +115,27 @@ public static class RenderWorkerVerb
         var run = await worker.RunAsync(args.Contains("--once", StringComparer.OrdinalIgnoreCase), ct).ConfigureAwait(false);
         stdout.WriteLine($"{run.Jobs} job(s)");
         return run.Unauthorized ? 3 : 0;
+    }
+
+    /// <summary>The scratch folder: <c>--scratch</c>, or by default a folder of the user's own
+    /// cache folder (never a fixed name in the temporary folder every user shares).</summary>
+    private static string Scratch(IReadOnlyList<string> args, string name)
+        => Option(args, "--scratch") is { } scratch ? Path.GetFullPath(scratch) : PrivateFolders.Of(name);
+
+    /// <summary>Makes the scratch folder the user's alone, or says why it cannot be used. The
+    /// default folder is ThIDE's own and is made private; one the operator names is checked only.</summary>
+    private static bool Private(IReadOnlyList<string> args, string scratch, TextWriter stderr)
+    {
+        try
+        {
+            PrivateFolders.Ensure(scratch, tighten: Option(args, "--scratch") is null);
+            return true;
+        }
+        catch (UnsafeFolderException ex)
+        {
+            stderr.WriteLine($"error: the scratch folder cannot be used: {ex.Message}");
+            return false;
+        }
     }
 
     // The most each number may be: a time a TimeSpan holds, a count a long holds, with room to spare.

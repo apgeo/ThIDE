@@ -96,7 +96,9 @@ first, and the project's model is exported with Therion when its build is out of
      [Two scene builders](#two-scene-builders).
    - **Render folder** — where the video, frames or still are saved; by default *Documents/ThIDE/Renders*
      (your home folder's *ThIDE/Renders* where there is no Documents folder). Leave it empty to keep
-     them in the temporary job folder, which the operating system may clean up.
+     them in ThIDE's own job folder, in your cache folder: `~/.cache/ThIDE/blender-jobs` on Linux,
+     `~/Library/Caches/ThIDE/blender-jobs` on macOS, `%LOCALAPPDATA%\ThIDE\blender-jobs` on Windows.
+     Only you may read it; ThIDE keeps its render queue there too.
 
    If anything is wrong (an odd video resolution, zero frames, …) it appears under **Fix before
    rendering** and the **Render** button stays disabled with the reason.
@@ -726,6 +728,17 @@ result lands in the bundle's `out` folder. The scripts find Blender on the PATH 
 Windows); the `BLENDER` environment variable names another one, for example
 `BLENDER=/opt/blender-4.5/blender sh render.sh`.
 
+**The run scripts run code that came with the bundle.** `render.sh`, `render.cmd` and
+`blender --python render.py` run the bundle's own player (`render.py`, `thide_player/`), Python with
+your rights: run them only for a bundle from someone you trust, as you would a program. The
+[render worker](#the-render-worker) renders a bundle from anyone else without running any of its
+code. The bundle's `README.txt` says so too.
+
+**A bundle says where the cave is.** Every plan holds the cave's position in its survey's
+coordinate system (`frame.origin`, `crs`), and a plan that draws the centreline holds the positions
+of its legs, with their survey dates when it is revealed by date. Whoever has the bundle can read
+them: think of that before you send a bundle of a cave whose location is not public.
+
 A bundle carries the terrain surface and its image when the scene draws them (`surface.ply`,
 `surface.png`), the annotations with their photos (`photos/`), the image the scene is lit by
 (`hdri/`), and the texts over the picture, in the plan's `texts`. A scene with texts renders
@@ -1202,13 +1215,26 @@ are filled (a synced share, an SFTP drop) is up to you.
 **Security.** A bundle is data, and the worker treats it so. It never runs the bundle's own
 `render.py`, `render.sh` or `thide_player`: it reads the plans, the meshes and the images, and plays
 them with its own player. It refuses, before Blender starts, a bundle whose plans name module
-folders or features outside the player's own, a path that leaves the bundle, a link, a plan the
-checks do not pass, and a bundle over its limits (its size, the unpacked size, the triangles, the
-frames × pixels × samples, the time). Extra modules come only from a folder the operator names
-(`--modules`). Blender runs with `-b --factory-startup` (no add-ons, no start-up scripts), and only
-the files the worker names go to the outbox. A fault in Blender's own readers of meshes and images
-is the risk that remains: run the worker as a user that can read and write the two folders and
-little else.
+folders or features outside the player's own, a path that leaves the bundle (an output folder
+too: whatever folder inside the bundle a plan names, the render is written into the bundle's own
+`out`), a GLB model that names another file (an image or a buffer by its URI) or uses an extension
+beyond materials (compressed meshes, WebP or KTX2 images), a link, a name that is not the same file
+on every system (`con.png`, a trailing dot, two names that differ only by their case), an entry
+that does not hold what the zip says, an image that is not what its name says, a plan the checks do
+not pass, and a bundle over its limits (its size, its entries, the unpacked size, the triangles, the
+frames × pixels × samples, the time). The triangles are counted from the meshes themselves, not
+from what a header says. Extra modules come only from a folder the operator names (`--modules`).
+Blender runs with `-b --factory-startup --disable-autoexec` (no add-ons, no start-up scripts), the
+player is told to open and write nothing outside the bundle's folder, and only the files the
+worker names go to the outbox. A fault in Blender's own readers of meshes and images is the risk
+that remains: run the worker as a user that can read and write the two folders and little else.
+
+The scratch folder (`--scratch`) is yours alone: by default `~/.cache/ThIDE/render-worker`
+(`render-node` for a server; `~/Library/Caches/ThIDE/…` on macOS, `%LOCALAPPDATA%\ThIDE\…` on
+Windows), made readable by you only. A scratch folder that is not yours, that others may write, or
+that lies in a folder anyone may write (such as a fixed name in `/tmp` without the sticky bit) is
+refused, because whoever can change it can change what Blender runs. The worker prints one line
+for each thing it does, with any control character of a bundle's names written out as `\uXXXX`.
 
 ### Rendering for a server
 
@@ -1222,9 +1248,15 @@ The server never reaches the machine; the machine calls the server. The protocol
         --token-file ~/.config/thide-node/token --node-name gpu-1
 
 - `--server` is the address the server's administrator gives; it must be HTTPS (plain HTTP is
-  accepted only to this machine, for tests). `--token-file` is a file whose first line is the
-  node token the administrator gives; it must be readable by you only (`chmod 600`), or the
-  worker refuses to start. The token is never written to the log.
+  accepted only to this machine, for tests, and never through a proxy). `--token-file` is a file
+  whose first line is the node token the administrator gives; it must be yours, readable by you
+  only (`chmod 600`), in a folder not everyone may write; on Windows, a file only you (and the
+  system and the administrators) may read: one in your profile is. Otherwise the worker refuses to
+  start. The token is never written to the log, and goes only to the server's own address.
+- The worker downloads a bundle from the server's own address only: a job whose bundle lies
+  elsewhere fails with `badJob`, so a server cannot use the machine to reach what only the machine
+  can (its own services, its network). What it tells the server of a failure names no path of the
+  machine (its scratch folder is `<scratch>`, your home `~`) and nothing of what it reached.
 - `--node-name` is the name the server shows (the computer's name by default); `--scratch` is where
   bundles are downloaded and frames kept (one folder for each job); `--poll-seconds` (30; `--poll`
   is the same option) is how long it waits for a job before asking again; `--once` makes one request and renders what it

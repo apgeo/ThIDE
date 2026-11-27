@@ -107,7 +107,7 @@ public class BlenderPanelTests
     }
 
     [UiFact]
-    public async Task A_failed_render_keeps_its_log_in_the_temp_folder_the_test_gave_the_app()
+    public async Task A_failed_render_keeps_its_log_in_the_cache_folder_the_test_gave_the_app()
     {
         if (!OnPath("therion")) return;
         var dir = await BuiltDemoCaveAsync();
@@ -122,10 +122,10 @@ public class BlenderPanelTests
         await app.InvokeAsync("#Blender.Render");
         await app.WaitAsync("role:Text;name:Render failed.", timeoutMs: 60_000);
 
-        // The app's own account of the job. Its folder is kept, for the log, and is under the temp
-        // folder this app was given: not under the machine's, where a ThIDE the developer has open
-        // keeps its jobs (and clears out old ones).
-        var jobRoot = Path.Combine(app.TempDirectory, "ThIDE", "blender-jobs");
+        // The app's own account of the job. Its folder is kept, for the log, and is under the cache
+        // folder this app was given: not under the user's, where a ThIDE the developer has open
+        // keeps its jobs (and clears out old ones), and not in the temp folder every user shares.
+        var jobRoot = Path.Combine(app.CacheDirectory, "ThIDE", "blender-jobs");
         var jobs = (await app.GetAsync("#Blender.Builder", "DataContext.Blender.Jobs"))
             .GetProperty("properties").GetProperty("DataContext.Blender.Jobs").GetString()!;
         var log = System.Text.RegularExpressions.Regex.Match(jobs, @"JobLogPath = (.+?), Duration = ").Groups[1].Value;

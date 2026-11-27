@@ -29,8 +29,25 @@ if len(DEEPEST) > 260 and not os.path.isfile(DEEPEST):
           flush=True)
     sys.exit(64)
 
-sys.path.insert(0, HERE)
 sys.dont_write_bytecode = True  # leave the folder as it was written
+
+
+def load_player():
+    """The player's package, loaded from its own folder beside this file. This folder is not put
+    on Python's module path: what else lies here (the plans, the meshes, whatever a bundle brought)
+    is never imported in place of a module, whatever its name."""
+    import importlib.util
+
+    package = os.path.join(HERE, "thide_player")
+    spec = importlib.util.spec_from_file_location(
+        "thide_player", os.path.join(package, "__init__.py"), submodule_search_locations=[package])
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["thide_player"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+load_player()
 
 from thide_player import core  # noqa: E402
 

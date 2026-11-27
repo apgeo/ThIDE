@@ -55,8 +55,31 @@ internal static class AppServices
         return Path.Combine(appData, "ThIDE", "blender-presets");
     }
 
-    /// <summary>Root under which per-render job folders are created (temp).</summary>
-    private static string BlenderJobRoot() => Path.Combine(Path.GetTempPath(), "ThIDE", "blender-jobs");
+    /// <summary>Root under which per-render job folders are created, with the render queue's
+    /// file: a folder of the user's alone (~/.cache/ThIDE/blender-jobs, %LOCALAPPDATA%\ThIDE\...),
+    /// never a fixed name in the temp folder every user of the machine shares, where another user
+    /// could change what Blender runs.</summary>
+    private static string BlenderJobRoot() => JobRoot.Value;
+
+    private const string RenderQueueFileName = "render-queue.json";
+
+    private static readonly Lazy<string> JobRoot = new(() =>
+    {
+        try
+        {
+            string root = Therion.Blender.Execution.PrivateFolders.Ensure(Therion.Blender.Execution.PrivateFolders.Of("blender-jobs"), tighten: true);
+            // The queue of a ThIDE that kept it in the temp folder, once, so that its renders go on.
+            try { Therion.Blender.Execution.PrivateFolders.MoveQueueFile(Path.Combine(Path.GetTempPath(), "ThIDE", "blender-jobs"), root, RenderQueueFileName); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            return root;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The user's folder cannot be made private: a folder of this session alone (made for
+            // the user only), whose renders cannot go on after a restart.
+            return Directory.CreateTempSubdirectory("thide-blender-jobs-").FullName;
+        }
+    });
 
     /// <summary>The user's Blender path override from Preferences ▸ External tools (the same
     /// IExternalToolPathOverrides store used for Therion/Mapiah), or null to auto-detect.</summary>
@@ -303,7 +326,7 @@ internal static class AppServices
         // Renders run one at a time, whoever starts them (the panel, agents through the in-app MCP
         // server): a second one waits in the queue. The queue keeps its jobs in a small file, so a
         // render that ThIDE was closed in the middle of (not cancelled) goes on at the next start.
-        services.AddSingleton(_ => new Therion.Blender.Execution.RenderQueue(Path.Combine(BlenderJobRoot(), "render-queue.json")));
+        services.AddSingleton(_ => new Therion.Blender.Execution.RenderQueue(Path.Combine(BlenderJobRoot(), RenderQueueFileName)));
         services.AddSingleton<Therion.Blender.IBlenderRenderService>(sp =>
         {
             var service = new Therion.Blender.Execution.BlenderRenderService(

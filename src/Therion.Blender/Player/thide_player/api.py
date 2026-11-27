@@ -338,6 +338,15 @@ def image_strip(scene, name, path, channel, first):
     return strips(scene).new_image(name=name, filepath=path, channel=channel, frame_start=first, fit_method="ORIGINAL")
 
 
+def is_inside(path, folder):
+    """Whether path lies in folder (or is it), links followed: neither climbs out of the other."""
+    try:
+        relative = os.path.relpath(os.path.realpath(path), os.path.realpath(folder))
+    except ValueError:  # on another drive
+        return False
+    return not os.path.isabs(relative) and relative.split(os.sep)[0] != os.pardir
+
+
 def scratch_dir():
     """A temporary folder that is removed when Blender exits."""
     path = tempfile.mkdtemp(prefix="thide-player-")
@@ -542,6 +551,9 @@ class Frames:
 class Context:
     """What the core hands every module."""
 
+    # Every path of the plan must lie in its folder (--confine): a plan from elsewhere.
+    confined = False
+
     def __init__(self, plan, plan_dir, scene, files=None, frames=None):
         self.plan = plan
         self.plan_dir = plan_dir
@@ -566,8 +578,12 @@ class Context:
         return 1 + int(round(seconds * self.fps))
 
     def path(self, name):
-        """Where a path of the plan leads: plan paths are relative to the plan's folder."""
-        return os.path.normpath(os.path.join(self.plan_dir, name))
+        """Where a path of the plan leads: plan paths are relative to the plan's folder. A plan
+        that is confined to its folder may name nothing outside it."""
+        path = os.path.normpath(os.path.join(self.plan_dir, name))
+        if self.confined and not is_inside(path, self.plan_dir):
+            raise PlanError('"%s" does not lie in the plan\'s folder, and this plan may name nothing outside it' % name)
+        return path
 
     def input_file(self, name, where):
         """The file a plan path names, for reading. A single-file script carries its files
