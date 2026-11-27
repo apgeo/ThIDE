@@ -33,6 +33,8 @@ a move or a fade. A change without a target is of the scene itself.
                    edge looks: "edge" is how far behind the threshold a part is wholly there, and
                    "glow" makes what has just appeared shine in a "color", by "strength", over
                    "width". Edge and width are in the units of the values.
+    cutaway        how open the cut-away of a model's textured material is, from 0 (no hole) to
+                   1 (all of its radius): the hole opens, or closes, as the keys say
     worldColor     the colour of the world (no target)
     worldStrength  the strength of the world (no target): how strongly it lights the scene, and
                    how bright the camera sees it, unless the two are set apart
@@ -94,11 +96,12 @@ KEYS = [{
     "worldBackdrop": [{"t": None, "value": None, "easing": None}],
     "worldRotation": [{"t": None, "value": None, "easing": None}],
     "reveal": [{"t": None, "value": None, "easing": None}],
+    "cutaway": [{"t": None, "value": None, "easing": None}],
     "revealFront": {"attribute": None, "edge": None, "glow": {"color": None, "strength": None, "width": None}},
 }]
 
 # What a target can change, and what the scene itself can.
-OF_A_TARGET = ("visible", "opacity", "tint", "scale", "offset", "energy", "reveal")
+OF_A_TARGET = ("visible", "opacity", "tint", "scale", "offset", "energy", "reveal", "cutaway")
 OF_THE_SCENE = ("worldColor", "worldStrength", "worldBackdrop", "worldRotation")
 
 EASINGS = ("linear", "smooth", "constant")
@@ -115,6 +118,7 @@ REVEAL_EDGE = "thide_reveal_edge"
 REVEAL_GLOW = "thide_reveal_glow"      # the colour
 REVEAL_GLOW_STRENGTH = "thide_reveal_glow_strength"
 REVEAL_GLOW_WIDTH = "thide_reveal_glow_width"
+CUTAWAY = "thide_cutaway"              # how open a cut-away is; "textured_materials" puts it there
 
 # The mesh attribute a revealed thing's values are kept in, whatever its file calls them, and the
 # threshold of a thing that is all there: above every value.
@@ -244,6 +248,13 @@ def build(ctx, changes):
                 obj[REVEAL_GLOW_WIDTH] = glow["width"]
                 key_values(ctx, obj, custom(REVEAL), change["reveal"], where + ".reveal",
                            lambda key, at: finite(key.get("value"), at + ".value"))
+            if "cutaway" in named:
+                if CUTAWAY not in obj:
+                    raise api.PlanError(
+                        '%s.cutaway: "%s" has no cut-away; give its textured material a "cutaway", '
+                        'and list "changes" after "textured_materials"' % (where, obj.name))
+                key_values(ctx, obj, custom(CUTAWAY), change["cutaway"], where + ".cutaway",
+                           lambda key, at: unit(key.get("value"), at + ".value"))
 
     if world:
         change_world(ctx, world)

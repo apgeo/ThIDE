@@ -253,7 +253,34 @@
           "image": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([pP][nN][gG]|[jJ][pP][eE]?[gG])$", "description": "A .png or .jpg file, relative to the plan." },
           "opacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "How solid the material is seen from its front. Default 1." },
           "backOpacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "How solid it is seen from behind. Default: as from the front. 0 makes a terrain that is not there for a camera under it." },
-          "shadow": { "type": "boolean", "description": "False keeps the models that wear it from casting shadows. Default true." }
+          "shadow": { "type": "boolean", "description": "False keeps the models that wear it from casting shadows. Default true." },
+          "cutaway": {
+            "description": "Since player 1.13: a hole straight down through the models that wear it, so that a terrain shows the cave under it. The hole is every place within 'radius' of 'lines', measured across the ground (only X and Y count). The mesh stays as it is: the material lets the scene through, the same in Cycles and in EEVEE; in the draft look the faces in the hole are taken away, without the soft edge or the rim. A change's 'cutaway' keys how open it is.",
+            "type": "object",
+            "required": ["lines", "radius"],
+            "additionalProperties": false,
+            "properties": {
+              "lines": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/vector" } },
+                "description": "Polylines in the plan's frame, each of one point or more (one point: a disc round it); the third number of a point is not used. At most 100000 points in all."
+              },
+              "radius": { "type": "number", "exclusiveMinimum": 0, "description": "How far the hole reaches from the lines, in metres." },
+              "edge": { "type": "number", "minimum": 0, "description": "How wide the soft edge is, in metres, inside the radius: the ground is gone at the radius less the edge and wholly there at the radius. Default 0: a clean cut." },
+              "open": { "type": "number", "minimum": 0, "maximum": 1, "description": "How much of the radius is open: 0 no hole, 1 all of it (the default). The hole grows out from the lines as it opens." },
+              "rim": {
+                "description": "A band of the ground just outside the hole in a colour of its own, so that the opening reads. It grows in as the hole opens. Default: none.",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "color": { "$ref": "#/$defs/color", "description": "Default a dark earth, [0.03, 0.025, 0.02]." },
+                  "width": { "type": "number", "exclusiveMinimum": 0, "description": "In metres beyond the hole. Default 3." },
+                  "strength": { "type": "number", "minimum": 0, "maximum": 1, "description": "How much of the colour lies over the ground at the hole, fading to none a width beyond. Default 0.6." }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -516,6 +543,21 @@
               "properties": {
                 "t": { "type": "number" },
                 "value": { "type": "number", "description": "The threshold at 't', in the units of the reveal values." },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "cutaway": {
+            "description": "Since player 1.13. Of a model that wears a textured material with a 'cutaway' only: how open the hole is, 0 (none) to 1 (all of its radius), as that material's 'open' says for a clip without this. The hole grows out from its lines as it opens.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number" },
+                "value": { "type": "number", "minimum": 0, "maximum": 1 },
                 "easing": { "$ref": "#/$defs/easing" }
               }
             }
