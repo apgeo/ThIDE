@@ -292,6 +292,49 @@ public class BlenderAnimationViewModelTests
         Assert.False(vm.HasSurface);
     }
 
+    [Fact]
+    public void TerrainCutaway_IsOffByDefault_MattersOnlyWithATerrain_ReachesTheSpec_AndKeepsWhatThePanelDoesNotShow()
+    {
+        var vm = Vm();
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        Assert.Equal(CutawayChoice.Off, vm.TerrainCutaway);
+        Assert.Equal([CutawayChoice.Off, CutawayChoice.Footprint, CutawayChoice.Circle], vm.CutawayChoices);
+        Assert.Null(vm.CurrentSpec.Surface.Cutaway);
+        Assert.Equal(15, vm.CutawayMargin);
+
+        vm.TerrainCutaway = CutawayChoice.Footprint;
+        Assert.False(vm.HasCutaway); // no terrain yet
+        vm.SurfaceMode = SurfaceMode.Solid;
+        Assert.True(vm.HasCutaway);
+        Assert.Contains(nameof(vm.HasCutaway), changed);
+        Assert.Equal(new CutawaySpec(), vm.CurrentSpec.Surface.Cutaway);
+
+        vm.TerrainCutaway = CutawayChoice.Circle;
+        vm.CutawayMargin = 40;
+        vm.CutawayOpenSeconds = 3;
+        Assert.Equal(new CutawaySpec { Shape = CutawayShape.Circle, Margin = 40, OpenSeconds = 3 }, vm.CurrentSpec.Surface.Cutaway);
+
+        // What a spec has beside the panel's knobs stays, through an Off and back.
+        vm.SelectedPreset = new PresetItem("by hand", null, false, new RenderPreset
+        {
+            Name = "by hand",
+            Spec = vm.CurrentSpec with
+            {
+                Surface = vm.CurrentSpec.Surface with { Cutaway = new CutawaySpec { Edge = 9, Rim = 0.2, OpenAt = 1.5, Margin = 25 } },
+            },
+        });
+        Assert.Equal((CutawayChoice.Footprint, 25.0, 0.0), (vm.TerrainCutaway, vm.CutawayMargin, vm.CutawayOpenSeconds));
+        vm.TerrainCutaway = CutawayChoice.Off;
+        Assert.Null(vm.CurrentSpec.Surface.Cutaway);
+        vm.TerrainCutaway = CutawayChoice.Footprint;
+        Assert.Equal(new CutawaySpec { Edge = 9, Rim = 0.2, OpenAt = 1.5, Margin = 25 }, vm.CurrentSpec.Surface.Cutaway);
+
+        vm.SelectedPreset = vm.Presets.First(p => p.BuiltIn);
+        Assert.Equal(CutawayChoice.Off, vm.TerrainCutaway);
+        Assert.Null(vm.CurrentSpec.Surface.Cutaway);
+    }
+
     // ---- validation + gating ----
 
     [Fact]

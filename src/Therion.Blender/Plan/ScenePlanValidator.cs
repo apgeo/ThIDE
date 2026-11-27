@@ -426,6 +426,50 @@ public static partial class ScenePlanValidator
                 else if (!HasImageExtension(image))
                     bad(path + ".image", "An image file is a .png or a .jpg.");
             }
+            if (material.Cutaway is { } cut) ValidateCutaway(cut, path + ".cutaway", bad);
+        }
+    }
+
+    private static void ValidateCutaway(PlanCutaway cut, string path, Action<string, string> bad)
+    {
+        if (cut.Lines is not { Count: > 0 })
+            bad(path + ".lines", "A cut-away needs at least one line.");
+        else
+        {
+            int points = 0;
+            for (int l = 0; l < cut.Lines.Count; l++)
+            {
+                var line = cut.Lines[l];
+                if (line is not { Count: > 0 })
+                {
+                    bad($"{path}.lines[{l}]", "A line is a list of one point or more.");
+                    continue;
+                }
+                points += line.Count;
+                for (int p = 0; p < line.Count; p++)
+                    if (!IsFinite(line[p]))
+                    {
+                        bad($"{path}.lines[{l}][{p}]", "A point must be finite.");
+                        break;
+                    }
+            }
+            if (points > PlanCutaway.MaxPoints)
+                bad(path + ".lines", $"A cut-away's lines have at most {PlanCutaway.MaxPoints} points; these have {points}.");
+        }
+        if (!(cut.Radius > 0) || !double.IsFinite(cut.Radius))
+            bad(path + ".radius", "The radius of a cut-away is a distance above 0.");
+        if (!(cut.Edge >= 0) || !double.IsFinite(cut.Edge))
+            bad(path + ".edge", "The edge of a cut-away is a distance, not negative.");
+        if (!(cut.Open >= 0 && cut.Open <= 1))
+            bad(path + ".open", "How open a cut-away is must be within 0–1.");
+        if (cut.Rim is { } rim)
+        {
+            if (!IsUnitColor(rim.Color))
+                bad(path + ".rim.color", "Colour channels must be within 0–1.");
+            if (!(rim.Width > 0) || !double.IsFinite(rim.Width))
+                bad(path + ".rim.width", "The width of a rim is a distance above 0.");
+            if (!(rim.Strength >= 0 && rim.Strength <= 1))
+                bad(path + ".rim.strength", "The strength of a rim must be within 0–1.");
         }
     }
 
@@ -682,6 +726,7 @@ public static partial class ScenePlanValidator
         // The things the sections of this library make. A module from elsewhere may make more,
         // which only the player can know: a plan with one is not held to this list.
         var draped = (plan.TexturedMaterials ?? []).Where(m => m is not null).SelectMany(m => m.Models).ToHashSet(StringComparer.Ordinal);
+        var cutAway = (plan.TexturedMaterials ?? []).Where(m => m is { Cutaway: not null }).SelectMany(m => m.Models).ToHashSet(StringComparer.Ordinal);
         var things = new List<Thing>();
         foreach (var model in plan.Models)
             things.Add(new Thing(model.Id, model.Role ?? "model", ThingKind.Model,
@@ -713,7 +758,7 @@ public static partial class ScenePlanValidator
                 bad(path, "A change is missing.");
                 continue;
             }
-            bool ofATarget = change is not { Visible: null, Opacity: null, Tint: null, Scale: null, Offset: null, Energy: null, Reveal: null };
+            bool ofATarget = change is not { Visible: null, Opacity: null, Tint: null, Scale: null, Offset: null, Energy: null, Reveal: null, Cutaway: null };
             if (!ofATarget && change is { WorldColor: null, WorldStrength: null, WorldBackdrop: null, WorldRotation: null })
                 bad(path, "A change needs the keys of at least one property.");
 
@@ -722,7 +767,7 @@ public static partial class ScenePlanValidator
             if (change.Target is not { } target)
             {
                 if (ofATarget)
-                    bad(path + ".target", "A change of visibility, opacity, tint, scale, offset, energy or reveal needs a target.");
+                    bad(path + ".target", "A change of visibility, opacity, tint, scale, offset, energy, reveal or cut-away needs a target.");
             }
             else
             {
@@ -876,6 +921,17 @@ public static partial class ScenePlanValidator
                 for (int k = 0; k < reveal.Count; k++)
                     if (!double.IsFinite(reveal[k].Value))
                         bad($"{path}.reveal[{k}].value", "The threshold must be finite.");
+            }
+            if (change.Cutaway is { } cutaway)
+            {
+                Once("cutaway");
+                if (NotOfALight("cutaway") && knowsTheScene
+                    && targets.FirstOrDefault(t => t.Kind != ThingKind.Model || !cutAway.Contains(t.Id)) is { } uncut)
+                    bad(path + ".cutaway", $"'{uncut.Id}' has no cut-away; give the textured material it wears a 'cutaway'.");
+                Times(cutaway.Select(k => (k.T, k.Easing)).ToList(), path + ".cutaway");
+                for (int k = 0; k < cutaway.Count; k++)
+                    if (!(cutaway[k].Value >= 0 && cutaway[k].Value <= 1))
+                        bad($"{path}.cutaway[{k}].value", "How open a cut-away is must be within 0–1.");
             }
             if (change.RevealFront is { } front)
             {

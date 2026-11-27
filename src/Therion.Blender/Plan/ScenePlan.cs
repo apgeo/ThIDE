@@ -536,6 +536,57 @@ public sealed record PlanTexturedMaterial
 
     /// <summary>False keeps the models that wear it from casting shadows.</summary>
     public bool Shadow { get; init; } = true;
+
+    /// <summary>A hole straight down through the models that wear it; null is none. Since
+    /// player 1.13.</summary>
+    public PlanCutaway? Cutaway { get; init; }
+}
+
+/// <summary>
+/// A cut-away of the models that wear a textured material: a hole straight down through them, so
+/// that a terrain shows the cave under it. The hole is every place within <see cref="Radius"/> of
+/// <see cref="Lines"/>, measured across the ground (only X and Y count): a corridor along a
+/// line, a disc round a line of one point. The mesh stays as it is; the material lets the scene
+/// through, the same in Cycles and in EEVEE. In the draft look the faces in the hole are taken
+/// away, without the soft edge or the rim.
+/// </summary>
+public sealed record PlanCutaway
+{
+    /// <summary>Polylines in the plan's frame, each of one point or more; their Z is not used.
+    /// The cave's centreline, or the middle of a circle.</summary>
+    public IReadOnlyList<IReadOnlyList<CaveVector3>> Lines { get; init; } = [];
+
+    /// <summary>How far the hole reaches from the lines, in metres; above 0.</summary>
+    public double Radius { get; init; }
+
+    /// <summary>How wide the soft edge is, in metres, inside the radius: the ground is gone at
+    /// <see cref="Radius"/> less this and wholly there at the radius. 0 is a clean cut.</summary>
+    public double Edge { get; init; }
+
+    /// <summary>How much of <see cref="Radius"/> is open, 0 (no hole) to 1, for the whole clip
+    /// unless a change keys it (<see cref="PlanChange.Cutaway"/>): the hole then grows out from
+    /// the lines as it opens.</summary>
+    public double Open { get; init; } = 1.0;
+
+    /// <summary>A band of the ground just outside the hole in a colour of its own; null is none.</summary>
+    public PlanCutawayRim? Rim { get; init; }
+
+    /// <summary>The most points the lines of one cut-away may have.</summary>
+    public const int MaxPoints = 100_000;
+}
+
+/// <summary>The rim of a cut-away: <see cref="Color"/> laid over the ground by
+/// <see cref="Strength"/> at the hole, fading to none <see cref="Width"/> metres beyond it.
+/// It grows in as the hole opens.</summary>
+public sealed record PlanCutawayRim
+{
+    public ColorRgb Color { get; init; } = new(0.03, 0.025, 0.02);
+
+    /// <summary>In metres; above 0.</summary>
+    public double Width { get; init; } = 3.0;
+
+    /// <summary>0–1.</summary>
+    public double Strength { get; init; } = 0.6;
 }
 
 /// <summary>A text in the scene that turns to face the camera, centred on <see cref="At"/>.</summary>
@@ -1101,6 +1152,11 @@ public sealed record PlanChange
 
     /// <summary>How the edge of <see cref="Reveal"/> looks; null is a clean cut.</summary>
     public PlanRevealFront? RevealFront { get; init; }
+
+    /// <summary>How open the cut-away of the target's textured material is
+    /// (<see cref="PlanCutaway.Open"/>), 0 to 1: the hole opens, or closes, as the keys say.
+    /// Only a model that wears a textured material with a cut-away has one. Since player 1.13.</summary>
+    public IReadOnlyList<PlanNumberKey>? Cutaway { get; init; }
 }
 
 /// <summary>The edge of a reveal: where the threshold is in the model at a given moment.</summary>

@@ -195,9 +195,11 @@ public sealed class BlenderPanelEditingTests : System.IDisposable
         Assert.NotNull(vm.SelectedShot);
         vm.SurfaceMode = SurfaceMode.Solid;
         vm.SurfaceOpacity = 0.7;
+        vm.TerrainCutaway = CutawayChoice.Circle;
         await vm.RenderFilmCommand.ExecuteAsync(null);
         var film = service.LastStoryboard!;
         Assert.Equal((SurfaceMode.Solid, 0.7), (film.Defaults.Surface!.Mode, film.Defaults.Surface.Opacity));
+        Assert.Equal(CutawayShape.Circle, film.Defaults.Surface.Cutaway!.Shape);
     }
 
     [Fact]
@@ -398,12 +400,14 @@ public sealed class BlenderPanelOptionNameTests
     [
         typeof(CameraTemplate), typeof(SurfaceMode), typeof(LightingRig), typeof(RenderEngineKind), typeof(GpuMode), typeof(SceneBuilder),
         typeof(RevealChoice), typeof(OutputKind), typeof(VideoContainer), typeof(LeadMarkerSizing), typeof(LabelRoofSource), typeof(TransitionKind),
+        typeof(CutawayChoice),
     ];
 
     private static readonly string[] Prefixes =
     [
         "Opt_Blender_Camera_", "Opt_Blender_Surface_", "Opt_Blender_Light_", "Opt_Blender_Engine_", "Opt_Blender_Gpu_", "Opt_Blender_Builder_",
         "Opt_Blender_Reveal_", "Opt_Blender_Output_", "Opt_Blender_Container_", "Opt_Blender_LeadSize_", "Opt_Blender_LabelRoof_", "Opt_Blender_Transition_",
+        "Opt_Blender_Cutaway_",
     ];
 
     [Fact]

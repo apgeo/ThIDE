@@ -265,6 +265,14 @@
             <DockPanel IsEnabled="{Binding Blender.HasSurface}"><TextBlock Text="{l:Loc Blender_UI_SurfaceOpacity}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding Blender.SurfaceOpacity, StringFormat='{}{0:0%}'}" DockPanel.Dock="Right" MinWidth="40" TextAlignment="Right" VerticalAlignment="Center" />
                 <Slider AutomationProperties.AutomationId="Blender.SurfaceOpacity" AutomationProperties.Name="{l:Loc Blender_UI_SurfaceOpacity}" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding Blender.SurfaceOpacity}" ToolTip.Tip="{l:Loc Blender_UI_SurfaceOpacity_Tip}" /></DockPanel>
+            <DockPanel IsEnabled="{Binding Blender.HasSurface}"><TextBlock Text="{l:Loc Blender_UI_Cutaway}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox AutomationProperties.AutomationId="Blender.Cutaway" AutomationProperties.Name="{l:Loc Blender_UI_Cutaway}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CutawayChoices}" SelectedItem="{Binding Blender.TerrainCutaway}" ToolTip.Tip="{l:Loc Blender_UI_Cutaway_Tip}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Cutaway_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
+            <DockPanel IsVisible="{Binding Blender.HasCutaway}"><TextBlock Text="{l:Loc Blender_UI_CutawayMargin}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox AutomationProperties.AutomationId="Blender.CutawayMargin" AutomationProperties.Name="{l:Loc Blender_UI_CutawayMargin}" Text="{Binding Blender.CutawayMargin}" ToolTip.Tip="{l:Loc Blender_UI_CutawayMargin_Tip}" /></DockPanel>
+            <DockPanel IsVisible="{Binding Blender.HasCutaway}"><TextBlock Text="{l:Loc Blender_UI_CutawayOpenSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox AutomationProperties.AutomationId="Blender.CutawayOpenSeconds" AutomationProperties.Name="{l:Loc Blender_UI_CutawayOpenSeconds}" Text="{Binding Blender.CutawayOpenSeconds}" ToolTip.Tip="{l:Loc Blender_UI_CutawayOpenSeconds_Tip}" /></DockPanel>
 
             <!-- light: a rig, or an image all round the scene (HDRI) -->
             <StackPanel Spacing="8" IsEnabled="{Binding Blender.CanEditShotSettings}">

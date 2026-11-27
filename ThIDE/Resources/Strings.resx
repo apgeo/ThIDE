@@ -447,6 +447,12 @@
   <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>The terrain surface of a .lox model, above the cave. Off: none. Solid: in one color. Textured: with the surface image draped over it (in one color when the model has no image). From above it is see-through, as much as Terrain opacity says, so the cave shows under it; from below it is invisible. The camera still frames the cave.</value></data>
   <data name="Blender_UI_SurfaceOpacity" xml:space="preserve"><value>Terrain opacity</value></data>
   <data name="Blender_UI_SurfaceOpacity_Tip" xml:space="preserve"><value>How opaque the terrain is seen from above: at 0 % it cannot be seen, at 100 % it hides the cave under it. The default is 40 %.</value></data>
+  <data name="Blender_UI_Cutaway" xml:space="preserve"><value>Terrain cut-away</value></data>
+  <data name="Blender_UI_Cutaway_Tip" xml:space="preserve"><value>Opens the terrain over the cave, so the cave is seen beneath it. Off: no hole. Footprint: the cave's outline seen from above, as far as Cut-away margin from its centreline. Circle: a round hole that holds the whole cave. The hole has a soft edge and a darker rim on the ground; the terrain's mesh is not changed. Best with Terrain opacity at 100 %. A preview shows the hole as a cut along the terrain's faces.</value></data>
+  <data name="Blender_UI_CutawayMargin" xml:space="preserve"><value>Cut-away margin (metres)</value></data>
+  <data name="Blender_UI_CutawayMargin_Tip" xml:space="preserve"><value>How far the hole reaches past the cave, in metres: from the centreline for a footprint, beyond the cave for a circle. The default is 15 m.</value></data>
+  <data name="Blender_UI_CutawayOpenSeconds" xml:space="preserve"><value>Cut-away opens over (seconds)</value></data>
+  <data name="Blender_UI_CutawayOpenSeconds_Tip" xml:space="preserve"><value>How many seconds the hole takes to open from the start of the clip, growing out from the cave. 0 has it open from the first frame.</value></data>
   <data name="Blender_UI_Render" xml:space="preserve"><value>Render</value></data>
   <data name="Blender_UI_Export" xml:space="preserve"><value>Export script…</value></data>
   <data name="Blender_UI_ExportDir" xml:space="preserve"><value>Export folder</value></data>
@@ -2623,4 +2629,7 @@ This cannot be undone.</value></data>
   <data name="Blender_Preset_NotDeleted" xml:space="preserve"><value>The preset "{0}" was not deleted: {1}</value></data>
   <data name="Blender_Blocker_RelativeFolder" xml:space="preserve"><value>"{0}" is not a full path: write the folder from the drive or the root (/).</value></data>
   <data name="Blender_UI_ChooseShotHint" xml:space="preserve"><value>Select a shot to edit its camera, light, engine, reveal, labels and texts below. The terrain, the fades, the frame rate and the output are the film's, and are edited here at any time.</value></data>
+  <data name="Opt_Blender_Cutaway_Off" xml:space="preserve"><value>Off</value></data>
+  <data name="Opt_Blender_Cutaway_Footprint" xml:space="preserve"><value>Footprint</value></data>
+  <data name="Opt_Blender_Cutaway_Circle" xml:space="preserve"><value>Circle</value></data>
 </root>

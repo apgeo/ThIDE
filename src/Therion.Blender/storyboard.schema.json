@@ -21,7 +21,7 @@
         "materials": { "$ref": "#/$defs/materials" },
         "lighting": { "$ref": "#/$defs/lighting" },
         "labels": { "$ref": "#/$defs/labels", "description": "A render spec's 'labels'. Its 'overlays' are written over every shot that has no 'texts' of its own." },
-        "surface": { "type": "object", "description": "A render spec's 'surface': the terrain above the cave, one for the whole film." },
+        "surface": { "$ref": "#/$defs/surface", "description": "A render spec's 'surface': the terrain above the cave, one for the whole film." },
         "annotations": { "$ref": "#/$defs/annotations" },
         "reveal": { "$ref": "#/$defs/reveal", "description": "A render spec's 'reveal', run by every shot that neither names a preset nor says what it does about the reveal: each of them shows the cave appear again." }
       }
@@ -79,6 +79,27 @@
     "lighting": { "type": "object", "description": "A render spec's 'lighting'." },
     "labels": { "type": "object", "description": "A render spec's 'labels'." },
     "annotations": { "type": "array", "items": { "type": "object" }, "description": "A render spec's 'annotations'." },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["Off", "Solid", "Textured"], "description": "No terrain (the default), the terrain in one colour, or with the model's surface image on it." },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "How opaque the terrain is seen from above. Default 0.4." },
+        "cutaway": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "A hole straight down through the terrain over the cave, so that the cave is seen beneath it. Drawn by the player only. In a film every shot opens it again, in the shot's own time.",
+          "properties": {
+            "shape": { "enum": ["Footprint", "Circle"], "description": "The cave's plan outline, as far as 'margin' from its centreline (the default), or a circle that holds the whole cave and 'margin' more." },
+            "margin": { "type": "number", "exclusiveMinimum": 0, "maximum": 10000, "description": "How far the hole reaches past the cave, in metres. Default 15." },
+            "edge": { "type": "number", "minimum": 0, "maximum": 10000, "description": "How wide the soft edge of the hole is, in metres; 0 is a clean cut. Default 4." },
+            "rim": { "type": "number", "minimum": 0, "maximum": 1, "description": "How dark the band of ground round the hole is; 0 is none. Default 0.6." },
+            "openAt": { "type": "number", "minimum": 0, "description": "When the hole starts to open, in seconds from the shot's start. Default 0." },
+            "openSeconds": { "type": "number", "minimum": 0, "description": "How long it takes to open, eased in and out; 0 (the default) is at once." }
+          }
+        }
+      }
+    },
     "reveal": { "type": "object" },
     "overlays": { "type": "object" }
   }
