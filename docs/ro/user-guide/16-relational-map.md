@@ -3,7 +3,7 @@
 > [← Înapoi la pagina principală a Ghidului utilizatorului](README.md)
 
 **Harta relațională** este o diagramă interactivă a relațiilor dintre obiectele proiectului —
-topografii, schițe și hărți și (opțional) fișierele care le găzduiesc. Acolo unde
+topografii, schițe, hărți și (opțional) fișierele care le găzduiesc. Acolo unde
 [Navigatorul de obiecte](12-object-browser-and-outline.md) vă oferă tabele, aceasta vă arată *forma*
 proiectului. Deschideți-o din **Vizualizare → Hartă relațională…** (sau din bara de instrumente).
 
@@ -27,9 +27,9 @@ proiectului. Deschideți-o din **Vizualizare → Hartă relațională…** (sau 
 
 ## Opțiuni de aranjare
 
-- **Aranjamentul diagramei** alege modul de dispunere a diagramei.
+- Lista **Aranjamentul diagramei** alege modul de dispunere.
 - **Dimensiune după nivel** face nodurile apropiate de rădăcină mai mari și frunzele mai mici — se
-  potrivește mai bine spațiilor de lucru mari, unde o dispunere plată devine aglomerată.
+  comportă mai bine în spațiile de lucru mari, unde o dispunere plată devine aglomerată.
 - **Reîmprospătează** reconstruiește diagrama din spațiul de lucru curent, după ce ați editat fișiere.
 
 ## Când este utilă

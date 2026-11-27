@@ -19,16 +19,16 @@ din **Vizualizare → Vizualizator hărți** (sau din Paleta de comenzi → *Com
 - **Deschide…** încarcă direct orice fișier PNG/SVG/PDF.
 - **Selectorul de rezultate** listează hărțile declarate de thconfig-ul activ prin `export map` care există
   pe disc — alegeți una pentru a o afișa.
-- **Afișare automată:** cu *Afișează automat harta randată după o compilare* (sau *…prima hartă la
-  deschiderea spațiului de lucru*) activat, ThIDE deschide pentru dumneavoastră prima hartă potrivită. O
-  opțiune de Deschidere automată pentru un anumit fișier poate impune o hartă anume.
+- **Afișare automată:** cu opțiunea *Afișează automat harta randată după o compilare* (sau *…prima hartă
+  la deschiderea spațiului de lucru*) activată, ThIDE deschide singur prima hartă potrivită. O setare
+  „Deschidere automată” stabilită pentru un anumit fișier poate impune o anumită hartă.
 
 **Deplasarea pe hartă**
 
-- **Zoom** cu butoanele `–` / `+` sau cu **Ctrl+rotița mouse-ului**; **100%** resetează; **Încadrează**
+- **Zoom** cu butoanele `–` / `+` sau cu **Ctrl+rotița mouse-ului**; **100%** readuce zoomul la 100%; **Încadrează**
   micșorează harta ca să încapă în fereastră (nu o mărește niciodată peste 100%).
 - **Navigarea între paginile PDF** (**◀ / ▶**) apare pentru PDF-urile cu mai multe pagini.
-- **Reîmprospătează** randează din nou (de ex. după o recompilare). Randarea se face în afara firului de
+- **Reîmprospătează** randează din nou harta (de ex. după o recompilare). Randarea se face în afara firului de
   execuție al interfeței, așa că un PDF mare nu blochează aplicația — cât timp lucrează se afișează un
   indicator de activitate.
 - Butoanele **Ecran complet**, **desprindere pe alt monitor** și **mutare în panoul central** se află în
@@ -60,13 +60,13 @@ sistemului de operare (fără un browser inclus). Îl deschideți din **Vizualiz
 - **Deschide…** încarcă direct orice `.lox`/`.3d`. După o compilare, cel mai nou model se încarcă automat
   când afișarea automată este activată (`.lox` are prioritate față de `.3d`).
 - Un model mai vechi decât sursele sale este marcat ca **învechit** — recompilați pentru a-l reîmprospăta.
-- Etichetele proprii ale vizualizatorului (cum ar fi legendele HUD) urmează limba aplicației: la
+- Etichetele proprii ale vizualizatorului (panourile sale și textele din HUD) urmează limba aplicației: la
   schimbarea limbii, vizualizatorul se reîncarcă cu același model.
 
-**Comenzi** (la fel ca în galeriile publice CaveView): **orientare** (Plan / profil N·E·S·V), **cameră**
+**Comenzi** (aceleași ca în galeriile publice CaveView): **orientare** (Plan / profil N·E·S·V), **cameră**
 (Perspectivă / Ortografică) și comutatoare pentru elemente — **Pereți, Radiale, Suprafață, Stații,
 Etichete, Nume, Cutie** (cutia de încadrare), **Rotire automată, Lumină, HUD** și **Meniu** (bara laterală
-proprie CaveView). **Colorează după:** Înălțime · Topografie · Lungime · Înclinare · Simplu. **Resetează
+proprie a CaveView). **Colorează după:** Înălțime · Topografie · Lungime · Înclinare · Simplu. **Resetează
 vederea** reîncadrează modelul; **↺ Implicite** readuce toate comutatoarele la valorile implicite; **Ecran
 complet** deschide vizualizatorul într-o fereastră proprie, cu aceeași bară de instrumente (**Ieși din
 ecran complet** sau Esc vă scoate din acest mod). Imaginea unui vizualizator desprins urmează fereastra
@@ -77,10 +77,10 @@ activați **Setări → Depanare → Activează instrumentele de dezvoltare web*
 
 - **Faceți clic pe o stație** în vederea 3D pentru ca editorul să sară la locul în care este declarată
   stația în sursa `.th`.
-- În sens invers, **Arată în vizualizarea 3D** — clic dreapta pe o stație (sau pe *De la*/*Până la* al unei
-  vize) în tabelul Măsurători, ori cardul informativ / clic dreapta pe o stație sau pe o
-  referință la o topografie în editor — vă duce acolo și marchează stația cu o **cruce de vizare** care o
-  urmărește (o topografie este încadrată). Comutatorul **🔍 Apropiere** din bara de instrumente 3D alege
+- În sens invers, **Arată în vizualizarea 3D** — din meniul de clic dreapta al unei stații (sau al
+  câmpului *De la*/*Până la* al unei vize) în tabelul „Măsurători”, ori din cardul informativ sau meniul de
+  clic dreapta al unei stații sau al unei referințe la o topografie în editor — vă duce acolo și marchează
+  stația cu o **cruce de vizare** care o urmărește (o topografie este încadrată în întregime). Comutatorul **🔍 Apropiere** din bara de instrumente 3D alege
   între apropierea imaginii de stație și doar centrarea ei. Pe un rând de **radială**, *Arată „Până la” în vizualizarea 3D*
   marchează capătul acelei radiale.
 
@@ -89,7 +89,7 @@ activați **Setări → Depanare → Activează instrumentele de dezvoltare web*
 Exportă modelul încărcat ca pagină web de sine stătătoare: un dosar cu `index.html`, vizualizatorul și
 modelul, de pus pe orice server web (sau, cu *funcționează și deschisă direct de pe disc*, de deschis prin
 dublu-clic). Poate lista intrările peșterii și stațiile cu comentarii ca locuri spre care să zburați, iar
-linkurile de forma `index.html#station=cave.12` o deschid pe o anumită stație.
+linkurile de forma `index.html#station=cave.12` o deschid direct la o anumită stație.
 
 Pentru referința detaliată (cum asociază stațiile cu sursa, cerințe, soluții de rezervă), consultați
 **[docs/3d-viewer.md](../../3d-viewer.md)**.
@@ -124,7 +124,7 @@ modul rapid de a găsi porțiunile deconectate: tot ce este stivuit la origine (
 legat de rețeaua principală. Rândul **Grupuri** (toate / niciunul / inversează / **principal**) vă permite
 să afișați/ascundeți porțiunile individual.
 
-În spate, previzualizarea unește stațiile echivalate prin `equate`, se ancorează în punctele `fix` și
+În culise, previzualizarea unește stațiile echivalate prin `equate`, se ancorează în punctele `fix` și
 tratează echivalările între fișiere și cele calificate cu `@` — astfel încât reflectă felul în care se
 îmbină efectiv peștera. Rămâne totuși de **calitate de previzualizare** (fără compensarea buclelor);
 compilați cu Therion pentru harta compensată.

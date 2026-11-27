@@ -2,7 +2,7 @@
 
 > [← Înapoi la pagina principală a Ghidului utilizatorului](README.md)
 
-Trei utilitare mici din **Unelte → Calculatoare** se ocupă de calculele care apar mereu în topografia
+Trei utilitare mici din **Unelte → Calculatoare** se ocupă de calculele care apar frecvent în topografia
 speologică. Fiecare produce un rezultat pe care îl puteți **copia** direct în fișierele `.th`.
 
 ## Convertor de unități
@@ -26,18 +26,18 @@ centesimale, iar proiectul în metri/grade.
 - *Din UTM în lat/long:* introduceți zona, emisfera, coordonata est și coordonata nord și citiți
   lat/long.
 
-Cel mai util, poate **copia o linie `fix` gata făcută**, fie în formă UTM, fie lat-long, astfel încât
-georeferențierea unei stații devine un simplu copiat-lipit. Folosiți-l împreună cu sistemele de
+Cel mai util este că poate **copia o linie `fix` gata făcută**, fie în formă UTM, fie lat-long, astfel
+încât georeferențierea unei stații se reduce la o simplă copiere și lipire. Folosiți-l împreună cu sistemele de
 coordonate declarate în thconfig.
 
 ## Calculator de declinație
 
 **Unelte → Calculatoare → Calculator de declinație…** calculează **declinația magnetică** pentru un loc
-și o dată folosind un model geomagnetic (sinteză în armonici sferice WMM / IGRF).
+și o dată, folosind un model geomagnetic (sinteză în armonici sferice WMM / IGRF).
 
 1. **Încărcați un model:** ThIDE are nevoie de un fișier `WMM.COF` (sau un `.COF` IGRF) — descărcați
-   unul (NOAA, domeniu public) și puneți-l în dosarul de setări al ThIDE (panoul indică exact calea;
-   vedeți [Instalare](02-installation-and-setup.md#6-unde-își-stochează-thide-setările)) sau folosiți **Încarcă model…** pentru a-l alege. Până atunci, panoul
+   unul (NOAA, domeniu public) și puneți-l în dosarul de setări al ThIDE (panoul indică calea exactă;
+   consultați [Instalare](02-installation-and-setup.md#6-unde-își-stochează-thide-setările)) sau folosiți **Încarcă model…** pentru a-l alege. Până atunci, panoul
    afișează *Niciun model magnetic încărcat*.
 2. Introduceți locul și **anul**; citiți declinația (° est/vest).
 3. **Copiază linia de declinație** pentru a lipi o valoare `declination` în topografie.

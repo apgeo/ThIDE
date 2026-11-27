@@ -4,7 +4,7 @@
 
 ThIDE este un mediu de lucru **cu panouri andocabile, în stil VS**: un editor în centru, panouri de
 unelte în jurul lui, o bară de meniu și o bară de instrumente sus, o bară de stare jos. Această pagină
-denumește fiecare parte, ca restul ghidului să se poată referi la ea.
+denumește fiecare parte, pentru ca restul ghidului să le poată menționa.
 
 ## Aranjamentul general
 
@@ -49,8 +49,8 @@ nimic.
 
 ## Bara de instrumente
 
-Un singur rând de acțiuni rapide, cu indicații (tooltip-uri) — un tooltip arată o singură dată
-scurtătura curentă a comenzii și nimic pentru o comandă fără scurtătură: deschidere
+Un singur rând de acțiuni rapide, cu indicații (o indicație arată o singură dată scurtătura curentă a
+comenzii, iar pentru o comandă fără scurtătură nu arată niciuna): deschidere
 fișier/thconfig/dosar, navigare **Înapoi/Înainte**, Salvează, Decupează/Copiază/Lipește, **Caută în
 fișiere**, **Redenumește simbolul**, **Salt la fișier** și **Paletă de comenzi**, salt la simbol
 (spațiu de lucru/document), import/export, generare raport, schiță nouă, Deschide în Loch/Aven,
@@ -58,9 +58,9 @@ fișiere**, **Redenumește simbolul**, **Salt la fișier** și **Paletă de come
 
 ## Panourile (vizualizări de unelte)
 
-Majoritatea panourilor de mai jos pot fi afișate sau ascunse din meniul **Vizualizare** și din Paleta
+Majoritatea panourilor de mai jos pot fi afișate sau ascunse din meniul **Vizualizare** și din paleta
 de comenzi. Excepțiile: **Ieșire compilator**, **Fișiere generate** și **XVI** nu au o intrare în
-meniul Vizualizare — sunt file în benzile lor laterale — iar **Animație Blender** se deschide din
+meniul Vizualizare — sunt file în zonele de panouri în care se află — iar **Animație Blender** se deschide din
 meniul **Unelte**. Fiecare are propria pagină în ghid:
 
 | Panou | La ce folosește | Ghid |
@@ -81,15 +81,15 @@ meniul **Unelte**. Fiecare are propria pagină în ghid:
 | **Asistent** *(experimental)* | Conversație cu un model AI **local** despre proiectul dumneavoastră | [Extensibilitate](20-extensibility.md#asistenți-ai-mcp) |
 | **Animație Blender** *(experimental)* | Randează un videoclip / imagini statice ale peșterii prin Blender | [Randări de animații Blender](23-blender-animation.md) |
 
-Unele panouri sunt **dezactivate implicit**, ca proiectele mari să rămână ușoare (Vizualizator hărți,
-Vizualizator 3D, Geologie structurală, unele analize) — activați-le din pagina **Vizualizare** a
+Unele panouri sunt **dezactivate implicit**, pentru ca proiectele mari să nu îngreuneze aplicația (Vizualizator hărți,
+Vizualizator 3D, Geologie structurală, unele analize) — activați-le pe pagina **Vizualizare** a
 setărilor (**Setări → Vizualizare**). Vedeți [Setări](19-settings-and-preferences.md).
 
 ### Exploratorul spațiului de lucru
 
 Arborele de fișiere din stânga. Lista derulantă de deasupra lui alege **thconfig-ul activ**. Clic
 dreapta pe un fișier sau dosar oferă: **Deschide**, **Afișează în Explorator fișiere**, **Setează ca
-thconfig activ al spațiului de lucru**, **Fișier nou… / Dosar nou**, **Șterge** (cu numele dat de
+thconfig activ al spațiului de lucru**, **Fișier nou… / Folder nou…**, **Șterge** (cu numele dat de
 sistemul dumneavoastră: *Mută în Coșul de reciclare* pe Windows, *Mută în coșul de gunoi* pe Linux și macOS,
 *Șterge definitiv* acolo unde nu există coș de gunoi), **Copiază calea completă / relativă**,
 **Reîmprospătează** și (pe Windows) meniul nativ al sistemului. Arborele reflectă structura
@@ -103,7 +103,7 @@ fila**, **Închide**, **Închide celelalte / Închide filele din dreapta / Înch
 **Copiază numele fișierului**. Ați închis o filă din greșeală? **Fișier → Redeschide fila închisă**.
 Tot ce ține de editare se află în [Editorul](07-editing.md).
 
-Notificările despre un fișier sau despre sesiune apar într-un banner deasupra editorului, nu într-o
+Mesajele despre un fișier sau despre sesiune apar într-un banner deasupra editorului, nu într-o
 notificare flotantă care poate ieși din cadrul unui ecran mic: un fișier modificat pe disc de alt
 program, un fișier care depășește o limită de dimensiune și — după o închidere neașteptată —
 **bannerul de recuperare**, care numește fișierele ale căror modificări nesalvate au fost păstrate și
@@ -124,9 +124,9 @@ nu se restaurează nimic, iar mesajul îl numește.
 
 ## Bara de stare
 
-De-a lungul marginii de jos: **calea** fișierului activ (breadcrumb), **Linie/Col** a cursorului și
+De-a lungul marginii de jos: **calea de navigare** a fișierului activ, **Linie/Col** ale cursorului și
 selecția, **Lungime/Linii** ale documentului, un indicator **Indexare…** / **Se compilează…**,
-rezultatul ultimei compilări și o scurtătură către panoul Diagnostice (cu F8 / Shift+F8 pentru a trece
+rezultatul ultimei compilări și o legătură rapidă către panoul Diagnostice (cu F8 / Shift+F8 pentru a trece
 de la o problemă la alta).
 
 ## Paleta de comenzi și notificările
@@ -134,7 +134,7 @@ de la o problemă la alta).
 - **Paletă de comenzi** (**Ctrl+Shift+P**) — cea mai rapidă cale către *orice*. Tastați numele unei
   comenzi sau folosiți prefixele `@` (simbol din acest document), `#` (simbol din spațiul de lucru),
   `:42` (salt la linie). Vedeți [Navigare și căutare](08-navigation-and-search.md).
-- **Notificări** — notificările care nu blochează lucrul (compilare terminată, import eșuat…) se
+- **Notificări** — notificările flotante, care nu blochează lucrul (compilare terminată, import eșuat…), se
   adună sub **clopoțelul** din bara de instrumente, ca să le puteți revedea mai târziu.
 
 ## Teme și limbă

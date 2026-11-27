@@ -1,6 +1,6 @@
 # 4. Concepte de bază și vocabular
 
-> [← Înapoi la pagina principală a ghidului](README.md)
+> [← Înapoi la pagina principală a Ghidului utilizatorului](README.md)
 
 Câteva idei explică modul în care se leagă totul în ThIDE. Învățați-le pe acestea cinci și restul
 aplicației va avea sens.
@@ -53,7 +53,7 @@ Aproape fiecare funcție „inteligentă” citește din acest graf:
 - **Diagnostice** — stații nerezolvate, puncte fixe duplicate, topografii deconectate, erori de închidere
   a buclelor…
 - **Analize** — lungimi, adâncimi, echipe, intrări, calitatea datelor.
-- **Previzualizări** — Previzualizare principală și tabelele din Navigator obiecte.
+- **Previzualizări** — panoul Previzualizare principală și tabelele din Navigator obiecte.
 - **Harta relațională** — o diagramă a grafului însuși.
 
 Pentru că este calculat în aplicație, este instantaneu — dar are **calitate de previzualizare** (fără
@@ -65,14 +65,14 @@ Therion**.
 ThIDE vă validează continuu fișierele și raportează **diagnostice** (erori, avertismente, informații) cu
 coduri stabile. Implicit, rulează în **mod permisiv** — multe probleme sunt avertismente, ca să puteți
 lucra în continuare. Activați **Vizualizare → Mod parser strict** pentru a transforma problemele tolerate
-în modul permisiv în erori (util pentru o ultimă trecere de curățenie). Fiecare cod este catalogat în
+în modul permisiv în erori (util pentru o ultimă trecere de curățare). Fiecare cod este catalogat în
 [docs/diagnostics.md](../../diagnostics.md); pagina
 [Diagnostice și validare](09-diagnostics-and-validation.md) explică panoul.
 
 ## Vocabularul unei peșteri (termenii Therion pe care îi veți întâlni)
 
 Acestea sunt conceptele proprii ale Therion, prezente peste tot în ThIDE (de exemplu ca file ale
-Navigatorului de obiecte):
+navigatorului de obiecte):
 
 | Termen | Semnificație |
 |---|---|
@@ -84,7 +84,7 @@ Navigatorului de obiecte):
 | **Echivalare** (`equate`) | O declarație că două nume de stații reprezintă același punct (leagă topografiile între ele). |
 | **Schiță** (`scrap`) | O unitate de desen dintr-un fișier `.th2` (puncte/linii/suprafețe care alcătuiesc desenul galeriei). |
 | **Hartă** (`map`) | O construcție din `.thconfig`/`.th` care reunește schițe sau alte hărți într-un rezultat. |
-| **Componentă** | Termenul ThIDE pentru o *porțiune conexă* a rețelei topografice. O peșteră legată în întregime este o singură componentă; o topografie care plutește separat este o componentă de sine stătătoare. |
+| **Componentă** | Termenul folosit de ThIDE pentru o *porțiune conexă* a rețelei topografice. O peșteră legată în întregime este o singură componentă; o topografie care plutește separat este o componentă de sine stătătoare. |
 
 Înțelegerea **componentelor** vă ajută să citiți previzualizările și avertismentul „topografie
 deconectată”: porțiunile care nu sunt unite prin stații comune sau echivalări (și nu sunt georeferențiate
@@ -92,4 +92,4 @@ printr-un `fix`) plutesc separat.
 
 ---
 
-Următoarea: [Un tur al interfeței →](05-interface-tour.md)
+Următorul: [Un tur al interfeței →](05-interface-tour.md)

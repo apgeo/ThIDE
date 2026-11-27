@@ -3,12 +3,12 @@
 > [← Înapoi la pagina principală a Ghidului utilizatorului](README.md)
 
 ThIDE face legătura între Therion și celelalte formate din trusa unui speolog — alte programe de
-topografie, GIS, GPS și date despre teren. Majoritatea se află în meniul **Unelte**.
+topografie, GIS, GPS și date de relief. Majoritatea se află în meniul **Unelte**.
 
 ## Import în Therion
 
 Cele trei comenzi de **import** din meniul **Unelte** convertesc date externe în construcții Therion
-pe care le puteți apoi lega în proiect:
+pe care le puteți apoi integra în proiect:
 
 | Import | Format sursă | Devine |
 |---|---|---|
@@ -29,48 +29,49 @@ oricărei părți, iar blocul se actualizează.
 - **Coloanele** se iau dintr-un rând de antet (`From`, `To`, `Length (m)`, `Azimuth`, `Inclination`,
   `Left`… și sinonimele obișnuite) sau, în lipsa lui, din numărul de coloane: 3 = length compass
   clino, 5 = from to length compass clino, 9 = la fel, plus left right up down. Scrieți propria listă
-  (`to from tape bearing gradient -`, unde `-` sare o coloană) când presupunerea este greșită.
-- **Separatori** — taburi, punct și virgulă, virgule (sunt permise celule între ghilimele) sau
+  (`to from tape bearing gradient -`, unde `-` omite o coloană) când deducția automată este greșită.
+- **Separatori** — tabulatoare, punct și virgulă, virgule (sunt permise celule între ghilimele) sau
   spații; virgula zecimală (`3,25`) este recunoscută.
-- **Unități** — `ft` / `feet` în antetul lungimii scrie `units length feet`; valorile de azimut peste
-  360 (și niciuna peste 400) sunt citite ca grade centesimale. Puteți schimba oricare dintre ele în
-  dialog.
-- **Un tabel fără stații** (o descărcare din instrument) primește numele stațiilor pornind de la
-  *Prima stație* — sugerată fiind ultima stație dinaintea cursorului —, numărând în sus. Trei vize
-  aproape identice la rând (obiceiul DistoX) devin un singur tronson mediat, iar vizele singure devin
-  radiale din stația curentă; setați *Vize pe segment* la 0 pentru ca fiecare viză să devină tronson.
+- **Unități** — `ft` / `feet` în antetul coloanei de lungime produce `units length feet`; dacă există
+  valori de azimut peste 360, dar niciuna peste 400, ele sunt citite ca grade centesimale. Puteți schimba
+  oricare dintre ele în dialog.
+- **Un tabel fără stații** (date descărcate direct din instrument) primește stații numerotate
+  crescător începând cu *Prima stație*, pentru care se sugerează ultima stație dinaintea cursorului.
+  Trei vize aproape identice la rând (obiceiul DistoX) devin un singur tronson, cu valorile mediate, iar
+  vizele singure devin radiale din stația curentă; setați *Vize pe segment* la 0 pentru ca fiecare viză să devină tronson.
 - **Verificări** — lungimi negative sau foarte mari, azimut sau înclinare în afara domeniului, un
-  tronson de la o stație la ea însăși, celule care nu sunt numere: fiecare este listată cu linia ei.
+  tronson de la o stație la ea însăși, celule care nu sunt numere: fiecare problemă este listată cu linia ei.
   Un rând căruia îi lipsește o valoare este citit ca radială doar într-un tabel în care niciun rând nu
   are lungimea completă (PocketTopo); în orice alt tabel este raportat ca tronson cu o valoare lipsă
   și este omis. Marcați radialele cu `-` în coloana *to*.
-- **Unde ajunge** — dialogul numește locul deasupra blocului (*Se inserează în: fișier, centreline de
-  la linia N*). Cu cursorul (sau selecția) într-un `centreline`, blocul merge acolo; în altă parte
+- **Unde ajunge** — dialogul afișează, deasupra blocului, locul inserării (*Se inserează în: fișier,
+  centreline de la linia N*). Cu cursorul (sau selecția) într-un `centreline`, blocul merge acolo; în altă parte
   dintr-o topografie, merge în ultimul `centreline` al topografiei respective, înainte de
   `endcentreline`, sau într-unul nou la sfârșitul topografiei. În afara oricărei topografii, dialogul
   refuză și spune acest lucru, în loc să scrie blocul deasupra liniei `encoding`.
 
-Același cititor importă un fișier `.csv`/`.tsv` ca topografie nouă (**Importă topografie…**,
+Același mecanism de citire importă un fișier `.csv`/`.tsv` ca topografie nouă (**Importă topografie…**,
 `import_survey` sau `therion-cli import`).
 
 ### Dosarul de intrare
 
 Activați **Unelte → Urmărește dosarul de intrare**, iar ThIDE urmărește dosarul `incoming/` din proiect
 (creează dosarul; setarea este păstrată în fișierul `.thide/project.json` al proiectului, unde
-`incoming.folder` poate numi alt dosar). Direcționați acolo dosarul de sincronizare al telefonului sau
-dosarul de descărcări: când un export de topografie a sosit complet, o notificare oferă **Importă…** —
+`incoming.folder` poate numi alt dosar). Configurați sincronizarea telefonului sau descărcările astfel încât
+fișierele să ajungă acolo: când un export de topografie a sosit complet, o notificare oferă **Importă…** —
 un `.th` deschide [Leagă un fișier de topografie](24-linking-surveys.md) pentru el, un `.svx` Survex
 sau un `.dat` Compass este mai întâi convertit și apoi legat, iar un `.gpx` devine un fișier de stații
 fixe. O schiță `.th2` sosită singură este doar anunțată: legați mai întâi topografia ei și copiați
-schița împreună cu ea. Un `.svx`, `.dat` sau `.gpx` tras în fereastră urmează același drum.
-Urmărirea este dezactivată până o activați.
+schița împreună cu ea. Un `.svx`, `.dat` sau `.gpx` tras și plasat în fereastră urmează același traseu.
+Urmărirea este dezactivată până când o activați.
 
 ### Un proiect în jurul unei topografii izolate (TopoDroid)
 
 O topografie exportată din TopoDroid (sau orice `.th` izolat, cu un singur bloc `survey`) nu se
 compilează singură până nu are un thconfig în jurul ei. **Unelte → Generează proiect din
-topografie…** construiește acest proiect pentru dumneavoastră; **Generează proiect din fișierul
-activ** face același lucru pentru fișierul `.th` deschis în editor.
+topografie…** cere fișierul topografiei și construiește acest proiect pentru dumneavoastră; **Unelte →
+Generează proiect din fișierul activ** pornește în schimb de la fișierul `.th` deschis în editor (dacă
+fișierul activ nu este un `.th`, vă cere unul).
 
 Dialogul este precompletat din fișier: numele proiectului este numele topografiei fără sufixul final
 `_YYYY` (TopoDroid denumește adesea topografiile `cave_2025`), iar titlul și o probabilă stație de
@@ -78,8 +79,8 @@ intrare sunt preluate din topografie. Dumneavoastră alegeți:
 
 - **Georeferențiere (opțional)** — stația de intrare, sistemul de coordonate (`lat-long`, `UTM35N`,
   `EPSG:4326`, …), cele două coordonate în ordinea sistemului respectiv și altitudinea. Necesară
-  pentru KML, shapefile și alte rezultate GIS. Dacă o lăsați goală, fișierul de legătură primește un
-  șablon `fix` comentat, de completat mai târziu.
+  pentru KML, shapefile și alte rezultate GIS. Dacă lăsați câmpurile goale, fișierul de legătură primește
+  un șablon `fix` comentat, de completat mai târziu.
 - **Layout și structură proiect** — un bloc `layout` cu scara hărții și legenda și, opțional, un dosar
   pentru grafică.
 - **Ținte de export** — bifați rezultatele pe care trebuie să le producă thconfig-ul: modele 3D (Loch
@@ -87,9 +88,10 @@ intrare sunt preluate din topografie. Dumneavoastră alegeți:
   profil desfășurat, SVG, XHTML), baza de date SQL sau CSV și o listă a topografiilor.
 
 **Creează proiect** cere apoi dosarul proiectului, copiază topografia în `th/` și scrie un `.th` de
-legătură și un thconfig cu exporturile alese. ThIDE refuză, înainte de a scrie ceva, un dosar în care
-fișierul de legătură ar suprascrie chiar topografia (dosarul propriu al topografiei) sau unul care
-conține deja oricare dintre fișierele pe care le-ar scrie — alegeți un dosar gol.
+legătură și un thconfig cu exporturile alese. Înainte de a scrie ceva, ThIDE refuză un dosar în care
+fișierul de legătură ar suprascrie chiar topografia (dosarul propriu al topografiei), precum și un dosar
+care conține deja oricare dintre fișierele pe care le-ar scrie, pe care le și numește. Alegeți un dosar
+gol.
 
 ## Export din Therion
 
@@ -98,10 +100,10 @@ conține deja oricare dintre fișierele pe care le-ar scrie — alegeți un dosa
 **Unelte → Exportă intrări / puncte fixe** scrie punctele georeferențiate într-un format GIS/GPS:
 
 - **KML** (Google Earth), **GeoJSON** (GIS web), **GPX** (GPS de mână) sau **CSV** (foi de calcul).
-  Coordonatele GPX sunt scrise cu 7 zecimale, așa cum le citește importul GPX, deci un drum dus-întors
-  păstrează precizia completă; KML, GeoJSON și CSV folosesc 6 (aproximativ 0,1 m).
+  Coordonatele GPX sunt scrise cu cel mult 7 zecimale, câte păstrează și importul GPX, deci un export
+  urmat de reimport nu pierde nimic; KML, GeoJSON și CSV folosesc cel mult 6 zecimale (aproximativ 0,1 m).
 
-Excelent pentru a partaja pozițiile intrărilor, a le reprezenta pe o hartă de bază sau a le încărca
+Foarte util pentru a partaja pozițiile intrărilor, a le reprezenta pe o hartă de bază sau a le încărca
 într-un GPS înainte de o ieșire.
 
 ### Tabele de date → CSV
@@ -120,8 +122,7 @@ filele de analiză.)
 **Unelte → Generează raport topografic (HTML)…** construiește un **raport HTML** autonom, ușor de
 partajat, al topografiei — o cale rapidă de a publica o prezentare generală fără a compila hărți.
 Exporturile de tabele pot fi produse și în HTML/LaTeX, pentru includere în documente. Dintr-un
-terminal: `therion-cli report project.thconfig --out
-report.html`.
+terminal: `therion-cli report project.thconfig --out report.html`.
 
 ## Desenare cu Mapiah
 
@@ -141,7 +142,7 @@ arată la ce schițe fac referire schițele (`scrap`) dumneavoastră.
 
 Georeferențierea în Therion folosește sisteme de coordonate (coduri EPSG / sisteme denumite). ThIDE le
 validează pe cele pe care le folosiți și poate converti pentru dumneavoastră între lat/long WGS84 și
-UTM — vedeți [Calculatoare și convertoare](18-calculators.md). Sistemele de coordonate necunoscute
+UTM — consultați [Calculatoare și convertoare](18-calculators.md). Sistemele de coordonate necunoscute
 sunt semnalate ca diagnostice (`TH0043`).
 
 ---
