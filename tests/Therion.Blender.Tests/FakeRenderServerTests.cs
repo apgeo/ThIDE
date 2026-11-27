@@ -7,6 +7,12 @@ using System.Net.Sockets;
 
 namespace Therion.Blender.Tests;
 
+/// <summary>Run alone: hundreds of servers that claim jobs of their own must not meet the servers
+/// of the render node's tests (on Windows, http.sys shares one port space among them all).</summary>
+[CollectionDefinition(nameof(FakeRenderServerTests), DisableParallelization = true)]
+public sealed class FakeRenderServerTestsCollection;
+
+[Collection(nameof(FakeRenderServerTests))]
 public sealed class FakeRenderServerTests
 {
     [Fact]

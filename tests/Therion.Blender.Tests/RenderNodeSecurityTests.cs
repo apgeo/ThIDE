@@ -17,6 +17,12 @@ using Xunit.Abstractions;
 
 namespace Therion.Blender.Tests;
 
+/// <summary>Run alone: a test here measures what the whole process allocates, which tests running
+/// beside it would add to.</summary>
+[CollectionDefinition(nameof(RenderNodeSecurityTests), DisableParallelization = true)]
+public sealed class RenderNodeSecurityTestsCollection;
+
+[Collection(nameof(RenderNodeSecurityTests))]
 public sealed class RenderNodeSecurityTests(ITestOutputHelper output) : IDisposable
 {
     private readonly string _dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"node-security-{Guid.NewGuid():N}")).FullName;

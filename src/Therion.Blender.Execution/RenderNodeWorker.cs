@@ -586,10 +586,12 @@ public sealed class RenderNodeWorker : IDisposable
         var url = new Uri(_server, bundle.Url);
         string partial = zip + ".part";
         string? last = null;
+        bool stalled = false;
         for (int tries = 1; tries <= Math.Max(1, _options.DownloadTries); tries++)
         {
             if (lease.Stopped is not null) return null;
             using var stall = new Stall(lease.Token, _options.StallTimeout);
+            stalled = false;
             try
             {
                 TryDelete(zip);
@@ -631,7 +633,8 @@ public sealed class RenderNodeWorker : IDisposable
             }
             catch (Exception ex) when (IsPassing(ex, lease.Token))
             {
-                last = stall.Stalled ? stall.Describe() : Describe(ex);
+                stalled = stall.Stalled;
+                last = stalled ? stall.Describe() : Describe(ex);
             }
             catch (OperationCanceledException) when (lease.Stopped is not null)
             {
@@ -645,7 +648,8 @@ public sealed class RenderNodeWorker : IDisposable
         TryDelete(partial);
         // The status the server answered is its own; what the network said (an address, a
         // reason) stays in the node's log.
-        return last is not null && last.StartsWith("the download was answered ", StringComparison.Ordinal)
+        // A stall is said as such: it names nothing of the network.
+        return last is not null && (stalled || last.StartsWith("the download was answered ", StringComparison.Ordinal))
             ? $"The bundle could not be downloaded: {last}."
             : "The bundle could not be downloaded: the connection failed or timed out.";
     }
