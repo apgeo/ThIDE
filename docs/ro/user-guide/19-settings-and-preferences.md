@@ -5,7 +5,7 @@
 Deschideți fereastra de setări cu **Setări → Preferințe…** (**Ctrl+,** sau *Preferințe…* din Paleta de
 comenzi); **Setări → Scurtături tastatură…** o deschide direct la lista de scurtături. Fereastra are o
 **casetă de căutare** (*Caută în setări…*) — tastați pentru a sări la orice opțiune. Secțiunile (paginile)
-din lateral grupează opțiunile; această pagină le parcurge pe fiecare, iar restul ghidului scrie o pagină
+din lateral grupează opțiunile; această pagină le parcurge pe fiecare, iar restul ghidului indică o pagină
 sub forma **Setări → Vizualizare** (și **Setări → Vizualizare → Scanare manager media** pentru un control
 de pe ea). Modificările se aplică cu **OK**; **Renunță** (sau Esc) le anulează.
 
@@ -46,14 +46,14 @@ multe peșteri.
 ## Funcții editor
 
 O secțiune proprie în bara laterală: câte o casetă de bifare pentru fiecare îmbunătățire a editorului
-(completare, ajutor pentru semnătură, minihartă, antete fixe, breadcrumbs, peek, împărțire/diff, mostre
-de culoare, spații albe, Enter inteligent, fragmente de cod…). Dezactivați orice vi se pare deranjant.
+(completare, ajutor pentru semnătură, minihartă, antete fixe, cale de navigare, vizualizarea definiției,
+editor împărțit/comparare, mostre de culoare, spații albe, Enter inteligent, fragmente de cod…). Dezactivați orice vi se pare deranjant.
 **O funcție afișată în gri aici a fost dezactivată la compilarea aplicației** și nu poate fi activată din
 această fereastră.
 
 ## Performanță
 
-Protecții care mențin peșterile mari responsive:
+Limite care mențin aplicația receptivă și la peșterile mari:
 
 | Setare | Efect |
 |---|---|
@@ -71,7 +71,7 @@ ca să puteți trece peste limită de la caz la caz.
 
 - **Salt la fișier (Ctrl+P): caută doar fișierele conectate la thconfig-ul activ** — dezactivat implicit.
   Când este dezactivat, Ctrl+P listează *toate* fișierele Therion din dosarul spațiului de lucru: întâi
-  fișierele thconfig-ului activ, celelalte în gri și marcate „(not in *name*.thconfig)”. Când este
+  fișierele thconfig-ului activ, celelalte în gri și marcate „(nu este în *name*.thconfig)”. Când este
   activat, acele alte fișiere sunt omise, inclusiv cele recente și cele deschise. Vedeți
   [Navigare și căutare](08-navigation-and-search.md#deschiderea-fișierelor-și-comutarea-între-ele).
 
@@ -80,9 +80,9 @@ ca să puteți trece peste limită de la caz la caz.
 | Setare | Note |
 |---|---|
 | **După o compilare reușită, deschide:** `.lox` / `.3d` / `.pdf` | Ce se deschide automat după o compilare; **Deschide fiecare ieșire corespunzătoare** sau doar prima. |
-| **Compilează la salvare** | Compilare în fundal, cu temporizare, a thconfig-ului activ la salvare. Dezactivat implicit. |
+| **Compilează la salvare** | Compilare în fundal a thconfig-ului activ la salvare, cu o scurtă întârziere. Dezactivat implicit. |
 | **Tastă rapidă de compilare la nivel de sistem** | **Doar Windows**, dezactivat implicit: Ctrl+Alt+B compilează chiar și când ThIDE nu este în prim-plan (cât timp e activat, combinația AltGr+B nu mai ajunge la celelalte programe). |
-| **Creează dosarele de ieșire lipsă înainte de compilare** | Evită eșecul Therion din cauza unui director absent. Activat implicit. |
+| **Creează dosarele de ieșire lipsă înainte de compilare** | Evită eșuarea Therion din cauza unui dosar inexistent. Activat implicit. |
 | **Salvează automat fișierele modificate înainte de compilare** | Sare peste întrebarea de salvare. Dezactivat implicit. |
 
 ## Vizualizare
@@ -90,7 +90,7 @@ ca să puteți trece peste limită de la caz la caz.
 O singură secțiune cu trei grupuri — panourile de previzualizare, analizele și un comutator pentru
 diagnostice.
 
-**Panouri de previzualizare.** Activați/dezactivați previzualizările doar-citire; dezactivarea uneia îi
+**Panouri de previzualizare.** Activați/dezactivați previzualizările (care sunt doar pentru citire); dezactivarea uneia îi
 ascunde panoul *și* intrarea din meniu (resetați aranjamentul sau reporniți pentru a închide un panou
 deja deschis):
 
@@ -104,8 +104,8 @@ deja deschis):
 
 Vedeți [Vizualizatoarele](11-viewers.md) și [Geologie structurală](15-structural-geology.md).
 
-**Analiză topografică.** Dezactivați oricare dintre acestea în spațiile de lucru foarte mari, pentru a
-evita munca făcută la fiecare reconstruire a grafului:
+**Analiză topografică.** Dezactivați oricare dintre acestea în spațiile de lucru foarte mari, ca să nu
+se mai facă aceste calcule la fiecare reconstruire a grafului:
 
 - **Statistici de proiect, grafice, echipă, intrări & calitatea datelor** (filele din
   [Prezentare generală](13-survey-overview-and-analytics.md)).
@@ -113,7 +113,7 @@ evita munca făcută la fiecare reconstruire a grafului:
   puncte, linii, suprafețe).
 - **Scanare comentarii TODO / FIXME / QM**.
 - **Scanare manager media** (`.xvi` referențiate + fișiere orfane de pe disc).
-- **Recalculează registrul de indicii pe măsură ce tastați** — reîmprospătare live a
+- **Recalculează registrul de indicii pe măsură ce tastați** — reîmprospătare în timp real a
   [pistelor](14-leads-notes-and-metadata.md) din conținutul nesalvat. Activat implicit; dezactivați-l în
   spațiile de lucru uriașe.
 
@@ -146,8 +146,8 @@ Hook-uri pentru utilizatori avansați (toate dezactivate implicit; vedeți
 
 - **Activează cârlige de script** — rulează o comandă **la deschidere / salvare / compilare** (folosiți
   `{file}` pentru cale).
-- **Încarcă pluginuri** — reguli semantice personalizate (DLL-uri `ISemanticRule`) din dosarul `plugins`
-  al dosarului de setări al ThIDE, încărcate la pornire.
+- **Încarcă pluginuri** — reguli semantice personalizate (DLL-uri `ISemanticRule`) din subdosarul `plugins`
+  al dosarului de setări ThIDE, încărcate la pornire.
 
 ### Server de unelte AI (MCP) — *experimental*
 
@@ -157,8 +157,8 @@ Hook-uri pentru utilizatori avansați (toate dezactivate implicit; vedeți
   dosarul de setări al ThIDE. **Dezactivat implicit.** Vedeți
   [docs/mcp-host-setup.md](../../mcp-host-setup.md).
 - **Urmează agentul (permite uneltelor AI să controleze fereastra)** — când este activat, asistentul poate
-  deschide fișiere, focaliza panouri, rula comenzi, salva și schimba aranjamentul. Când este dezactivat,
-  poate în continuare să *citească* proiectul și să răspundă la întrebări, dar nu poate atinge interfața.
+  deschide fișiere, muta focalizarea pe panouri, rula comenzi, salva și schimba aranjamentul. Când este dezactivat,
+  poate în continuare să *citească* proiectul și să răspundă la întrebări, dar nu poate acționa asupra interfeței.
   Activat implicit (odată ce serverul însuși este activat).
 
 ### Panoul Asistent — *experimental*
@@ -185,7 +185,7 @@ accesa proiectul.
 ## Depanare
 
 Comutatoare de nivel scăzut pentru **vizualizările web încorporate** ([vizualizatorul 3D](11-viewers.md#vizualizatorul-3d)
-și diagramele structurale). **Modificările intră în vigoare după repornirea ThIDE.** Aveți nevoie de
+și graficele structurale). **Modificările intră în vigoare după repornirea ThIDE.** Aveți nevoie de
 această secțiune doar dacă un panou web nu funcționează corect — vedeți
 [Depanare și întrebări frecvente](22-troubleshooting-and-faq.md).
 
@@ -194,7 +194,7 @@ această secțiune doar dacă un panou web nu funcționează corect — vedeți
 | Setare | Note |
 |---|---|
 | **Dezactivează redarea DMA-BUF** | Rezolvă un **panou web gol (alb/negru)** pe multe sisteme Linux (drivere NVIDIA, Wayland). Doar Linux; **activat implicit**. Ignorat dacă `WEBKIT_DISABLE_DMABUF_RENDERER` este deja setat în mediul dumneavoastră. |
-| **Dezactivează compunerea accelerată (ultimă soluție)** | Forțează randarea software când panoul rămâne *în continuare* gol. **Dezactivează WebGL, deci vizualizatorul 3D nu mai poate randa** — este destinat diagramelor structurale 2D. Doar Linux; dezactivat implicit. |
+| **Dezactivează compunerea accelerată (ultimă soluție)** | Forțează randarea software când panoul rămâne *în continuare* gol. **Dezactivează WebGL, deci vizualizatorul 3D nu mai poate randa** — este destinat graficelor structurale 2D. Doar Linux; dezactivat implicit. |
 | **Vizualizare web offscreen (experimental)** | Randează conținutul web prin compozitorul aplicației, în loc să încorporeze o fereastră nativă. Poate rezolva probleme de încorporare, dar poate afecta gestionarea intrărilor de la tastatură și mouse. Doar Linux; dezactivat implicit. |
 
 **Toate platformele:**
@@ -210,7 +210,7 @@ sau Delete o golește). Coloanele afișează **Comandă · Combinație · Implic
 **Resetează tot la valorile implicite** (care listează scurtăturile modificate de dumneavoastră și cere
 mai întâi confirmarea). Nimic nu se salvează până nu apăsați **OK** — **Renunță** readuce toate
 combinațiile la starea anterioară. O combinație pe care o are deja altă comandă nu este preluată pe
-tăcute: rândul afișează *Deja folosită de …* și vă întreabă dacă o **Înlocuiește** sau
+tăcute: rândul afișează *Deja folosită de …* și vă oferă variantele **Înlocuiește** și
 **Păstrează-o pe cea veche**. Comenzile livrate **fără** o combinație implicită sunt listate și ele aici,
 deci aici le atribuiți. Valorile implicite curente sunt listate în
 [Scurtături tastatură](21-keyboard-shortcuts.md).

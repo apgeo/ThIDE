@@ -42,7 +42,7 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
    - **Coborâre elicoidală (Helix descent)** — o spirală din partea de sus a peșterii până jos.
    - **Zbor complet (Full flythrough)** — un zbor în lumina frontalei prin cea mai lungă galerie.
    - **Dezvăluirea hărții (Map reveal)** — o trecere văzută aproape de sus, în care peștera apare
-     puțin câte puțin, de la intrări spre interior (vezi
+     puțin câte puțin, de la intrări spre interior (vedeți
      [Dezvăluirea peșterii, parte cu parte](#dezvăluirea-peșterii-parte-cu-parte)).
    - **Imagini pentru documentare (Documentation stills)** — imagini încadrate de sus / din față /
      din lateral / izometrice.
@@ -61,7 +61,7 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
    - **Teren** — suprafața terenului pe care o poate avea un model *.lox*, desenată deasupra
      peșterii: *Off* (implicit), *Solid* (o singură culoare) sau *Textured* (cu imaginea suprafeței
      așezată pe el; o singură culoare când modelul nu are imagine). Văzut de sus e transparent,
-     văzut de jos nu se vede, nu aruncă umbre, iar camera încadrează tot peștera. **Opacitatea
+     văzut de jos nu se vede, nu aruncă umbre, iar camera încadrează în continuare peștera. **Opacitatea
      terenului**, alături, alege cât din peșteră se vede prin el de sus: la 0 % terenul nu se
      vede, la 100 % ascunde peștera de sub el; implicit 40 %. O grilă foarte mare e rărită la cel
      mult 512 × 512 puncte.
@@ -73,22 +73,21 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
      GPU pentru Cycles (Auto le încearcă pe toate și revine la CPU).
    - **Animație** — cadre pe secundă și durată; panoul afișează **numărul de cadre** rezultat.
    - **Dezvăluire** — peștera apare parte cu parte cât rulează clipul, după distanță, după
-     ordinea ridicării sau după datele ei: vedeți
+     ordinea din topografie sau după datele topografierii: vedeți
      [Dezvăluirea peșterii, parte cu parte](#dezvăluirea-peșterii-parte-cu-parte).
-   - **Ieșire** — un videoclip (MP4/MKV/WebM), o secvență PNG numerotată sau o singură imagine;
+   - **Ieșire** — un videoclip (MP4/MKV/WebM), un șir de imagini PNG numerotate sau o singură imagine;
      plus rezoluția și numele fișierului.
    - **Etichete** — activați etichetele stațiilor și marcajele pistelor. *Mărimea marcajelor*
      alege cât de mare e un marcaj: *Auto* îl dimensionează după galerie într-un zbor prin peșteră
      și după toată peștera altfel; *Cave*, *Passage*, *CameraDistance* (cam aceeași mărime în
      imagine la orice distanță, cu tot cu textul lui) și *HiddenInFlythrough* fixează un singur
-     fel. *Etichete deasupra*
-     alege tavanul deasupra căruia se ridică eticheta unei stații: întâi înălțimea măsurată, întâi
-     pereții, doar pereții sau deloc (pe stație).
+     fel. *Etichete deasupra* alege tavanul deasupra căruia se ridică eticheta unei stații: întâi
+     înălțimea măsurată, întâi pereții, doar pereții sau deloc (pe stație).
    - **Adnotări** — etichete, note cu linie, marcaje și fotografii proprii, încărcate dintr-un
      fișier: vedeți [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii).
-   - **Texte peste imagine** — **Titlul** și **Subtitlul** lui, **Linia de credite**, **Cadrul de
-     final**, **Scara grafică**, **Săgeata nordului**, **Legenda adâncimii**, trecerile din și în
-     negru și **Subtitrările**, fiecare în timpul ei: vedeți
+   - **Texte peste imagine** — **Titlu** și **Subtitlu**, **Linie de credite**, **Cadru de
+     final**, **Scară grafică**, **Săgeata nordului**, **Legenda adâncimii**, trecerile din și în
+     negru și **Subtitrări**, fiecare în timpul ei: vedeți
      [Textele din panou](#textele-din-panou).
    - **Constructor de scenă (avansat)** — ce construiește scena în Blender, la randare, la export
      și la deschiderea în Blender; lăsați-l pe *Auto*. Vedeți
@@ -106,7 +105,7 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
    umbre), o fracțiune de secundă pe cadru acolo unde randarea adevărată poate dura un minut.
    Folosiți-o pentru a verifica mișcarea camerei, încadrarea și textele înainte de randarea lungă.
    Schița se salvează lângă randare, cu `-draft` adăugat la nume. Un teren transparent nu apare
-   într-o schiță, iar aceasta o spune.
+   într-o schiță, iar schița semnalează acest lucru.
 
 5. **Randați.** Progresul arată etapa și, cât timp randează Blender, numărul de cadre (sau un
    indicator rotativ pentru etapele fără procentaj). Randările lungi sunt normale; **Renunță**
@@ -171,24 +170,25 @@ scurtează pe cealaltă.
 
 **Numele peșterii într-un text.** Scrieți `{cave}` acolo unde trebuie să stea numele peșterii:
 în titlu, în linia de credite, în cadrul de final sau într-o subtitrare. Este completat din model
-când pornește randarea: titlul unui fișier `.3d` sau titlul ridicării din vârful unui fișier
-`.lox` (`-title` al celui mai din afară `survey` al proiectului). Presetările integrate îl
+când pornește randarea: titlul unui fișier `.3d` sau titlul topografiei de pe primul nivel al unui
+fișier `.lox` (`-title` al celui mai din exterior `survey` al dumneavoastră). Presetările integrate îl
 folosesc pentru titlurile lor, de aceea câmpul Titlu arată `{cave}` până scrieți altceva. Un text
 care nu este altceva decât numele este lăsat deoparte când modelul nu are nume.
 
-**Două numere ale modelului.** `{length}` ține locul lungimii axei topografice a modelului, iar
-`{depth}` al întinderii lui pe verticală, fiecare în metri întregi, cu unitatea („1234 m”, „87 m”).
-Sunt ceea ce conține modelul însuși: `{length}` este suma vizelor lui, fără cele pe care le are
-semnalate ca fiind de suprafață, radiante (splay) sau duplicate, iar `{depth}` este înălțimea de la
+**Două numere ale modelului.** `{length}` ține locul lungimii poligonalei modelului, iar
+`{depth}` al denivelării lui, fiecare în metri întregi, cu unitatea („1234 m”, „87 m”).
+Sunt ceea ce conține modelul însuși: `{length}` este suma tronsoanelor lui, fără cele pe care le
+semnalează ca fiind de suprafață, radiale sau duplicate, iar `{depth}` este înălțimea de la
 stația cea mai de jos la cea mai de sus. Acestea nu sunt întotdeauna dezvoltarea și denivelarea
-dintr-un raport (un model poate conține doar o parte a peșterii sau vize de suprafață nesemnalate);
+dintr-un raport (un model poate conține doar o parte a peșterii sau tronsoane de suprafață nesemnalate);
 scrieți numerele de mână acolo unde trebuie să fie cele oficiale. Un text care nu este altceva decât
 un număr pe care modelul nu îl dă este lăsat deoparte.
 
 **Texte în presetări.** O presetare păstrează textele împreună cu toate celelalte. **Salvează**
 stochează titlul și subtitlul lui, linia de credite, cadrul de final, scara grafică, săgeata
 nordului, legenda adâncimii, trecerile și subtitrările așa cum sunt în panou, iar alegerea
-presetării le aduce înapoi mai târziu, subtitrările ca rânduri pe care le puteți modifica. Folosiți `{cave}` într-o presetare pe care vreți să o folosiți pentru mai multe peșteri.
+presetării le aduce înapoi mai târziu, subtitrările ca rânduri pe care le puteți modifica.
+Folosiți `{cave}` într-o presetare pe care vreți să o folosiți pentru mai multe peșteri.
 
 Ceea ce nu are câmp în panou (linia de colț și textele ei temporizate, secundele unui cadru de
 titlu) se setează într-o specificație de randare (JSON-ul pe care îl ține o presetare, la
@@ -198,8 +198,8 @@ prin uneltele MCP. O presetare care le are le păstrează cât timp schimbați t
 
 **Un cadru de final peste scenă.** Într-o specificație de randare, cadrul de final mai are două
 setări, la `labels.overlays.endCard`. `backdrop` spune cât de întunecat este cadrul: 1 (implicit)
-este cadrul negru, 0 lasă ultimul cadru al scenei așa cum este și pune textul pe un fundal
-întunecat al lui, iar un număr între ele întunecă doar cadrul. `"overScene": true` aduce cadrul de
+este cadrul negru, 0 lasă ultimul cadru al scenei așa cum este și pune textul pe o casetă
+întunecată proprie, iar un număr între ele întunecă parțial cadrul. `"overScene": true` aduce cadrul de
 final peste ultimele secunde ale scenei, care continuă sub el, în loc să țină pe loc ultimul
 cadru: filmul nu mai este atunci mai lung din cauza lui.
 
@@ -218,7 +218,7 @@ dispariția lui (fără el, titlul este prezent de la primul cadru, iar un cadru
 "endCard": { "text": "Mulțumim", "seconds": 4, "fade": 2 }
 ```
 
-`"titleFadeIn"` și `"titleFadeOut"` dau celor două timpuri separate: `"titleFadeIn": 0.3,
+`"titleFadeIn"` și `"titleFadeOut"` dau fiecăreia dintre cele două faze timpul ei: `"titleFadeIn": 0.3,
 "titleFadeOut": 1.5` face ca cadrul să apară repede și să dispară încet. Fiecare, când este dat,
 are întâietate față de `"titleFade"` pentru jumătatea lui; `titleFadeOut` merge cu `titleSeconds`,
 fiindcă numai un cadru de titlu dispare.
@@ -228,7 +228,7 @@ pentru un player video sau o pagină web care le poate afișa, ascunde sau tradu
 
 **Două etape.** O randare cu texte randează întâi scena ca imagini PNG numerotate, apoi face
 filmul din acele cadre, cu textele peste ele. Cadrele ocupă spațiu pe disc cât timp rulează
-randarea (ThIDE le socotește înainte să pornească) și sunt șterse când filmul este scris. Pentru că
+randarea (ThIDE calculează acest spațiu înainte să pornească) și sunt șterse când filmul este scris. Pentru că
 textele se adaugă la sfârșit, schimbarea unuia nu cere randarea din nou a scenei: vedeți
 `--compose-only` la [Din linia de comandă](#din-linia-de-comandă).
 
@@ -259,13 +259,13 @@ tăietură: etichetele sunt pur și simplu prezente începând cu `showFrame`.
 ## Dezvăluirea peșterii, parte cu parte
 
 Peștera nu trebuie să fie toată acolo de la primul cadru. Cu o **dezvăluire** (`reveal`) ea apare
-parte cu parte cât rulează clipul, într-o ordine pe care o dă chiar ridicarea topografică:
+parte cu parte cât rulează clipul, într-o ordine dată chiar de topografie:
 
 | Dezvăluire | Peștera apare… | Are nevoie de |
 |---|---|---|
-| `distance` (după distanță) | de la intrări spre interior, fiecare loc atunci când dezvăluirea a ajuns, de-a lungul galeriilor, atât de departe cât se află locul | nimic: orice model o are. O peșteră fără intrare marcată pornește de la prima stație a primei vize; `from` numește altă stație de pornire |
-| `order` (după ordine) | viză cu viză, în ordinea în care le are ridicarea, fiecare viză crescând dinspre capătul care este deja acolo | nimic |
-| `date` (după dată) | în ordinea **datelor ridicării**: istoria explorării, cu un **contor al anilor** într-un colț al imaginii | datele ridicării |
+| `distance` (după distanță) | de la intrări spre interior, fiecare loc în momentul în care dezvăluirea a înaintat de-a lungul galeriilor până la distanța la care se află el | nimic: orice model o are. O peșteră fără intrare marcată pornește de la prima stație a primului tronson; `from` numește altă stație de pornire |
+| `order` (după ordine) | tronson cu tronson, în ordinea în care le are topografia, fiecare tronson crescând dinspre capătul care este deja acolo | nimic |
+| `date` (după dată) | în ordinea **datelor topografierii**: istoria explorării, cu un **contor al anilor** într-un colț al imaginii | datele topografierii |
 
 Presetarea **Map reveal** dezvăluie după distanță. Orice altă presetare primește o dezvăluire în
 panou:
@@ -275,7 +275,7 @@ panou:
   alegeți o dezvăluire.
 - **De la stația** (după distanță) — stația de la care se măsoară distanțele; gol, se măsoară de
   la intrări.
-- **Fișier cu date** (după dată) — fișierul `.3d` care are datele ridicării, scris sau ales cu
+- **Fișier cu date** (după dată) — fișierul `.3d` care are datele topografierii, scris sau ales cu
   **Răsfoiește…**; gol, se folosește un `.3d` cu același nume de lângă model (vedeți *De unde vin
   datele*, mai jos).
 - **Dezvăluirea începe** — secunda la care începe dezvăluirea. **Dezvăluie până la sfârșitul
@@ -288,7 +288,7 @@ Un fișier care nu există, o dezvăluire care se termină înainte să înceap�
 sfârșitul clipului apar la **De corectat înainte de randare**. **Salvează** păstrează dezvăluirea
 în presetare.
 
-O dezvăluire vine și din linia de comandă (`--reveal date`, vezi
+O dezvăluire vine și din linia de comandă (`--reveal date`, vedeți
 [mai jos](#din-linia-de-comandă)), prin uneltele MCP (`reveal`) sau stă chiar în specificația de
 randare, care are două setări în plus față de panou (`glowColor` și `counter`; panoul le păstrează
 pe cele ale presetării):
@@ -305,23 +305,23 @@ pe cele ale presetării):
   dacă nu spuneți altceva), până când dezvăluirea a trecut mai departe.
 - `counter` (pentru `date`) scrie deasupra scării grafice anul la care a ajuns dezvăluirea.
   **Map reveal** îl are pornit: treceți presetarea pe `date` și ea numără anii. Cu
-  `"counterFormat": "{} m"` și o dezvăluire după `distance` are și ea un contor, al metrilor de la
+  `"counterFormat": "{} m"`, și o dezvăluire după `distance` are un contor, al metrilor de la
   intrare, iar una după `order` numără tronsoanele; `{}` este locul numărului, iar
   `counterDecimals` (0 până la 6) câte zecimale are.
 - `from` (pentru `distance`) este numele stației de la care se măsoară distanțele.
 - `datesPath` (pentru `date`) numește fișierul care are datele.
 
-**De unde vin datele.** Un fișier `.3d` păstrează ziua în care a fost măsurată fiecare viză; un
+**De unde vin datele.** Un fișier `.3d` păstrează ziua în care a fost măsurat fiecare tronson; un
 fișier `.lox` nu. Pentru un model `.3d` datele sunt pur și simplu acolo. Pentru un model `.lox`,
 care este cel cu pereții adevărați, ThIDE ia datele din fișierul `.3d` al aceleiași peșteri: un
 `.3d` cu același nume aflat lângă `.lox` sau cel pe care îl numiți (`--reveal-dates cave.3d`,
-`datesPath`). Vizele celor două fișiere sunt potrivite după locul stațiilor lor, așa că amândouă
+`datesPath`). Tronsoanele celor două fișiere sunt potrivite după locul stațiilor lor, așa că amândouă
 trebuie să provină din aceleași date topografice.
 
-- O viză fără dată este arătată de la începutul dezvăluirii; randarea spune câte sunt.
+- Un tronson fără dată este arătat de la începutul dezvăluirii; randarea spune câte sunt.
 - Un model fără nicio dată este randat întreg, iar randarea spune de ce.
-- O peșteră ridicată în trei expediții apare în trei pași. Cu pereți ridicați (un `.lox`), fiecare
-  bucată de perete apare odată cu viza de care este cel mai aproape.
+- O peșteră topografiată în trei expediții apare în trei pași. Cu pereți topografiați (un `.lox`),
+  fiecare bucată de perete apare odată cu tronsonul de care este cel mai aproape.
 
 **Ce trebuie știut.**
 
@@ -339,7 +339,7 @@ trebuie să provină din aceleași date topografice.
 Pe lângă etichetele pe care ThIDE le face din model (stațiile, pistele), o scenă poate avea
 **adnotări** proprii: lucruri care arată ceva, fiecare la o stație sau într-un punct.
 
-| Fel | Ce este |
+| Tip | Ce este |
 |---|---|
 | `label` | o etichetă: un text pe stația lui, întors spre cameră |
 | `callout` | o notă cu linie: un text așezat la distanță de stație, cu o linie de la stație până la el |
@@ -382,15 +382,13 @@ O fotografie care stă cu fața spre cameră rămâne paralelă cu imaginea și 
 vede mereu ca dreptunghiul care este. Își arată imaginea așa cum ar arăta-o un ecran, oricare ar fi
 lumina din peșteră, și nu luminează nimic. Un text și un marcaj strălucesc, ca etichetele.
 
-**Transparență.** Acolo unde un PNG este transparent (o imagine decupată de pe fundalul ei),
-fotografia lipsește și se vede peștera din spatele ei; mozaicul unei previzualizări arată tot
-dreptunghiul.
-
-**Fotografii.** O fotografie este un PNG sau un JPEG de cel mult 32 MiB, 16 384 de pixeli pe o
+**Fotografii.** O fotografie este un PNG sau un JPEG de cel mult 32 MiB, 16.384 de pixeli pe o
 latură și 64 de milioane de pixeli; orice altceva este respins înainte ca Blender să pornească. O
-imagine lată de 2 000 de pixeli este mai mult decât arată un film: fișierele mai mici dau pachete
+imagine lată de 2.000 de pixeli este mai mult decât arată un film: fișierele mai mici dau pachete
 mai mici și randări mai rapide. Fișierele rămân unde sunt; ThIDE le copiază pentru randare și
-într-un pachet (în dosarul lui `photos`).
+într-un pachet (în dosarul `photos` al acestuia). Acolo unde un PNG este transparent (o imagine
+decupată de pe fundalul ei), fotografia lipsește și se vede peștera din spatele ei; mozaicul unei
+previzualizări arată tot dreptunghiul.
 
 **În panou.** La **Adnotări**, scrieți calea fișierului sau alegeți-l cu **Răsfoiește…** și
 apăsați **Încarcă**: scena primește adnotările fișierului *în locul* celor pe care le avea, iar
@@ -402,7 +400,7 @@ fișier nu există sau nu este PNG ori JPEG. Un fișier care nu este o listă de
 (fișierul rămâne). **Salvează** le păstrează în presetare, iar o presetare care are adnotări le
 aduce înapoi; alegerea unei presetări le înlocuiește pe cele ale unui fișier.
 
-**În altă parte.** În linia de comandă, `--annotations note.json` (o dată pentru fiecare fișier);
+**În altă parte.** În linia de comandă, `--annotations notes.json` (o dată pentru fiecare fișier);
 prin uneltele MCP, `annotations` numește un astfel de fișier din spațiul de lucru; într-o
 specificație de randare, aceeași listă stă la `annotations`.
 
@@ -416,7 +414,7 @@ specificație de randare, aceeași listă stă la `annotations`.
 
 ## Iluminarea cu o imagine (HDRI)
 
-O scenă poate fi luminată de imaginea unui întreg loc: un cer, un studio, o carieră la apus. O
+O scenă poate fi luminată de imaginea unui întreg peisaj înconjurător: un cer, un studio, o carieră la apus. O
 asemenea imagine (un *HDRI*) este așezată de jur împrejurul scenei, este ceea ce vede camera în
 spatele peșterii și luminează peștera cu propriile ei culori, din locurile ei luminoase. ThIDE nu
 vine cu niciuna; multe se pot descărca gratuit.
@@ -431,11 +429,11 @@ Este și o setare a specificației de randare, la `lighting`, a liniei de comand
 (`hdri`, `hdriStrength`, `hdriRotation`, pentru o imagine din spațiul de lucru):
 
 ```json
-"lighting": { "rig": "HdriFile", "hdriPath": "ceruri/seara.hdr", "strength": 1.5, "hdriRotation": 90 }
+"lighting": { "rig": "HdriFile", "hdriPath": "skies/evening.hdr", "strength": 1.5, "hdriRotation": 90 }
 ```
 
 ```
-therion-cli blender cave.lox --hdri ceruri/seara.hdr --hdri-rotation 90 --hdri-strength 1.5 --out renders
+therion-cli blender cave.lox --hdri skies/evening.hdr --hdri-rotation 90 --hdri-strength 1.5 --out renders
 ```
 
 - **Imaginea** este un fișier Radiance **`.hdr`** sau OpenEXR **`.exr`**, formatele obișnuite ale
@@ -450,26 +448,26 @@ therion-cli blender cave.lox --hdri ceruri/seara.hdr --hdri-rotation 90 --hdri-s
   vină lumina. Nerotită, imaginea are mijlocul spre est.
 - **`strength`** o face mai luminoasă sau mai slabă: 1 este imaginea așa cum este.
 - Fișierul rămâne unde este. ThIDE îl copiază pentru randare și într-un
-  [pachet](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator) (în dosarul lui `hdri`), așa
+  [pachet](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator) (în dosarul `hdri` al acestuia), așa
   că un pachet se randează pe alt calculator fără el.
 - O previzualizare nu desenează nicio imagine: fundalul ei este un gri simplu, la fel de puternic
   cum este setată imaginea.
 
 ## O peșteră privită de departe: bătaia lămpii
 
-Lumina *Headlamp* este o lampă care stă pe cameră, iar lumina ei scade cu pătratul distanței:
-luminează bine un perete aflat la trei metri, pe unul aflat la 25 m cam a douăsprezecea parte, iar
-pe unul aflat la 140 m deloc. Un zbor prin galerii este mereu aproape de un perete. O cameră care
+Sistemul de lumini *Headlamp* este o lampă care stă pe cameră, iar lumina ei scade cu pătratul
+distanței: luminează bine un perete aflat la trei metri, pe unul aflat la 25 m de vreo douăsprezece
+ori mai slab, iar pe unul aflat la 140 m deloc. Un zbor prin galerii este mereu aproape de un perete. O cameră care
 stă departe de peșteră (o orbită, o imagine statică a întregii peșteri, un zbor care urmărește de la
 30–140 m) o vede întunecată.
 
-**Lampa bate până unde privește camera** întărește lampa cu pătratul distanței de la cameră până
+**Lampa bate până unde privește camera** mărește puterea lămpii proporțional cu pătratul distanței de la cameră până
 la ceea ce privește, dincolo de 3 m, astfel încât peștera este luminată de departe la fel ca de
 aproape. Mai aproape de 3 m lampa își păstrează tăria, iar **Intensitatea luminii** o scalează în
 continuare.
 
 - **În panou**, la **Lumină**: bifați **Lampa bate până unde privește camera** (se poate bifa cât
-  timp lumina este *Headlamp*).
+  timp sistemul de lumini este *Headlamp*).
 - **Într-o specificație de randare**: `"lighting": { "rig": "Headlamp", "lampReach": true }`.
 - **În linia de comandă**: `--lamp-reach`, care alege și lampa de pe cameră ca lumină.
 
@@ -478,12 +476,12 @@ acest lucru. În cifrele unei randări de test: o peșteră inventată, într-o 
 148 m, are luminozitatea 0,1 din 255 cu lampa așa cum este și 154 cu bătaia activă.
 
 Cine scrie planuri de scenă cu biblioteca are încă două unelte pentru aceasta (vedeți `CHANGES.md`
-al bibliotecii): `LampReach`, care pune chei pe energia lămpii după distanțe proprii, și un
+al bibliotecii): `LampReach`, care animă prin cadre-cheie energia lămpii după distanțe proprii, și un
 material **neluminat** (`"unlit": true`), care își arată culorile așa cum le arată un ecran,
-oricare ar fi lumina, pentru vize topografice și trasee care trebuie să se citească de la orice
+oricare ar fi lumina, pentru linii topografice și trasee care trebuie să se citească de la orice
 distanță.
 
-**Lumina *SunSky* este aceeași în orice Blender.** Blender 5 are un model de cer mai nou pe lângă
+**Sistemul de lumini *SunSky* este același în orice Blender.** Blender 5 are un model de cer mai nou pe lângă
 cel din Blender 4, mai albastru și mai luminos; playerul cere în ambele cerul din Blender 4, așa că
 o scenă arată la fel în Blender 4.2, 4.5 și 5.0. (Până la playerul 1.8 al ThIDE, o scenă sub soare
 și cer arăta foarte diferit în Blender 5.)
@@ -496,21 +494,22 @@ pe drum. Stațiile sunt unite pe cele mai scurte galerii dintre ele, așa că un
 unei galerii laterale și înapoi înseamnă trei nume.
 
 - **Viteza după mărimea galeriei.** Camera zboară cu de două ori raza galeriei pe secundă, între
-  1,5 și 12 m/s: o târâtoare lată de 1,4 m este parcursă cu 1,5 m/s, o galerie lată de 10 m cu
-  10 m/s. Raza se citește din pereții galeriei, așa cum îi dau stânga, dreapta, sus și jos ale
-  ridicării; o galerie desenată din pereți reali (scrap-uri) este parcursă cu 4 m/s. Între galerii
+  1,5 și 12 m/s: o porțiune de târâș lată de 1,4 m este parcursă cu 1,5 m/s, o galerie lată de 10 m cu
+  10 m/s. Raza se citește din pereții galeriei, așa cum îi dau valorile stânga, dreapta, sus și jos
+  (LRUD) din topografie; o galerie desenată din pereții reali ai schițelor (`scrap`) este parcursă
+  cu 4 m/s. Între galerii
   de mărimi diferite viteza se schimbă treptat.
 - **Opriri.** La fiecare oprire camera încetinește până se oprește, în aproximativ o secundă,
   stă pe loc (1 s la o oprire de pe drum, dacă nu dați alt timp), își rotește privirea pe loc, cu
   cel mult 100° pe secundă, spre direcția în care merge mai departe, apoi accelerează din nou. La
-  capătul unei fundături se întoarce complet, în aproximativ două secunde.
+  un capăt închis se întoarce complet, în aproximativ două secunde.
 - **Durata clipului.** Un traseu durează cât îi iau deplasarea, opririle și rotirile, iar în linia
   de comandă aceasta este durata clipului. Dacă dați în schimb o durată, deplasarea este grăbită
   sau încetinită ca să încapă în ea; opririle și rotirile își păstrează durata.
 - **Două nume țin locul unor stații pe care le dă modelul:** `entrance`, prima stație semnalată
   ca intrare, și `farthest`, stația cea mai îndepărtată de începutul traseului, măsurată de-a
   lungul galeriilor. Un traseu fără stații numite merge de la intrare până la stația cea mai
-  îndepărtată. O stație cu același nume în mai multe ridicări se numește împreună cu ridicarea ei,
+  îndepărtată. O stație cu același nume în mai multe topografii se scrie împreună cu topografia ei,
   `5@upper`.
 
 Un exemplu inventat: intrarea peșterii este `e1`, o galerie laterală pleacă din galeria principală
@@ -518,7 +517,7 @@ la `s12` și se termină la `b7`, iar galeria principală continuă până la `s
 privi galeria laterală până la capăt, a reveni și a merge mai departe:
 
 ```
-therion-cli blender pestera.lox --preset "Full flythrough" --route e1:b7:s40
+therion-cli blender cave.lox --preset "Full flythrough" --route e1:b7:s40
 ```
 
 Același lucru într-o specificație de randare:
@@ -530,13 +529,13 @@ Același lucru într-o specificație de randare:
 }
 ```
 
-`stations` (`["e1", "s12", "s40"]`) enumeră stațiile de parcurs în locul lui `from`, `via` și `to`;
+`stations` (`["e1", "s12", "s40"]`) enumeră stațiile prin care trece camera, în locul lui `from`, `via` și `to`;
 camera se oprește atunci doar la prima și la ultima. `startHoldSeconds`, `holdSeconds` și
 `endHoldSeconds` sunt opririle de la început, de la fiecare oprire de pe drum și de la sfârșit;
 `lookAheadMeters`, `clearanceMeters` și `smoothingIterations` sunt cele ale zborului prin galerii.
-`speeds` (`[1, 2]`) spune de câte ori viteza proprie a galeriei este parcursă fiecare porțiune
-dintre două opriri: la intrare cu viteza galeriei, la ieșire de două ori mai repede.
-Cu `"timing": "Fit"` (implicit) traseul este potrivit la durata din specificație. În panou,
+`speeds` (`[1, 2]`) spune cu ce multiplu al vitezei proprii a galeriei este parcursă fiecare
+porțiune dintre două opriri: la intrare cu viteza galeriei, la întoarcere de două ori mai repede.
+Cu `"timing": "Fit"` (implicit) traseul este ajustat la durata din specificație. În panou,
 șablonul **Route** zboară de la intrare până la stația cea mai îndepărtată, în durata clipului. O
 stație pe care modelul nu o are oprește randarea, iar mesajul îi spune numele.
 
@@ -632,7 +631,7 @@ randării, `2` la o eroare de utilizare sau de specificație.
   secunde de la începutul filmului: `--caption "2.5-6:Sala Mare"`; dați opțiunea o dată pentru
   fiecare subtitrare. `{cave}` în oricare dintre ele ține locul numelui peșterii. Presetările
   integrate scriu acest nume ca titlu: `--title ""` randează fără titlu.
-- `--hdri seara.hdr` luminează scena cu o imagine așezată de jur împrejurul ei, care este și
+- `--hdri evening.hdr` luminează scena cu o imagine așezată de jur împrejurul ei, care este și
   fundalul: vedeți [Iluminarea cu o imagine (HDRI)](#iluminarea-cu-o-imagine-hdri).
   `--hdri-rotation 90` o rotește, iar `--hdri-strength 1.5` o face mai luminoasă. Merge și cu
   `--bundle`.
@@ -644,22 +643,22 @@ randării, `2` la o eroare de utilizare sau de specificație.
   oricare ar fi camera presetării: vedeți [Zborul pe un traseu între stații](#zborul-pe-un-traseu-între-stații).
   Traseul dă durata clipului; `--route-seconds 45` îl potrivește în schimb în 45 de secunde. Merge
   și cu `--bundle`.
-- **Marcaje pentru continuări.** O presetare sau o specificație care marchează continuările (*Full
-  flythrough* o face) marchează stațiile pe care modelul însuși le are semnalate drept continuări,
-  lucru pe care îl conține un fișier `.lox` (în Therion: `station <nume> "<comentariu>"
-  continuation`); un fișier `.3d` nu are asemenea semnalări. `--leads continuari.json` numește în
+- **Marcaje pentru piste.** O presetare sau o specificație care marchează pistele (*Full
+  flythrough* o face) marchează stațiile pe care modelul însuși le semnalează drept continuări,
+  semnalări pe care le conține un fișier `.lox` (în Therion: `station <nume> "<comentariu>"
+  continuation`); un fișier `.3d` nu are asemenea semnalări. `--leads leads.json` numește în
   schimb stațiile de marcat (o dată pentru fiecare fișier): o listă JSON ale cărei elemente sunt
   numele unei stații sau `{ "station": "main.12", "note": "curent de aer" }`. O stație pe care
   modelul nu o are este lăsată deoparte. Merge și cu `--bundle`.
-- `--annotations note.json` adaugă etichetele, notele cu linie, marcajele și fotografiile dintr-un
-  fișier la cele ale presetării sau ale specificației: vezi
+- `--annotations notes.json` adaugă etichetele, notele cu linie, marcajele și fotografiile dintr-un
+  fișier la cele ale presetării sau ale specificației: vedeți
   [Adnotări](#adnotări-etichete-note-cu-linie-marcaje-și-fotografii). Merge și cu `--bundle`. Un
   script scris cu `--export` este al generatorului de scripturi și le omite, așa cum omite
   subtitrările; comanda spune acest lucru.
-- `--reveal date`, `--reveal order` sau `--reveal distance` arată peștera parte cu parte: vezi
+- `--reveal date`, `--reveal order` sau `--reveal distance` arată peștera parte cu parte: vedeți
   [Dezvăluirea peșterii, parte cu parte](#dezvăluirea-peșterii-parte-cu-parte). `--reveal-from
   main.12` măsoară o dezvăluire după distanță de la acea stație, în locul intrărilor;
-  `--reveal-dates cave.3d` numește fișierul cu datele ridicării pentru un model care nu le are;
+  `--reveal-dates cave.3d` numește fișierul cu datele topografierii pentru un model care nu le are;
   `--reveal-seconds 1-9.5` spune când începe dezvăluirea și când este acolo toată peștera. Peste o
   presetare care dezvăluie deja, `--reveal` schimbă după ce se dezvăluie și îi păstrează timpii.
   Merge și cu `--bundle`; un script scris cu `--export` o omite, iar comanda spune acest lucru.
@@ -701,25 +700,23 @@ Blender (`render.py` și `thide_player/`), scripturile de rulare `render.sh` (Li
 `render.cmd` (Windows), un fișier `README.txt` care explică cum se randează și licența playerului:
 `LICENSE` (Mozilla Public License 2.0) și un `NOTICE` care spune ce este playerul și că sursa lui se
 află în depozitul ThIDE de pe GitHub. Arhiva conține un
-singur dosar, cu numele ei (`cave-bundle` pentru `cave-bundle.zip`), așa că dezarhivată oriunde
-face doar acel dosar. Cine o primește o dezarhivează și rulează `sh render.sh` sau `render.cmd` în
-acel dosar; rezultatul ajunge în dosarul `out` al pachetului. Scripturile caută Blender în PATH (și în dosarul obișnuit de instalare pe macOS și
-Windows); variabila de mediu `BLENDER` indică altă instalare, de exemplu
+singur dosar, cu numele ei (`cave-bundle` pentru `cave-bundle.zip`), așa că, dezarhivată oriunde,
+creează doar acel dosar și nimic altceva. Cine o primește o dezarhivează și rulează `sh render.sh`
+sau `render.cmd` în acel dosar; rezultatul ajunge în dosarul `out` al pachetului. Scripturile caută
+Blender în PATH (și în dosarul obișnuit de instalare pe macOS și Windows); variabila de mediu `BLENDER` indică altă instalare, de exemplu
 `BLENDER=/opt/blender-4.5/blender sh render.sh`.
 
 Un pachet conține suprafața terenului și imaginea ei atunci când scena le desenează (`surface.ply`,
 `surface.png`), adnotările cu fotografiile lor (`photos/`), imaginea care luminează scena
-(`hdri/`) și textele de peste imagine, la `texts`
-în plan. O scenă cu texte se randează și
-acolo în două etape, în dosarul `frames` al pachetului și apoi în `out`; pornită din nou după ce a
+(`hdri/`) și textele de peste imagine, la `texts` în plan. O scenă cu texte se randează și acolo în
+două etape, în dosarul `frames` al pachetului și apoi în `out`; pornită din nou după ce a
 fost oprită, continuă. `sh render.sh --keep-frames` păstrează cadrele, iar
 `sh render.sh --compose` (sau `render.cmd --compose`) scrie filmul din nou din ele după ce un text
 din `scene-plan.json` a fost schimbat. Subtitrările sunt deja în pachet ca fișiere de subtitrare
 (`out/<nume>.srt`, `.vtt`).
 
-- `--draft` adaugă o previzualizare: un al doilea plan, `scene-plan.draft.json`, cu un aspect
-  rapid: vizualizarea solidă a Blender, la jumătate din dimensiunea imaginii, o fracțiune de
-  secundă pe cadru.
+- `--draft` adaugă un al doilea plan, `scene-plan.draft.json`, cu un aspect rapid: vizualizarea
+  solidă a Blender, la jumătate din dimensiunea imaginii, o fracțiune de secundă pe cadru.
   `sh render.sh --draft` (sau `render.cmd --draft`) îl randează ca `<nume>-draft`, ca să verificați
   mișcarea camerei înainte de randarea lungă.
 - `--render` randează pachetul și aici, cu Blender-ul găsit de ThIDE (sau cel dat cu `--blender`):
@@ -735,7 +732,7 @@ din `scene-plan.json` a fost schimbat. Subtitrările sunt deja în pachet ca fi�
   octet.
 - Un plan de scenă spune tot ce poate spune o specificație de randare, așa că un pachet nu lasă
   nimic deoparte: afișarea și ascunderea temporizată a etichetelor se află în plan (la
-  `changes`), iar imaginea unei iluminări HDRI este printre fișierele lui.
+  `changes`), iar imaginea unui sistem de lumini HDRI este printre fișierele lui.
 
 **Ce poate spune un plan de scenă.** `scene-plan.json` este JSON simplu, pe care orice editor de
 text îl poate modifica și orice program îl poate scrie, și poate spune mai mult decât folosesc
@@ -743,7 +740,7 @@ scenele făcute de ThIDE:
 
 - La `changes`, ce se întâmplă cât rulează clipul, sub formă de chei în secunde: un lucru este
   arătat, ascuns sau estompat (`visible`), este acolo doar în parte (`opacity`), capătă o culoare
-  (`tint`); un model este întins (`scale`) și mutat (`offset`); o lumină este întărită sau slăbită
+  (`tint`); un model este întins (`scale`) și mutat (`offset`); o lumină este intensificată sau atenuată
   (`energy` — un soare care se stinge când camera intră în subteran); lumea își schimbă culoarea
   și intensitatea (`worldColor`, `worldStrength`: și intensitatea unei imagini HDRI, așa că un cer
   poate păli când camera intră în peșteră). O cheie poate sta după sfârșitul clipului,
@@ -763,10 +760,11 @@ scenele făcute de ThIDE:
   mărimea ei în metri. O adnotare poate ține de un model (`"model"`): merge atunci acolo unde merge
   punctul ei din model, cât timp modelul este întins sau mutat. Când este prezentă se spune
   printr-o schimbare a ei, după `id`: cheile ei `visible`, cu un `fade`.
-- La `lines`, linii prin puncte date, desenate ca tuburi subțiri: vizele unei ridicări, un traseu.
+- La `lines`, linii prin puncte date, desenate ca tuburi subțiri: tronsoanele unei topografii, un
+  traseu.
 - O rampă de culori pe înălțime poate fi măsurată în modelul însuși (`"space": "model"`), așa că
   culorile rămân pe rocă atunci când un model este întins sau mutat.
-- O poziție a camerei poate avea propriul interval de vizibilitate (`clipStart`, `clipEnd`),
+- O poziție a camerei poate avea propriul interval de decupare (`clipStart`, `clipEnd`),
   pentru un zbor care vine de departe până aproape.
 - La `look.world`, ce înconjoară scena: o singură culoare, un cer de zi sau o imagine (`"kind":
   "image"`, cu fișierul ei `image`, cu intensitatea `strength` și cu rotirea `rotation`, în
@@ -806,7 +804,7 @@ Un exemplu inventat, cu patru secvențe:
   "texts": {
     "title": "{cave}", "titleSeconds": 3,
     "credits": "Topografie: Clubul Speologic Inventat",
-    "endCard": { "text": "{length} cartați, {depth} adâncime", "seconds": 4 },
+    "endCard": { "text": "{length} topografiați, {depth} adâncime", "seconds": 4 },
     "fadeFromBlack": 1
   },
   "shots": [
@@ -820,7 +818,7 @@ Un exemplu inventat, cu patru secvențe:
       "reveal": "hold" }
   ],
   "output": { "kind": "Video", "container": "Mp4", "width": 1920, "height": 1080,
-              "baseName": "film-inventat" }
+              "baseName": "invented-film" }
 }
 ```
 
@@ -838,12 +836,12 @@ stații](#zborul-pe-un-traseu-între-stații)): cu `"timing": "Natural"` și fă
 durează cât îi ia traseului, iar cu `seconds` traseul este potrivit la acea durată.
 
 **Cum începe o secvență** (`in`): cu o tăietură, dacă nu spune nimic; cu o trecere printr-o
-culoare (`Dip`), în care imaginea se duce într-o culoare (`color`, implicit negru) pe ultimele
+culoare (`Dip`), în care imaginea trece într-o culoare (`color`, implicit negru) pe ultimele
 cadre ale secvenței dinainte și iese din ea pe primele cadre ale acesteia; sau cu o suprapunere
 (`Dissolve`), în care imaginea trece treptat de la o secvență la cealaltă. O suprapunere de o
 secundă pornește secvența cu o secundă înainte de sfârșitul celeilalte, iar amândouă sunt randate
 pentru acea secundă, așa că filmul este cu atât mai scurt decât secvențele lui adunate. `seconds`
-spune cât durează trecerea (ambele jumătăți) sau suprapunerea; nu poate fi mai lungă decât
+spune cât durează trecerea (ambele jumătăți) sau suprapunerea; durata nu poate depăși
 secvențele pe care le leagă. Prima secvență începe filmul; ieșirea din negru este unul dintre
 textele filmului.
 
@@ -856,7 +854,7 @@ camera acelei secvențe și sunt ascunse cât durează o trecere sau o suprapune
 `texts` le are pe cele implicite (`defaults.labels.overlays`): în exemplu, prima, a treia și a
 patra secvență au scară grafică și săgeata nordului, iar a doua, care are propriile `texts`, are
 un text de colț și săgeata nordului. Subtitrările filmului și ale secvențelor sunt scrise lângă
-film (`.srt`, `.vtt`).
+film ca fișiere de subtitrare (`.srt`, `.vtt`).
 
 **Dezvăluirea.** O secvență poate arăta peștera parte cu parte (vedeți [Dezvăluirea peșterii,
 parte cu parte](#dezvăluirea-peșterii-parte-cu-parte)), cu timpii socotiți de la începutul
@@ -886,7 +884,7 @@ trecere, care leagă secvențele și scrie textele.
   `render.cmd`) îl randează acolo secvență cu secvență, iar `--draft`, `--keep-frames` și
   `--compose` fac pentru film ce fac pentru o scenă.
 
-O fotografie, o imagine HDRI și un fișier cu datele ridicărilor sunt numite relativ la fișierul
+O fotografie, o imagine HDRI și un fișier cu datele topografierii sunt numite relativ la fișierul
 storyboardului. Un storyboard este un film: pentru imagini statice sau pentru un fișier Blender al
 scenei, randați o singură secvență (`--shot`) sau folosiți o specificație de randare. Schema care
 descrie fișierul se află în depozitul ThIDE (`src/Therion.Blender/storyboard.schema.json`).
@@ -895,49 +893,50 @@ descrie fișierul se află în depozitul ThIDE (`src/Therion.Blender/storyboard.
 
 O **presetare compusă** este un storyboard care se potrivește oricărei peșteri: nu numește nicio
 stație, doar locuri pe care modelul le găsește (intrarea, stația cea mai îndepărtată, galeria
-topografiată ultima) și un tur al galeriilor, iar textele ei spun `{cave}`. La randare, ThIDE
+topografiată ultima) și un parcurs pe ramuri, iar textele ei spun `{cave}`. La randare, ThIDE
 citește modelul și face din ea filmul acelei peșteri. Trei vin cu ThIDE:
 
 | Presetare compusă | Filmul |
 |---|---|
-| **Showcase** | o orbită în jurul peșterii, apoi galeria principală de la intrare la stația cea mai îndepărtată, apoi o elice în jos |
-| **Grand tour** | o orbită, apoi un [tur al galeriilor](#tururi-ale-galeriilor) principale și al galeriilor laterale care merită (cel mult două minute) și un card de final |
+| **Showcase** | o orbită în jurul peșterii, apoi galeria principală de la intrare la stația cea mai îndepărtată, apoi o elice care coboară în jurul peșterii |
+| **Grand tour** | o orbită, apoi un [parcurs pe ramuri](#parcursuri-pe-ramuri) al galeriei principale și al galeriilor laterale care merită vizitate (cel mult două minute) și un cadru de final |
 | **Exploration history** | peștera apărând în ordinea în care a fost topografiată, cu un contor al anilor, apoi un zbor de-a lungul galeriei topografiate ultima, cu toată peștera la vedere |
 
 Într-un fișier storyboard, simbolurile sunt două chei ale unei camere pe traseu:
 
 ```json
-{ "name": "Tur", "preset": "Full flythrough", "seconds": 120,
+{ "name": "Parcurs", "preset": "Full flythrough", "seconds": 120,
   "camera": { "template": "Route", "route": { "branches": "auto" } } }
 { "name": "Găsită ultima", "preset": "Full flythrough", "seconds": 14, "reveal": "hold",
   "camera": { "template": "Route", "route": { "from": "newest" } } }
 ```
 
-`"branches": "auto"` face din secvență un tur al galeriilor peșterii, de la `from` al traseului
-(intrarea, când lipsește), în secundele secvenței, cu aspectul presetării ei; secvențele turului îi
-iau locul. Fiecare dintre ele păstrează adnotările secvenței (sau pe ale storyboardului) alături de
-marcajele turului la pistele lui, iar prima păstrează și textele secvenței. `"from": "newest"`
-zboară galeria din ultima zi de topografiere, de la capătul ei mai apropiat de o intrare (cea mai
-apropiată, într-o peșteră cu mai multe) la celălalt; un model fără date de topografiere zboară în
-schimb galeria principală. Ce s-a făcut apare în avertismentele randării. Presetările compuse proprii stau lângă
+`"branches": "auto"` face din secvență un parcurs pe ramurile peșterii, de la `from` al traseului
+(intrarea, când lipsește), în secundele secvenței, cu aspectul presetării ei; secvențele parcursului
+îi iau locul. Fiecare dintre ele păstrează adnotările secvenței (sau pe ale storyboardului) alături
+de marcajele parcursului la pistele lui, iar prima păstrează și textele secvenței. `"from":
+"newest"` zboară de-a lungul galeriei din ultima zi de topografiere, de la capătul ei mai apropiat
+de o intrare (cea mai apropiată, într-o peșteră cu mai multe) la celălalt; un model fără date de
+topografiere zboară în schimb de-a lungul galeriei principale. Ce s-a făcut apare în
+avertismentele randării. Presetările compuse proprii stau lângă
 presetările dumneavoastră, ca fișiere `*.composite.json` (un `name`, o `description` și
 `storyboard`): **Salvează ca presetare compusă** din [fila Storyboard](#fila-storyboard) scrie una.
 
-Traseul unei secvențe de parcurs poate spune și ce galerii laterale vizitează turul. `include` și
+Traseul unei secvențe de parcurs poate spune și ce galerii laterale vizitează parcursul. `include` și
 `exclude` primesc ce primesc `--include` și `--exclude` (numărul unei ramificații, ca `B3`, o
-stație din ea, numele unei topografii) și au întâietate față de regulile turului; `priority`
+stație din ea, numele unei topografii) și au întâietate față de regulile parcursului; `priority`
 listează numere de ramificații, cele mai dorite întâi: când filmul depășește timpul, galeriile
 laterale pe care le numește sunt lăsate deoparte după celelalte, de la coada listei în sus.
 `language` al unui storyboard (`en` sau `ro`) este limba textelor pe care filmul le scrie singur,
-textele din colț ale unui tur și notele pistelor lui. Când lipsește, ele sunt în limba ThIDE când
+textele din colț ale unui parcurs și notele pistelor lui. Când lipsește, ele sunt în limba ThIDE când
 panoul randează filmul și în engleză din linia de comandă.
 
 ```json
-{ "version": 1, "name": "{cave}: turul meu", "language": "ro",
+{ "version": 1, "name": "{cave}: parcursul meu", "language": "ro",
   "texts": { "title": "{cave}", "titleSeconds": 3, "endCard": { "text": "Clubul de Speologie Inventat" } },
   "shots": [
     { "name": "Afară", "preset": "Orbit showcase", "seconds": 10 },
-    { "name": "Tur", "preset": "Full flythrough", "seconds": 120, "in": { "kind": "Dip", "seconds": 0.6 },
+    { "name": "Parcurs", "preset": "Full flythrough", "seconds": 120, "in": { "kind": "Dip", "seconds": 0.6 },
       "camera": { "template": "Route",
                   "route": { "branches": "auto", "exclude": ["B3"], "priority": ["B5", "B1"] } } } ] }
 ```
@@ -947,7 +946,7 @@ randează, îl schițează sau îl pune într-un pachet, așa cum face `--storyb
 Primește o presetare compusă inclusă după nume (oricum ar fi scris cu majuscule) sau fișierul
 uneia: cele salvate din panou sunt în dosarul presetărilor dumneavoastră
 (`%AppData%\ThIDE\blender-presets` pe Windows, `~/.config/ThIDE/blender-presets` pe Linux).
-`--tour-language ro` scrie textele tururilor ei în română, orice ar spune presetarea; `--shot N`
+`--tour-language ro` scrie textele parcursurilor ei în română, orice ar spune presetarea; `--shot N`
 randează doar una dintre secvențele ei.
 
 ```
@@ -970,7 +969,7 @@ Panoul are două file deasupra setărilor. **Scenă** este o singură randare, c
   iar orice schimbare făcută acolo se scrie în ea. **Începe cu** alege o tăietură, o trecere prin
   negru sau o suprapunere și secundele ei. Setările de ieșire (mărimea, cadrele pe secundă,
   numele fișierului) sunt ale filmului.
-- **Filmul**, sub secvențe: **Titlu** (cu un **Subtitlu** și secundele **Cadrului de titlu**,
+- **Filmul**, sub secvențe: **Titlu** (cu un **Subtitlu** și secundele din **Cadru de titlu**,
   pentru un titlu care stă în mijlocul imaginii înainte să se stingă; 0 îl ține sus), **Cadru de
   final** (cu un subtitlu și secundele lui; gol înseamnă niciunul) și **Limba textelor**: limba în
   care un parcurs își scrie textele din colț și notele pistelor. *Ca interfața* urmează limba ThIDE
@@ -983,7 +982,7 @@ Panoul are două file deasupra setărilor. **Scenă** este o singură randare, c
   unde se scrie filmul rămâne pe seama celui care îl randează. Numele unei presetări compuse
   incluse este refuzat; una proprie cu același nume este înlocuită.
 - **O secvență de parcurs** (*parcurs* în listă, ca în Grand tour) are un tabel al galeriilor ei
-  laterale. **Arată galeriile** citește modelul și calculează turul așa cum îl va calcula
+  laterale. **Arată galeriile** citește modelul și calculează parcursul așa cum îl va calcula
   randarea: fiecare galerie laterală cu numărul ei, dacă este ramificație sau ocolire, ramificația
   de unde pleacă, lungimea și ce face filmul cu ea (parcursă și tăietură înapoi, parcursă
   dus-întors, parcursă de la un capăt la altul, o privire, sau de ce e lăsată deoparte: prea
@@ -993,50 +992,50 @@ Panoul are două file deasupra setărilor. **Scenă** este o singură randare, c
   filmul depășește timpul, galeriile de la coadă sunt lăsate deoparte primele. Orice schimbare se
   scrie în traseul secvenței (`include`, `exclude`, `priority`, ca
   [mai sus](#presetări-compuse-un-film-întreg-ca-șablon)), iar tabelul este calculat din nou;
-  notele de sub el spun ce a lăsat deoparte sau a scurtat turul.
-- **Schiță a tuturor** schițează toate secvențele, **Schiță a secvenței** doar pe cea selectată,
-  **Estimare** spune câte cadre, cât timp, cât disc și câtă memorie cere filmul, iar **Randează
+  notele de sub el spun ce a lăsat deoparte sau a scurtat parcursul.
+- **Schiță a tuturor** face câte o schiță din fiecare secvență, **Schiță a secvenței** doar din cea
+  selectată, **Estimare** spune câte cadre, cât timp, cât spațiu pe disc și câtă memorie cere filmul, iar **Randează
   filmul** arată estimarea și randează. Randările își așteaptă rândul în coada de randare, listată
-  sub butoane cu câte un **Renunță**; o randare în mijlocul căreia ThIDE a fost închis continuă la
+  sub butoane, fiecare cu un buton **Renunță**; o randare în mijlocul căreia ThIDE a fost închis continuă la
   pornirea următoare și apare ca *reluată*.
 
-## Tururi ale galeriilor
+## Parcursuri pe ramuri
 
-Un **tur** este un film al peșterii făcut după reguli, nu de mână: galeria principală este
-parcursă de la intrare spre interior, iar la fiecare joncțiune care merită camera intră în galeria
-laterală, îi arată capătul și revine. ThIDE calculează turul din model, îl încadrează în timpul
+Un **parcurs** este un film al peșterii făcut după reguli, nu de mână: galeria principală este
+străbătută de la intrare spre interior, iar la fiecare joncțiune care merită camera intră în galeria
+laterală, îi arată capătul și revine. ThIDE calculează parcursul din model, îl încadrează în timpul
 pe care îl dați și îl scrie ca [storyboard](#un-film-din-mai-multe-secvențe-storyboardul), care se
 randează, se previzualizează sau se împachetează ca oricare altul și poate fi mai întâi editat de
 mână.
 
 ```
-therion-cli blender pestera.lox --tour --draft
-therion-cli blender pestera.lox --tour --write-storyboard tur.storyboard.json
-therion-cli blender pestera.lox --storyboard tur.storyboard.json
+therion-cli blender cave.lox --tour --draft
+therion-cli blender cave.lox --tour --write-storyboard tour.storyboard.json
+therion-cli blender cave.lox --storyboard tour.storyboard.json
 ```
 
-Prima linie face o previzualizare a întregului tur, de privit înainte de randarea lungă. A doua
+Prima linie face o schiță a întregului parcurs, de privit înainte de randarea lungă. A doua
 scrie storyboardul și nu randează nimic; a treia îl randează, după ce ați schimbat ce ați dorit.
 Fiecare comandă `--tour` afișează tabelul galeriilor laterale și ce a hotărât despre fiecare.
 
 **Galeria principală** (`--trunk`). Implicit merge de la prima stație semnalată ca intrare până la
 stația cea mai îndepărtată de ea de-a lungul galeriilor (`farthest`); un model fără intrare
-primește cea mai lungă galerie, așa cum o parcurge șablonul *Flythrough* (`longest`). `deepest`
+primește cea mai lungă galerie, așa cum o străbate șablonul *Flythrough* (`longest`). `deepest`
 merge până la stația cea mai de jos, `through` până la o altă intrare (sau până la `--tour-end`),
 iar `via` prin stațiile pe care le numiți (`--tour-via s20 --tour-via s77 --tour-end s140`).
-`--tour-start` numește alt început. Galeria principală este parcursă o singură dată și nu trece
+`--tour-start` numește alt început. Galeria principală este străbătută o singură dată și nu trece
 de două ori prin aceeași stație.
 
-**Galerii laterale.** După ce se scot vizele galeriei principale, fiecare rest conex al peșterii
+**Galerii laterale.** După ce se scot tronsoanele galeriei principale, fiecare rest conex al peșterii
 este un sistem lateral. Unul care atârnă de galeria principală într-o singură stație este o
-**ramură**: este parcursă de la joncțiunea ei până la stația ei cea mai îndepărtată. Unul care
-atârnă de ea în două stații este o **ocolire** (o buclă apare ca ocolire): este parcursă de la
+**ramură**: este străbătută de la joncțiunea ei până la stația ei cea mai îndepărtată. Unul care
+atârnă de ea în două stații este o **ocolire** (o buclă apare ca ocolire): este străbătută de la
 prima joncțiune până la a doua, apoi filmul revine la prima și continuă pe galeria principală,
-astfel că nimic nu este parcurs de două ori și nimic nu este sărit. Sunt numerotate **B1, B2, …**
+astfel că nimic nu este străbătut de două ori și nimic nu este sărit. Sunt numerotate **B1, B2, …**
 de-a lungul galeriei principale; numerele nu se schimbă în funcție de ce este ales. Tabelul spune
-pentru fiecare: joncțiunea, lungimea (toate vizele ei), **raza de acțiune** (cât de departe ajunge
-de galeria principală), diferența de nivel, lățimea medie (stânga + dreapta din ridicare), pistele,
-ridicările și rangul.
+pentru fiecare: joncțiunea, lungimea (toate tronsoanele ei), **raza de acțiune** (cât de departe ajunge
+de galeria principală), diferența de nivel, lățimea medie (stânga + dreapta din topografie),
+pistele, topografiile și rangul.
 
 **Care sunt vizitate.**
 
@@ -1046,10 +1045,10 @@ ridicările și rangul.
 | Câte | 12, cele mai bine clasate întâi | `--max-branches 8` |
 | Rang | după raza de acțiune, apoi după lungime | |
 | Piste | o galerie laterală cu o pistă este vizitată oricât de scurtă ar fi | `--no-lead-branches` |
-| De mână | bate orice regulă: numărul unei ramuri, o stație din ea sau numele unei ridicări | `--include B2`, `--exclude side2` |
+| De mână | bate orice regulă: numărul unei ramuri, o stație din ea sau numele unei topografii | `--include B2`, `--exclude side2` |
 | Adâncime | 1: ce atârnă de galeria principală; 2 și ce atârnă de ramurile vizitate (B3.1, B3.2) | `--tour-depth 2` |
 
-Pistele sunt stațiile pe care modelul le are semnalate drept continuări, sau cele din `--leads
+Pistele sunt stațiile pe care modelul le semnalează drept continuări, sau cele din `--leads
 <fișier.json>`.
 
 **Cum este vizitată o galerie laterală** (`--branch-mode` pentru toate, `--branch B5=return`
@@ -1057,33 +1056,33 @@ pentru una):
 
 | Mod | Ce face camera | Timp de film |
 |---|---|---|
-| `cut` (implicit) | intră, încetinește, se oprește la o rază de galerie înainte de capăt și stă 1,5 s; apoi filmul taie înapoi la joncțiune, printr-o trecere prin negru de 0,3 s | zborul de intrare |
+| `cut` (implicit) | intră, încetinește, se oprește la o rază de galerie înainte de capăt și stă 1,5 s; apoi filmul revine prin tăietură la joncțiune, printr-o trecere prin negru de 0,3 s | zborul de intrare |
 | `return` | ca la `cut`, apoi se întoarce și zboară înapoi de două ori mai repede | de aproximativ 1,6 ori |
 | `peek` | rămâne la joncțiune și privește în galeria laterală 3 s | 3 s |
 | `skip` | trece mai departe | deloc |
 
-O ocolire este parcursă întotdeauna până la capăt. `--peek-short` aruncă o privire, de la
+O ocolire este străbătută întotdeauna de la un capăt la altul. `--peek-short` aruncă o privire, de la
 joncțiune, în galeriile laterale lăsate deoparte ca prea scurte. Cât timp se vede o galerie
-laterală, numărul și lungimea ei stau în colțul imaginii („Galerie laterală B3 · 96 m”, cu
-`--tour-language ro`; implicit textele sunt în engleză), iar fiecare pistă de pe drumul camerei
-are un marcaj și nota ei cât timp camera este aproape. Secvențele unui tur nu arată etichetele de
+laterală, numărul și lungimea ei stau în colțul imaginii („Side passage B3 · 96 m”;
+cu `--tour-language ro`, textele sunt în română: „Galerie laterală B3 · 96 m”), iar fiecare pistă de
+pe drumul camerei are un marcaj și nota ei cât timp camera este aproape. Secvențele unui parcurs nu arată etichetele de
 stații ale peșterii.
 
-**Timpul.** Camera zboară cu viteza dată de mărimea galeriei (vezi [Zborul pe un traseu între
+**Timpul.** Camera zboară cu viteza dată de mărimea galeriei (vedeți [Zborul pe un traseu între
 stații](#zborul-pe-un-traseu-între-stații)), așa că filmul are o durată firească. Două bugete o
 țin în frâu: `--tour-seconds` (180) pentru film și `--branch-seconds` (20) pentru o galerie
-laterală. Când ceva depășește bugetul, se face, în această ordine:
+laterală. Când ceva depășește bugetul, se procedează astfel, în această ordine:
 
-1. o galerie laterală este parcursă mai repede, până la de două ori viteza; apoi este parcursă
+1. o galerie laterală este străbătută mai repede, până la de două ori viteza; apoi este străbătută
    doar cât îi permite timpul, iar colțul spune cât mai continuă („continuă încă 60 m”). Un zbor
    de întoarcere care nu încape devine mai întâi o tăietură;
-2. întregul tur este parcurs mai repede, până la de două ori viteza;
+2. camera zboară mai repede de-a lungul întregului parcurs, până la de două ori viteza;
 3. zborurile de întoarcere devin tăieturi, cele mai slab clasate întâi;
 4. galeriile laterale cele mai slab clasate sunt lăsate deoparte (întâi privirile; cele alese de
    mână, ultimele);
 5. galeria principală însăși este scurtată.
 
-Tot ce a fost lăsat deoparte sau scurtat este spus în notele pe care le afișează comanda și în
+Tot ce a fost lăsat deoparte sau scurtat este menționat în notele pe care le afișează comanda și în
 README-ul unui pachet.
 
 Un exemplu inventat: o galerie principală de 620 m de la `e1` la `s140`, nouă sisteme laterale,
@@ -1101,10 +1100,10 @@ Un exemplu inventat: o galerie principală de 620 m de la `e1` la `s140`, nouă 
 
 Filmul: de la `e1` la `s12`, în B1 și o tăietură înapoi, mai departe până la `s48`, în B3, prin B4
 cât permit 20 s, înapoi la `s48` și mai departe, pe lângă `s77`, până la `s90`, în B5 și înapoi,
-apoi până la `s140`. (Tabelul afișat de comandă este în engleză.)
+apoi până la `s140`.
 
-**Un fișier de tur** spune același lucru ca opțiunile și călătorește împreună cu proiectul
-(`--tour-file tur.json`; o opțiune dată pe lângă el are întâietate):
+**Un fișier de parcurs** spune același lucru ca opțiunile și călătorește împreună cu proiectul
+(`--tour-file tour.json`; o opțiune dată pe lângă el are întâietate):
 
 ```json
 {
@@ -1114,7 +1113,7 @@ apoi până la `s140`. (Tabelul afișat de comandă este în engleză.)
   "priority": ["B5", "B1"],
   "tourSeconds": 180, "branchSeconds": 20,
   "preset": "Full flythrough", "language": "ro",
-  "output": { "width": 1920, "height": 1080, "baseName": "tur-pestera" }
+  "output": { "width": 1920, "height": 1080, "baseName": "cave-tour" }
 }
 ```
 
@@ -1123,26 +1122,26 @@ pe care le numește sunt lăsate deoparte după celelalte, de la coada listei î
 înaintea unei vizite, iar o vizită aleasă de mână ultima). `preset` (`--preset`) este presetarea
 din care filmul își ia materialele, iluminarea și motorul
 de randare; ele sunt scrise în `defaults` din storyboard, unde le puteți schimba pentru toate
-secvențele deodată. `--bundle` scrie turul ca [pachet de
+secvențele deodată. `--bundle` scrie parcursul ca [pachet de
 randare](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator), cu tabelul și notele în
 README. Un agent are aceleași lucruri prin uneltele `plan_tour` (tabelul, fără să scrie nimic) și
-`write_tour_storyboard`.
+`write_tour_storyboard` (vedeți [uneltele agentului](../../mcp-host-setup.md), în engleză).
 
 Bine de știut:
 
-- Turul rămâne în partea de peșteră în care se află începutul lui; părțile pe care nicio viză nu
-  le leagă de ea sunt numite într-o notă și nu sunt vizitate.
-- O galerie laterală parcursă la adâncimea 1 este parcursă până la stația ei cea mai îndepărtată;
+- Parcursul rămâne în partea de peșteră în care se află începutul lui; părțile pe care niciun
+  tronson nu le leagă de ea sunt numite într-o notă și nu sunt vizitate.
+- O galerie laterală vizitată la adâncimea 1 este străbătută până la stația ei cea mai îndepărtată;
   galeriile ei laterale sunt socotite în lungimea și în pistele ei și sunt vizitate doar cu
   `--tour-depth 2`.
 - Storyboardul numește fiecare stație pe lângă care trece camera, deci aparține acestui model:
-  după ce ridicarea s-a schimbat, faceți turul din nou, în loc să editați un storyboard vechi.
+  după ce topografia s-a schimbat, faceți parcursul din nou, în loc să editați un storyboard vechi.
 
 ## Peșteri mari, randări lungi
 
 **Pereții pe părți.** La o peșteră mare (peste o jumătate de milion de triunghiuri de pereți sau
-peste doi kilometri în lățime) pereții sunt scriși pe părți: galeriile, câteva sute de metri pe
-parte (după o rețea de 100 m pentru pereții desenați din scrapuri). Părțile împreună sunt aceeași
+peste doi kilometri de la un capăt la altul) pereții sunt scriși pe părți: galeriile, câteva sute de metri pe
+parte (după o grilă de 100 m pentru pereții desenați din schițe, `scrap`). Părțile împreună sunt aceeași
 rețea de poligoane, vârf cu vârf, cu aceleași culori de adâncime și aceeași dezvăluire, deci
 imaginea nu se schimbă. Se schimbă doar faptul că o cameră **în interiorul** peșterii (un zbor
 prin galerii, un traseu) arată numai părțile aflate la cel mult 200 m de drumul ei; o cameră din
@@ -1150,27 +1149,27 @@ afară (o orbită, o imagine statică) le arată pe toate. `--parts on` împarte
 off` nu împarte niciuna.
 
 **Etichete lângă traseu.** O cameră din interior etichetează doar stațiile și marchează doar
-continuările aflate la cel mult 200 m de drumul ei; limita de 200 de etichete de stații se aplică
+pistele aflate la cel mult 200 m de drumul ei; limita de 200 de etichete de stații se aplică
 apoi acestora. Într-un film, fiecare secvență și le alege pe ale ei. O adnotare a cărei stație se
 află într-o parte pe care secvența o lasă deoparte este lăsată deoparte odată cu ea, ca nimic să
 nu plutească acolo unde nu sunt pereți.
 
 **Cât va costa.** Înainte de începerea randării, progresul spune cât va costa: cadrele, timpul
-după secundele presupuse pe cadru (sau măsurate), discul pentru cadre și film și memoria de care
-va avea nevoie Blender. O scenă cu peste 20 de milioane de triunghiuri primește un avertisment (o
-placă grafică s-ar putea să nu o încapă). În timpul randării, progresul spune câte secunde ia un
+după secundele presupuse pe cadru (sau măsurate), spațiul pe disc pentru cadre și film și memoria de care
+va avea nevoie Blender. O scenă cu peste 20 de milioane de triunghiuri primește un avertisment (s-ar
+putea să nu încapă în memoria unei plăci grafice). În timpul randării, progresul spune câte secunde ia un
 cadru și cât timp a mai rămas, după cadrele scrise până atunci. În linia de comandă, `--estimate`
 afișează estimarea și nu randează nimic:
 
-    therion-cli blender pestera.lox --storyboard tur.storyboard.json --estimate
+    therion-cli blender cave.lox --storyboard tour.storyboard.json --estimate
 
 **Un interval de cadre.** `--frame-range 1-600 --frames <dosar>` randează doar cadrele 1–600 ale
 unei scene în dosarul de cadre și nimic altceva. Mai multe randări pot folosi același dosar în
 același timp, fiecare cu intervalul ei; filmul se scrie după ce toate sunt gata:
 
-    therion-cli blender pestera.lox --spec tur.json --frames cadre --frame-range 1-900
-    therion-cli blender pestera.lox --spec tur.json --frames cadre --frame-range 901-1800
-    therion-cli blender pestera.lox --spec tur.json --frames cadre --compose-only
+    therion-cli blender cave.lox --spec tour.json --frames frames --frame-range 1-900
+    therion-cli blender cave.lox --spec tour.json --frames frames --frame-range 901-1800
+    therion-cli blender cave.lox --spec tour.json --frames frames --compose-only
 
 Merită pe un calculator cu **mai multe plăci grafice**: porniți câte o randare pentru fiecare
 placă, fiecare văzând doar placa ei (`CUDA_VISIBLE_DEVICES=0`, `=1`, … la NVIDIA), fiecare cu
@@ -1178,8 +1177,8 @@ intervalul ei. Pe un singur calculator fără ele se câștigă puțin, pentru c
 toate nucleele. Secvențele unui film se randează oricum una câte una; pentru un interval dintr-o
 secvență, randați doar acea secvență (`--shot`).
 
-**O randare odată.** În ThIDE randările rulează pe rând, oricine le pornește: o randare pornită din
-panou în timp ce randează un agent (sau invers) își așteaptă rândul, iar panoul spune asta. Randarea
+**O singură randare la un moment dat.** În ThIDE randările rulează pe rând, oricine le pornește: o randare pornită din
+panou în timp ce randează un agent (sau invers) își așteaptă rândul, iar panoul afișează acest lucru. Randarea
 unui agent care s-a terminat apare în istoricul panoului. Dacă ThIDE se oprește în mijlocul unei
 randări (nu când aceasta este anulată), randarea continuă cu cadrele ei la următoarea pornire a
 ThIDE.
@@ -1190,7 +1189,7 @@ ThIDE.
 randare](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator) care sosesc într-un dosar, pe
 rând, de la cel mai vechi, și lasă rezultatele în alt dosar. Este pentru un calculator cu Blender și
 o placă grafică bună, care nu are nimic altceva din ThIDE; felul în care se umplu dosarele (un
-dosar sincronizat, un SFTP) rămâne la alegerea dumneavoastră.
+dosar partajat sincronizat, un dosar SFTP) rămâne la alegerea dumneavoastră.
 
     therion-cli render-worker --inbox /srv/render/in --outbox /srv/render/out
 
@@ -1208,7 +1207,7 @@ dosar sincronizat, un SFTP) rămâne la alegerea dumneavoastră.
 **Securitate.** Un pachet este o colecție de date, iar executorul îl tratează ca atare. Nu rulează
 niciodată `render.py`, `render.sh` sau `thide_player` din pachet: citește planurile, rețelele de
 poligoane și imaginile și le redă cu propriul player. Refuză, înainte să pornească Blender, un pachet
-ale cărui planuri numesc dosare de module sau funcții din afara celor ale playerului, o cale care
+ale cărui planuri numesc dosare de module sau funcționalități din afara celor ale playerului, o cale care
 iese din pachet, o legătură simbolică, un plan care nu trece verificările și un pachet peste limite
 (dimensiunea lui, dimensiunea dezarhivată, triunghiurile, cadre × pixeli × eșantioane, timpul).
 Module în plus vin doar dintr-un dosar numit de operator (`--modules`). Blender rulează cu `-b
@@ -1240,17 +1239,17 @@ serverul. Protocolul este descris în
   singură cerere și randează ce primește. `--blender`, `--modules` și limitele sunt cele ale
   executorului cu dosare; limitele unei lucrări le pot doar micșora.
 - Filmul este scris în containerul cerut de lucrare: implicit MP4 (H.264) sau WebM, pe care un
-  server îl poate prefera pentru că H.264 vine cu condițiile unui grup de brevete.
+  server îl poate prefera pentru că H.264 vine cu condițiile unui consorțiu de brevete.
 - O lucrare anulată pe server oprește Blender la următorul semnal de prezență (o treime din durata
-  rezervării, 40 s pentru o rezervare de 2 minute). O rețea care cade este încercată din nou, cu
-  așteptări tot mai lungi; dacă serverul nu poate fi atins o rezervare întreagă, lucrarea este
+  rezervării, 40 s pentru o rezervare de 2 minute). După o cădere a rețelei se reîncearcă, cu
+  pauze tot mai lungi; dacă serverul nu poate fi contactat pe durata unei rezervări întregi, lucrarea este
   oprită, iar serverul o dă altcuiva. Cadrele ei rămân: dacă aceeași lucrare revine la acest
   calculator, continuă de la ele. Un token refuzat de server oprește executorul (codul de ieșire 3).
 
 **Pregătirea unui calculator cu placă grafică.**
 
 1. Instalați Blender 4.2 sau mai nou de pe [blender.org](https://www.blender.org/download/)
-   (versiunile LTS sunt cele testate), verificați descărcarea cu SHA-256 publicat pe site și
+   (versiunile LTS sunt cele testate), verificați descărcarea cu suma SHA-256 publicată pe site și
    dezarhivați-o, de exemplu în `/opt/blender`. Verificați că vede placa: în preferințele Blender
    sau randând cu Cycles un pachet mic cu executorul cu dosare: fișierul `<lucrare>.log` spune
    `THIDE:device=OPTIX` sau `CUDA` (pe o placă NVIDIA), `HIP`, `ONEAPI` sau `METAL`, și `CPU` când
@@ -1278,10 +1277,10 @@ rețea decât adresa serverului și alt dosar decât cel de lucru.
 **Securitatea unui nod.** Tot ce s-a spus mai sus despre un pachet este valabil și pentru o lucrare
 de la un server: este o colecție de date, scripturile lui nu rulează niciodată, este verificat
 înainte să pornească Blender și se trimit înapoi doar fișierele numite de executor. În plus,
-dimensiunea și SHA-256 ale pachetului sunt verificate față de cele date de server înainte ca el să
+dimensiunea și suma SHA-256 ale pachetului sunt verificate față de cele date de server înainte ca el să
 fie citit, tokenul merge doar la adresa serverului și doar prin HTTPS, iar o lucrare eșuată nu
 încarcă nimic în afară de motivul eșecului. Pentru că rămâne riscul unui defect în cititoarele
-Blender, rulați Blender ca un utilizator care nu poate atinge mult mai mult decât dosarul de lucru:
+Blender, rulați Blender ca un utilizator care nu are acces la mult mai mult decât dosarul de lucru:
 un utilizator separat sau un container ca mai sus.
 
 ## Cerințe și sfaturi
@@ -1292,7 +1291,7 @@ un utilizator separat sau un container ca mai sus.
   alternativă și vă spun ce dispozitiv a fost folosit efectiv.
 - **Peșterile mari** se randează bine, dar încet; folosiți **Previzualizare** pentru a verifica în
   câteva secunde mișcarea camerei și încadrarea, înainte de varianta finală.
-- **Spațiul pe disc** — secvențele de cadre păstrează fiecare PNG și pot ocupa mult, la fel și
+- **Spațiul pe disc** — șirurile de cadre păstrează fiecare PNG și pot ocupa mult, la fel și
   cadrele din care se face un film cu texte; ThIDE estimează dimensiunea și refuză de la început
   dacă unitatea este aproape plină.
 
@@ -1307,6 +1306,6 @@ un utilizator separat sau un container ca mai sus.
 | Randarea EEVEE eșuează pe un server | Schimbați motorul la **Cycles**. |
 | *„…the player lights a scene with a Radiance .hdr or an OpenEXR .exr image…”*, *„…cannot travel with the plan…”* | Imaginea iluminării HDRI este alt fel de imagine, este deteriorată sau este prea mare (mesajul spune care). Folosiți un fișier `.hdr` sau `.exr`; sau puneți **Constructor de scenă** pe *Generator*, care încarcă orice imagine pe care o citește Blender. |
 | Fiecare randare are numele peșterii scris sus | Îl scriu presetările integrate. Goliți câmpul **Titlu** (sau `--title ""`). |
-| Titlul este un cod scurt, nu numele peșterii | Este numele pe care îl are modelul: dați celui mai din afară `survey` al proiectului un `-title` sau scrieți titlul pe care îl vreți. |
+| Titlul este un cod scurt, nu numele peșterii | Este numele pe care îl are modelul: dați celui mai din exterior `survey` al proiectului un `-title` sau scrieți titlul pe care îl vreți. |
 | Previzualizarea nu are teren | Un teren transparent nu apare în previzualizări; randarea îl desenează. |
 | Un titlu sau săgeata nordului sunt ascunse de pereți | Scena a fost construită de generatorul de scripturi (el le desenează în scenă). Puneți **Constructor de scenă** pe *Auto* sau *Player*. |

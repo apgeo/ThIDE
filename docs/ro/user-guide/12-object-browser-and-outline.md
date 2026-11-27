@@ -15,8 +15,8 @@ pliabil: topografii în topografii, schițe și (opțional) stațiile din ele.
 - **Include stațiile în contur** adaugă stațiile ca frunze sub fiecare poligonală.
 - Faceți clic pe un element pentru a sări la el în editor.
 
-Dacă un fișier nu are o structură de topografii/schițe, conturul vă spune acest lucru. Este specific
-fiecărui fișier și ușor — gândiți-vă la el ca la cuprinsul documentului pe care îl editați.
+Dacă un fișier nu are o structură de topografii/schițe, conturul vă spune acest lucru. Este propriu
+fiecărui fișier și nu încarcă aplicația — gândiți-vă la el ca la cuprinsul documentului pe care îl editați.
 
 ## Navigatorul de obiecte
 
@@ -41,7 +41,7 @@ Comune tuturor tabelelor:
   simbolul…**, **Copiază numele calificat** și comenzi de copiere (celulă / rând / tot, simplu sau
   formatat).
 - Dublu-clic pentru a sări la declarația din sursă.
-- **Export CSV…** pentru a scoate un tabel din aplicație.
+- **Export CSV…** pentru a exporta un tabel în afara aplicației.
 
 Pentru că aceste tabele provin din modelul în timp real, ele sunt cea mai rapidă cale de a răspunde la
 întrebări precum „există această stație / câte radiale are această topografie / care schițe nu sunt

@@ -1,6 +1,6 @@
 # 2. Instalare și configurare
 
-> [← Înapoi la pagina principală a ghidului](README.md)
+> [← Înapoi la pagina principală a Ghidului utilizatorului](README.md)
 
 Această pagină vă ajută să porniți ThIDE și să-l conectați la uneltele externe pe care le pilotează.
 
@@ -55,12 +55,12 @@ Dacă o unealtă lipsește când încercați să o folosiți, ThIDE vă spune ca
 exemplu, dialogul „Mapiah nu a fost găsit” trimite direct la această pagină de setări).
 
 > ThIDE lansează Therion, Loch, Aven și Mapiah ca **programe separate**, prin linia de comandă — nu
-> încorporează și nu leagă codul lor. Vezi [Unelte externe și licențiere](../../usage.md#external-tools).
+> le încorporează codul și nu se leagă de el. Vezi [Unelte externe și licențiere](../../usage.md#external-tools).
 
 ## 5. Opțional: asocieri de fișiere
 
 Pentru ca fișierele Therion să se deschidă în ThIDE când faceți dublu clic pe ele în managerul de fișiere,
-folosiți **Setări → Asocieri de fișiere** și apăsați **Asociază** (sau **Asociază toate**). Asocierea se
+folosiți **Setări → Asocieri de fișiere** și faceți clic pe **Asociază** (sau **Asociază toate**). Asocierea se
 face per utilizator și nu necesită drepturi de administrator. Detalii și note despre platforme:
 [docs/file-association.md](../../file-association.md).
 
@@ -75,12 +75,12 @@ de date ale aplicațiilor pe care platforma dumneavoastră îl rezervă fiecăru
 | Linux | `~/.config/ThIDE` (sub `$XDG_CONFIG_HOME`, când această variabilă este setată) |
 | macOS | dosarul de date ale aplicațiilor pe care .NET îl raportează pentru utilizatorul dumneavoastră — panoul care vă cere să puneți un fișier acolo (modelul de declinație, pluginurile) indică exact calea |
 
-Acesta conține preferințele, scurtăturile de tastatură, tema și limba, indexul de simboluri și cache-ul de
-analiză, copiile de recuperare după o închidere neașteptată, pluginurile și fișierele auxiliare ale
-fiecărui proiect (piste, metadate). Rareori aveți nevoie să umblați direct în acest dosar, dar aici vă cer
+Acesta conține preferințele, scurtăturile de tastatură, tema și limba, indexul de simboluri și cache-ul
+analizei sintactice, copiile de recuperare după o închidere neașteptată, pluginurile și fișierele însoțitoare ale
+fiecărui proiect (piste, metadate). Rareori aveți nevoie să umblați direct în acest dosar, dar în el vă cer
 câteva funcționalități (modelul de declinație, pluginurile) să puneți fișiere. Celelalte pagini ale
 acestui ghid îl numesc *dosarul de setări*.
 
 ---
 
-Următoarea: [Primii pași: prima sesiune →](03-getting-started.md)
+Următorul: [Primii pași: prima sesiune →](03-getting-started.md)

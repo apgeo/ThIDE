@@ -7,13 +7,13 @@ Scurtăturile de mai jos sunt cele **implicite**. Aproape fiecare poate fi **rea
 combinația dorită. Acea pagină de setări este lista de referință, mereu actuală; pagina de față este
 doar un memento rapid.
 
-> Pe macOS, citiți **Ctrl** ca **⌘** acolo unde combinațiile dumneavoastră îl mapează astfel.
+> Pe macOS, citiți **Ctrl** ca **⌘** acolo unde combinațiile dumneavoastră îl asociază astfel.
 
 **Nu toate comenzile vin cu o combinație de taste.** Multe dintre ele — *Deschide fișier*, *Deschide
 dosar*, *Salvează toate*, *Împarte editorul*, *Export rapid*, *Duplică liniile*, comutatoarele de panouri
 și altele — sunt în mod deliberat **neatribuite implicit** și se pot accesa din meniuri sau din Paleta de
-comenzi. Ele apar totuși ca rânduri în **Setări → Scurtături tastatură**, deci le puteți atribui ce
-doriți. Dacă o scurtătură pe care o așteptați de la alt editor nu face nimic, acesta este motivul —
+comenzi. Ele apar totuși ca rânduri în **Setări → Scurtături tastatură**, deci le puteți atribui orice
+combinație doriți. Dacă o scurtătură pe care o așteptați de la alt editor nu face nimic, acesta este motivul —
 atribuiți-o acolo.
 
 ## Fișiere și navigare
@@ -86,7 +86,7 @@ Vedeți [Compilare și rezultate](10-compiling-and-output.md).
 
 Celelalte comutatoare de panouri (Navigator obiecte, Contur, Prezentare generală, Jurnal, Previzualizare
 principală, Vizualizator hărți, Vizualizator 3D, Geologie structurală, Animație Blender) vin
-**neatribuite** — folosiți meniul **Vizualizare** sau atribuiți-le singur în
+**neatribuite** — folosiți meniul **Vizualizare** sau atribuiți-le chiar dumneavoastră scurtături în
 **Setări → Scurtături tastatură**.
 
 ## Prefixele Paletei de comenzi

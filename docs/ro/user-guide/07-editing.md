@@ -18,7 +18,7 @@ pur și simplu treceți la tema **Întunecată**, care adaptează atât interfa�
 
 - **Completare automată** — sugestii în funcție de context pe măsură ce tastați (comenzi, opțiuni,
   stații cunoscute).
-- **Carduri la trecerea cu mouse-ul** — țineți mouse-ul peste o referință la o
+- **Carduri informative** — țineți mouse-ul peste o referință la o
   stație/topografie/fișier pentru un rezumat și acțiuni rapide (salt la definiție, găsirea
   referințelor, redenumire, documentație, afișare în 3D, deschidere).
 - **Închiderea automată a parantezelor/ghilimelelor** și indentare automată.
@@ -41,7 +41,7 @@ folosit de două ori se schimbă în ambele locuri.
 | `thconf`, `layout-plan-500`, `layout-copy`, `export-plan-pdf`, `export-model-lox` | schelet și fragmente de thconfig (oferite în fișierele thconfig) |
 
 **Fragmentele dumneavoastră proprii** se pun în `snippets.json` — în dosarul de setări al ThIDE, doar
-pentru dumneavoastră, sau în dosarul `.thide/` al proiectului, ca să le împărțiți cu toți cei care au
+pentru dumneavoastră, sau în dosarul `.thide/` al proiectului, ca să le partajați cu toți cei care au
 proiectul (locul în care stau fișierele proiectului se alege în **Setări → General**). Fișierul este o
 listă de intrări:
 
@@ -53,11 +53,11 @@ listă de intrări:
 ```
 
 Șabloanele folosesc sintaxa de fragmente din VS Code: `$1`, `${1:default}`, `${1|plan,elevation|}` (o
-alegere), `$0` (unde ajunge cursorul la final) și variabile — `$DATE`, `$TIME`, `$YEAR`, `$FILE_NAME`,
+listă de opțiuni), `$0` (unde ajunge cursorul la final) și variabile — `$DATE`, `$TIME`, `$YEAR`, `$FILE_NAME`,
 `$FILE_BASENAME`, `$CURRENT_SURVEY`, `$PARENT_SURVEY`, `$TEAM_RECENT`, `$LAST_UNITS`,
 `$LAST_CALIBRATE`, `$LAST_INSTRUMENT`, `$LAST_DATA`, `$LAST_STATION`, `$NEXT_STATION` sau
 `${NAME:fallback}`. Scrieți `\$` pentru un semn dolar literal. `scope` este `th`, `th2`, `thconfig` sau
-`any`. Un fișier stricat este raportat o singură dată, iar restul fragmentelor continuă să funcționeze.
+`any`. Un fișier defect este raportat o singură dată, iar restul fragmentelor continuă să funcționeze.
 
 Dialogul **Export rapid** (**Compilare → Export rapid…**) are un buton **Salvează ca fragment…**: el
 salvează blocul de export pe care l-ați compus ca fragment de thconfig, oferit apoi în **Generează cod**
@@ -84,26 +84,26 @@ previzualizează și poate adăuga linia `input` într-un fișier de topografie 
 ## Comentarii și majuscule
 
 - **Comutare comentariu** — **Ctrl+/** pe linie sau pe selecție.
-- **MAJUSCULE** / **minuscule** pentru selecție (meniul Editare sau Paleta de comenzi).
+- **MAJUSCULE** / **minuscule** pentru selecție (meniul Editare sau paleta de comenzi).
 
 ## Operații pe linii
 
-Din meniul contextual al editorului (sau din Paleta de comenzi):
+Din meniul contextual al editorului (sau din paleta de comenzi):
 
 | Acțiune | Ce face |
 |---|---|
-| **Duplică liniile** | Copiază linia curentă/selecția sub ea însăși. |
+| **Duplică liniile** | Copiază linia curentă/selecția imediat dedesubt. |
 | **Mută liniile în sus / Mută liniile în jos** | Mută liniile fără decupare și lipire. |
 | **Sortează liniile selectate** | Sortează alfabetic liniile selectate. |
 | **Lipește ca date de vize…** | Transformă un tabel de vize (foaie de calcul, CSV, DistoX) într-un bloc `data` (și din **Editare → Lipește ca date de vize…**) — vedeți [Import](17-import-export-and-gis.md#tabele-de-vize-foi-de-calcul-csv-pockettopo-distox). |
 | **Generează cod** ▸ **Inserează data de azi** | Inserează data de azi (util pentru `date`). |
-| **Generează cod** ▸ **Inserează membru echipă** | Inserează un membru `team` din proiectul dumneavoastră. |
+| **Generează cod** ▸ **Inserează membru echipă** | Inserează un membru al echipei (`team`) din proiectul dumneavoastră. |
 
 ## Formatarea
 
 - **Formatează documentul** — **Shift+Alt+F** reindentează fișierul după imbricarea blocurilor. Nu
   reordonează și nu elimină nicio linie; `therion-cli format --check` aplică aceeași regulă în CI.
-- **Formatare la salvare** — activați **Formatează documentul la salvare** în pagina **Editor** a
+- **Formatare la salvare** — activați **Formatează documentul la salvare** pe pagina **Editor** a
   setărilor (**Setări → Editor**) pentru a formata automat la fiecare salvare.
 
 Există și un **formatator pentru directivele de regiune**, astfel încât *Include în regiune* produce
@@ -112,8 +112,8 @@ linii de directivă curate, cu ghilimelele corecte.
 ## Semne de carte
 
 - **Editare → Adaugă semn de carte…** marchează linia curentă (cu un titlu opțional).
-- **Căutare → Semne de carte…** le listează pe toate; apăsați **Salt la** pentru a sări la unul.
-  Excelente ca „locuri de parcare” într-un fișier lung.
+- **Căutare → Semne de carte…** le listează pe toate; faceți clic pe **Salt la** pentru a sări la unul.
+  Foarte utile pentru a marca locurile la care reveniți într-un fișier lung.
 
 ## Spații albe și afișare
 
@@ -130,7 +130,7 @@ timp real cu vizele și stațiile acelui fișier, extrase din graful de obiecte.
   nume/topografie/tip (stații).
 - **Grupați după** topografie/altele; afișați sau ascundeți coloane; marcați **Supr. / Dupl. / Radial /
   Aprox.**
-- Clic dreapta pe un rând: **Salt la declarație** (pentru De la/La), **Arată în vizualizarea 3D**,
+- Clic dreapta pe un rând: **Salt la declarație** (pentru „De la” / „Până la”), **Arată în vizualizarea 3D**,
   **Redenumește stația…**.
 - Dublu-clic pentru a sări la linia din sursă.
 
