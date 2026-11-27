@@ -73,7 +73,7 @@ public class PlanRulesTests
     [Fact]
     public void TheBundlesFolderName_HoldsToTheSameRules()
     {
-        Assert.Equal("a_b_", Therion.Blender.Player.RenderBundleWriter.FolderName("a:b?.zip"));
+        Assert.Equal("film_1_", Therion.Blender.Player.RenderBundleWriter.FolderName("film:1?.zip"));
         Assert.Equal("CON_", Therion.Blender.Player.RenderBundleWriter.FolderName("CON.zip"));
         Assert.Equal("nul_.x", Therion.Blender.Player.RenderBundleWriter.FolderName("nul.x.zip"));
         Assert.True(PlanRules.IsPlainBaseName(Therion.Blender.Player.RenderBundleWriter.FolderName("a<b>|c.zip")));
