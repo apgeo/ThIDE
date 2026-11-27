@@ -265,9 +265,16 @@ public sealed class RenderNodeSecurityTests(ITestOutputHelper output) : IDisposa
     {
         if (!OperatingSystem.IsWindows()) return;
         string file = Token(_dir, "invented-token");
-        Assert.True(RenderNodeToken.TryRead(file, out _, out string? mine), mine);
         var info = new FileInfo(file);
-        var security = info.GetAccessControl();
+        // The user's alone, as a file in the user's profile is.
+        var security = new System.Security.AccessControl.FileSecurity();
+        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+        security.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
+            System.Security.Principal.WindowsIdentity.GetCurrent().User!,
+            System.Security.AccessControl.FileSystemRights.FullControl, System.Security.AccessControl.AccessControlType.Allow));
+        info.SetAccessControl(security);
+        Assert.True(RenderNodeToken.TryRead(file, out _, out string? mine), mine);
+        security = info.GetAccessControl();
         security.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
             new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.BuiltinUsersSid, null),
             System.Security.AccessControl.FileSystemRights.Read, System.Security.AccessControl.AccessControlType.Allow));
