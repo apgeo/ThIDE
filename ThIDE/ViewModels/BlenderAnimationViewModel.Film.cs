@@ -102,9 +102,9 @@ public sealed partial class BlenderAnimationViewModel
     /// <summary>The languages a film's own texts can be written in; the first follows the interface.</summary>
     public IReadOnlyList<FilmLanguageItem> FilmLanguages { get; } =
     [
-        new(null, Tr.Get("Blender_UI_FilmLanguageUi")),
-        new("en", Tr.Get("Blender_UI_FilmLanguageEn")),
-        new("ro", Tr.Get("Blender_UI_FilmLanguageRo")),
+        new(null, "Blender_UI_FilmLanguageUi"),
+        new("en", "Blender_UI_FilmLanguageEn"),
+        new("ro", "Blender_UI_FilmLanguageRo"),
     ];
 
     private FilmLanguageItem? _selectedFilmLanguage;
@@ -146,7 +146,7 @@ public sealed partial class BlenderAnimationViewModel
 
     /// <summary>Why the name cannot be saved under; null when it can.</summary>
     public string? CompositeNameProblem
-        => BuiltInComposites.ByName(NewCompositeName.Trim()) is not null ? Tr.Get("Blender_Composite_NameBuiltIn") : null;
+        => PresetStore.NameProblem(NewCompositeName, composite: true) is Therion.Blender.Presets.PresetNameProblem.BuiltIn ? Tr.Get("Blender_Composite_NameBuiltIn") : null;
 
     private bool CanSaveComposite => _presetStore is not null && Shots.Count > 0 && StoryboardBlockers.Count == 0
                                      && !string.IsNullOrWhiteSpace(NewCompositeName) && CompositeNameProblem is null;
@@ -183,8 +183,11 @@ public sealed partial class BlenderAnimationViewModel
     }
 }
 
-/// <summary>A language of the film's own texts in the tab's list; a null code follows the interface.</summary>
-public sealed record FilmLanguageItem(string? Code, string Label)
+/// <summary>A language of the film's own texts in the tab's list; a null code follows the
+/// interface. Its label is in the interface's language of the moment.</summary>
+public sealed record FilmLanguageItem(string? Code, string LabelKey)
 {
+    public string Label => Tr.Get(LabelKey);
+
     public override string ToString() => Label;
 }

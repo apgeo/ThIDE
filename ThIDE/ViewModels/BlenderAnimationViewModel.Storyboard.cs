@@ -1,8 +1,11 @@
 // The Storyboard tab of the Blender panel: a film as a list of shots. A shot is added from a
 // preset (a camera move with its look) or a composite preset adds its shots (Showcase, Grand
-// tour, Exploration history); the shots are reordered and removed here, and the panel's settings
-// edit the shot that is selected: selecting one loads what it shows into them, and every change
-// made there is written back into it. The output settings are the film's. Draft all, Draft shot
+// tour, Exploration history); the shots are reordered and removed here. On this tab the panel's
+// settings edit the film and the shot that is selected, never the Scene tab's scene, which is
+// kept aside while this tab is shown: the frame rate, the output, the terrain and the fades are
+// the film's; the rest (camera, light, engine, reveal, labels, texts) is the selected shot's,
+// loaded into them when it is selected and written back into it on every change, and cannot be
+// edited while no shot is selected. Draft all, Draft shot
 // and Render go through the render queue as the panel's (owner "panel"); the estimate is shown
 // before a render starts. The queue itself is listed, with a cancel for each job. The film's
 // title, end card and language, and saving it as a composite, are in the .Film part; the branch
@@ -35,18 +38,25 @@ public sealed partial class BlenderAnimationViewModel
 
     /// <summary>The tab shown: <see cref="SceneTab"/> or <see cref="StoryboardTab"/>.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsStoryboardTab), nameof(IsSceneTab))]
+    [NotifyPropertyChangedFor(nameof(IsStoryboardTab), nameof(IsSceneTab), nameof(CanEditShotSettings), nameof(ChooseShotHint))]
     private int _panelTab;
 
     public bool IsStoryboardTab => PanelTab == StoryboardTab;
     public bool IsSceneTab => !IsStoryboardTab;
+
+    /// <summary>True when the settings a shot holds (camera, light, engine, reveal, labels, texts)
+    /// can be edited: on the Scene tab, or for the selected shot.</summary>
+    public bool CanEditShotSettings => IsSceneTab || HasSelectedShot;
+
+    /// <summary>True on the Storyboard tab with no shot selected: the panel says to select one.</summary>
+    public bool ChooseShotHint => IsStoryboardTab && !HasSelectedShot;
 
     /// <summary>The film's shots, in order.</summary>
     public ObservableCollection<StoryboardShotViewModel> Shots { get; } = [];
 
     /// <summary>The shot the settings edit; null edits the scene alone.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelectedShot))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedShot), nameof(CanEditShotSettings), nameof(ChooseShotHint))]
     private StoryboardShotViewModel? _selectedShot;
 
     public bool HasSelectedShot => SelectedShot is not null;
@@ -68,6 +78,15 @@ public sealed partial class BlenderAnimationViewModel
     /// <summary>How the selected shot begins.</summary>
     public IReadOnlyList<TransitionKind> TransitionKinds { get; } = Enum.GetValues<TransitionKind>();
 
+    // What the film has that no shot does, and that the settings edit on this tab: its frame rate
+    // and output, and (in its defaults and texts below) the terrain and the fades.
+    private int _filmFps;
+    private OutputSpec _filmOutput = new();
+
+    // The Scene tab's scene, kept while this tab is shown: the settings then show the film.
+    private SceneSpec? _sceneKept;
+    private string _sceneKeptAnnotationsPath = "";
+
     /// <summary>How long the film is, as its shots say (a tour's is at most its shot's).</summary>
     public double FilmSeconds => Math.Max(Shots.Sum(s => s.Seconds) - Shots.Skip(1).Sum(s => s.Shot.In is { Kind: TransitionKind.Dissolve } d ? d.Seconds : 0), 1e-3);
 
@@ -76,19 +95,19 @@ public sealed partial class BlenderAnimationViewModel
     private OverlaySpec? _filmTexts;
     private StoryboardDefaults _filmDefaults = new();
 
-    /// <summary>The film the tab describes: its shots, with the output the settings say.</summary>
+    /// <summary>The film the tab describes: its shots, with its own frame rate and output.</summary>
     public Storyboard CurrentStoryboard => new()
     {
         Name = _filmName,
-        Fps = _spec.Animation.Fps,
+        Fps = _filmFps,
         Language = FilmLanguage,
         Defaults = _filmDefaults,
         Texts = _filmTexts,
         Shots = Shots.Select(s => s.Shot).ToList(),
-        Output = _spec.Output with
+        Output = _filmOutput with
         {
             // A film is a video or frames, written where the renders go.
-            Kind = _spec.Output.Kind == OutputKind.Still ? OutputKind.Video : _spec.Output.Kind,
+            Kind = _filmOutput.Kind == OutputKind.Still ? OutputKind.Video : _filmOutput.Kind,
             OutputDirectory = RenderDirectory?.Trim() ?? "",
         },
     };
@@ -120,6 +139,10 @@ public sealed partial class BlenderAnimationViewModel
             Seconds = spec.Animation.DurationSeconds,
             In = Shots.Count == 0 ? null : new TransitionSpec { Kind = TransitionKind.Dissolve, Seconds = 1 },
         };
+        // A preset of the user's that has a built-in one's name (saved before such names were
+        // refused) would be found as the built-in by its name: it is written into the shot.
+        if (!preset.BuiltIn && BuiltInPresets.ByName(preset.Name) is not null)
+            shot = StoryboardExpander.InlinePreset(shot, preset.Preset, _filmDefaults);
         int at = SelectedShot is { } selected ? Shots.IndexOf(selected) + 1 : Shots.Count;
         Shots.Insert(at, NewShotRow(shot));
         ShotsChanged();
@@ -129,17 +152,22 @@ public sealed partial class BlenderAnimationViewModel
     private bool CanAddShot => SelectedPreset is not null && SelectedPreset.Preset.Spec.Camera.Template != CameraTemplate.StillSet;
 
     /// <summary>Adds the shots of the selected composite at the end. Into an empty film it also
-    /// brings the composite's name, texts and defaults.</summary>
+    /// brings the composite's name, texts, defaults, language, frame rate and output, so that it
+    /// renders here as it does from the command line and the agent tools.</summary>
     [RelayCommand]
     private void AddComposite()
     {
         if (SelectedComposite is not { } item) return;
         var film = item.Composite.Storyboard;
-        if (Shots.Count == 0)
+        bool empty = Shots.Count == 0;
+        if (empty)
         {
             _filmName = film.Name;
             _filmTexts = film.Texts;
             _filmDefaults = film.Defaults;
+            _filmFps = film.Fps;
+            // Where it is written is the panel's (the render folder).
+            _filmOutput = film.Output with { OutputDirectory = "" };
             SetFilmLanguage(film.Language);
             FilmTextsChanged();
         }
@@ -151,6 +179,8 @@ public sealed partial class BlenderAnimationViewModel
             Shots.Add(NewShotRow(shot));
         }
         ShotsChanged();
+        // The settings show the film's frame rate, output, terrain and fades it brought.
+        if (empty) ShowFilmSettings();
     }
 
     [RelayCommand]
@@ -181,6 +211,7 @@ public sealed partial class BlenderAnimationViewModel
             (_filmName, _filmTexts, _filmDefaults) = (null, null, new StoryboardDefaults());
             SetFilmLanguage(null);
             FilmTextsChanged();
+            ShowFilmSettings();
         }
         ShotsChanged();
     }
@@ -199,36 +230,92 @@ public sealed partial class BlenderAnimationViewModel
         ClearBranchTable();
     }
 
-    partial void OnSelectedShotChanged(StoryboardShotViewModel? value)
+    partial void OnSelectedShotChanged(StoryboardShotViewModel? value) => ShowFilmSettings();
+
+    partial void OnPanelTabChanged(int oldValue, int newValue)
     {
-        if (value is null) return;
-        // What the shot shows, over its preset and the film's defaults, into the settings; the
-        // output settings stay the film's.
-        SceneSpec spec;
-        try
+        if (newValue == StoryboardTab && oldValue != StoryboardTab)
         {
-            var alone = CurrentStoryboard with { Shots = [value.Shot with { In = null, Reveal = value.Shot.Reveal is { Mode: ShotRevealMode.Hold } ? null : value.Shot.Reveal }] };
-            spec = StoryboardPlanner.ShotSpec(alone with { Output = alone.Output with { OutputDirectory = "out" } }, 0, FindPreset);
+            // The scene is kept as it is; the settings show the film and its selected shot.
+            _sceneKept = _spec;
+            _sceneKeptAnnotationsPath = AnnotationsPath;
+            ShowFilmSettings();
         }
-        catch (ArgumentException)
+        else if (newValue != StoryboardTab && oldValue == StoryboardTab && _sceneKept is { } scene)
         {
-            return;
+            _sceneKept = null;
+            ShowSpec(scene, _sceneKeptAnnotationsPath);
         }
+        RevalidateStoryboard();
+    }
+
+    /// <summary>
+    /// On this tab, the settings show the film: its frame rate, output, terrain and fades, with
+    /// what the selected shot shows over its preset and the film's defaults (even a shot that
+    /// cannot be planned as it stands: its own settings, never another's). With no shot selected
+    /// they show the preset a shot would be added from, and edit nothing of it.
+    /// </summary>
+    private void ShowFilmSettings()
+    {
+        if (!IsStoryboardTab) return;
+        var scene = _sceneKept ?? _spec;
+        int at = SelectedShot is { } row ? Shots.IndexOf(row) : -1;
+        var shot = at >= 0
+            ? StoryboardPlanner.ShotSettings(CurrentStoryboard, at, FindPreset)
+            : SelectedPreset?.Preset.Spec ?? scene;
+        // The shot's texts; the end card is the film's, and is edited with the film's title.
+        var texts = (at >= 0 ? shot.Labels.Overlays : new OverlaySpec()) with
+        {
+            EndCard = null,
+            FadeFromBlack = _filmTexts?.FadeFromBlack ?? 0,
+            FadeToBlack = _filmTexts?.FadeToBlack ?? 0,
+        };
+        ShowSpec(shot with
+        {
+            Source = scene.Source,
+            Animation = shot.Animation with { Fps = _filmFps },
+            Output = _filmOutput,
+            Surface = _filmDefaults.Surface ?? new SurfaceSpec(),
+            Labels = shot.Labels with { Overlays = texts },
+        }, "");
+    }
+
+    /// <summary>The knobs take <paramref name="spec"/>'s values, one after another; the spec is
+    /// not rebuilt from the half of them that have theirs.</summary>
+    private void ShowSpec(SceneSpec spec, string annotationsPath)
+    {
         _suspend = true;
         try
         {
-            _spec = spec with { Source = _spec.Source, Output = _spec.Output };
-            AnnotationsPath = "";
+            _spec = spec;
+            AnnotationsPath = annotationsPath;
             PushSpecToKnobs(_spec);
         }
         finally { _suspend = false; }
         Revalidate();
     }
 
-    /// <summary>After a change of the settings: the selected shot takes what they say.</summary>
-    private void WriteSettingsToShot()
+    /// <summary>After a change of the settings on this tab: the film takes its frame rate,
+    /// output, terrain and fades, and the selected shot the rest.</summary>
+    private void WriteSettingsToFilm()
     {
-        if (!IsStoryboardTab || SelectedShot is not { } row) return;
+        if (!IsStoryboardTab) return;
+        var spec = _spec;
+        _filmFps = spec.Animation.Fps;
+        _filmOutput = spec.Output;
+        // No terrain is said as none, as a storyboard without one says it.
+        var surface = _filmDefaults.Surface is null && spec.Surface == new SurfaceSpec() ? null : spec.Surface;
+        if (surface != _filmDefaults.Surface) _filmDefaults = _filmDefaults with { Surface = surface };
+        var overlays = spec.Labels.Overlays;
+        if (overlays.FadeFromBlack != (_filmTexts?.FadeFromBlack ?? 0) || overlays.FadeToBlack != (_filmTexts?.FadeToBlack ?? 0))
+            SetFilmTexts(t => t with { FadeFromBlack = overlays.FadeFromBlack, FadeToBlack = overlays.FadeToBlack });
+        if (SelectedShot is { } row) WriteSettingsToShot(row);
+        else ShotsChanged();
+    }
+
+    /// <summary>The selected shot takes what the settings say of it.</summary>
+    private void WriteSettingsToShot(StoryboardShotViewModel row)
+    {
         var old = row.Shot;
         var spec = _spec;
         row.Shot = old with
@@ -274,6 +361,7 @@ public sealed partial class BlenderAnimationViewModel
             var film = CurrentStoryboard;
             foreach (var error in StoryboardValidator.Validate(film with { Output = film.Output with { OutputDirectory = "out" } }, FindPreset))
                 StoryboardBlockers.Add($"{error.Path}: {error.Message}");
+            if (RelativeFolderProblem(RenderDirectory) is { } relative) StoryboardBlockers.Add(relative);
         }
         FilmEstimate = null;
         DraftAllCommand.NotifyCanExecuteChanged();
@@ -284,13 +372,10 @@ public sealed partial class BlenderAnimationViewModel
         ListBranchesCommand.NotifyCanExecuteChanged();
     }
 
-    partial void OnPanelTabChanged(int value) => RevalidateStoryboard();
-
     partial void OnSelectedPresetChanged(PresetItem? oldValue, PresetItem? newValue)
     {
-        // In the film, a preset is what a shot is added from: the settings no longer edit a shot.
-        if (IsStoryboardTab) SelectedShot = null;
         AddShotCommand.NotifyCanExecuteChanged();
+        DeletePresetCommand.NotifyCanExecuteChanged();
     }
 
     // ---- draft, estimate, render ----
@@ -314,10 +399,16 @@ public sealed partial class BlenderAnimationViewModel
     {
         LastError = null;
         IsBusy = true;
+        using var work = BeginWork();
         try
         {
-            var source = await _sources!.AcquireAsync(BuildRequest()).ConfigureAwait(true);
-            await EstimateAsync(Film(null), source, draft: false).ConfigureAwait(true);
+            // Finding the model may export it with Therion first: Cancel stops that.
+            var source = await _sources!.AcquireAsync(BuildRequest(), work.Token).ConfigureAwait(true);
+            await EstimateAsync(Film(null), source, draft: false, work.Token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = Tr.Get("Blender_Status_Cancelled");
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.IO.IOException or NotSupportedException
                                        or ModelSourceNotFoundException)
@@ -326,6 +417,7 @@ public sealed partial class BlenderAnimationViewModel
         }
         finally
         {
+            EndWork(work);
             IsBusy = false;
             RevalidateCommands();
         }
@@ -351,10 +443,10 @@ public sealed partial class BlenderAnimationViewModel
         return StoryboardExpander.InlinePresets(film, FindPreset);
     }
 
-    private async Task EstimateAsync(Storyboard film, RenderSource source, bool draft)
+    private async Task EstimateAsync(Storyboard film, RenderSource source, bool draft, CancellationToken ct = default)
     {
         if (_renderService is not IRenderEstimator estimator) return;
-        var estimate = await estimator.EstimateStoryboardAsync(film, source, new RenderOptions { Draft = draft, Owner = PanelHolder }).ConfigureAwait(true);
+        var estimate = await estimator.EstimateStoryboardAsync(film, source, new RenderOptions { Draft = draft, Owner = PanelHolder }, ct).ConfigureAwait(true);
         FilmEstimate = string.Format(CultureInfo.CurrentCulture, Tr.Get("Blender_Storyboard_Estimate"),
             estimate.Frames, TimeSpan.FromSeconds(Math.Round(estimate.Seconds)).ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture),
             estimate.DiskBytes / 1e9, estimate.MemoryBytes / 1e9);
@@ -510,7 +602,7 @@ public sealed partial class StoryboardShotViewModel : ObservableObject
     /// <summary>What the camera does: its template, or a tour of the branches.</summary>
     public string Kind => IsTour
         ? Tr.Get("Blender_Shot_Tour")
-        : (Camera?.Template ?? CameraTemplate.Static).ToString();
+        : ThIDE.Converters.LocKeyConverter.Label(BlenderAnimationViewModel.CameraOptionPrefix, (Camera?.Template ?? CameraTemplate.Static).ToString());
 
     /// <summary>How long the shot is, as it says or as its preset does.</summary>
     public double Seconds => Shot.Seconds

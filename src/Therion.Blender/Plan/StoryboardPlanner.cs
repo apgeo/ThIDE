@@ -120,6 +120,22 @@ public static class StoryboardPlanner
     }
 
     /// <summary>
+    /// What shot <paramref name="index"/> shows, over its preset and the storyboard's defaults, as
+    /// a render spec, whether or not the storyboard is valid (a shot of no length, a preset that is
+    /// not known): for an editor to show the shot as it stands. Not a spec to render: that is
+    /// <see cref="ShotSpec"/>'s.
+    /// </summary>
+    /// <param name="presets">Finds the preset a shot names; null knows the built-in ones.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The storyboard has no such shot.</exception>
+    public static SceneSpec ShotSettings(Storyboard storyboard, int index, Func<string, RenderPreset?>? presets = null)
+    {
+        ArgumentNullException.ThrowIfNull(storyboard);
+        if (index < 0 || index >= storyboard.Shots.Count || storyboard.Shots[index] is null)
+            throw new ArgumentOutOfRangeException(nameof(index), index, $"The storyboard has {storyboard.Shots.Count} shot(s).");
+        return Effective(storyboard, index, presets ?? BuiltInPresets.ByName);
+    }
+
+    /// <summary>
     /// What the conversion of the model needs to know of <paramref name="storyboard"/>, as a
     /// render spec: the reveal its shots run (the reveal values go on the vertices of the one
     /// mesh they share) and the terrain. Not a spec to render.

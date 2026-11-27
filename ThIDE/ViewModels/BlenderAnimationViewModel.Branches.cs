@@ -68,19 +68,28 @@ public sealed partial class BlenderAnimationViewModel
         if (SelectedShot is not { IsTour: true } row || _sources is null) return;
         LastError = null;
         IsPlanningTour = true;
+        IsBusy = true;
+        using var work = BeginWork();
         try
         {
-            var source = await _sources.AcquireAsync(BuildRequest()).ConfigureAwait(true);
+            // Finding the model may export it with Therion first, and reading a large one takes a
+            // while: Cancel stops both.
+            var source = await _sources.AcquireAsync(BuildRequest(), work.Token).ConfigureAwait(true);
             string path = source.Model.Path;
             var written = File.GetLastWriteTimeUtc(path);
             if (_tourModel is not { } kept || kept.Path != path || kept.Written != written)
             {
-                var geometry = await Task.Run(() => GeometryStage.Build(CaveModelReader.ReadFile(path))).ConfigureAwait(true);
+                var geometry = await Task.Run(() => GeometryStage.Build(CaveModelReader.ReadFile(path)), work.Token).ConfigureAwait(true);
+                work.Token.ThrowIfCancellationRequested();
                 _tourModel = (path, written, geometry, source.Leads);
             }
             _tourShot = row;
             _branchOrderSaid = row.Camera?.Route?.Priority is { Count: > 0 };
             await PlanTourAsync(fresh: true).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = Tr.Get("Blender_Status_Cancelled");
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException
                                        or NotSupportedException or ModelSourceNotFoundException or CaveFileFormatException)
@@ -89,7 +98,10 @@ public sealed partial class BlenderAnimationViewModel
         }
         finally
         {
+            EndWork(work);
+            IsBusy = false;
             IsPlanningTour = false;
+            RevalidateCommands();
         }
     }
 
@@ -209,7 +221,7 @@ public sealed partial class BlenderAnimationViewModel
         camera = camera with { Route = route };
         row.Shot = row.Shot with { Camera = camera };
         // The settings edit this shot: they keep its route.
-        if (SelectedShot == row) _spec = _spec with { Camera = camera };
+        if (IsStoryboardTab && SelectedShot == row) _spec = _spec with { Camera = camera };
         ShotsChanged();
     }
 
@@ -245,15 +257,18 @@ public enum BranchVisit
     LeaveOut,
 }
 
-/// <summary>A choice of <see cref="BranchVisit"/> in the row's list.</summary>
-public sealed record BranchVisitItem(BranchVisit Value, string Label)
+/// <summary>A choice of <see cref="BranchVisit"/> in the row's list; its label is in the
+/// interface's language of the moment.</summary>
+public sealed record BranchVisitItem(BranchVisit Value, string LabelKey)
 {
     public static IReadOnlyList<BranchVisitItem> All { get; } =
     [
-        new(BranchVisit.Auto, Tr.Get("Blender_Branch_VisitAuto")),
-        new(BranchVisit.Visit, Tr.Get("Blender_Branch_VisitYes")),
-        new(BranchVisit.LeaveOut, Tr.Get("Blender_Branch_VisitNo")),
+        new(BranchVisit.Auto, "Blender_Branch_VisitAuto"),
+        new(BranchVisit.Visit, "Blender_Branch_VisitYes"),
+        new(BranchVisit.LeaveOut, "Blender_Branch_VisitNo"),
     ];
+
+    public string Label => Tr.Get(LabelKey);
 
     public override string ToString() => Label;
 }

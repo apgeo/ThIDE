@@ -207,7 +207,7 @@ public class BlenderAnimationViewModelTests
     {
         var svc = new FakeRenderService();
         var vm = WithSource(Vm(svc));
-        vm.ExportDirectory = "exports";
+        vm.ExportDirectory = Path.Combine(Path.GetTempPath(), "exports");   // a full path: a relative one is refused
         Assert.False(vm.SelfContained);
         Assert.False(vm.EmbedMesh);
 
@@ -566,7 +566,7 @@ public class BlenderAnimationViewModelTests
     public async Task Export_WritesScriptPath()
     {
         var vm = WithSource(Vm());
-        vm.ExportDirectory = "C:/exports";
+        vm.ExportDirectory = Path.Combine(Path.GetTempPath(), "exports");
         Assert.True(vm.ExportScriptCommand.CanExecute(null));
 
         await vm.ExportScriptCommand.ExecuteAsync(null);

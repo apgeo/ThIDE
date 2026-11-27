@@ -440,9 +440,9 @@
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Station labels</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Lead markers</value></data>
   <data name="Blender_UI_LeadMarkerSize" xml:space="preserve"><value>Lead marker size</value></data>
-  <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Auto: from the passage in a flythrough, from the whole cave otherwise. Cave: always from the whole cave. Passage: always from the passage. CameraDistance: about the same size in the picture at any distance, its caption with it. HiddenInFlythrough: from the whole cave, and none in a flythrough.</value></data>
+  <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Auto: from the passage in a flythrough, from the whole cave otherwise. By the cave: always from the whole cave. By the passage: always from the passage. By camera distance: about the same size in the picture at any distance, its caption with it. Hidden in a flythrough: from the whole cave, and none in a flythrough.</value></data>
   <data name="Blender_UI_LabelRoof" xml:space="preserve"><value>Labels above</value></data>
-  <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>The roof a station label is lifted above. SurveyFirst: the surveyed up distance, else the walls. WallsFirst: the walls, else the surveyed up distance. WallsOnly: the walls only. None: labels sit on their stations.</value></data>
+  <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>The roof a station label is lifted above. Survey, then walls: the surveyed up distance, else the walls. Walls, then survey: the walls, else the surveyed up distance. Walls only: the walls only. None: labels sit on their stations.</value></data>
   <data name="Blender_UI_Surface" xml:space="preserve"><value>Terrain</value></data>
   <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>The terrain surface of a .lox model, above the cave. Off: none. Solid: in one color. Textured: with the surface image draped over it (in one color when the model has no image). From above it is see-through, as much as Terrain opacity says, so the cave shows under it; from below it is invisible. The camera still frames the cave.</value></data>
   <data name="Blender_UI_SurfaceOpacity" xml:space="preserve"><value>Terrain opacity</value></data>
@@ -2147,7 +2147,7 @@ This cannot be undone.</value></data>
   <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Render folder</value></data>
   <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Where the video, frames or still are saved. Leave empty to keep them in the temporary job folder.</value></data>
   <data name="Blender_UI_Builder" xml:space="preserve"><value>Scene builder (advanced)</value></data>
-  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>What makes the scene in Blender when it is rendered, exported or opened in Blender. Auto: the player, which shows everything a scene asks for. Player: the same, asked for by name; it writes the texts over the finished frames, so nothing hides them. Generator: the earlier builder, kept for comparison; it draws the title in the scene and no credits, end card or captions, no annotations and no reveal, and does not turn an HDRI image. A preview is always the player's.</value></data>
+  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>What makes the scene in Blender when it is rendered, exported or opened in Blender. Auto: the player, which shows everything a scene asks for. Player: the same, asked for by name; it writes the texts over the finished frames, so nothing hides them. Script generator: the earlier builder, kept for comparison; it draws the title in the scene and no credits, end card or captions, no annotations and no reveal, and does not turn an HDRI image. A preview is always the player's.</value></data>
   <data name="Blender_UI_Preview" xml:space="preserve"><value>Preview</value></data>
   <data name="Blender_UI_Preview_Tip" xml:space="preserve"><value>A quick draft of the render: half the size, without lights and shadows, a fraction of a second per frame. For checking the camera move, the framing and the texts before the long render. It is saved beside the render, with -draft added to its name.</value></data>
   <data name="Blender_UI_Credits" xml:space="preserve"><value>Credits line</value></data>
@@ -2179,11 +2179,11 @@ This cannot be undone.</value></data>
   <data name="Blender_Fail_BuilderRefused" xml:space="preserve"><value>The player cannot make this scene: it does not carry {0}. Choose the script generator, or Auto.</value></data>
   <data name="Blender_UI_Light" xml:space="preserve"><value>Light</value></data>
   <data name="Blender_UI_LightRig" xml:space="preserve"><value>Light rig</value></data>
-  <data name="Blender_UI_LightRig_Tip" xml:space="preserve"><value>What lights the scene. Headlamp: a lamp on the camera, the look of a caver's head torch. SunSky: a sun and a sky. ThreePoint: three lights, as in a studio. HdriFile: an image all round the scene (an HDRI), which lights it and is what is seen behind the cave.</value></data>
+  <data name="Blender_UI_LightRig_Tip" xml:space="preserve"><value>What lights the scene. Headlamp: a lamp on the camera, the look of a caver's head torch. Sun and sky: a sun and a sky. Three-point: three lights, as in a studio. HDRI image: an image all round the scene (an HDRI), which lights it and is what is seen behind the cave.</value></data>
   <data name="Blender_UI_LightStrength" xml:space="preserve"><value>Light strength</value></data>
   <data name="Blender_UI_LightStrength_Tip" xml:space="preserve"><value>How brightly the light shines: 1 is the rig, or the image, as it is; 2 is twice as bright.</value></data>
   <data name="Blender_UI_HdriPath" xml:space="preserve"><value>HDRI image</value></data>
-  <data name="Blender_UI_HdriPath_Tip" xml:space="preserve"><value>The image the scene is lit by when the light rig is HdriFile: a Radiance .hdr or an OpenEXR .exr file, twice as wide as it is high. The file stays where it is; ThIDE copies it for the render.</value></data>
+  <data name="Blender_UI_HdriPath_Tip" xml:space="preserve"><value>The image the scene is lit by when the light rig is HDRI image: a Radiance .hdr or an OpenEXR .exr file, twice as wide as it is high. The file stays where it is; ThIDE copies it for the render.</value></data>
   <data name="Blender_UI_Browse" xml:space="preserve"><value>Browse…</value></data>
   <data name="Blender_UI_BrowseHdri" xml:space="preserve"><value>Choose the HDRI image</value></data>
   <data name="Blender_UI_HdriRotation" xml:space="preserve"><value>HDRI rotation (degrees)</value></data>
@@ -2192,7 +2192,7 @@ This cannot be undone.</value></data>
   <data name="Blender_UI_LampReach_Tip" xml:space="preserve"><value>For the Headlamp rig. The lamp on the camera lights a wall a few metres away; a cave seen from farther off stays dark. With this on, the lamp is turned up by the distance from the camera to what it looks at, so the cave is lit from far as it is from near. Only the player draws it.</value></data>
   <data name="Blender_UI_Reveal" xml:space="preserve"><value>Reveal</value></data>
   <data name="Blender_UI_RevealBy" xml:space="preserve"><value>Reveal the cave by</value></data>
-  <data name="Blender_UI_RevealBy_Tip" xml:space="preserve"><value>Shows the cave part by part while the clip runs. Off: all of it from the first frame. Distance: from the entrances inwards. Order: leg by leg, in the survey's own order. Date: in the order of the survey dates, with a counter of the years. A still shows the whole cave, and only the player draws a reveal.</value></data>
+  <data name="Blender_UI_RevealBy_Tip" xml:space="preserve"><value>Shows the cave part by part while the clip runs. Off: all of it from the first frame. By distance: from the entrances inwards. By survey order: leg by leg, in the survey's own order. By date: in the order of the survey dates, with a counter of the years. A still shows the whole cave, and only the player draws a reveal.</value></data>
   <data name="Blender_UI_RevealFrom" xml:space="preserve"><value>From station</value></data>
   <data name="Blender_UI_RevealFrom_Tip" xml:space="preserve"><value>By distance: the name of the station the distances are measured from, as the model has it. Empty measures from the entrances.</value></data>
   <data name="Blender_UI_RevealDates" xml:space="preserve"><value>Dates file</value></data>
@@ -2570,4 +2570,57 @@ This cannot be undone.</value></data>
   <data name="Blender_Branch_WhyExcluded" xml:space="preserve"><value>left out by hand</value></data>
   <data name="Blender_Branch_WhySkipped" xml:space="preserve"><value>passed by</value></data>
   <data name="Blender_Tour_Summary" xml:space="preserve"><value>The tour: {1:0.#} s; shots: {0}; side passages: {2}.</value></data>
+  <data name="Opt_Blender_Camera_Static" xml:space="preserve"><value>Static</value></data>
+  <data name="Opt_Blender_Camera_Orbit" xml:space="preserve"><value>Orbit</value></data>
+  <data name="Opt_Blender_Camera_Helix" xml:space="preserve"><value>Helix</value></data>
+  <data name="Opt_Blender_Camera_Flythrough" xml:space="preserve"><value>Flythrough</value></data>
+  <data name="Opt_Blender_Camera_Viewpoints" xml:space="preserve"><value>Viewpoints</value></data>
+  <data name="Opt_Blender_Camera_StillSet" xml:space="preserve"><value>Set of stills</value></data>
+  <data name="Opt_Blender_Camera_Route" xml:space="preserve"><value>Route</value></data>
+  <data name="Opt_Blender_Surface_Off" xml:space="preserve"><value>Off</value></data>
+  <data name="Opt_Blender_Surface_Solid" xml:space="preserve"><value>Solid</value></data>
+  <data name="Opt_Blender_Surface_Textured" xml:space="preserve"><value>Textured</value></data>
+  <data name="Opt_Blender_Light_Headlamp" xml:space="preserve"><value>Headlamp</value></data>
+  <data name="Opt_Blender_Light_SunSky" xml:space="preserve"><value>Sun and sky</value></data>
+  <data name="Opt_Blender_Light_ThreePoint" xml:space="preserve"><value>Three-point</value></data>
+  <data name="Opt_Blender_Light_HdriFile" xml:space="preserve"><value>HDRI image</value></data>
+  <data name="Opt_Blender_Engine_Cycles" xml:space="preserve"><value>Cycles</value></data>
+  <data name="Opt_Blender_Engine_Eevee" xml:space="preserve"><value>EEVEE</value></data>
+  <data name="Opt_Blender_Gpu_Auto" xml:space="preserve"><value>Auto</value></data>
+  <data name="Opt_Blender_Gpu_OptiX" xml:space="preserve"><value>OptiX</value></data>
+  <data name="Opt_Blender_Gpu_Cuda" xml:space="preserve"><value>CUDA</value></data>
+  <data name="Opt_Blender_Gpu_Hip" xml:space="preserve"><value>HIP</value></data>
+  <data name="Opt_Blender_Gpu_OneApi" xml:space="preserve"><value>oneAPI</value></data>
+  <data name="Opt_Blender_Gpu_Metal" xml:space="preserve"><value>Metal</value></data>
+  <data name="Opt_Blender_Gpu_CpuOnly" xml:space="preserve"><value>CPU only</value></data>
+  <data name="Opt_Blender_Builder_Auto" xml:space="preserve"><value>Auto</value></data>
+  <data name="Opt_Blender_Builder_Player" xml:space="preserve"><value>Player</value></data>
+  <data name="Opt_Blender_Builder_Generator" xml:space="preserve"><value>Script generator</value></data>
+  <data name="Opt_Blender_Reveal_Off" xml:space="preserve"><value>Off</value></data>
+  <data name="Opt_Blender_Reveal_Distance" xml:space="preserve"><value>By distance</value></data>
+  <data name="Opt_Blender_Reveal_Order" xml:space="preserve"><value>By survey order</value></data>
+  <data name="Opt_Blender_Reveal_Date" xml:space="preserve"><value>By date</value></data>
+  <data name="Opt_Blender_Output_Video" xml:space="preserve"><value>Video</value></data>
+  <data name="Opt_Blender_Output_FrameSequence" xml:space="preserve"><value>Numbered frames</value></data>
+  <data name="Opt_Blender_Output_Still" xml:space="preserve"><value>Still image</value></data>
+  <data name="Opt_Blender_Container_Mp4" xml:space="preserve"><value>MP4</value></data>
+  <data name="Opt_Blender_Container_Mkv" xml:space="preserve"><value>MKV</value></data>
+  <data name="Opt_Blender_Container_WebM" xml:space="preserve"><value>WebM</value></data>
+  <data name="Opt_Blender_LeadSize_Auto" xml:space="preserve"><value>Auto</value></data>
+  <data name="Opt_Blender_LeadSize_Cave" xml:space="preserve"><value>By the cave</value></data>
+  <data name="Opt_Blender_LeadSize_Passage" xml:space="preserve"><value>By the passage</value></data>
+  <data name="Opt_Blender_LeadSize_CameraDistance" xml:space="preserve"><value>By camera distance</value></data>
+  <data name="Opt_Blender_LeadSize_HiddenInFlythrough" xml:space="preserve"><value>Hidden in a flythrough</value></data>
+  <data name="Opt_Blender_LabelRoof_SurveyFirst" xml:space="preserve"><value>Survey, then walls</value></data>
+  <data name="Opt_Blender_LabelRoof_WallsFirst" xml:space="preserve"><value>Walls, then survey</value></data>
+  <data name="Opt_Blender_LabelRoof_WallsOnly" xml:space="preserve"><value>Walls only</value></data>
+  <data name="Opt_Blender_LabelRoof_None" xml:space="preserve"><value>None</value></data>
+  <data name="Opt_Blender_Transition_Cut" xml:space="preserve"><value>Cut</value></data>
+  <data name="Opt_Blender_Transition_Dip" xml:space="preserve"><value>Dip to black</value></data>
+  <data name="Opt_Blender_Transition_Dissolve" xml:space="preserve"><value>Dissolve</value></data>
+  <data name="Blender_Preset_NameBuiltIn" xml:space="preserve"><value>A built-in preset has this name: choose another.</value></data>
+  <data name="Blender_Preset_NotSaved" xml:space="preserve"><value>The preset "{0}" was not saved: {1}</value></data>
+  <data name="Blender_Preset_NotDeleted" xml:space="preserve"><value>The preset "{0}" was not deleted: {1}</value></data>
+  <data name="Blender_Blocker_RelativeFolder" xml:space="preserve"><value>"{0}" is not a full path: write the folder from the drive or the root (/).</value></data>
+  <data name="Blender_UI_ChooseShotHint" xml:space="preserve"><value>Select a shot to edit its camera, light, engine, reveal, labels and texts below. The terrain, the fades, the frame rate and the output are the film's, and are edited here at any time.</value></data>
 </root>

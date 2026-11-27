@@ -440,11 +440,11 @@
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Etichete stații</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Marcaje continuări</value></data>
   <data name="Blender_UI_LeadMarkerSize" xml:space="preserve"><value>Mărimea marcajelor</value></data>
-  <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Auto: după galerie într-un zbor prin peșteră, după toată peștera altfel. Cave: mereu după toată peștera. Passage: mereu după galerie. CameraDistance: cam aceeași mărime în imagine la orice distanță, cu tot cu textul lui. HiddenInFlythrough: după toată peștera, și deloc într-un zbor prin peșteră.</value></data>
+  <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Automat: după galerie într-un zbor prin peșteră, după toată peștera altfel. După peșteră: mereu după toată peștera. După galerie: mereu după galerie. După distanța camerei: cam aceeași mărime în imagine la orice distanță, cu tot cu textul lui. Ascunse în zbor: după toată peștera, și deloc într-un zbor prin peșteră.</value></data>
   <data name="Blender_UI_LabelRoof" xml:space="preserve"><value>Etichete deasupra</value></data>
-  <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>Tavanul deasupra căruia se ridică eticheta unei stații. SurveyFirst: distanța în sus măsurată, altfel pereții. WallsFirst: pereții, altfel distanța în sus măsurată. WallsOnly: doar pereții. None: etichetele stau pe stații.</value></data>
+  <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>Tavanul deasupra căruia se ridică eticheta unei stații. Măsurat, apoi pereții: distanța în sus măsurată, altfel pereții. Pereții, apoi măsurat: pereții, altfel distanța în sus măsurată. Doar pereții: doar pereții. Niciunul: etichetele stau pe stații.</value></data>
   <data name="Blender_UI_Surface" xml:space="preserve"><value>Teren</value></data>
-  <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>Suprafața terenului unui model .lox, deasupra peșterii. Off: fără. Solid: într-o singură culoare. Textured: cu imaginea suprafeței așezată pe el (într-o singură culoare când modelul nu are imagine). Văzut de sus e transparent, cât spune Opacitatea terenului, ca peștera să se vadă dedesubt; văzut de jos nu se vede. Camera încadrează tot peștera.</value></data>
+  <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>Suprafața terenului unui model .lox, deasupra peșterii. Fără: nu se desenează. Uniform: într-o singură culoare. Cu imagine: cu imaginea suprafeței așezată pe el (într-o singură culoare când modelul nu are imagine). Văzut de sus e transparent, cât spune Opacitatea terenului, ca peștera să se vadă dedesubt; văzut de jos nu se vede. Camera încadrează tot peștera.</value></data>
   <data name="Blender_UI_SurfaceOpacity" xml:space="preserve"><value>Opacitatea terenului</value></data>
   <data name="Blender_UI_SurfaceOpacity_Tip" xml:space="preserve"><value>Cât de opac e terenul văzut de sus: la 0 % nu se vede, la 100 % ascunde peștera de sub el. Implicit 40 %.</value></data>
   <data name="Blender_UI_Render" xml:space="preserve"><value>Randează</value></data>
@@ -2147,7 +2147,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Folder randare</value></data>
   <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Unde se salvează videoclipul, cadrele sau imaginea. Lăsați gol pentru a le păstra în folderul temporar al lucrării.</value></data>
   <data name="Blender_UI_Builder" xml:space="preserve"><value>Constructor de scenă (avansat)</value></data>
-  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>Ce construiește scena în Blender, la randare, la export și la deschiderea în Blender. Auto: playerul, care arată tot ce cere o scenă. Player: același, cerut pe nume; scrie textele peste cadrele terminate, așa că nimic nu le ascunde. Generator: constructorul mai vechi, păstrat pentru comparație; desenează titlul în scenă, nu desenează creditele, cadrul de final sau subtitrările, nici adnotările sau o dezvăluire, și nu rotește o imagine HDRI. O previzualizare este mereu a playerului.</value></data>
+  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>Ce construiește scena în Blender, la randare, la export și la deschiderea în Blender. Automat: playerul, care arată tot ce cere o scenă. Player: același, cerut pe nume; scrie textele peste cadrele terminate, așa că nimic nu le ascunde. Generator de scripturi: constructorul mai vechi, păstrat pentru comparație; desenează titlul în scenă, nu desenează creditele, cadrul de final sau subtitrările, nici adnotările sau o dezvăluire, și nu rotește o imagine HDRI. O previzualizare este mereu a playerului.</value></data>
   <data name="Blender_UI_Preview" xml:space="preserve"><value>Previzualizare</value></data>
   <data name="Blender_UI_Preview_Tip" xml:space="preserve"><value>O schiță rapidă a randării: jumătate din mărime, fără lumini și umbre, o fracțiune de secundă pe cadru. Pentru a verifica mișcarea camerei, încadrarea și textele înainte de randarea lungă. Se salvează lângă randare, cu -draft adăugat la nume.</value></data>
   <data name="Blender_UI_Credits" xml:space="preserve"><value>Linie de credite</value></data>
@@ -2179,20 +2179,20 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_Fail_BuilderRefused" xml:space="preserve"><value>Playerul nu poate construi această scenă: nu redă {0}. Alegeți generatorul de scripturi sau Auto.</value></data>
   <data name="Blender_UI_Light" xml:space="preserve"><value>Lumină</value></data>
   <data name="Blender_UI_LightRig" xml:space="preserve"><value>Sistem de lumini</value></data>
-  <data name="Blender_UI_LightRig_Tip" xml:space="preserve"><value>Ce luminează scena. Headlamp: o lampă pe cameră, ca frontala unui speolog. SunSky: un soare și un cer. ThreePoint: trei lumini, ca într-un studio. HdriFile: o imagine de jur împrejurul scenei (HDRI), care o luminează și este ceea ce se vede în spatele peșterii.</value></data>
+  <data name="Blender_UI_LightRig_Tip" xml:space="preserve"><value>Ce luminează scena. Lampă frontală: o lampă pe cameră, ca frontala unui speolog. Soare și cer: un soare și un cer. Trei lumini: trei lumini, ca într-un studio. Imagine HDRI: o imagine de jur împrejurul scenei (HDRI), care o luminează și este ceea ce se vede în spatele peșterii.</value></data>
   <data name="Blender_UI_LightStrength" xml:space="preserve"><value>Intensitatea luminii</value></data>
   <data name="Blender_UI_LightStrength_Tip" xml:space="preserve"><value>Cât de puternic luminează: 1 este sistemul de lumini, sau imaginea, așa cum este; 2 este de două ori mai puternic.</value></data>
   <data name="Blender_UI_HdriPath" xml:space="preserve"><value>Imagine HDRI</value></data>
-  <data name="Blender_UI_HdriPath_Tip" xml:space="preserve"><value>Imaginea cu care este luminată scena când sistemul de lumini este HdriFile: un fișier Radiance .hdr sau OpenEXR .exr, de două ori mai lat decât înalt. Fișierul rămâne unde este; ThIDE îl copiază pentru randare.</value></data>
+  <data name="Blender_UI_HdriPath_Tip" xml:space="preserve"><value>Imaginea cu care este luminată scena când sistemul de lumini este Imagine HDRI: un fișier Radiance .hdr sau OpenEXR .exr, de două ori mai lat decât înalt. Fișierul rămâne unde este; ThIDE îl copiază pentru randare.</value></data>
   <data name="Blender_UI_Browse" xml:space="preserve"><value>Răsfoiește…</value></data>
   <data name="Blender_UI_BrowseHdri" xml:space="preserve"><value>Alegeți imaginea HDRI</value></data>
   <data name="Blender_UI_HdriRotation" xml:space="preserve"><value>Rotire HDRI (grade)</value></data>
   <data name="Blender_UI_HdriRotation_Tip" xml:space="preserve"><value>Cu cât este rotită imaginea în jurul verticalei, în sens invers acelor de ceasornic văzut de sus: aduce soarele din imagine acolo de unde trebuie să vină lumina. Doar playerul o rotește.</value></data>
   <data name="Blender_UI_LampReach" xml:space="preserve"><value>Lampa bate până unde privește camera</value></data>
-  <data name="Blender_UI_LampReach_Tip" xml:space="preserve"><value>Pentru lumina Headlamp. Lampa de pe cameră luminează un perete aflat la câțiva metri; o peșteră privită de mai departe rămâne întunecată. Cu opțiunea activă, lampa este întărită după distanța de la cameră până la ceea ce privește, astfel încât peștera este luminată de departe la fel ca de aproape. Este desenată doar de player.</value></data>
+  <data name="Blender_UI_LampReach_Tip" xml:space="preserve"><value>Pentru lumina Lampă frontală. Lampa de pe cameră luminează un perete aflat la câțiva metri; o peșteră privită de mai departe rămâne întunecată. Cu opțiunea activă, lampa este întărită după distanța de la cameră până la ceea ce privește, astfel încât peștera este luminată de departe la fel ca de aproape. Este desenată doar de player.</value></data>
   <data name="Blender_UI_Reveal" xml:space="preserve"><value>Dezvăluire</value></data>
   <data name="Blender_UI_RevealBy" xml:space="preserve"><value>Dezvăluie peștera după</value></data>
-  <data name="Blender_UI_RevealBy_Tip" xml:space="preserve"><value>Arată peștera parte cu parte cât rulează clipul. Off: toată, de la primul cadru. Distance: de la intrări spre interior. Order: viză cu viză, în ordinea ridicării topografice. Date: în ordinea datelor ridicării, cu un contor al anilor. O imagine statică arată toată peștera, iar o dezvăluire este desenată doar de player.</value></data>
+  <data name="Blender_UI_RevealBy_Tip" xml:space="preserve"><value>Arată peștera parte cu parte cât rulează clipul. Fără: toată, de la primul cadru. După distanță: de la intrări spre interior. În ordinea ridicării: viză cu viză, în ordinea ridicării topografice. După dată: în ordinea datelor ridicării, cu un contor al anilor. O imagine statică arată toată peștera, iar o dezvăluire este desenată doar de player.</value></data>
   <data name="Blender_UI_RevealFrom" xml:space="preserve"><value>De la stația</value></data>
   <data name="Blender_UI_RevealFrom_Tip" xml:space="preserve"><value>După distanță: numele stației de la care se măsoară distanțele, așa cum îl are modelul. Gol, se măsoară de la intrări.</value></data>
   <data name="Blender_UI_RevealDates" xml:space="preserve"><value>Fișier cu date</value></data>
@@ -2570,4 +2570,57 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_Branch_WhyExcluded" xml:space="preserve"><value>lăsată deoparte de mână</value></data>
   <data name="Blender_Branch_WhySkipped" xml:space="preserve"><value>trecută cu vederea</value></data>
   <data name="Blender_Tour_Summary" xml:space="preserve"><value>Parcursul: {1:0.#} s, secvențe: {0}; galerii laterale: {2}.</value></data>
+  <data name="Opt_Blender_Camera_Static" xml:space="preserve"><value>Fixă</value></data>
+  <data name="Opt_Blender_Camera_Orbit" xml:space="preserve"><value>Orbită</value></data>
+  <data name="Opt_Blender_Camera_Helix" xml:space="preserve"><value>Elice</value></data>
+  <data name="Opt_Blender_Camera_Flythrough" xml:space="preserve"><value>Zbor prin peșteră</value></data>
+  <data name="Opt_Blender_Camera_Viewpoints" xml:space="preserve"><value>Puncte de vedere</value></data>
+  <data name="Opt_Blender_Camera_StillSet" xml:space="preserve"><value>Set de imagini statice</value></data>
+  <data name="Opt_Blender_Camera_Route" xml:space="preserve"><value>Traseu</value></data>
+  <data name="Opt_Blender_Surface_Off" xml:space="preserve"><value>Fără</value></data>
+  <data name="Opt_Blender_Surface_Solid" xml:space="preserve"><value>Uniform</value></data>
+  <data name="Opt_Blender_Surface_Textured" xml:space="preserve"><value>Cu imagine</value></data>
+  <data name="Opt_Blender_Light_Headlamp" xml:space="preserve"><value>Lampă frontală</value></data>
+  <data name="Opt_Blender_Light_SunSky" xml:space="preserve"><value>Soare și cer</value></data>
+  <data name="Opt_Blender_Light_ThreePoint" xml:space="preserve"><value>Trei lumini</value></data>
+  <data name="Opt_Blender_Light_HdriFile" xml:space="preserve"><value>Imagine HDRI</value></data>
+  <data name="Opt_Blender_Engine_Cycles" xml:space="preserve"><value>Cycles</value></data>
+  <data name="Opt_Blender_Engine_Eevee" xml:space="preserve"><value>EEVEE</value></data>
+  <data name="Opt_Blender_Gpu_Auto" xml:space="preserve"><value>Automat</value></data>
+  <data name="Opt_Blender_Gpu_OptiX" xml:space="preserve"><value>OptiX</value></data>
+  <data name="Opt_Blender_Gpu_Cuda" xml:space="preserve"><value>CUDA</value></data>
+  <data name="Opt_Blender_Gpu_Hip" xml:space="preserve"><value>HIP</value></data>
+  <data name="Opt_Blender_Gpu_OneApi" xml:space="preserve"><value>oneAPI</value></data>
+  <data name="Opt_Blender_Gpu_Metal" xml:space="preserve"><value>Metal</value></data>
+  <data name="Opt_Blender_Gpu_CpuOnly" xml:space="preserve"><value>Doar procesorul (CPU)</value></data>
+  <data name="Opt_Blender_Builder_Auto" xml:space="preserve"><value>Automat</value></data>
+  <data name="Opt_Blender_Builder_Player" xml:space="preserve"><value>Player</value></data>
+  <data name="Opt_Blender_Builder_Generator" xml:space="preserve"><value>Generator de scripturi</value></data>
+  <data name="Opt_Blender_Reveal_Off" xml:space="preserve"><value>Fără</value></data>
+  <data name="Opt_Blender_Reveal_Distance" xml:space="preserve"><value>După distanță</value></data>
+  <data name="Opt_Blender_Reveal_Order" xml:space="preserve"><value>În ordinea ridicării</value></data>
+  <data name="Opt_Blender_Reveal_Date" xml:space="preserve"><value>După dată</value></data>
+  <data name="Opt_Blender_Output_Video" xml:space="preserve"><value>Video</value></data>
+  <data name="Opt_Blender_Output_FrameSequence" xml:space="preserve"><value>Cadre numerotate</value></data>
+  <data name="Opt_Blender_Output_Still" xml:space="preserve"><value>Imagine statică</value></data>
+  <data name="Opt_Blender_Container_Mp4" xml:space="preserve"><value>MP4</value></data>
+  <data name="Opt_Blender_Container_Mkv" xml:space="preserve"><value>MKV</value></data>
+  <data name="Opt_Blender_Container_WebM" xml:space="preserve"><value>WebM</value></data>
+  <data name="Opt_Blender_LeadSize_Auto" xml:space="preserve"><value>Automat</value></data>
+  <data name="Opt_Blender_LeadSize_Cave" xml:space="preserve"><value>După peșteră</value></data>
+  <data name="Opt_Blender_LeadSize_Passage" xml:space="preserve"><value>După galerie</value></data>
+  <data name="Opt_Blender_LeadSize_CameraDistance" xml:space="preserve"><value>După distanța camerei</value></data>
+  <data name="Opt_Blender_LeadSize_HiddenInFlythrough" xml:space="preserve"><value>Ascunse în zbor</value></data>
+  <data name="Opt_Blender_LabelRoof_SurveyFirst" xml:space="preserve"><value>Măsurat, apoi pereții</value></data>
+  <data name="Opt_Blender_LabelRoof_WallsFirst" xml:space="preserve"><value>Pereții, apoi măsurat</value></data>
+  <data name="Opt_Blender_LabelRoof_WallsOnly" xml:space="preserve"><value>Doar pereții</value></data>
+  <data name="Opt_Blender_LabelRoof_None" xml:space="preserve"><value>Niciunul</value></data>
+  <data name="Opt_Blender_Transition_Cut" xml:space="preserve"><value>Tăietură</value></data>
+  <data name="Opt_Blender_Transition_Dip" xml:space="preserve"><value>Trecere prin negru</value></data>
+  <data name="Opt_Blender_Transition_Dissolve" xml:space="preserve"><value>Suprapunere</value></data>
+  <data name="Blender_Preset_NameBuiltIn" xml:space="preserve"><value>O presetare predefinită are acest nume: alegeți altul.</value></data>
+  <data name="Blender_Preset_NotSaved" xml:space="preserve"><value>Presetarea „{0}” nu a fost salvată: {1}</value></data>
+  <data name="Blender_Preset_NotDeleted" xml:space="preserve"><value>Presetarea „{0}” nu a fost ștearsă: {1}</value></data>
+  <data name="Blender_Blocker_RelativeFolder" xml:space="preserve"><value>„{0}” nu este o cale completă: scrieți folderul de la unitate sau de la rădăcină (/).</value></data>
+  <data name="Blender_UI_ChooseShotHint" xml:space="preserve"><value>Selectați o secvență ca să-i editați mai jos camera, lumina, motorul, dezvăluirea, etichetele și textele. Terenul, ieșirea din negru și intrarea în negru, cadrele pe secundă și ieșirea sunt ale filmului și se editează aici oricând.</value></data>
 </root>
