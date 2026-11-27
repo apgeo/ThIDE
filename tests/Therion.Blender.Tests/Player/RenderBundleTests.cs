@@ -576,6 +576,35 @@ public class RenderBundleTests : IDisposable
     }
 
     [Fact]
+    public void ABundleOfACaveWithATerrainCutaway_CarriesItInThePlan_AndNoFileMore()
+    {
+        string lox = Path.Combine(_dir, "terrain-cut.lox");
+        LoxWriter.WriteFile(InventedTerrain.Add(InventedCave.Build(InventedCaveSize.Small)), lox);
+        var source = new ResolvedModelSource { Path = lox, Format = CaveSourceFormat.Lox, Kind = ModelSourceKind.ExternalFile };
+        var spec = Orbit with
+        {
+            Surface = new SurfaceSpec { Mode = SurfaceMode.Textured, Opacity = 1, Cutaway = new CutawaySpec { Margin = 12, OpenSeconds = 2 } },
+        };
+
+        var content = RenderBundleWriter.FromModel(source, spec, Path.Combine(_dir, "work-terrain-cut"), draft: true);
+
+        Assert.Empty(content.NotCarried);
+        Assert.Empty(content.Notices);
+        Assert.Equal(["model.ply", "surface.ply", "surface.png"], content.Files.Keys);
+        var cut = Assert.Single(content.Plan.TexturedMaterials!).Cutaway!;
+        Assert.Equal(12, cut.Radius);
+        Assert.NotEmpty(cut.Lines);
+        Assert.Single(content.Plan.Changes!, c => c.Cutaway is not null);
+        Assert.Equal(cut, content.Draft!.TexturedMaterials![0].Cutaway);
+
+        string zipPath = Path.Combine(_dir, "terrain-cut.zip");
+        RenderBundleWriter.WriteZip(content, zipPath);
+        string plan = System.Text.Encoding.UTF8.GetString(Read(zipPath)["scene-plan.json"]);
+        Assert.Contains("\"cutaway\": {", plan);
+        Assert.Empty(ScenePlanValidator.Validate(ScenePlanSerializer.Read(plan)));
+    }
+
+    [Fact]
     public void ABundleOfACaveWithATerrain_CarriesTheTerrainAndItsImage()
     {
         string lox = Path.Combine(_dir, "terrain.lox");

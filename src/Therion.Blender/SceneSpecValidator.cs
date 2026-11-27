@@ -26,6 +26,7 @@ public static class SceneSpecValidator
     public const double MaxRevolutions = 1_000;
     public const double MaxTurns = 1_000;
     public const double MaxScale = 1_000;
+    public const double MaxCutawayMargin = 10_000;
     public const int MaxSmoothingIterations = 8;
     public const int MinViewpoints = 2;
 
@@ -81,6 +82,21 @@ public static class SceneSpecValidator
         // ---- surface ----
         if (spec.Surface.Opacity is < 0 or > 1 || double.IsNaN(spec.Surface.Opacity))
             Bad("surface.opacity", "Surface opacity must be within 0–1.");
+        if (spec.Surface.Cutaway is { } cut)
+        {
+            if (!(cut.Margin > 0 && cut.Margin <= MaxCutawayMargin))
+                Bad("surface.cutaway.margin", $"The margin of a cut-away must be within (0, {MaxCutawayMargin}] m.");
+            if (!(cut.Edge >= 0 && cut.Edge <= MaxCutawayMargin))
+                Bad("surface.cutaway.edge", $"The edge of a cut-away must be within 0–{MaxCutawayMargin} m.");
+            if (!(cut.Rim >= 0 && cut.Rim <= 1))
+                Bad("surface.cutaway.rim", "The rim of a cut-away must be within 0–1.");
+            if (!(cut.OpenAt >= 0 && cut.OpenAt <= MaxDurationSeconds))
+                Bad("surface.cutaway.openAt", "The time a cut-away opens at is in seconds, not negative.");
+            if (!(cut.OpenSeconds >= 0 && cut.OpenSeconds <= MaxDurationSeconds))
+                Bad("surface.cutaway.openSeconds", "The time a cut-away takes to open is in seconds, not negative.");
+            if (!Enum.IsDefined(cut.Shape))
+                Bad("surface.cutaway.shape", "Unknown cut-away shape.");
+        }
 
         // ---- lighting ----
         if (spec.Lighting.Strength is < 0 or > MaxLightStrength || double.IsNaN(spec.Lighting.Strength))

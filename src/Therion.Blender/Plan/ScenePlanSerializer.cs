@@ -91,6 +91,12 @@ public static class ScenePlanSerializer
             foreach (var property in type.Properties)
                 if (property.Name == "shadow") property.ShouldSerialize = (_, value) => value is false;
         }
+        else if (type.Type == typeof(PlanCutaway))
+        {
+            // A line of a cut-away on a line of its own.
+            foreach (var property in type.Properties)
+                if (property.Name == "lines") property.CustomConverter = new CutawayLinesConverter();
+        }
     }
 
     public static string Write(ScenePlan plan)
@@ -397,6 +403,38 @@ public static class ScenePlanSerializer
             if (value.Colors is { } colors) line.Append(", \"colors\": [").AppendJoin(", ", colors.Select(Text)).Append(']');
             if (value.Reveal is { } reveal) line.Append(", \"reveal\": [").AppendJoin(", ", reveal.Select(Num)).Append(']');
             writer.WriteRawValue(line.Append(" }").ToString());
+        }
+    }
+
+    private const string CutawayLineIndent = "\n          ";
+
+    private sealed class CutawayLinesConverter : JsonConverter<IReadOnlyList<IReadOnlyList<CaveVector3>>>
+    {
+        public override IReadOnlyList<IReadOnlyList<CaveVector3>> Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            const string expected = "Expected an array of lines, each an array of points.";
+            if (reader.TokenType != JsonTokenType.StartArray) throw new JsonException(expected);
+            var lines = new List<IReadOnlyList<CaveVector3>>();
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+            {
+                if (reader.TokenType != JsonTokenType.StartArray) throw new JsonException(expected);
+                var points = new List<CaveVector3>();
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                {
+                    var (x, y, z) = ReadTriple(ref reader);
+                    points.Add(new CaveVector3(x, y, z));
+                }
+                lines.Add(points);
+            }
+            return lines;
+        }
+
+        public override void Write(Utf8JsonWriter writer, IReadOnlyList<IReadOnlyList<CaveVector3>> value, JsonSerializerOptions options)
+        {
+            writer.WriteStartArray();
+            foreach (var line in value)
+                writer.WriteRawValue(new StringBuilder(CutawayLineIndent).Append('[').AppendJoin(", ", (line ?? []).Select(Text)).Append(']').ToString());
+            writer.WriteEndArray();
         }
     }
 

@@ -2,7 +2,7 @@
 
 ## 2026-11-27 — fixes in the core: a counter over walls in parts, routes, tours, names
 
-The plan stays **version 1** and this is player **1.13**. No plan key is new or changed; the player
+The plan stays **version 1** and this is player **1.14**. No plan key is new or changed; the player
 refuses some hand-written plans it used to read wrongly (below).
 
 ### Breaking changes
@@ -58,7 +58,7 @@ refuses some hand-written plans it used to read wrongly (below).
 - `TourBuilder` names the cap of `TourSeconds` and `BranchSeconds`: "more than 0 and at most 86400
   seconds".
 
-### Player 1.13
+### Player 1.14
 - A counter's `target` is matched to a change by its id and role, as C# matches it:
   `{"id": "m", "role": null}` names the change of `{"id": "m"}`.
 - A plan with `NaN`, `Infinity` or a number too large for a float (`1e999`) is refused when it is
@@ -66,6 +66,63 @@ refuses some hand-written plans it used to read wrongly (below).
 - A module name with a line break after it is not a module name.
 - A dip of one frame is the colour on the first frame of the shot it leads to only, as the
   movie's timing has it (the comment said otherwise; the picture is unchanged).
+
+## 2026-11-27 — a cut-away of the terrain over the cave
+
+The plan stays **version 1** and this is player **1.13**. Everything here is a new, optional key,
+so every plan of yesterday plays as it did. A plan that uses one needs a player 1.13 (an older
+player refuses the key by name, as it refuses every key it does not know).
+
+### Breaking changes
+- None. `SurfaceSpec` has one more key, `cutaway`, written only when set, so the JSON (and the
+  hash) of a spec without it is what it was.
+
+### The spec
+- **`SurfaceSpec.Cutaway`** (`surface.cutaway`, null by default): **`CutawaySpec`** with `Shape`
+  (**`CutawayShape`**: `Footprint`, the default — every place within `Margin` of the centreline,
+  seen from above; `Circle` — a disc that holds the whole cave and `Margin` more), `Margin`
+  (15 m), `Edge` (the soft edge, 4 m), `Rim` (how dark the rim on the ground is, 0–1, 0.6),
+  `OpenAt` and `OpenSeconds` (when the hole starts to open and how long it takes, eased; both 0:
+  open throughout). `SceneSpecValidator` checks the numbers (`MaxCutawayMargin`). Drawn by the
+  player only; the script generator draws the terrain without it.
+- The storyboard schema describes `defaults.surface` (`mode`, `opacity`, `cutaway`) where it
+  said only "an object". Every shot of a film opens the hole again, in its own time.
+
+### The plan
+- **`PlanTexturedMaterial.Cutaway`** (`texturedMaterials[].cutaway`): **`PlanCutaway`** with
+  `Lines` (polylines in the plan's frame, each of one point or more; Z is not used; at most
+  `MaxPoints` = 100,000 points), `Radius` (metres; the hole is every place within it of the lines,
+  across the ground), `Edge` (the soft edge, inside the radius), `Open` (0–1, how much of the
+  radius is open; default 1) and `Rim` (**`PlanCutawayRim`**: `Color`, `Width`, `Strength`; null is
+  none).
+- **`PlanChange.Cutaway`** (`changes[].cutaway`, number keys 0–1): how open the cut-away of a
+  model's textured material is; the hole grows out from its lines. Only of a model whose textured
+  material has a cut-away (`ScenePlanValidator`, and the player by name).
+- **`CutawayPlanner`** (`Plan/`): `Plan(spec, framing)` — the footprint follows every leg of the
+  centreline graph, joined into runs between ends and junctions (and round loops) and thinned to
+  within `Tolerance` (0.25 m), or the longest path without a graph, or a circle without either
+  (`HasFootprint`); `Change(spec, target)` — the opening; `Footprint(framing)` — the lines alone,
+  for whoever writes a plan of their own; `RimColor`, `MinRimWidth`.
+- `ScenePlanBuilder.FromSpec` gives the terrain's material its cut-away and adds the opening to
+  the changes; `Notices` says when a footprint is a circle for want of a centreline.
+
+### The player
+- `textured_materials` works out, once, how far every place near the lines is from them on a grid
+  (a pixel a quarter of the edge, at most 2048 a side), keeps it in a float image packed into the
+  scene (`ThideCutawayField:<material>`; a saved scene carries it), and multiplies the material's
+  alpha by a smooth step from the radius open less the edge to the radius open, read from the
+  world position: the same in Cycles and EEVEE, in Blender 4.2, 4.5 and 5.0. The rim mixes its
+  colour over the base colour, growing in as the hole opens. The mesh is not changed. The object's
+  number `thide_cutaway` is how open it is; `changes` keys it.
+- The draft (solid view) takes away the faces in the hole with a modifier
+  (`ThideCutawayDraft`, over a vertex attribute `thide_cutaway_distance`), following the same
+  number, and warns that the soft edge and the rim are not drawn. A see-through terrain is still
+  left out of the draft.
+
+### The panel
+- **Terrain cut-away** (*Off*, *Footprint*, *Circle*), **Cut-away margin (metres)** and **Cut-away
+  opens over (seconds)**, under the terrain's opacity; what the panel does not show (edge, rim, the time
+  it starts to open) is kept.
 
 ## 2026-11-27 — render node protocol: receiver check and reason constants
 
