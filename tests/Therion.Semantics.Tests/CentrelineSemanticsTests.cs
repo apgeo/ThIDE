@@ -132,6 +132,23 @@ public class CentrelineSemanticsTests
     }
 
     [Fact]
+    public void A_bracketed_dimension_pair_is_one_column()
+    {
+        // Therion reads [from to] as one reading: the dimension at both ends of the shot.
+        var model = Bind("""
+            survey s
+              centreline
+                data normal from to length compass clino left right up down
+                1 2 5.0 010 0 [1 1.5] 2 [- 1] 0.5
+              endcentreline
+            endsurvey
+            """);
+        Assert.DoesNotContain(model.Diagnostics, d => d.Code == SemanticDiagnosticCodes.DataRowArity);
+        Assert.DoesNotContain(model.Diagnostics, d => d.Code == SemanticDiagnosticCodes.DataValueInvalid);
+        Assert.Single(model.Shots);
+    }
+
+    [Fact]
     public void Ignoreall_suppresses_arity_warnings()
     {
         var model = Bind("""
