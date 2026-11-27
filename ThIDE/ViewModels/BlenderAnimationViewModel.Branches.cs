@@ -117,7 +117,7 @@ public sealed partial class BlenderAnimationViewModel
     {
         Tour tour;
         try { tour = await work.ConfigureAwait(true); }
-        catch (ArgumentException ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             if (version == _tourVersion) LastError = ex.Message.Split(" (Parameter", 2)[0];
             return;

@@ -78,11 +78,13 @@ public sealed partial class BlenderAnimationViewModel
         RevalidateStoryboard();
     }
 
-    /// <summary>True when the texts say nothing: the film then has none.</summary>
+    private static readonly IReadOnlyList<CaptionSpec> NoCaptions = [];
+
+    /// <summary>True when the texts say nothing that the default texts do not: the film then has
+    /// none. (Two empty lists are not equal as a record compares them, so both are made one.)</summary>
     private static bool IsBlank(OverlaySpec t)
-        => t.Title is null && t.Subtitle is null && t.TitleSeconds is null && t.EndCard is null && t.Credits is null && t.Corner is null
-           && t.Captions.Count == 0 && t.CornerCaptions.Count == 0 && t.FadeFromBlack == 0 && t.FadeToBlack == 0
-           && t.TitleFade is null && t.TitleFadeIn is null && t.TitleFadeOut is null && !t.ScaleBar && !t.NorthArrow && !t.DepthLegend;
+        => t.Captions.Count == 0 && t.CornerCaptions.Count == 0
+           && t with { Captions = NoCaptions, CornerCaptions = NoCaptions } == new OverlaySpec { Captions = NoCaptions, CornerCaptions = NoCaptions };
 
     private void FilmTextsChanged()
     {
