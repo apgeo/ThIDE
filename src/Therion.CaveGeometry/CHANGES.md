@@ -1,5 +1,24 @@
 # Therion.CaveGeometry — changes for consumers
 
+## 2026-11-27 — model readers
+
+Additive only. Readers for 3-D model files, in `Therion.CaveGeometry` (`Readers/`). Coordinates come
+back exactly as stored: no axis swap, no unit scaling, no recentring.
+
+- **`ModelReader`**: `Read(path)`, `Read(stream, format)`, `TryDetectFormat(path, out format)`
+  (content first: binary STL by exact size, "solid" + "facet", a `ply` line, the `glTF` magic, OBJ
+  vertex lines; extension as the fallback).
+- **`ModelFile`**: `Format`, `Mesh` or `Points` (exactly one), `IsPointCloud`, `UpAxisHint`
+  (`ModelUpAxis.Y` for glb, `Z` otherwise), `UnitsKnown` (glb only: metres), `Warnings`.
+  `ModelFileFormat` (`Stl, Ply, Obj, Glb, Xyz`), `ModelUpAxis` (`Z, Y`).
+- **`CavePointCloud`**: `Points`, optional `Normals` and `Colors`, `Bounds`, `IsEmpty`, `Empty`.
+- **`StlReader`**, **`PlyReader`**, **`ObjReader`**, **`GlbReader`**, **`XyzReader`**: each has
+  `Read(Stream)`. STL welds equal vertices; PLY reads colours, `s/t` and the `reveal` property
+  the PLY writer emits; glb applies node transforms.
+- Malformed input (truncated data, a count the data cannot hold, an index out of range, a bad
+  magic, a required glTF extension such as Draco, meshopt or quantization) throws
+  `Therion.Cave3D.Parsing.CaveFileFormatException`.
+
 ## 2026-11-27 — the walls in parts
 
 - **`WallParts.Split(geometry)`**: the walls as `WallPart`s (`Index`, `Mesh`, `Bounds`, `Branches`,
