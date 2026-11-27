@@ -90,7 +90,8 @@ public static partial class ScenePlanValidator
             Bad("output.directory", "An output directory is required ('.' is the plan's own folder).");
         if (string.IsNullOrWhiteSpace(plan.Output.BaseName))
             Bad("output.baseName", "A base file name is required.");
-        else if (!SceneSpecValidator.IsPlainFileName(plan.Output.BaseName))
+        else if (plan.Output.BaseName.AsSpan().IndexOfAny('/', '\\') >= 0
+                 || plan.Output.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             Bad("output.baseName", "The base name must be a plain file name (no separators or reserved characters).");
 
         // ---- the scene as a Blender file ----

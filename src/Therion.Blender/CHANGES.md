@@ -31,9 +31,6 @@ and no longer puts its own folder on Python's module path.
   as written only: `http://loopback/` (which .NET reads as `localhost`) is refused.
 - **`RenderNodeProtocol.IsJobId`** refuses device names of Windows (`NUL`, `CON`, `COM1.x`…) and an
   id that ends in a dot.
-- **`SceneSpecValidator`, `ScenePlanValidator`, `MoviePlanValidator`** refuse a base name that holds
-  a character any system refuses (`*`, `?`, `<`, `|`…) or is a device name of Windows, on every
-  system (before, Linux let `*` and `?` through).
 
 ### Additive API
 - `RenderBundleReader.Triangles(path)`: the triangles of a PLY or GLB counted from its data.
@@ -42,7 +39,7 @@ and no longer puts its own folder on Python's module path.
   its control characters as `\uXXXX`).
 - `RenderNodeProtocol.IsThisMachine(uri)`, `LeaseSeconds(seconds)` and `MaxLeaseSeconds` (a day):
   `HeartbeatInterval` takes a lease of at most a day.
-- `SceneSpecValidator.IsPlainFileName(name)`; `PlanImage.Identify(stream)`.
+- `PlanImage.Identify(stream)`.
 
 ### Behaviour
 - `RenderBundleReader.PlyFaces` reads a header of any length (up to 1 MiB) and still only declares;

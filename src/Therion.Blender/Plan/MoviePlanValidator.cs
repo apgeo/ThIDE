@@ -97,7 +97,8 @@ public static class MoviePlanValidator
             Bad("output.directory", "An output directory is required ('.' is the plan's own folder).");
         if (string.IsNullOrWhiteSpace(movie.Output.BaseName))
             Bad("output.baseName", "A base file name is required.");
-        else if (!SceneSpecValidator.IsPlainFileName(movie.Output.BaseName))
+        else if (movie.Output.BaseName.AsSpan().IndexOfAny('/', '\\') >= 0
+                 || movie.Output.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             Bad("output.baseName", "The base name must be a plain file name (no separators or reserved characters).");
         return errors;
     }

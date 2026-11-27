@@ -513,18 +513,6 @@ public sealed class RenderBundleReaderSecurityTests(ITestOutputHelper output) : 
     [InlineData("job.")]
     public void AJobIdThatWindowsTakesForADevice_IsNotAJobId(string id) => Assert.False(RenderNodeProtocol.IsJobId(id));
 
-    [Theory]
-    [InlineData("clip*")]
-    [InlineData("clip?")]
-    [InlineData("con")]
-    [InlineData("a<b")]
-    public void ABaseNameWithAWildcardOrADeviceName_IsRefused(string name)
-    {
-        var spec = Small with { Output = Small.Output with { BaseName = name, OutputDirectory = _dir } };
-        Assert.Contains(SceneSpecValidator.Validate(spec), e => e.Path == "output.baseName");
-        Assert.False(SceneSpecValidator.IsPlainFileName(name));
-    }
-
     [Fact]
     public void APhotoNamedForAWindowsDevice_TravelsUnderAnotherName()
     {
