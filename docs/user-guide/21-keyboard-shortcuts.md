@@ -83,8 +83,8 @@ See [Compiling & output](10-compiling-and-output.md).
 | `F11` | Toggle full screen |
 
 The other panel toggles (Object Browser, Outline, Overview, Log, Mainline Preview, Map Viewer, 3D Viewer,
-Structural Geology, Blender Animation) ship **unbound** — use the **View** menu, or bind them
-yourself in **Settings → Keyboard Shortcuts**.
+Structural Geology, Blender Animation) ship **unbound** — use the **View** menu (the **Tools** menu
+for Blender Animation), or bind them yourself in **Settings → Keyboard Shortcuts**.
 
 ## Command Palette prefixes
 

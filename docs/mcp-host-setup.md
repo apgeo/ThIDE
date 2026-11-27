@@ -227,11 +227,13 @@ these tools.
 
 A render takes minutes to hours, longer than a host waits for one tool call, so it runs as a job: start
 it, then ask `render_status` until it says `succeeded`, `failed` (with a `failureKind` such as
-`blenderNotFound` and the path of Blender's log) or `cancelled`. One render runs at a time; a second
-`start_render` answers `render_busy`. `start_render` takes a preset name and optionally a `.lox`/`.3d` in
-the workspace, the output kind (`video`, `frames`, `still`), width, height, length, samples, output folder
-and file name. `draft: true` renders a quick preview (seconds, in Blender's solid view) to look at before
-the long render. `title`, `credits`, `endCard` (with `endCardSeconds`) and `captions` (each
+`blenderNotFound` and the path of Blender's log) or `cancelled`. One render runs at a time, whoever
+started it (an agent or ThIDE's Blender panel): a second `start_render` is queued (state `queued`) and
+starts when the one before has ended. `render_busy` comes only when 10 renders have not ended yet.
+`start_render` takes a preset name and optionally a `.lox`/`.3d` in the workspace, the output kind
+(`video`, `frames`, `still`), width, height, length, samples, output folder and file name.
+`draft: true` renders only a quick preview instead (seconds, in Blender's solid view): look at it, then
+start the long render. `title`, `credits`, `endCard` (with `endCardSeconds`) and `captions` (each
 `"<start>-<end>:<text>"`, times in seconds) are written over the picture, and captions also as `.srt` and
 `.vtt` beside the movie. `{cave}` in any of them stands for the cave's name, which the built-in presets
 write as their title; an empty `title` renders without one. `builder` (`auto`, `player`, `generator`)
@@ -240,7 +242,8 @@ script generator is used only when it is asked for. `render_status` says which d
 the render does not show (`leftOut`). `annotations` names a JSON file of labels, callouts, markers and
 photos in the workspace, `reveal` (`date`, `order`, `distance`, with `revealFrom` and `revealDates`) shows
 the cave part by part, and `hdri` names an image in the workspace the scene is lit by (a `.hdr` or an
-`.exr`), with `hdriStrength` and `hdriRotation` (degrees). Without a model it renders the project's own: the last build output, or — when that is
+`.exr`; with `builder: generator`, any picture Blender reads), with `hdriStrength` and `hdriRotation`
+(degrees). Without a model it renders the project's own: the last build output, or — when that is
 missing or older than the sources — a fresh export of the model alone by Therion, on a copy of the
 thconfig without its `system` lines. Outputs go to a folder in the workspace, or to a temporary folder
 that `render_status` names; paths outside the workspace and the project's config folder are refused.
@@ -250,9 +253,18 @@ Stopping the server (or ThIDE) cancels a render still running.
 writes) and renders that film of several shots instead of one scene: every file it names (photos, HDRI
 images, survey dates) is relative to it and must be in the workspace, the presets its shots name are the
 built-in ones and the user's, and only `model`, `width`, `height`, `baseName`, `outputDirectory`,
-`reExport` and `draft` (a draft of every shot) go with it. A `preset` that is a composite preset renders
-that film of the cave: `list_render_presets` lists them under `composites` (Showcase, Grand tour,
-Exploration history, and the user's own), each with its shots and length.
+`reExport`, `draft` (a draft of every shot) and `language` go with it; a `preset` beside it is refused,
+since its shots name their own. A `preset` that is a composite preset renders that film of the cave:
+`list_render_presets` lists them under `composites` (Showcase, Grand tour, Exploration history, and the
+user's own), each with its shots and length. Such a film renders at its own frame rate and size, as the
+panel does. `language` (`en` or `ro`) is the language of the texts a film writes itself (a tour's corner
+texts and the notes of its leads); without it they are in the film's own language, else in ThIDE's
+interface language, as the panel writes them.
+
+The render tools are offered only while the Blender module is on (`EnableBlenderAnimation` in ThIDE's
+`settings.json`, on by default): with it off, the server has none of them, as the panel is gone, and when
+the setting changes while ThIDE runs the server restarts with or without them (agents reconnect through
+the endpoint file).
 
 `export_render_script` takes what `start_render` takes (preset, model, sizes, texts, `annotations`,
 `reveal`, `hdri`) and writes the same scene for someone to render themselves. By default it is the

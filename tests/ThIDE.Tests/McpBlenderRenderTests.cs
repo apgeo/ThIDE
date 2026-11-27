@@ -195,6 +195,29 @@ public sealed class McpBlenderRenderTests : IDisposable
         Assert.DoesNotContain("list_render_presets", names);
     }
 
+    [Fact]
+    public async Task With_the_blender_module_off_agents_get_no_render_tools_until_it_is_turned_on()
+    {
+        var launcher = new FakeLauncher();
+        await using var session = await Session.StartAsync(_scratch, RenderHost(FakeBlender(), launcher), blenderModule: false);
+
+        var names = (await session.Client.ListToolsAsync()).Select(t => t.Name).ToHashSet();
+        Assert.Contains("run_build", names);
+        Assert.DoesNotContain("start_render", names);
+        Assert.DoesNotContain("write_tour_storyboard", names);
+
+        // Turned on in Preferences: the server comes back with them, at a new endpoint.
+        await session.SetBlenderModuleAsync(true);
+        names = (await session.Client.ListToolsAsync()).Select(t => t.Name).ToHashSet();
+        Assert.Contains("start_render", names);
+        Assert.Contains("export_render_script", names);
+
+        await session.SetBlenderModuleAsync(false);
+        names = (await session.Client.ListToolsAsync()).Select(t => t.Name).ToHashSet();
+        Assert.DoesNotContain("start_render", names);
+        Assert.Empty(launcher.Runs);
+    }
+
     /// <summary>The same agent render with the real Blender (THIDE_BLENDER_PATH pins one).</summary>
     [BlenderFact]
     public async Task An_agent_renders_a_still_with_the_real_blender()
@@ -243,28 +266,44 @@ public sealed class McpBlenderRenderTests : IDisposable
     private sealed class Session : IAsyncDisposable
     {
         private McpHostService _host = null!;
+        private Settings _settings = null!;
         public McpClient Client { get; private set; } = null!;
 
-        public static async Task<Session> StartAsync(string scratch, IBlenderRenderHost? blender)
+        public static async Task<Session> StartAsync(string scratch, IBlenderRenderHost? blender, bool blenderModule = true)
         {
             var settings = new Settings();
             var locator = new ExternalToolLocator();
             var session = new Session
             {
+                _settings = settings,
                 _host = new McpHostService(settings, new LogService(), new UiBridge(), locator, new TherionCompiler(locator),
                     session: null, buffers: null, Path.Combine(scratch, "endpoint", "mcp-endpoint.json"), blender: blender),
             };
-            settings.Save(settings.Current with { EnableMcpServer = true });
+            settings.Save(settings.Current with { EnableMcpServer = true, EnableBlenderAnimation = blenderModule });
             await session._host.ApplySettingAsync();
-            var endpoint = session._host.Endpoint ?? throw new InvalidOperationException("the in-app host did not start");
-            session.Client = await McpClient.CreateAsync(new HttpClientTransport(new HttpClientTransportOptions
+            await session.ConnectAsync();
+            return session;
+        }
+
+        /// <summary>Turns the Blender module on or off, as Preferences does, and connects to the server again.</summary>
+        public async Task SetBlenderModuleAsync(bool on)
+        {
+            _settings.Save(_settings.Current with { EnableBlenderAnimation = on });
+            await _host.ApplySettingAsync();
+            await Client.DisposeAsync();
+            await ConnectAsync();
+        }
+
+        private async Task ConnectAsync()
+        {
+            var endpoint = _host.Endpoint ?? throw new InvalidOperationException("the in-app host did not start");
+            Client = await McpClient.CreateAsync(new HttpClientTransport(new HttpClientTransportOptions
             {
                 Endpoint = new Uri(endpoint.Url),
                 TransportMode = HttpTransportMode.StreamableHttp,
                 AdditionalHeaders = new Dictionary<string, string> { ["Authorization"] = $"Bearer {endpoint.Token}" },
                 Name = "render test",
             }));
-            return session;
         }
 
         public async ValueTask DisposeAsync()

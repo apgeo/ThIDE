@@ -129,24 +129,37 @@ public static class StoryboardExpander
         {
             Shots = storyboard.Shots.Select(shot =>
             {
-                if (shot?.Preset is not { } name || BuiltInPresets.ByName(name) is not null || presets(name)?.Spec is not { } spec) return shot!;
-                var camera = shot.Camera ?? spec.Camera;
-                // A route that sets its own time keeps it: a shot that said a length would fit it.
-                bool natural = camera is { Template: CameraTemplate.Route, Route.Timing: RouteTiming.Natural };
-                return shot with
-                {
-                    Preset = null,
-                    Seconds = shot.Seconds ?? (natural ? null : spec.Animation.DurationSeconds),
-                    Camera = camera,
-                    Engine = shot.Engine ?? spec.Engine,
-                    Materials = shot.Materials ?? spec.Materials,
-                    Lighting = shot.Lighting ?? spec.Lighting,
-                    // The preset's labels in the scene, and the texts the shot had without them.
-                    Labels = shot.Labels ?? spec.Labels with { Overlays = new OverlaySpec() },
-                    Texts = shot.Texts ?? shot.Labels?.Overlays ?? defaults.Labels?.Overlays ?? new OverlaySpec(),
-                    Reveal = shot.Reveal ?? (spec.Reveal is { } reveal ? ShotReveal.Of(reveal) : ShotReveal.None),
-                };
+                if (shot?.Preset is not { } name || BuiltInPresets.ByName(name) is not null || presets(name) is not { } preset) return shot!;
+                return InlinePreset(shot, preset, defaults);
             }).ToList(),
+        };
+    }
+
+    /// <summary>
+    /// <paramref name="shot"/> with what <paramref name="preset"/> gives it written in, and no
+    /// preset named: what the shot says itself stays. For a preset of the user's, which is known
+    /// only where it was saved, or one whose name a built-in preset also has.
+    /// </summary>
+    public static ShotSpec InlinePreset(ShotSpec shot, RenderPreset preset, StoryboardDefaults? defaults = null)
+    {
+        ArgumentNullException.ThrowIfNull(shot);
+        ArgumentNullException.ThrowIfNull(preset);
+        var spec = preset.Spec;
+        var camera = shot.Camera ?? spec.Camera;
+        // A route that sets its own time keeps it: a shot that said a length would fit it.
+        bool natural = camera is { Template: CameraTemplate.Route, Route.Timing: RouteTiming.Natural };
+        return shot with
+        {
+            Preset = null,
+            Seconds = shot.Seconds ?? (natural ? null : spec.Animation.DurationSeconds),
+            Camera = camera,
+            Engine = shot.Engine ?? spec.Engine,
+            Materials = shot.Materials ?? spec.Materials,
+            Lighting = shot.Lighting ?? spec.Lighting,
+            // The preset's labels in the scene, and the texts the shot had without them.
+            Labels = shot.Labels ?? spec.Labels with { Overlays = new OverlaySpec() },
+            Texts = shot.Texts ?? shot.Labels?.Overlays ?? defaults?.Labels?.Overlays ?? new OverlaySpec(),
+            Reveal = shot.Reveal ?? (spec.Reveal is { } reveal ? ShotReveal.Of(reveal) : ShotReveal.None),
         };
     }
 

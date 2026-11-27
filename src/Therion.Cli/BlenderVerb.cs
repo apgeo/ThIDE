@@ -57,6 +57,24 @@ public static partial class BlenderVerb
             return 2;
         }
 
+        // Options that only say something beside another: refused alone rather than dropped.
+        bool bundled = Option(args, "--bundle") is not null, exported = Option(args, "--export") is not null;
+        if (Flag(args, "--readme-language") && !bundled && !exported)
+        {
+            stderr.WriteLine("error: --readme-language is the language of a bundle's README: it goes with --bundle or --export.");
+            return 2;
+        }
+        if (Flag(args, "--estimate") && (bundled || exported))
+        {
+            stderr.WriteLine("error: --estimate estimates a render: it does not go with --bundle or --export.");
+            return 2;
+        }
+        if (Flag(args, "--one-file") && !exported)
+        {
+            stderr.WriteLine("error: --one-file writes an export as one script: it goes with --export.");
+            return 2;
+        }
+
         // A film of several shots (--storyboard), unless one shot of it is asked for (--shot):
         // that one is a render spec like any other from here on.
         if (!TryReadStoryboard(args, stderr, out var storyboard, out int? shot)) return 2;
@@ -79,13 +97,19 @@ public static partial class BlenderVerb
             stderr.WriteLine("error: --render and --render-plan go with --bundle <file.zip|folder>.");
             return 2;
         }
-        // How a render is made: these are for the render itself, not for a bundle or an export.
+        // How a render is made: these are for the render itself, not for a bundle or an export;
+        // the builder is also the export's.
         bool keepFrames = Flag(args, "--keep-frames"), composeOnly = Flag(args, "--compose-only");
         string? builderName = Option(args, "--builder"), framesDir = Option(args, "--frames");
-        bool staged = keepFrames || composeOnly || builderName is not null || framesDir is not null;
+        bool staged = keepFrames || composeOnly || framesDir is not null;
         if (staged && (bundle is not null || Option(args, "--export") is not null))
         {
-            stderr.WriteLine("error: --builder, --keep-frames, --compose-only and --frames go with a render, not with --bundle or --export.");
+            stderr.WriteLine("error: --keep-frames, --compose-only and --frames go with a render, not with --bundle or --export.");
+            return 2;
+        }
+        if (builderName is not null && bundle is not null)
+        {
+            stderr.WriteLine("error: --builder goes with a render or with --export; a bundle is the player's.");
             return 2;
         }
         if (draft && bundle is null && Option(args, "--export") is not null)
@@ -152,12 +176,25 @@ public static partial class BlenderVerb
         {
             if (Option(args, "--export") is { } exportDir)
             {
-                var scriptPath = await service.ExportScriptAsync(spec, renderSource, exportDir, progress, ct).ConfigureAwait(false);
-                // An exported script is the script generator's: what only the player draws is not in it.
-                if (SceneBuilders.NotDrawnByTheGenerator(spec) is { Count: > 0 } notDrawn)
-                    stderr.WriteLine($"warning: the exported script does not show {string.Join(", ", notDrawn)}");
-                stdout.WriteLine(scriptPath);
-                stderr.WriteLine($"exported script + assets to {exportDir}");
+                // What Export script… writes in the panel: the scene a render shows, by the builder
+                // it uses (the player's folder, or with --one-file one script that carries it), or
+                // the script generator's script with --builder generator.
+                string readme = Option(args, "--readme-language") ?? "en";
+                if (!RenderBundleWriter.ReadmeLanguages.Contains(readme, StringComparer.Ordinal))
+                {
+                    stderr.WriteLine($"error: --readme-language takes one of: {string.Join(", ", RenderBundleWriter.ReadmeLanguages)}.");
+                    return 2;
+                }
+                var export = await service.ExportAsync(
+                        spec, renderSource, exportDir, new ExportOptions { Builder = builder, SingleFile = Flag(args, "--one-file"), Language = readme }, progress, ct)
+                    .ConfigureAwait(false);
+                foreach (string notice in export.Notices) stderr.WriteLine($"warning: {notice}");
+                if (export.LeftOut.Count > 0)
+                    stderr.WriteLine($"warning: the exported script does not show {string.Join(", ", export.LeftOut)}");
+                stdout.WriteLine(export.ScriptPath);
+                string what = export.Builder == SceneBuilder.Generator ? "the script generator's script + assets"
+                    : export.SingleFile ? "one script with the whole scene" : "the player's folder";
+                stderr.WriteLine($"exported {what} to {exportDir}");
                 return 0;
             }
 
@@ -405,7 +442,7 @@ public static partial class BlenderVerb
     private static readonly string[] SceneOptions =
     [
         "--title", "--credits", "--end-card", "--end-card-seconds", "--caption", "--annotations", "--reveal", "--reveal-from",
-        "--reveal-dates", "--reveal-seconds", "--hdri", "--hdri-rotation", "--hdri-strength", "--lamp-reach",
+        "--reveal-dates", "--reveal-seconds", "--hdri", "--hdri-rotation", "--hdri-strength", "--lamp-reach", "--route", "--route-seconds",
     ];
 
     /// <summary>

@@ -194,11 +194,16 @@ public static partial class BlenderVerb
             || !Number("--min-length", 0, out double? minLength) || !Number("--max-branches", 0, out double? maxCount)
             || !Number("--tour-depth", 1, out double? depth))
             return false;
+        if (depth > TourSpec.MaxDepth)
+        {
+            stderr.WriteLine($"error: --tour-depth takes 1 to {TourSpec.MaxDepth}, not {depth}.");
+            return false;
+        }
         if (tourSeconds is { } whole) spec = spec with { TourSeconds = whole };
         if (branchSeconds is { } each) spec = spec with { BranchSeconds = each };
         if (minLength is { } least) spec = spec with { MinLength = least };
         if (maxCount is { } most) spec = spec with { MaxCount = (int)Math.Min(most, int.MaxValue) };
-        if (depth is { } deep) spec = spec with { Depth = (int)Math.Min(deep, 16) };
+        if (depth is { } deep) spec = spec with { Depth = (int)deep };
 
         if (Option(args, "--branch-mode") is { } all)
         {

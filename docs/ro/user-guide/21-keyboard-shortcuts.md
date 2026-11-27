@@ -86,8 +86,8 @@ Vedeți [Compilare și rezultate](10-compiling-and-output.md).
 
 Celelalte comutatoare de panouri (Navigator obiecte, Contur, Prezentare generală, Jurnal, Previzualizare
 principală, Vizualizator hărți, Vizualizator 3D, Geologie structurală, Animație Blender) vin
-**neatribuite** — folosiți meniul **Vizualizare** sau atribuiți-le chiar dumneavoastră scurtături în
-**Setări → Scurtături tastatură**.
+**neatribuite** — folosiți meniul **Vizualizare** (meniul **Unelte** pentru Animație Blender) sau
+atribuiți-le chiar dumneavoastră scurtături în **Setări → Scurtături tastatură**.
 
 ## Prefixele Paletei de comenzi
 

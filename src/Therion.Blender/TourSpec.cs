@@ -72,8 +72,12 @@ public sealed record TourSpec
     /// none (the rank alone).</summary>
     public IReadOnlyList<string>? Priority { get; init; }
 
-    /// <summary>1 visits what hangs on the main passage; 2 also what hangs on those.</summary>
+    /// <summary>1 visits what hangs on the main passage; 2 also what hangs on those; at most
+    /// <see cref="MaxDepth"/>.</summary>
     public int Depth { get; init; } = 1;
+
+    /// <summary>The deepest a tour goes into what hangs on what (<see cref="Depth"/>).</summary>
+    public const int MaxDepth = 16;
 
     // ---- the visits ----
 

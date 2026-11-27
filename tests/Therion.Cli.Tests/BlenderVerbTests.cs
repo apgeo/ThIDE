@@ -30,7 +30,7 @@ public class BlenderVerbTests : IDisposable
     [CorpusFact]
     public async Task Export_WritesScriptAndAssets()
     {
-        var (code, stdout, _) = await Run("blender", CorpusLox(), "--preset", "Orbit showcase", "--export", _dir);
+        var (code, stdout, _) = await Run("blender", CorpusLox(), "--preset", "Orbit showcase", "--export", _dir, "--builder", "generator");
 
         Assert.Equal(0, code);
         Assert.True(File.Exists(Path.Combine(_dir, "render.py")));
@@ -43,7 +43,7 @@ public class BlenderVerbTests : IDisposable
     [CorpusFact]
     public async Task Export_DefaultsToOrbitShowcase_WhenNoPreset()
     {
-        var (code, _, _) = await Run("blender", CorpusLox(), "--export", _dir);
+        var (code, _, _) = await Run("blender", CorpusLox(), "--export", _dir, "--builder", "generator");
         Assert.Equal(0, code);
         var script = File.ReadAllText(Path.Combine(_dir, "render.py"));
         Assert.Contains("camera: orbit", script);
@@ -61,7 +61,7 @@ public class BlenderVerbTests : IDisposable
         await File.WriteAllTextAsync(specPath, specJson);
 
         var outDir = Path.Combine(_dir, "out");
-        var (code, _, _) = await Run("blender", CorpusLox(), "--spec", specPath, "--export", outDir);
+        var (code, _, _) = await Run("blender", CorpusLox(), "--spec", specPath, "--export", outDir, "--builder", "generator");
         Assert.Equal(0, code);
         var script = File.ReadAllText(Path.Combine(outDir, "render.py"));
         Assert.Contains("camera: stillset", script);              // the spec's StillSet template

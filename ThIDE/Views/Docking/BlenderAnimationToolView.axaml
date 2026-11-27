@@ -39,6 +39,8 @@
                 <Button AutomationProperties.AutomationId="Blender.SavePreset" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_SavePreset}" Command="{Binding Blender.SavePresetCommand}" Margin="4,0,0,0" />
                 <TextBox AutomationProperties.AutomationId="Blender.NewPresetName" AutomationProperties.Name="{l:Loc Blender_UI_NewPresetName}" PlaceholderText="{l:Loc Blender_UI_NewPresetName}" Text="{Binding Blender.NewPresetName}" />
             </DockPanel>
+            <TextBlock AutomationProperties.AutomationId="Blender.PresetNameProblem" Text="{Binding Blender.PresetNameProblem}" Foreground="#C05050" TextWrapping="Wrap"
+                       IsVisible="{Binding Blender.PresetNameProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
             <Separator />
 
@@ -138,9 +140,13 @@
                     <TextBox AutomationProperties.AutomationId="Blender.ShotTransitionSeconds" AutomationProperties.Name="{l:Loc Blender_UI_ShotTransitionSeconds}"
                              DockPanel.Dock="Right" Width="70" Margin="6,0,0,0" Text="{Binding Blender.SelectedShot.TransitionSeconds, FallbackValue=0}" />
                     <ComboBox AutomationProperties.AutomationId="Blender.ShotTransition" AutomationProperties.Name="{l:Loc Blender_UI_ShotTransition}" HorizontalAlignment="Stretch"
-                              ItemsSource="{Binding Blender.TransitionKinds}" SelectedItem="{Binding Blender.SelectedShot.TransitionKind, FallbackValue={x:Null}}" />
+                              ItemsSource="{Binding Blender.TransitionKinds}" SelectedItem="{Binding Blender.SelectedShot.TransitionKind, FallbackValue={x:Null}}">
+                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Transition_}" /></DataTemplate></ComboBox.ItemTemplate>
+                    </ComboBox>
                 </DockPanel>
                 <TextBlock Text="{l:Loc Blender_UI_EditsShot}" TextWrapping="Wrap" FontStyle="Italic" IsVisible="{Binding Blender.HasSelectedShot}" />
+                <TextBlock AutomationProperties.AutomationId="Blender.ChooseShotHint" Text="{l:Loc Blender_UI_ChooseShotHint}" TextWrapping="Wrap" FontStyle="Italic"
+                           IsVisible="{Binding Blender.ChooseShotHint}" />
                 <!-- the side passages of a tour shot -->
                 <StackPanel AutomationProperties.AutomationId="Blender.Branches" Spacing="4" IsVisible="{Binding Blender.IsTourShot}">
                     <DockPanel>
@@ -161,7 +167,9 @@
                                     <TextBlock Grid.Column="4" Text="{Binding Outcome}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Outcome}"
                                                FontStyle="{Binding Chosen, Converter={x:Static local:SelectedShotBrush.LeftOut}}" />
                                     <ComboBox Grid.Column="5" AutomationProperties.AutomationId="{Binding VisitId}" AutomationProperties.Name="{l:Loc Blender_UI_BranchVisit}" HorizontalAlignment="Stretch"
-                                              ItemsSource="{Binding VisitChoices}" SelectedItem="{Binding VisitChoice}" />
+                                              ItemsSource="{Binding VisitChoices}" SelectedItem="{Binding VisitChoice}">
+                                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Blender_Branch_Visit}" /></DataTemplate></ComboBox.ItemTemplate>
+                                    </ComboBox>
                                     <Button Grid.Column="6" AutomationProperties.AutomationId="{Binding UpId}" AutomationProperties.Name="{l:Loc Blender_UI_BranchUp}" Content="&#x2191;" Padding="6,0"
                                             ToolTip.Tip="{l:Loc Blender_UI_BranchUp}" Command="{Binding $parent[ItemsControl].DataContext.Blender.MoveBranchUpCommand}" CommandParameter="{Binding}" />
                                     <Button Grid.Column="7" AutomationProperties.AutomationId="{Binding DownId}" AutomationProperties.Name="{l:Loc Blender_UI_BranchDown}" Content="&#x2193;" Padding="6,0"
@@ -196,7 +204,9 @@
                              Text="{Binding Blender.FilmEndCardSeconds}" /></DockPanel>
                 <DockPanel><TextBlock Text="{l:Loc Blender_UI_FilmLanguage}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                     <ComboBox AutomationProperties.AutomationId="Blender.FilmLanguage" AutomationProperties.Name="{l:Loc Blender_UI_FilmLanguage}" HorizontalAlignment="Stretch"
-                              ToolTip.Tip="{l:Loc Blender_UI_FilmLanguage_Tip}" ItemsSource="{Binding Blender.FilmLanguages}" SelectedItem="{Binding Blender.SelectedFilmLanguage}" /></DockPanel>
+                              ToolTip.Tip="{l:Loc Blender_UI_FilmLanguage_Tip}" ItemsSource="{Binding Blender.FilmLanguages}" SelectedItem="{Binding Blender.SelectedFilmLanguage}">
+                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Blender_UI_FilmLanguage}" /></DataTemplate></ComboBox.ItemTemplate>
+                    </ComboBox></DockPanel>
                 <!-- the film kept as a composite preset of the user's -->
                 <DockPanel>
                     <Button AutomationProperties.AutomationId="Blender.SaveComposite" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_SaveComposite}" Margin="6,0,0,0"
@@ -244,24 +254,33 @@
 
             <!-- camera + engine -->
             <TextBlock Text="{l:Loc Blender_UI_Camera}" FontWeight="Bold" />
-            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Template}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.CameraTemplate" AutomationProperties.Name="{l:Loc Blender_UI_Template}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CameraTemplates}" SelectedItem="{Binding Blender.CameraTemplate}" /></DockPanel>
+            <DockPanel IsEnabled="{Binding Blender.CanEditShotSettings}"><TextBlock Text="{l:Loc Blender_UI_Template}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox AutomationProperties.AutomationId="Blender.CameraTemplate" AutomationProperties.Name="{l:Loc Blender_UI_Template}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CameraTemplates}" SelectedItem="{Binding Blender.CameraTemplate}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Camera_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Surface}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.Surface" AutomationProperties.Name="{l:Loc Blender_UI_Surface}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.SurfaceModes}" SelectedItem="{Binding Blender.SurfaceMode}" ToolTip.Tip="{l:Loc Blender_UI_Surface_Tip}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.Surface" AutomationProperties.Name="{l:Loc Blender_UI_Surface}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.SurfaceModes}" SelectedItem="{Binding Blender.SurfaceMode}" ToolTip.Tip="{l:Loc Blender_UI_Surface_Tip}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Surface_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <DockPanel IsEnabled="{Binding Blender.HasSurface}"><TextBlock Text="{l:Loc Blender_UI_SurfaceOpacity}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding Blender.SurfaceOpacity, StringFormat='{}{0:0%}'}" DockPanel.Dock="Right" MinWidth="40" TextAlignment="Right" VerticalAlignment="Center" />
                 <Slider AutomationProperties.AutomationId="Blender.SurfaceOpacity" AutomationProperties.Name="{l:Loc Blender_UI_SurfaceOpacity}" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding Blender.SurfaceOpacity}" ToolTip.Tip="{l:Loc Blender_UI_SurfaceOpacity_Tip}" /></DockPanel>
             <DockPanel IsEnabled="{Binding Blender.HasSurface}"><TextBlock Text="{l:Loc Blender_UI_Cutaway}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.Cutaway" AutomationProperties.Name="{l:Loc Blender_UI_Cutaway}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CutawayChoices}" SelectedItem="{Binding Blender.TerrainCutaway}" ToolTip.Tip="{l:Loc Blender_UI_Cutaway_Tip}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.Cutaway" AutomationProperties.Name="{l:Loc Blender_UI_Cutaway}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CutawayChoices}" SelectedItem="{Binding Blender.TerrainCutaway}" ToolTip.Tip="{l:Loc Blender_UI_Cutaway_Tip}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Cutaway_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <DockPanel IsVisible="{Binding Blender.HasCutaway}"><TextBlock Text="{l:Loc Blender_UI_CutawayMargin}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.CutawayMargin" AutomationProperties.Name="{l:Loc Blender_UI_CutawayMargin}" Text="{Binding Blender.CutawayMargin}" ToolTip.Tip="{l:Loc Blender_UI_CutawayMargin_Tip}" /></DockPanel>
             <DockPanel IsVisible="{Binding Blender.HasCutaway}"><TextBlock Text="{l:Loc Blender_UI_CutawayOpenSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.CutawayOpenSeconds" AutomationProperties.Name="{l:Loc Blender_UI_CutawayOpenSeconds}" Text="{Binding Blender.CutawayOpenSeconds}" ToolTip.Tip="{l:Loc Blender_UI_CutawayOpenSeconds_Tip}" /></DockPanel>
 
             <!-- light: a rig, or an image all round the scene (HDRI) -->
+            <StackPanel Spacing="8" IsEnabled="{Binding Blender.CanEditShotSettings}">
             <TextBlock Text="{l:Loc Blender_UI_Light}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_LightRig}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.LightRig" AutomationProperties.Name="{l:Loc Blender_UI_LightRig}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LightRigs}" SelectedItem="{Binding Blender.LightRig}" ToolTip.Tip="{l:Loc Blender_UI_LightRig_Tip}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.LightRig" AutomationProperties.Name="{l:Loc Blender_UI_LightRig}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LightRigs}" SelectedItem="{Binding Blender.LightRig}" ToolTip.Tip="{l:Loc Blender_UI_LightRig_Tip}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Light_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_LightStrength}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.LightStrength" AutomationProperties.Name="{l:Loc Blender_UI_LightStrength}" Text="{Binding Blender.LightStrength}" ToolTip.Tip="{l:Loc Blender_UI_LightStrength_Tip}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_HdriPath}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
@@ -273,25 +292,35 @@
 
             <TextBlock Text="{l:Loc Blender_UI_Engine}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Engine}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.Engine" AutomationProperties.Name="{l:Loc Blender_UI_Engine}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Engines}" SelectedItem="{Binding Blender.EngineKind}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.Engine" AutomationProperties.Name="{l:Loc Blender_UI_Engine}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Engines}" SelectedItem="{Binding Blender.EngineKind}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Engine_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Gpu}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.Gpu" AutomationProperties.Name="{l:Loc Blender_UI_Gpu}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.GpuModes}" SelectedItem="{Binding Blender.Gpu}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.Gpu" AutomationProperties.Name="{l:Loc Blender_UI_Gpu}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.GpuModes}" SelectedItem="{Binding Blender.Gpu}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Gpu_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Samples}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.Samples" AutomationProperties.Name="{l:Loc Blender_UI_Samples}" Text="{Binding Blender.Samples}" /></DockPanel>
-            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Builder}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
-                <ComboBox AutomationProperties.AutomationId="Blender.Builder" AutomationProperties.Name="{l:Loc Blender_UI_Builder}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Builders}" SelectedItem="{Binding Blender.Builder}" ToolTip.Tip="{l:Loc Blender_UI_Builder_Tip}" /></DockPanel>
+            </StackPanel>
+            <DockPanel IsVisible="{Binding Blender.IsSceneTab}"><TextBlock Text="{l:Loc Blender_UI_Builder}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
+                <ComboBox AutomationProperties.AutomationId="Blender.Builder" AutomationProperties.Name="{l:Loc Blender_UI_Builder}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Builders}" SelectedItem="{Binding Blender.Builder}" ToolTip.Tip="{l:Loc Blender_UI_Builder_Tip}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Builder_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
 
             <!-- animation -->
             <TextBlock Text="{l:Loc Blender_UI_Animation}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Fps}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.Fps" AutomationProperties.Name="{l:Loc Blender_UI_Fps}" Text="{Binding Blender.Fps}" /></DockPanel>
-            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Duration}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+            <DockPanel IsEnabled="{Binding Blender.CanEditShotSettings}"><TextBlock Text="{l:Loc Blender_UI_Duration}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.Duration" AutomationProperties.Name="{l:Loc Blender_UI_Duration}" Text="{Binding Blender.DurationSeconds}" /></DockPanel>
 
             <!-- reveal: the cave appears part by part while the clip runs -->
+            <StackPanel Spacing="8" IsEnabled="{Binding Blender.CanEditShotSettings}">
             <TextBlock Text="{l:Loc Blender_UI_Reveal}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_RevealBy}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.Reveal" AutomationProperties.Name="{l:Loc Blender_UI_RevealBy}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.RevealChoices}" SelectedItem="{Binding Blender.RevealMode}" ToolTip.Tip="{l:Loc Blender_UI_RevealBy_Tip}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.Reveal" AutomationProperties.Name="{l:Loc Blender_UI_RevealBy}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.RevealChoices}" SelectedItem="{Binding Blender.RevealMode}" ToolTip.Tip="{l:Loc Blender_UI_RevealBy_Tip}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Reveal_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <StackPanel Spacing="8" IsVisible="{Binding Blender.HasReveal}">
                 <DockPanel IsEnabled="{Binding Blender.RevealsByDistance}"><TextBlock Text="{l:Loc Blender_UI_RevealFrom}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                     <TextBox AutomationProperties.AutomationId="Blender.RevealFrom" AutomationProperties.Name="{l:Loc Blender_UI_RevealFrom}" Text="{Binding Blender.RevealFrom}" ToolTip.Tip="{l:Loc Blender_UI_RevealFrom_Tip}" /></DockPanel>
@@ -307,32 +336,42 @@
                     <TextBox AutomationProperties.AutomationId="Blender.RevealEdge" AutomationProperties.Name="{l:Loc Blender_UI_RevealEdge}" Text="{Binding Blender.RevealEdge}" ToolTip.Tip="{l:Loc Blender_UI_RevealEdge_Tip}" /></DockPanel>
                 <CheckBox AutomationProperties.AutomationId="Blender.RevealGlow" Content="{l:Loc Blender_UI_RevealGlow}" IsChecked="{Binding Blender.RevealGlow}" ToolTip.Tip="{l:Loc Blender_UI_RevealGlow_Tip}" />
             </StackPanel>
+            </StackPanel>
 
             <Separator />
 
             <!-- output -->
             <TextBlock Text="{l:Loc Blender_UI_Output}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Output}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.OutputKind" AutomationProperties.Name="{l:Loc Blender_UI_Output}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.OutputKinds}" SelectedItem="{Binding Blender.OutputKind}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.OutputKind" AutomationProperties.Name="{l:Loc Blender_UI_Output}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.OutputKinds}" SelectedItem="{Binding Blender.OutputKind}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Output_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Container}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.Container" AutomationProperties.Name="{l:Loc Blender_UI_Container}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Containers}" SelectedItem="{Binding Blender.Container}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.Container" AutomationProperties.Name="{l:Loc Blender_UI_Container}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Containers}" SelectedItem="{Binding Blender.Container}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_Container_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Width}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.Width" AutomationProperties.Name="{l:Loc Blender_UI_Width}" Text="{Binding Blender.Width}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Height}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.Height" AutomationProperties.Name="{l:Loc Blender_UI_Height}" Text="{Binding Blender.Height}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_BaseName}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.BaseName" AutomationProperties.Name="{l:Loc Blender_UI_BaseName}" Text="{Binding Blender.BaseName}" /></DockPanel>
-            <CheckBox AutomationProperties.AutomationId="Blender.SelfContained" Content="{l:Loc Blender_UI_SelfContained}" IsChecked="{Binding Blender.SelfContained}" ToolTip.Tip="{l:Loc Blender_UI_SelfContained_Tip}" />
-            <CheckBox AutomationProperties.AutomationId="Blender.EmbedMesh" Content="{l:Loc Blender_UI_EmbedMesh}" IsChecked="{Binding Blender.EmbedMesh}" IsEnabled="{Binding Blender.CanEmbedMesh}" Margin="20,0,0,0" ToolTip.Tip="{l:Loc Blender_UI_EmbedMesh_Tip}" />
+            <CheckBox IsVisible="{Binding Blender.IsSceneTab}" AutomationProperties.AutomationId="Blender.SelfContained" Content="{l:Loc Blender_UI_SelfContained}" IsChecked="{Binding Blender.SelfContained}" ToolTip.Tip="{l:Loc Blender_UI_SelfContained_Tip}" />
+            <CheckBox IsVisible="{Binding Blender.IsSceneTab}" AutomationProperties.AutomationId="Blender.EmbedMesh" Content="{l:Loc Blender_UI_EmbedMesh}" IsChecked="{Binding Blender.EmbedMesh}" IsEnabled="{Binding Blender.CanEmbedMesh}" Margin="20,0,0,0" ToolTip.Tip="{l:Loc Blender_UI_EmbedMesh_Tip}" />
 
-            <!-- labels -->
+            <!-- labels, annotations, the texts and the captions: the shot's (the fades below are the film's) -->
+            <StackPanel Spacing="8" IsEnabled="{Binding Blender.CanEditShotSettings}">
             <TextBlock Text="{l:Loc Blender_UI_Labels}" FontWeight="Bold" />
             <CheckBox AutomationProperties.AutomationId="Blender.StationLabels" Content="{l:Loc Blender_UI_StationLabels}" IsChecked="{Binding Blender.ShowStationLabels}" />
             <CheckBox AutomationProperties.AutomationId="Blender.LeadMarkers" Content="{l:Loc Blender_UI_LeadMarkers}" IsChecked="{Binding Blender.ShowLeadMarkers}" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_LeadMarkerSize}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.LeadMarkerSize" AutomationProperties.Name="{l:Loc Blender_UI_LeadMarkerSize}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LeadMarkerSizings}" SelectedItem="{Binding Blender.LeadMarkerSizing}" ToolTip.Tip="{l:Loc Blender_UI_LeadMarkerSize_Tip}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.LeadMarkerSize" AutomationProperties.Name="{l:Loc Blender_UI_LeadMarkerSize}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LeadMarkerSizings}" SelectedItem="{Binding Blender.LeadMarkerSizing}" ToolTip.Tip="{l:Loc Blender_UI_LeadMarkerSize_Tip}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_LeadSize_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_LabelRoof}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox AutomationProperties.AutomationId="Blender.LabelRoof" AutomationProperties.Name="{l:Loc Blender_UI_LabelRoof}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LabelRoofSources}" SelectedItem="{Binding Blender.LabelRoof}" ToolTip.Tip="{l:Loc Blender_UI_LabelRoof_Tip}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.LabelRoof" AutomationProperties.Name="{l:Loc Blender_UI_LabelRoof}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LabelRoofSources}" SelectedItem="{Binding Blender.LabelRoof}" ToolTip.Tip="{l:Loc Blender_UI_LabelRoof_Tip}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{l:LocOption Opt_Blender_LabelRoof_}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox></DockPanel>
 
             <!-- annotations: labels, callouts, markers and photos, from a JSON file -->
             <TextBlock Text="{l:Loc Blender_UI_Annotations}" FontWeight="Bold" ToolTip.Tip="{l:Loc Blender_UI_Annotations_Tip}" />
@@ -357,21 +396,24 @@
                 <TextBox AutomationProperties.AutomationId="Blender.Subtitle" AutomationProperties.Name="{l:Loc Blender_UI_Subtitle}" Text="{Binding Blender.Subtitle}" ToolTip.Tip="{l:Loc Blender_UI_Subtitle_Tip}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Credits}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.Credits" AutomationProperties.Name="{l:Loc Blender_UI_Credits}" Text="{Binding Blender.Credits}" ToolTip.Tip="{l:Loc Blender_UI_Credits_Tip}" /></DockPanel>
-            <DockPanel><TextBlock Text="{l:Loc Blender_UI_EndCard}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+            <!-- a film's end card is edited with its title, above -->
+            <DockPanel IsVisible="{Binding Blender.IsSceneTab}"><TextBlock Text="{l:Loc Blender_UI_EndCard}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.EndCard" AutomationProperties.Name="{l:Loc Blender_UI_EndCard}" Text="{Binding Blender.EndCardText}" AcceptsReturn="True" TextWrapping="Wrap" ToolTip.Tip="{l:Loc Blender_UI_EndCard_Tip}" /></DockPanel>
-            <DockPanel><TextBlock Text="{l:Loc Blender_UI_EndCardSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
+            <DockPanel IsVisible="{Binding Blender.IsSceneTab}"><TextBlock Text="{l:Loc Blender_UI_EndCardSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
                 <TextBox AutomationProperties.AutomationId="Blender.EndCardSeconds" AutomationProperties.Name="{l:Loc Blender_UI_EndCardSeconds}" Text="{Binding Blender.EndCardSeconds}" /></DockPanel>
             <WrapPanel>
                 <CheckBox AutomationProperties.AutomationId="Blender.ScaleBar" Content="{l:Loc Blender_UI_ScaleBar}" IsChecked="{Binding Blender.ShowScaleBar}" Margin="0,0,12,0" ToolTip.Tip="{l:Loc Blender_UI_ScaleBar_Tip}" />
                 <CheckBox AutomationProperties.AutomationId="Blender.NorthArrow" Content="{l:Loc Blender_UI_NorthArrow}" IsChecked="{Binding Blender.ShowNorthArrow}" Margin="0,0,12,0" ToolTip.Tip="{l:Loc Blender_UI_NorthArrow_Tip}" />
                 <CheckBox AutomationProperties.AutomationId="Blender.DepthLegend" Content="{l:Loc Blender_UI_DepthLegend}" IsChecked="{Binding Blender.ShowDepthLegend}" ToolTip.Tip="{l:Loc Blender_UI_DepthLegend_Tip}" />
             </WrapPanel>
+            </StackPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_FadeFromBlack}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
                 <TextBox AutomationProperties.AutomationId="Blender.FadeFromBlack" AutomationProperties.Name="{l:Loc Blender_UI_FadeFromBlack}" Text="{Binding Blender.FadeFromBlack}" ToolTip.Tip="{l:Loc Blender_UI_Fade_Tip}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_FadeToBlack}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
                 <TextBox AutomationProperties.AutomationId="Blender.FadeToBlack" AutomationProperties.Name="{l:Loc Blender_UI_FadeToBlack}" Text="{Binding Blender.FadeToBlack}" ToolTip.Tip="{l:Loc Blender_UI_Fade_Tip}" /></DockPanel>
 
             <!-- captions: a text, and the seconds it is shown from and to -->
+            <StackPanel Spacing="8" IsEnabled="{Binding Blender.CanEditShotSettings}">
             <DockPanel>
                 <Button AutomationProperties.AutomationId="Blender.AddCaption" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_AddCaption}" Command="{Binding Blender.AddCaptionCommand}" ToolTip.Tip="{l:Loc Blender_UI_AddCaption_Tip}" />
                 <TextBlock Text="{l:Loc Blender_UI_Captions}" VerticalAlignment="Center" ToolTip.Tip="{l:Loc Blender_UI_Captions_Tip}" />
@@ -437,6 +479,7 @@
                     <TextBlock FontSize="11" Opacity="0.7" Text="0 s" />
                 </DockPanel>
             </StackPanel>
+            </StackPanel>
 
             <Separator />
 
@@ -455,7 +498,7 @@
                 <TextBox AutomationProperties.AutomationId="Blender.RenderDirectory" AutomationProperties.Name="{l:Loc Blender_UI_RenderDir}" Text="{Binding Blender.RenderDirectory}"
                          ToolTip.Tip="{l:Loc Blender_UI_RenderDirTip}" />
             </DockPanel>
-            <DockPanel>
+            <DockPanel IsVisible="{Binding Blender.IsSceneTab}">
                 <TextBlock Text="{l:Loc Blender_UI_ExportDir}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.ExportDirectory" AutomationProperties.Name="{l:Loc Blender_UI_ExportDir}" Text="{Binding Blender.ExportDirectory}" />
             </DockPanel>
@@ -501,6 +544,7 @@
                     <DataTemplate x:DataType="vmm:JobHistoryEntry">
                         <DockPanel Margin="0,2,0,2">
                             <Button DockPanel.Dock="Left" Content="&#x29C9;" Padding="4,0" FontSize="12"
+                                    AutomationProperties.AutomationId="{Binding CopyId}" AutomationProperties.Name="{l:Loc Blender_UI_CopyResult}"
                                     Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
                                     ToolTip.Tip="{l:Loc Blender_UI_CopyResult}"
                                     Command="{Binding $parent[ItemsControl].DataContext.Blender.CopyJobCommand}"

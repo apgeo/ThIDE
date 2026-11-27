@@ -100,6 +100,9 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         _gui = gui;
 
         _spec = BuiltInPresets.OrbitShowcase().Spec;
+        // A film starts with the scene's frame rate and output; from then on they are its own.
+        _filmFps = _spec.Animation.Fps;
+        _filmOutput = _spec.Output;
         LoadPresets();
         LoadComposites();
         ReloadArtifacts();
@@ -119,7 +122,15 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     // ---- presets ----
     [ObservableProperty] private PresetItem? _selectedPreset;
-    [ObservableProperty] private string _newPresetName = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PresetNameProblem))]
+    private string _newPresetName = "";
+
+    /// <summary>Why the preset cannot be saved under the name typed; null when it can (or when
+    /// nothing is typed yet).</summary>
+    public string? PresetNameProblem => string.IsNullOrWhiteSpace(NewPresetName) ? null
+        : PresetStore.NameProblem(NewPresetName) is Therion.Blender.Presets.PresetNameProblem.BuiltIn ? Tr.Get("Blender_Preset_NameBuiltIn") : null;
 
     // ---- spec knobs (project onto _spec) ----
     [ObservableProperty] private CameraTemplate _cameraTemplate;
@@ -524,7 +535,11 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     /// <summary>The spec currently being edited (read-only view for callers/tests).</summary>
     public SceneSpec CurrentSpec => _spec;
 
-    /// <summary>Available enum choices for the view's dropdowns.</summary>
+    /// <summary>The resx key prefix of a camera template's name, as the dropdowns show it.</summary>
+    internal const string CameraOptionPrefix = "Opt_Blender_Camera_";
+
+    /// <summary>Available enum choices for the view's dropdowns; each is shown by its name in the
+    /// interface's language (an Opt_Blender_* key).</summary>
     public IReadOnlyList<CameraTemplate> CameraTemplates { get; } = Enum.GetValues<CameraTemplate>();
     public IReadOnlyList<RenderEngineKind> Engines { get; } = Enum.GetValues<RenderEngineKind>();
     public IReadOnlyList<GpuMode> GpuModes { get; } = Enum.GetValues<GpuMode>();
@@ -553,11 +568,25 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         else if (e.PropertyName is nameof(UseExternalFile) or nameof(ExternalFilePath) or nameof(SelectedArtifact) or nameof(IsBusy)
                  or nameof(Builder))
             Revalidate();
+        else if (e.PropertyName is nameof(RenderDirectory))
+        {
+            Revalidate();
+            RevalidateStoryboard();
+        }
+
     }
 
     partial void OnSelectedPresetChanged(PresetItem? value)
     {
         if (value is null) return;
+        if (IsStoryboardTab)
+        {
+            // In the film, a preset is what a shot is added from: the settings show it, and no
+            // longer edit a shot; the scene of the Scene tab is not touched.
+            if (SelectedShot is null) ShowFilmSettings();
+            else SelectedShot = null;
+            return;
+        }
         _suspend = true;
         try
         {
@@ -620,7 +649,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         };
         if (_spec.Reveal is { } reveal) _revealKept = reveal;
         if (_spec.Surface.Cutaway is { } cut) _cutawayKept = cut;
-        WriteSettingsToShot();
+        WriteSettingsToFilm();
         Revalidate();
     }
 
@@ -762,6 +791,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         if (_spec.Reveal is { By: RevealBy.Date, DatesPath: { } dates } && !System.IO.File.Exists(dates))
             Blockers.Add(string.Format(Tr.Get("Blender_Blocker_FileNotFound"), dates));
         foreach (string problem in _photoProblems) Blockers.Add(problem);
+        if (RelativeFolderProblem(RenderDirectory) is { } relative) Blockers.Add(relative);
         RefreshAnnotations(errors.Where(e => e.Path.StartsWith("annotations", StringComparison.Ordinal)).Select(e => $"{e.Path}: {e.Message}"));
 
         OnPropertyChanged(nameof(EstimatedFrameCount));
@@ -772,6 +802,13 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         OpenInBlenderGuiCommand.NotifyCanExecuteChanged();
         RevalidateCommands();
     }
+
+    /// <summary>A folder typed as a relative path would be taken from wherever ThIDE was started,
+    /// not from the project: it is refused, and says so.</summary>
+    private static string? RelativeFolderProblem(string? folder)
+        => string.IsNullOrWhiteSpace(folder) || System.IO.Path.IsPathRooted(folder.Trim())
+            ? null
+            : string.Format(Tr.Get("Blender_Blocker_RelativeFolder"), folder.Trim());
 
     private bool HasSource => UseExternalFile
         ? !string.IsNullOrWhiteSpace(ExternalFilePath)
@@ -813,7 +850,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         string status = ok ? Tr.Get("Blender_Status_Done")
             : job.State == RenderJobState.Cancelled ? Tr.Get("Blender_Status_Cancelled")
             : result?.Error ?? Tr.Get("Blender_Status_Failed");
-        Jobs.Insert(0, new JobHistoryEntry(job.Request.Name, ok, status,
+        AddJob(new JobHistoryEntry(job.Request.Name, ok, status,
             ok ? [.. result?.Outputs ?? []] : [], result?.Log, TimeSpan.FromSeconds(result?.Seconds ?? 0)));
         if (!IsBusy) StatusMessage = status;
     }
@@ -873,7 +910,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     {
         Outputs.Clear();
         Warnings.Clear();
-        LastError = null;
+        LastError = RelativeFolderProblem(ExportDirectory);
+        if (LastError is not null) return;
         IsBusy = true;
         ExportScriptCommand.NotifyCanExecuteChanged();
         _cts = new CancellationTokenSource();
@@ -925,7 +963,28 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Cancel() => _cts?.Cancel();
+    private void Cancel()
+    {
+        _cts?.Cancel();
+        _work?.Cancel();
+    }
+
+    // The work that is not a render or an export (an estimate, opening a scene in Blender, reading
+    // the model for the branch table): it may export the model with Therion first, which takes
+    // minutes, so Cancel stops it too. Closing ThIDE does not ask about it.
+    private CancellationTokenSource? _work;
+
+    private CancellationTokenSource BeginWork()
+    {
+        var work = new CancellationTokenSource();
+        _work = work;
+        return work;
+    }
+
+    private void EndWork(CancellationTokenSource work)
+    {
+        if (_work == work) _work = null;
+    }
 
     /// <summary>True while a render or script export runs; closing ThIDE would stop it.</summary>
     public bool IsJobRunning => _cts is not null;
@@ -953,25 +1012,38 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     private void SavePreset()
     {
         if (_presetStore is null) return;
-        _presetStore.Save(new RenderPreset { Name = NewPresetName.Trim(), Spec = _spec, BuiltIn = false });
+        string name = NewPresetName.Trim();
+        // A full disk or a folder that cannot be written is said, not thrown: the work is kept.
+        try { _presetStore.Save(new RenderPreset { Name = name, Spec = _spec, BuiltIn = false }); }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            LastError = string.Format(Tr.Get("Blender_Preset_NotSaved"), name, IoErrorText.Reason(ex));
+            return;
+        }
+        LastError = null;
         LoadPresets();
         NewPresetName = "";
     }
 
-    private bool CanSavePreset => _presetStore is not null && !string.IsNullOrWhiteSpace(NewPresetName);
+    private bool CanSavePreset => _presetStore is not null && PresetStore.NameProblem(NewPresetName) is null;
 
     [RelayCommand(CanExecute = nameof(CanDeletePreset))]
     private void DeletePreset()
     {
         if (_presetStore is null || SelectedPreset is not { BuiltIn: false } item) return;
-        _presetStore.Delete(item.Name);
+        try { _presetStore.Delete(item.Name); }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            LastError = string.Format(Tr.Get("Blender_Preset_NotDeleted"), item.Name, IoErrorText.Reason(ex));
+            return;
+        }
+        LastError = null;
         LoadPresets();
     }
 
     private bool CanDeletePreset => _presetStore is not null && SelectedPreset is { BuiltIn: false };
 
     partial void OnNewPresetNameChanged(string value) => SavePresetCommand.NotifyCanExecuteChanged();
-    partial void OnSelectedPresetChanging(PresetItem? value) => DeletePresetCommand.NotifyCanExecuteChanged();
     partial void OnExportDirectoryChanged(string? value) => ExportScriptCommand.NotifyCanExecuteChanged();
 
     partial void OnSelfContainedChanged(bool value)
@@ -1048,7 +1120,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         {
             foreach (var path in result.OutputPaths) Outputs.Add(path);
             StatusMessage = Tr.Get(draft ? "Blender_Status_PreviewDone" : "Blender_Status_Done");
-            Jobs.Insert(0, new JobHistoryEntry(jobName, true, StatusMessage, [.. result.OutputPaths], result.JobLogPath, result.Duration));
+            AddJob(new JobHistoryEntry(jobName, true, StatusMessage, [.. result.OutputPaths], result.JobLogPath, result.Duration));
             _notifications?.Success(Tr.Get("Blender_Tool_Title"), StatusMessage,
                 _shell is not null && result.OutputPaths.Length > 0 ? Tr.Get("Blender_Notify_OpenFolder") : null,
                 _shell is not null && result.OutputPaths.Length > 0 ? () => RevealOutput(result.OutputPaths[0]) : null);
@@ -1057,7 +1129,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         {
             LastError = FailureMessage(result);
             StatusMessage = Tr.Get("Blender_Status_Failed");
-            Jobs.Insert(0, new JobHistoryEntry(jobName, false, LastError ?? StatusMessage, [], result.JobLogPath, result.Duration));
+            AddJob(new JobHistoryEntry(jobName, false, LastError ?? StatusMessage, [], result.JobLogPath, result.Duration));
             _notifications?.Error(Tr.Get("Blender_Tool_Title"), LastError ?? StatusMessage,
                 result.JobLogPath is not null && _shell is not null ? Tr.Get("Blender_Notify_OpenLog") : null,
                 result.JobLogPath is not null && _shell is not null ? () => _shell.Open(result.JobLogPath) : null);
@@ -1065,6 +1137,11 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         OpenOutputFolderCommand.NotifyCanExecuteChanged();
         OpenJobLogCommand.NotifyCanExecuteChanged();
     }
+
+    private int _jobsAdded;
+
+    /// <summary>A job joins the history, first; its number (from 1, never reused) names its row.</summary>
+    private void AddJob(JobHistoryEntry entry) => Jobs.Insert(0, entry with { Number = ++_jobsAdded });
 
     private static string FailureMessage(RenderResult result) => result.StartFailedPath is { } path
         ? string.Format(Tr.Get("Blender_Fail_StartFailed"), path)
@@ -1134,6 +1211,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         LastError = null;
         BlenderMissing = false;
         IsBusy = true;
+        using var work = BeginWork();
         try
         {
             // The script Blender opens with lies in a folder of the user's alone, not in the temp
@@ -1141,13 +1219,14 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             var dir = System.IO.Path.Combine(
                 Therion.Blender.Execution.PrivateFolders.Ensure(GuiFolder, tighten: true), System.Guid.NewGuid().ToString("N")[..8]);
             var progress = new Progress<RenderProgress>(OnProgress);
-            var source = await _sources.AcquireAsync(BuildRequest()).ConfigureAwait(true);
+            var source = await _sources.AcquireAsync(BuildRequest(), work.Token).ConfigureAwait(true);
             // A render started from Blender's window writes where "Render" would.
             var spec = string.IsNullOrWhiteSpace(RenderDirectory)
                 ? _spec
                 : _spec with { Output = _spec.Output with { OutputDirectory = RenderDirectory.Trim() } };
             var export = await _renderService.ExportAsync(
-                spec, source, dir, new ExportOptions { Builder = Builder, Interactive = true }, progress).ConfigureAwait(true);
+                spec, source, dir, new ExportOptions { Builder = Builder, Interactive = true }, progress, work.Token).ConfigureAwait(true);
+            work.Token.ThrowIfCancellationRequested();
             if (!_gui.Launch(export.ScriptPath, export.ScriptArguments))
             {
                 BlenderMissing = true;
@@ -1160,12 +1239,17 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
                 if (export.TextsInSecondStage) Warnings.Add(Tr.Get("Blender_OpenInBlender_TextsNote"));
             }
         }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = Tr.Get("Blender_Status_Cancelled");
+        }
         catch (Exception ex)
         {
             LastError = ex.Message;
         }
         finally
         {
+            EndWork(work);
             IsBusy = false;
             Revalidate();
         }
@@ -1273,4 +1357,10 @@ public sealed record ArtifactItem(string DisplayName, ModelArtifact? Artifact);
 
 /// <summary>A finished render job in the panel's history (BA-B13).</summary>
 public sealed record JobHistoryEntry(
-    string Name, bool Succeeded, string Status, IReadOnlyList<string> Outputs, string? JobLogPath, System.TimeSpan Duration);
+    string Name, bool Succeeded, string Status, IReadOnlyList<string> Outputs, string? JobLogPath, System.TimeSpan Duration)
+{
+    /// <summary>Its place in the order the jobs ended, from 1: what its row's automation ids call it.</summary>
+    public int Number { get; init; }
+
+    public string CopyId => $"Blender.Job.{Number}.Copy";
+}
