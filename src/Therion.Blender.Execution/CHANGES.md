@@ -1,5 +1,17 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-27 — the disk preflight scales with resolution
+
+### Breaking changes
+- None. `DiskPreflight.EstimateBytes` keeps its signature.
+
+### Behaviour
+- A PNG frame (frame sequence or still) is now estimated at about 2 MB at 1080p, scaled by pixel
+  count, never under 64 KB a frame, plus a fixed 32 MB margin. It was about 5 MB a frame at 1080p;
+  a measured frame takes 1.77 MB, and a sample render was refused for it. The 1.5 times safety
+  factor and the video estimate are unchanged. New public constants: `FrameBytesAt1080p`,
+  `MinFrameBytes`, `FixedMarginBytes`.
+
 ## 2026-11-27 — fixes from a Windows machine with a GPU
 
 ### Breaking changes
