@@ -1279,6 +1279,85 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler? RenumberStationsRequested;
     [RelayCommand] private void RenumberStations() => RenumberStationsRequested?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>Raised to open Tools ▸ Export as a single .th file (the view shows the options); carries a name for the file.</summary>
+    public event EventHandler<string>? ExportSingleThRequested;
+
+    /// <summary>Tools ▸ Export as a single .th file: asks the view for the options.</summary>
+    [RelayCommand]
+    private void ExportSingleTh()
+    {
+        if (_session?.ActiveThconfig?.FullPath is not { } entry)
+        {
+            _notifications.Info(Tr.Get("Flatten_Title"), Tr.Get("Flatten_NoProject"));
+            return;
+        }
+        ExportSingleThRequested?.Invoke(this, SingleThName(entry));
+    }
+
+    /// <summary>A name for the merged file: the configuration's, or its folder's for a plain <c>thconfig</c>.</summary>
+    private static string SingleThName(string entry)
+    {
+        var stem = System.IO.Path.GetFileNameWithoutExtension(entry);
+        if (stem.Equals("thconfig", StringComparison.OrdinalIgnoreCase))
+            stem = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(entry)) ?? stem;
+        return Therion.Workspace.Import.ScaffoldValueRules.SafeSurveyName(stem);
+    }
+
+    /// <summary>
+    /// Merges the open project into one .th with <paramref name="options"/>: picks the file, merges from
+    /// the editor's text where a file is open (unsaved edits included), writes and opens the result.
+    /// </summary>
+    public async Task ExportSingleThAsync(Therion.Workspace.Flatten.FlattenOptions options, bool writeStationNames)
+    {
+        if (_picker is null || _session?.ActiveThconfig?.FullPath is not { } entry) return;
+        var outPath = await _picker.PickSaveFileAsync(Tr.Get("Flatten_SaveTitle"),
+            (options.SurveyName ?? SingleThName(entry)) + ".th", System.IO.Path.GetDirectoryName(entry)).ConfigureAwait(true);
+        if (string.IsNullOrEmpty(outPath)) return;
+        try
+        {
+            // The editor's buffers, read here on the UI thread; the merge runs off it.
+            var open = _documents.Documents
+                .Where(d => !string.IsNullOrEmpty(d.FilePath))
+                .GroupBy(d => System.IO.Path.GetFullPath(d.FilePath), Therion.Workspace.Editing.FilePaths.Comparer)
+                .ToDictionary(g => g.Key, g => g.First().DocumentText, Therion.Workspace.Editing.FilePaths.Comparer);
+            var disk = Therion.Workspace.Flatten.FlattenFileSource.Disk;
+            var files = new Therion.Workspace.Flatten.FlattenFileSource(
+                path => open.TryGetValue(path, out var text) ? text : disk.ReadText(path),
+                path => open.ContainsKey(path) || disk.Exists(path));
+            var result = await Task.Run(() => Therion.Workspace.Flatten.SurveyFlattener.Flatten(entry, options, files)).ConfigureAwait(true);
+
+            await System.IO.File.WriteAllTextAsync(outPath, result.Text, new System.Text.UTF8Encoding(false)).ConfigureAwait(true);
+            if (writeStationNames)
+                await System.IO.File.WriteAllTextAsync(System.IO.Path.ChangeExtension(outPath, ".names.csv"), result.StationNamesCsv(),
+                    new System.Text.UTF8Encoding(false)).ConfigureAwait(true);
+            await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
+
+            var s = result.Statistics;
+            var fileName = System.IO.Path.GetFileName(outPath);
+            var problems = result.Diagnostics.Where(d => d.Severity >= Therion.Core.DiagnosticSeverity.Warning).ToList();
+            if (problems.Count == 0)
+            {
+                StatusText = string.Format(System.Globalization.CultureInfo.CurrentCulture, Tr.Get("Flatten_Done"),
+                    fileName, s.Shots, s.SplaysKept, s.SplaysDropped, s.Stations, s.Centrelines, s.Files);
+                _notifications.Success(Tr.Get("Flatten_Title"), StatusText);
+            }
+            else
+            {
+                foreach (var d in problems) _log?.Warning($"Single .th export: {d.Message} ({d.Span})");
+                StatusText = string.Format(System.Globalization.CultureInfo.CurrentCulture, Tr.Get("Flatten_DoneWithProblems"),
+                    fileName, problems.Count, problems[0].Message);
+                if (result.HasErrors) _notifications.Error(Tr.Get("Flatten_Title"), StatusText);
+                else _notifications.Warning(Tr.Get("Flatten_Title"), StatusText);
+            }
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            StatusText = ex.Message;
+            _log?.Warning($"Single .th export failed: {ex.Message}");
+            _notifications.Error(Tr.Get("Flatten_Failed"), ex.Message);
+        }
+    }
+
     /// <summary>Raised to open Tools ▸ New trip… in the view.</summary>
     public event EventHandler? NewTripRequested;
 

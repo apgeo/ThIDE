@@ -123,6 +123,7 @@ public partial class MainWindow : Window
                 vm.FormatAllRequested += (_, _) => _ = FormatAllAsync();
                 vm.NormalizeProjectRequested += (_, _) => _ = NormalizeProjectAsync();
                 vm.RenumberStationsRequested += (_, _) => _ = RenumberStationsAsync();
+                vm.ExportSingleThRequested += (_, _) => _ = ExportSingleThAsync(vm);
                 if (AppServices.Provider.GetService<IMacroService>() is MacroService macroService)
                 {
                     macroService.AskVariables = m => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => AskMacroVariablesAsync(m));
@@ -817,6 +818,14 @@ public partial class MainWindow : Window
         await window.ShowDialog(this);
         if (!window.Confirmed || model.Plan is not { Ok: true } plan) return;
         await Fixes.RenumberAsync(plan, model.Summary);
+    }
+
+    /// <summary>Tools ▸ Export as a single .th file: the options first, then the view model merges and writes.</summary>
+    private async System.Threading.Tasks.Task ExportSingleThAsync(MainWindowViewModel vm)
+    {
+        var choices = await new ExportSingleThDialog().ShowAsync(this);
+        if (choices is null) return;
+        await vm.ExportSingleThAsync(choices.Options, choices.WriteStationNames);
     }
 
     /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>

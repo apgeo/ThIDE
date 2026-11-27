@@ -348,6 +348,8 @@
                         <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Shots.Latex" Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="shots|latex" />
                     </MenuItem>
                 </MenuItem>
+                <!-- the whole project as one survey with one centreline. -->
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportSingleTh" Header="{l:Loc Menu_Tools_ExportSingleTh}" Command="{Binding ExportSingleThCommand}" />
                 <!-- one-click survey report. -->
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.GenerateReport" Header="{l:Loc Menu_Tools_GenReport}" InputGesture="{l:Gesture GenerateReport}" Command="{Binding GenerateReportCommand}" />
                 <Separator />
