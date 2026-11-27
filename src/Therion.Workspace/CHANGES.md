@@ -4,6 +4,20 @@ What a consumer of this library can notice, newest first. Each entry says what c
 and what to do. Entries also cover behaviour that reaches you through `Therion.Syntax` and
 `Therion.Semantics`, which this library is built on.
 
+## 2026-11 (single-file export)
+
+### Additions
+- **`Therion.Workspace.Flatten`**: `SurveyFlattener.Flatten(entryPath, FlattenOptions?, FlattenFileSource?)`
+  merges a whole project (a `.thconfig` or a `.th`, with every `source` and `input`) into the text of
+  one `.th` holding one survey with one centreline, and returns a `FlattenResult` (the text,
+  diagnostics with `TH_FLAT_0xx` codes, statistics, the old → new name of every station, the
+  declination applied per source centreline). Pure apart from the file reads, which
+  `FlattenFileSource` lets a caller supply (the app passes its editor buffers). Never throws on bad
+  data. Migration: none — nothing existing changed.
+- **`Therion.Core.IgrfModel`**: the IGRF-14 field (1900–2030, coefficients embedded, about 42 KB),
+  evaluated as Therion evaluates it for a dated centreline; `IgrfModel.Default.Declination(lat, lon,
+  altKm, decimalYear)`. `GeoMagneticModel` (WMM from a user-supplied `.COF`) is unchanged.
+
 ## 2026-11 (round 6)
 
 ### Behaviour changes
