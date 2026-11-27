@@ -109,6 +109,19 @@ public static class DataReadingValidation
 
             case ReadingValueKind.Dimension:
                 if (IsOmitted(value)) return null;
+                // `[from to]`: the dimension at both ends of the shot, each a number or `-`.
+                if (value.Length >= 2 && value[0] == '[' && value[^1] == ']')
+                {
+                    var ends = value[1..^1].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                    if (ends.Length is < 1 or > 2) return NotANumber(reading, value);
+                    foreach (var e in ends)
+                    {
+                        if (IsOmitted(e)) continue;
+                        if (!TryNum(e, out var end)) return NotANumber(reading, value);
+                        if (end < 0) return Negative(reading, value);
+                    }
+                    return null;
+                }
                 if (!TryNum(value, out var dim)) return NotANumber(reading, value);
                 return dim < 0 ? Negative(reading, value) : null;
 

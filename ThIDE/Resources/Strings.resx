@@ -2570,4 +2570,34 @@ This cannot be undone.</value></data>
   <data name="Blender_Branch_WhyExcluded" xml:space="preserve"><value>left out by hand</value></data>
   <data name="Blender_Branch_WhySkipped" xml:space="preserve"><value>passed by</value></data>
   <data name="Blender_Tour_Summary" xml:space="preserve"><value>The tour: {1:0.#} s; shots: {0}; side passages: {2}.</value></data>
+  <data name="Menu_Tools_ExportSingleTh" xml:space="preserve"><value>Export as a Single .th File…</value></data>
+  <data name="Flatten_Title" xml:space="preserve"><value>Export as a single .th file</value></data>
+  <data name="Flatten_Intro" xml:space="preserve"><value>Merges every survey of the project into one survey with one centerline. Equated stations become one station, and each shot's magnetic declination is added to its compass reading, so the file needs no dates to compile the same. Drawings (.th2) are not carried.</value></data>
+  <data name="Flatten_Survey" xml:space="preserve"><value>Survey name</value></data>
+  <data name="Flatten_Naming" xml:space="preserve"><value>Station names</value></data>
+  <data name="Flatten_NamingKeep" xml:space="preserve"><value>Keep them (add the survey where two names clash)</value></data>
+  <data name="Flatten_NamingSurvey" xml:space="preserve"><value>Put the survey name in front of every station</value></data>
+  <data name="Flatten_NamingSequential" xml:space="preserve"><value>Number the stations 1, 2, 3 …</value></data>
+  <data name="Flatten_Prefix" xml:space="preserve"><value>Prefix for every station name (optional)</value></data>
+  <data name="Flatten_PrefixHint" xml:space="preserve"><value>e.g. A or cave1_</value></data>
+  <data name="Flatten_SplayPercent" xml:space="preserve"><value>Splays to keep at each station (%)</value></data>
+  <data name="Flatten_LimitSplays" xml:space="preserve"><value>At most this many splays per station:</value></data>
+  <data name="Flatten_SplayHint" xml:space="preserve"><value>The splays kept are the ones that cover the passage best, not the first ones. A splay to a named station that is used elsewhere is always kept.</value></data>
+  <data name="Flatten_Standalone" xml:space="preserve"><value>Include everything the file needs on its own: the coordinate system and fixed points, the entrances and other station comments, station marks, dates and team</value></data>
+  <data name="Flatten_Declination" xml:space="preserve"><value>Add each shot's magnetic declination to its compass reading (stated, or of its survey's date)</value></data>
+  <data name="Flatten_Latitude" xml:space="preserve"><value>Latitude</value></data>
+  <data name="Flatten_Longitude" xml:space="preserve"><value>Longitude</value></data>
+  <data name="Flatten_LocationHint" xml:space="preserve"><value>The cave's position (WGS84 degrees) for the declination of each date. Leave it empty to use the fixed points; it is needed when they are in a coordinate system ThIDE cannot place on the globe.</value></data>
+  <data name="Flatten_SourceComments" xml:space="preserve"><value>Put a comment before the shots of each source centerline (its survey, file, date and declination)</value></data>
+  <data name="Flatten_WriteNames" xml:space="preserve"><value>Also save the list of old and new station names (.csv)</value></data>
+  <data name="Flatten_ChooseFile" xml:space="preserve"><value>Choose file…</value></data>
+  <data name="Flatten_BadPercent" xml:space="preserve"><value>The share of splays to keep is a number from 0 to 100.</value></data>
+  <data name="Flatten_BadMax" xml:space="preserve"><value>The number of splays per station is a whole number.</value></data>
+  <data name="Flatten_BadLocation" xml:space="preserve"><value>The latitude is −90 to 90 and the longitude −180 to 180 (degrees).</value></data>
+  <data name="Flatten_NoProject" xml:space="preserve"><value>Open a project (a .thconfig) first.</value></data>
+  <data name="Flatten_SaveTitle" xml:space="preserve"><value>Save the single .th file</value></data>
+  <data name="Flatten_Done" xml:space="preserve"><value>Wrote {0}. Shots: {1}; splays: {2} ({3} left out); stations: {4}; centerlines: {5}; files: {6}.</value></data>
+  <data name="Flatten_DoneWithProblems" xml:space="preserve"><value>Wrote {0}, with problems to check ({1}); the first: {2}</value></data>
+  <data name="Flatten_Failed" xml:space="preserve"><value>Single .th export failed</value></data>
+  <data name="Flatten_SurveyHint" xml:space="preserve"><value>empty: the project's top-level survey, or the configuration's name</value></data>
 </root>

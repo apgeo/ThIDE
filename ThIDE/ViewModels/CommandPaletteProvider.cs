@@ -149,6 +149,7 @@ public sealed class CommandPaletteProvider
         foreach (var (kindKey, kind) in new[] { ("Browser_Tab_Stations", "stations"), ("Browser_Tab_Shots", "shots") })
             foreach (var fmt in new[] { "csv", "markdown", "html", "latex" })
                 list.Add(ParamCmd(tools, $"{L("Menu_Tools_ExportTable")}: {L(kindKey)} — {FormatLabel(fmt)}", _vm.ExportTableCommand, $"{kind}|{fmt}", "Icon.Export"));
+        list.Add(VmCmd(tools, L("Menu_Tools_ExportSingleTh"), _vm.ExportSingleThCommand, "Icon.Export"));
         list.Add(VmCmd(tools, L("Menu_Tools_GenReport"), _vm.GenerateReportCommand, "Icon.Th"));
         list.Add(VmCmd(tools, L("Menu_Tools_NewScrap"), _vm.NewScrapScaffoldCommand, "Icon.Th2"));
         list.Add(Action(tools, L("Menu_Tools_UnitConverter"), () => { _vm.RaiseShowToolWindow("unit"); return Task.CompletedTask; }, "Icon.Timer"));

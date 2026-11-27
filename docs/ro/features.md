@@ -26,7 +26,7 @@
 - **Lipește ca date de vize**: tabele din foi de calcul, CSV, PocketTopo sau DistoX → un bloc Therion `data`, cu detectarea coloanelor și unităților, stații denumite pentru descărcările brute (vizele repetate → un singur tronson) și verificări pe fiecare linie; fișierele `.csv`/`.tsv` se importă ca topografie nouă.
 - **Dosarul de intrare** (opțional): exporturile de topografie care ajung în `incoming/` sunt oferite pentru import după ce sunt complete și sunt direcționate către **Leagă un fișier de topografie** sau către importatoarele Survex/Compass/GPX; plasarea acestor fișiere prin tragere pe fereastră are același efect.
 - **Macrouri**: scenarii cu previzualizare, apoi aplicare, construite din uneltele MCP și rulate fără model — **Unelte** ▸ **Macrouri**, sarcini, hook-uri sau `therion-mcp macro run … [--apply]`; o singură unealtă dintr-un shell cu `therion-mcp call`. Prompturile MCP `audit_workspace` și `prepare_release` trimit mai întâi la macroul corespunzător.
-- **Fără interfață grafică**: `therion-cli format --check` (CI / pre-commit), `import` (Survex, Compass, GPX, tabele de vize) și `report` (raport topografic HTML).
+- **Fără interfață grafică**: `therion-cli format --check` (CI / pre-commit), `import` (Survex, Compass, GPX, tabele de vize), `flatten` (tot proiectul ca un singur `.th`) și `report` (raport topografic HTML).
 - **Presetare LM Studio** (`docs/assistant/thide.preset.json` sau `therion-mcp skills preset`): pachetul de abilități pentru modelele locale.
 - **Leagă un fișier de topografie** — alegeți o stație a unui fișier `.th` independent și stația din proiect din care acesta continuă; ThIDE scrie `input` + `equate` (nume relative la topografia de destinație) în fișierul sugerat, copiază fișierul și schițele lui în proiect, verifică duplicatele și previzualizează rezultatul. Vedeți [ghidul utilizatorului, capitolul 24](user-guide/24-linking-surveys.md).
 - **Previzualizare 2D în timp real** a poligonalelor — cu echivalările unite și ancorată în punctele fixe, colorare după topografie/fișier/componentă, marcaje de joncțiune pe care se poate face clic și vizibilitate per componentă.
@@ -46,6 +46,7 @@
 ## Import / export și GIS
 - **Import:** Survex (`.svx`), Compass (`.dat`), DEM (ESRI ASCII → `surface`) și puncte GPX (→ `fix`).
 - **Export:** intrări și puncte fixe în **KML / GeoJSON / GPX / CSV**.
+- **Tot proiectul ca un singur `.th`** (**Unelte** ▸ **Exportă ca un singur fișier .th…**, `therion-cli flatten`): o singură topografie cu o singură poligonală, stațiile echivalate unite, numele păstrate, cu prefix sau numerotate, declinația magnetică a fiecărei vize (cea declarată sau cea IGRF a datei ei) în citirea busolei, radialele rărite după procent sau pe stație și, opțional, punctele fixe, intrările, comentariile stațiilor, datele și echipa, ca fișierul să stea singur.
 - **Generarea unui proiect** în jurul unui fișier de topografie `.th` simplu (de exemplu din TopoDroid): arborele de dosare, topografia de legătură, georeferențierea și aspectul (layout) opționale, plus un thconfig cu exporturile alese.
 - Generarea de fișiere `.th2` (schiță nouă; schiță din imagine / `.xvi`) și transformări de coordonate (WGS84 ↔ UTM, lat-long).
 

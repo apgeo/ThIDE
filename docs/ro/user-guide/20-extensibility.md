@@ -21,6 +21,7 @@ therion-cli report   path/to/project.thconfig --out output/report.html
 therion-cli stats    path/to/project.thconfig    # lungime/adâncime etc.
 therion-cli deps     path/to/project.thconfig --dot   # graful de includeri (Graphviz)
 therion-cli gis      path/to/project.thconfig --format kml --out entrances.kml
+therion-cli flatten  path/to/project.thconfig --out cave-single.th --standalone   # tot proiectul ca o singură topografie, o singură poligonală
 therion-cli new      --list                      # șabloane de proiect (integrate și importate)
 therion-cli new      single-cave --out ~/caves/pit --var project=pit
 ```

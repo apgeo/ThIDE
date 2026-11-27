@@ -266,7 +266,7 @@ public sealed class ThParser
             (string.Equals(parentBlock, "centreline", StringComparison.OrdinalIgnoreCase) ||
              string.Equals(parentBlock, "centerline", StringComparison.OrdinalIgnoreCase)))
         {
-            var (values, valueSpans) = CoalesceValues(line);
+            var (values, valueSpans) = MergeBracketedValues(CoalesceValues(line));
             // A single bare token can't be a survey shot in ANY Therion data format (even the default
             // `normal` needs from+to, and the shortest formats still need ≥2 columns). So a 1-column
             // "row" is really a stray/typo'd command (e.g. `zx`) that the centreline data-row fallback
@@ -1221,6 +1221,39 @@ public sealed class ThParser
             spans.Add(JoinSpans(groupStart, groupEnd));
         }
         return (values.ToImmutable(), spans.ToImmutable());
+    }
+
+    /// <summary>
+    /// Joins a bracketed list in a data row into one value: Therion reads <c>[0.5 1.2]</c> (the
+    /// passage dimension at the from and the to station) as a single reading, so the row's columns
+    /// line up with its <c>data</c> order only when it is one value here too.
+    /// </summary>
+    private static (ImmutableArray<string> Values, ImmutableArray<SourceSpan> Spans) MergeBracketedValues(
+        (ImmutableArray<string> Values, ImmutableArray<SourceSpan> Spans) row)
+    {
+        var (values, spans) = row;
+        bool any = false;
+        foreach (var v in values) if (v.StartsWith('[') && !v.EndsWith(']')) { any = true; break; }
+        if (!any) return row;
+
+        var merged = ImmutableArray.CreateBuilder<string>(values.Length);
+        var mergedSpans = ImmutableArray.CreateBuilder<SourceSpan>(values.Length);
+        for (int i = 0; i < values.Length; i++)
+        {
+            int end = i;
+            if (values[i].StartsWith('[') && !values[i].EndsWith(']'))
+                while (end + 1 < values.Length && !values[end].EndsWith(']')) end++;
+            if (end == i || !values[end].EndsWith(']'))
+            {
+                merged.Add(values[i]);
+                if (i < spans.Length) mergedSpans.Add(spans[i]);
+                continue;
+            }
+            merged.Add(string.Join(' ', values.Skip(i).Take(end - i + 1)));
+            if (end < spans.Length) mergedSpans.Add(JoinSpans(spans[i], spans[end]));
+            i = end;
+        }
+        return (merged.ToImmutable(), mergedSpans.ToImmutable());
     }
 
     /// <summary>Union of two spans on the same line (first value token → last value token).</summary>

@@ -123,6 +123,49 @@ Exporturile de tabele pot fi produse și în HTML/LaTeX, pentru includere în do
 terminal: `therion-cli report project.thconfig --out
 report.html`.
 
+### Tot proiectul ca un singur fișier .th
+
+**Unelte → Exportă ca un singur fișier .th…** unește toate topografiile proiectului — fiecare fișier
+citit de liniile `source` ale configurației și fiecare `input` din ele — într-un singur fișier `.th`
+care conține **o singură topografie cu o singură poligonală**. Este un mod de a da toată peștera cuiva
+(sau altui program) ca un singur fișier, sau de a vedea toate datele într-un loc. Fișierele deschise în
+editor se citesc așa cum sunt acolo, cu modificările nesalvate.
+
+- **O stație pentru fiecare punct.** Stațiile legate prin `equate` devin o singură stație, cu numele
+  celei pe care proiectul o pomenește prima; referințele `punct@topografie` se rezolvă așa cum le
+  rezolvă Therion. Numele se pot păstra (unde două topografii folosesc același nume, acele stații
+  primesc în față numele topografiei, de ex. `sifon_12`), pot primi mereu în față numele topografiei
+  sau se pot numerota 1, 2, 3 …; un prefix opțional se pune în fața fiecărui nume. **Salvează și lista
+  cu numele vechi și noi ale stațiilor** scrie un `.names.csv` lângă fișier.
+- **Citiri în metri și grade.** Se calculează `units`, `calibrate`, citirile inverse și contoarele
+  topofil; vizele de tip diving, cylpolar și cartesian își păstrează stilul; datele intercalate pe stații
+  devin rânduri from/to; dimensiunile galeriei (stânga/dreapta/sus/jos) se păstrează.
+- **Declinația magnetică.** Declinația fiecărei poligonale se află ca în Therion: cea declarată de
+  poligonală sau de o topografie care o cuprinde (`declination`, `grid-angle`, `survey -declination`),
+  altfel câmpul IGRF la data poligonalei și la poziția medie a punctelor fixe; poligonalele fără dată o
+  primesc pe cea a celei mai vechi date din proiect. Se adaugă la fiecare citire a busolei, iar fișierul
+  scrie `declination 0`, ca să iasă la fel și fără date calendaristice. Comentariul dinaintea fiecărei
+  părți a fișierului spune ce declinație s-a folosit. Când punctele fixe sunt într-un sistem de
+  coordonate pe care ThIDE nu îl poate așeza pe glob, dați latitudinea și longitudinea peșterii. Un
+  proiect fără puncte fixe într-un sistem de coordonate global nu primește declinație după dată (nici
+  Therion nu aplică) decât dacă îi dați poziția.
+- **Mai puține radiale.** Se poate păstra o parte din radialele fiecărei stații (în %) și/sau cel mult
+  un număr pe stație. Se păstrează radialele care acoperă cel mai bine galeria (răspândite în jurul
+  stației), nu primele; o radială care se termină într-o stație cu nume folosită și în altă parte se
+  păstrează mereu.
+- **De sine stătător.** Cu **Include tot ce îi trebuie fișierului ca să stea singur**, fișierul conține
+  și sistemul de coordonate și punctele fixe, intrările și celelalte comentarii și marcaje ale stațiilor
+  (continuări, izvoare …), marcajele stațiilor, datele și echipa. Fără această opțiune conține doar
+  măsurătorile: vize, radiale, dimensiuni, marcajele vizelor și direcțiile secțiunii desfășurate.
+- **Nu se preiau:** desenele (`.th2`), hărțile, suprafețele, datele aduse cu `import` (un `.3d`) și
+  alegerile `select` ale configurației. Sistemul de coordonate de ieșire al configurației (`cs`) nu se
+  poate scrie într-un `.th`; antetul fișierului îl numește.
+
+Compilat de Therion, fișierul unit dă fiecărei stații poziția pe care o are în proiect (la centimetrul
+lui Therion). Dintr-un terminal: `therion-cli flatten project.thconfig --out pestera-unica.th
+--standalone --splays 50 --max-splays 4 --names pestera-unica.csv --thconfig unica.thconfig`
+(`--thconfig` scrie și o configurație care îl compilează; `therion-cli --help` listează opțiunile).
+
 ## Desenare cu Mapiah
 
 Pentru desenul galeriilor din fișierele `.th2`, ThIDE integrează editorul vizual extern **Mapiah**:

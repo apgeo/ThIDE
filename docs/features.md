@@ -26,7 +26,7 @@
 - **Paste as shot data**: spreadsheet, CSV, PocketTopo or DistoX tables → a Therion `data` block with column and unit detection, named stations for raw dumps (repeated shots → one leg) and checks per line; `.csv`/`.tsv` import as a new survey.
 - **Incoming folder** (opt-in): survey exports landing in `incoming/` are offered for import once complete, routed to Link survey file or the Survex/Compass/GPX importers; dropping those files on the window does the same.
 - **Macros**: preview-then-apply playbooks of the MCP tools, run without a model — Tools ▸ Macros, tasks, hooks, or `therion-mcp macro run … [--apply]`; one tool from a shell with `therion-mcp call`. The MCP prompts `audit_workspace` and `prepare_release` point to the matching macro first.
-- **Headless**: `therion-cli format --check` (CI / pre-commit), `import` (Survex, Compass, GPX, shot tables) and `report` (HTML survey report).
+- **Headless**: `therion-cli format --check` (CI / pre-commit), `import` (Survex, Compass, GPX, shot tables), `flatten` (the whole project as one `.th`) and `report` (HTML survey report).
 - **LM Studio preset** (`docs/assistant/thide.preset.json`, or `therion-mcp skills preset`): the skill pack for local models.
 - **Link survey file** — pick a station of a standalone `.th` and the project station it continues from; ThIDE writes `input` + `equate` (names relative to the destination survey) into the suggested file, copies the file and its sketches into the project, checks for duplicates, and previews the result. See [user guide 24](user-guide/24-linking-surveys.md).
 - **Live 2D preview** of centrelines — equate-merged and fix-anchored, color-by survey/file/component, with clickable junction markers and per-component visibility.
@@ -46,6 +46,7 @@
 ## Import / export & GIS
 - **Import:** Survex (`.svx`), Compass (`.dat`), DEM (ESRI ASCII → `surface`), and GPX waypoints (→ `fix`).
 - **Export:** entrances and fixed points to **KML / GeoJSON / GPX / CSV**.
+- **The whole project as one `.th`** (**Tools ▸ Export as a Single .th File…**, `therion-cli flatten`): one survey with one centreline, equated stations merged, names kept, prefixed or numbered, each shot's magnetic declination (stated, or IGRF of its date) in its compass reading, splays thinned by share or per station, and optionally the fixed points, entrances, station comments, dates and team so the file stands alone.
 - **Scaffold a project** around a bare (e.g. TopoDroid) survey `.th`: folder tree, wrapper survey, optional georeference and layout, and a thconfig with the chosen exports.
 - `.th2` scaffolding (new scrap; sketch-from-image / `.xvi`) and coordinate transforms (WGS84 ↔ UTM, lat-long).
 

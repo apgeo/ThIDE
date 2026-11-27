@@ -25,6 +25,23 @@ public class DataReadingValidationTests
         Assert.Equal(expected, DataReadingValidation.Classify(reading));
 
     [Theory]
+    [InlineData("[1 1.5]")]
+    [InlineData("[- 2]")]
+    [InlineData("[0.5]")]
+    public void A_bracketed_dimension_pair_is_valid(string value) =>
+        Assert.Null(DataReadingValidation.CheckValue("left", value));
+
+    [Theory]
+    [InlineData("[1 x]")]
+    [InlineData("[1 2 3]")]
+    public void A_bad_bracketed_dimension_pair_is_not_a_number(string value) =>
+        Assert.True(DataReadingValidation.CheckValue("up", value)!.Value.IsError);
+
+    [Fact]
+    public void A_negative_end_of_a_dimension_pair_warns() =>
+        Assert.False(DataReadingValidation.CheckValue("down", "[-1 2]")!.Value.IsError);
+
+    [Theory]
     [InlineData("length", "5.15x")]
     [InlineData("compass", "14x1.4")]
     [InlineData("clino", "49.7zxzxzx")]

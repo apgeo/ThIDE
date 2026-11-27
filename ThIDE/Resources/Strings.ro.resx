@@ -2570,4 +2570,34 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_Branch_WhyExcluded" xml:space="preserve"><value>lăsată deoparte de mână</value></data>
   <data name="Blender_Branch_WhySkipped" xml:space="preserve"><value>trecută cu vederea</value></data>
   <data name="Blender_Tour_Summary" xml:space="preserve"><value>Parcursul: {1:0.#} s, secvențe: {0}; galerii laterale: {2}.</value></data>
+  <data name="Menu_Tools_ExportSingleTh" xml:space="preserve"><value>Exportă ca un singur fișier .th…</value></data>
+  <data name="Flatten_Title" xml:space="preserve"><value>Exportă ca un singur fișier .th</value></data>
+  <data name="Flatten_Intro" xml:space="preserve"><value>Unește toate topografiile proiectului într-o singură topografie cu o singură poligonală. Stațiile echivalate devin o singură stație, iar declinația magnetică a fiecărei vize se adaugă la citirea busolei, ca fișierul să iasă la fel și fără date calendaristice. Desenele (.th2) nu sunt preluate.</value></data>
+  <data name="Flatten_Survey" xml:space="preserve"><value>Numele topografiei</value></data>
+  <data name="Flatten_Naming" xml:space="preserve"><value>Numele stațiilor</value></data>
+  <data name="Flatten_NamingKeep" xml:space="preserve"><value>Se păstrează (cu topografia în față unde două nume se repetă)</value></data>
+  <data name="Flatten_NamingSurvey" xml:space="preserve"><value>Se pune numele topografiei în fața fiecărei stații</value></data>
+  <data name="Flatten_NamingSequential" xml:space="preserve"><value>Stațiile se numerotează 1, 2, 3 …</value></data>
+  <data name="Flatten_Prefix" xml:space="preserve"><value>Prefix pentru numele fiecărei stații (opțional)</value></data>
+  <data name="Flatten_PrefixHint" xml:space="preserve"><value>de ex. A sau pestera1_</value></data>
+  <data name="Flatten_SplayPercent" xml:space="preserve"><value>Radiale păstrate la fiecare stație (%)</value></data>
+  <data name="Flatten_LimitSplays" xml:space="preserve"><value>Cel mult atâtea radiale pe stație:</value></data>
+  <data name="Flatten_SplayHint" xml:space="preserve"><value>Se păstrează radialele care acoperă cel mai bine galeria, nu primele. O radială spre o stație cu nume folosită și în altă parte se păstrează mereu.</value></data>
+  <data name="Flatten_Standalone" xml:space="preserve"><value>Include tot ce îi trebuie fișierului ca să stea singur: sistemul de coordonate și punctele fixe, intrările și celelalte comentarii ale stațiilor, marcajele stațiilor, datele și echipa</value></data>
+  <data name="Flatten_Declination" xml:space="preserve"><value>Adaugă declinația magnetică a fiecărei vize la citirea busolei (cea declarată sau cea a datei topografiei)</value></data>
+  <data name="Flatten_Latitude" xml:space="preserve"><value>Latitudine</value></data>
+  <data name="Flatten_Longitude" xml:space="preserve"><value>Longitudine</value></data>
+  <data name="Flatten_LocationHint" xml:space="preserve"><value>Poziția peșterii (grade WGS84) pentru declinația fiecărei date. Lăsați gol pentru a folosi punctele fixe; e nevoie de ea când acestea sunt într-un sistem de coordonate pe care ThIDE nu îl poate așeza pe glob.</value></data>
+  <data name="Flatten_SourceComments" xml:space="preserve"><value>Pune un comentariu înaintea vizelor fiecărei poligonale sursă (topografia, fișierul, data și declinația ei)</value></data>
+  <data name="Flatten_WriteNames" xml:space="preserve"><value>Salvează și lista cu numele vechi și noi ale stațiilor (.csv)</value></data>
+  <data name="Flatten_ChooseFile" xml:space="preserve"><value>Alegeți fișierul…</value></data>
+  <data name="Flatten_BadPercent" xml:space="preserve"><value>Partea de radiale păstrate e un număr de la 0 la 100.</value></data>
+  <data name="Flatten_BadMax" xml:space="preserve"><value>Numărul de radiale pe stație e un număr întreg.</value></data>
+  <data name="Flatten_BadLocation" xml:space="preserve"><value>Latitudinea e între −90 și 90, iar longitudinea între −180 și 180 (grade).</value></data>
+  <data name="Flatten_NoProject" xml:space="preserve"><value>Deschideți întâi un proiect (un .thconfig).</value></data>
+  <data name="Flatten_SaveTitle" xml:space="preserve"><value>Salvează fișierul .th unic</value></data>
+  <data name="Flatten_Done" xml:space="preserve"><value>S-a scris {0}. Vize: {1}; radiale: {2} ({3} lăsate deoparte); stații: {4}; poligonale: {5}; fișiere: {6}.</value></data>
+  <data name="Flatten_DoneWithProblems" xml:space="preserve"><value>S-a scris {0}, cu probleme de verificat ({1}); prima: {2}</value></data>
+  <data name="Flatten_Failed" xml:space="preserve"><value>Exportul într-un singur .th a eșuat</value></data>
+  <data name="Flatten_SurveyHint" xml:space="preserve"><value>gol: topografia de nivel superior a proiectului sau numele configurației</value></data>
 </root>
