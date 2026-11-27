@@ -1,5 +1,21 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-27 — fixes from a Windows machine with a GPU
+
+The plan stays **version 1** and the player stays **1.12**: no key is new or changed.
+
+### Breaking changes
+- None.
+
+### The player
+- A render on a GPU (OptiX, CUDA, HIP, oneAPI, Metal) denoises on the GPU too
+  (`cycles.denoising_use_gpu`, Blender 4.1 and newer). Started with `--factory-startup`, Blender
+  ran the denoiser on the CPU: 4 of the 10.6 s an OptiX frame of the flythrough took at 1920×1080
+  on an 8-core machine, now 6.5 s.
+- A bundle's `render.py` stops with a `THIDE:error` that names the length when the bundle lies too
+  deep for a Windows without long paths (`LongPathsEnabled` 0, the default): its folder at most
+  217 characters. Before, Python only said it had no `thide_player`.
+
 ## 2026-11-27 — the render node protocol
 
 The plan stays **version 1**; the player does not change.

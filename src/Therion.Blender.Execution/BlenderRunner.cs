@@ -43,6 +43,11 @@ public interface IBlenderProcess : IDisposable
 
     /// <summary>Kills the process and its whole child tree (cancellation).</summary>
     void KillTree();
+
+    /// <summary>Waits, at most <paramref name="timeout"/>, until a process that was killed is gone.
+    /// Windows keeps what a dying process holds (its files, its working folder) locked until then,
+    /// so a job that goes on with its frames right after a cancel would find its folder in use.</summary>
+    Task WaitForExitAsync(TimeSpan timeout) => Task.CompletedTask;
 }
 
 /// <summary>Starts a Blender process. Injected so the runner is testable without Blender.</summary>
@@ -55,6 +60,15 @@ public interface IBlenderProcessLauncher
 public sealed class BlenderRunner
 {
     private const int TailLines = 40;
+
+    /// <summary>How long a cancel waits for the killed Blender to be gone.</summary>
+    internal static readonly TimeSpan KillWait = TimeSpan.FromSeconds(30);
+
+    /// <summary>Said with a crash after Blender found no OpenGL to draw with.</summary>
+    internal const string NoOpenGlHint =
+        "Blender found no OpenGL to draw with, which a draft (the solid view) and EEVEE need. On Windows "
+        + "that is a Blender started outside a signed-in desktop session (a service, a scheduled task that "
+        + "runs whether the user is signed in or not, an SSH session): render with Cycles there, or from a desktop session.";
 
     private readonly IBlenderProcessLauncher _launcher;
     private readonly Func<string, long?> _freeSpaceProbe;
@@ -154,6 +168,11 @@ public sealed class BlenderRunner
                 }
                 if (log is not null) await log.FlushAsync().ConfigureAwait(false);
             }
+            if (cancelled || ct.IsCancellationRequested)
+            {
+                process.KillTree();
+                await process.WaitForExitAsync(KillWait).ConfigureAwait(false);
+            }
             try { exitCode = process.ExitCode; } catch { exitCode = -1; }
         }
         finally
@@ -198,6 +217,7 @@ public sealed class BlenderRunner
         {
             kind = RenderFailureKind.Crashed;
             error = $"Blender exited with code {exitCode} before finishing." +
+                    (parser.NoOpenGl ? " " + NoOpenGlHint : "") +
                     (tail.Count > 0 ? "\nLast output:\n" + string.Join("\n", tail) : "");
         }
         else
@@ -314,6 +334,14 @@ public sealed class RealBlenderProcessLauncher : IBlenderProcessLauncher
         {
             try { if (!_process.HasExited) _process.Kill(entireProcessTree: true); }
             catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { /* already gone */ }
+        }
+
+        public async Task WaitForExitAsync(TimeSpan timeout)
+        {
+            using var limit = new CancellationTokenSource(timeout);
+            try { await _process.WaitForExitAsync(limit.Token).ConfigureAwait(false); }
+            catch (OperationCanceledException) { /* still going: what it holds stays locked */ }
+            catch (InvalidOperationException) { /* never started or already disposed */ }
         }
 
         public void Dispose() => _process.Dispose();

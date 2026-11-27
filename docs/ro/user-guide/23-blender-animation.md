@@ -1189,13 +1189,22 @@ serverul. Protocolul este descris în
 1. Instalați Blender 4.2 sau mai nou de pe [blender.org](https://www.blender.org/download/)
    (versiunile LTS sunt cele testate), verificați descărcarea cu SHA-256 publicat pe site și
    dezarhivați-o, de exemplu în `/opt/blender`. Verificați că vede placa: în preferințele Blender
-   sau randând o previzualizare cu executorul cu dosare.
+   sau randând cu Cycles un pachet mic cu executorul cu dosare: fișierul `<lucrare>.log` spune
+   `THIDE:device=OPTIX` sau `CUDA` (pe o placă NVIDIA), `HIP`, `ONEAPI` sau `METAL`, și `CPU` când
+   nicio placă nu a putut fi folosită.
 2. Compilați `therion-cli` din sursele ThIDE cu .NET SDK:
    `dotnet publish src/Therion.Cli -c Release -o /opt/thide-cli`.
 3. Creați un utilizator doar pentru executor (`useradd --system --create-home thide-render`), puneți
    fișierul cu tokenul în dosarul lui personal cu `chmod 600` și porniți executorul ca acel
    utilizator, de exemplu dintr-un serviciu systemd cu `Restart=on-failure`,
    `--blender /opt/blender/blender` și `--scratch /var/lib/thide-render`.
+4. Pe **Windows**, Blender poate desena cu OpenGL doar într-o sesiune de desktop în care un
+   utilizator este autentificat. Un executor pornit ca serviciu, de o sarcină programată care
+   rulează indiferent dacă utilizatorul este autentificat sau nu, ori prin SSH randează cu Cycles
+   pe placă, dar nu o previzualizare (vederea solidă) și nici cu EEVEE: Blender se oprește acolo,
+   iar eroarea lucrării spune de ce. Pentru a le randa și pe acestea, porniți executorul în
+   sesiunea unui utilizator autentificat (o sarcină programată „la autentificare”, care rulează
+   doar când utilizatorul este autentificat) și împiedicați blocarea acelei sesiuni.
 
 Pentru un container, scrieți o rețetă care descarcă Blender în timp ce se construiește imaginea (de
 pe blender.org, verificând SHA-256) și construiți imaginea pe calculatorul care o rulează. Nu
