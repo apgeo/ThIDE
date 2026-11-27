@@ -126,6 +126,7 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(tools, L("Menu_Tools_ImportSurvey"), _vm.ImportSurveyCommand, "Icon.Import"));
         list.Add(VmCmd(tools, L("Menu_Tools_ImportDem"), _vm.ImportDemSurfaceCommand, "Icon.Import"));
         list.Add(VmCmd(tools, L("Menu_Tools_ImportGpx"), _vm.ImportGpxCommand, "Icon.Import"));
+        list.Add(VmCmd(tools, L("Menu_Tools_MeshSurvey"), _vm.MeshSurveyCommand, "Icon.Import"));
         list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldProject"), _vm.ScaffoldProjectCommand, null, "Icon.Config"));
         list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldActive"), _vm.ScaffoldProjectCommand, "active", "Icon.Config"));
         list.Add(VmCmd(tools, L("Menu_Tools_LinkSurvey"), _vm.LinkSurveyCommand, "Icon.Import"));
