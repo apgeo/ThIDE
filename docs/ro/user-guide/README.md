@@ -47,6 +47,8 @@ alături de acest ghid (**Ajutor → Cartea Therion**, inclusă în aplicație).
   la sfârșitul acestui ghid)
 - [Legarea unui fișier de topografie în proiect](24-linking-surveys.md) — liniile `input` și `equate`
   generate (pagina 24)
+- [O topografie derivată dintr-un model 3D](25-survey-from-3d-model.md) — o poligonală și radiale
+  așezate într-o scanare sau rețea 3D care nu are topografie (pagina 25)
 
 ### Analizați-vă topografia
 12. [Navigator obiecte și Contur](12-object-browser-and-outline.md)

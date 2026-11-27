@@ -2575,7 +2575,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Tab_Model" xml:space="preserve"><value>Model</value></data>
   <data name="MeshSurvey_Tab_Settings" xml:space="preserve"><value>Setări</value></data>
   <data name="MeshSurvey_Tab_Guide" xml:space="preserve"><value>Ghid</value></data>
-  <data name="MeshSurvey_Intro" xml:space="preserve"><value>Transformă o peșteră scanată sau modelată (o rețea 3D închisă sau aproape închisă, ori un nor de puncte) într-o topografie Therion: stații, vize, LRUD și radiale care se potrivesc modelului. Puteți indica singur un punct de start și câteva sau toate vizele.</value></data>
+  <data name="MeshSurvey_Intro" xml:space="preserve"><value>Transformă o peșteră scanată sau modelată (o rețea 3D închisă sau aproape închisă, ori un nor de puncte) într-o topografie Therion: stații, tronsoane, LRUD și radiale care se potrivesc modelului. Puteți indica singur un punct de start și câteva sau toate tronsoanele.</value></data>
   <data name="MeshSurvey_Model" xml:space="preserve"><value>Model 3D</value></data>
   <data name="MeshSurvey_Browse" xml:space="preserve"><value>Răsfoiește…</value></data>
   <data name="MeshSurvey_BrowseTitle" xml:space="preserve"><value>Alegeți un model 3D (STL, PLY, OBJ, GLB, XYZ, PTS)</value></data>
@@ -2605,7 +2605,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Unlimited" xml:space="preserve"><value>nelimitat</value></data>
   <data name="MeshSurvey_NoLimit" xml:space="preserve"><value>fără limită</value></data>
   <data name="MeshSurvey_NoSplit" xml:space="preserve"><value>fără împărțire</value></data>
-  <data name="MeshSurvey_Legs" xml:space="preserve"><value>Vize</value></data>
+  <data name="MeshSurvey_Legs" xml:space="preserve"><value>Tronsoane</value></data>
   <data name="MeshSurvey_Legs_Preferred" xml:space="preserve"><value>Lungime preferată (m)</value></data>
   <data name="MeshSurvey_Legs_Min" xml:space="preserve"><value>Cea mai scurtă (m)</value></data>
   <data name="MeshSurvey_Legs_Max" xml:space="preserve"><value>Cea mai lungă (m)</value></data>
@@ -2630,10 +2630,10 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Splays" xml:space="preserve"><value>Radiale</value></data>
   <data name="MeshSurvey_Splays_Mode" xml:space="preserve"><value>Mod</value></data>
   <data name="MeshSurvey_Splays_Count" xml:space="preserve"><value>Radiale pe stație</value></data>
-  <data name="MeshSurvey_Splays_Scale" xml:space="preserve"><value>Mai multe radiale în pasaje mari, mai puține în cele mici</value></data>
+  <data name="MeshSurvey_Splays_Scale" xml:space="preserve"><value>Mai multe radiale în galerii mari, mai puține în cele mici</value></data>
   <data name="MeshSurvey_Void" xml:space="preserve"><value>Gol și săli</value></data>
   <data name="MeshSurvey_Void_Voxel" xml:space="preserve"><value>Dimensiunea voxelului (m, 0 = automat)</value></data>
-  <data name="MeshSurvey_Void_PassageWidth" xml:space="preserve"><value>Cel mai îngust pasaj (m)</value></data>
+  <data name="MeshSurvey_Void_PassageWidth" xml:space="preserve"><value>Cea mai îngustă trecere (m)</value></data>
   <data name="MeshSurvey_Void_Pillar" xml:space="preserve"><value>Cel mai mic stâlp (m)</value></data>
   <data name="MeshSurvey_Void_Chamber" xml:space="preserve"><value>Săli mari</value></data>
   <data name="MeshSurvey_Output" xml:space="preserve"><value>Citiri și rezultat</value></data>
@@ -2641,9 +2641,9 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Output_PerSurvey" xml:space="preserve"><value>Stații pe topografie</value></data>
   <data name="MeshSurvey_Output_Noise" xml:space="preserve"><value>Adaugă eroare sintetică de instrument</value></data>
   <data name="MeshSurvey_Output_Cartesian" xml:space="preserve"><value>Scrie citiri carteziene</value></data>
-  <data name="MeshSurvey_Guide_Intro" xml:space="preserve"><value>Puteți indica opțional un punct de start și câteva sau toate vizele. Două puncte unite printr-o vizare sunt verificate pe model: o vizare care taie prin rocă apare în roșu.</value></data>
+  <data name="MeshSurvey_Guide_Intro" xml:space="preserve"><value>Puteți indica opțional un punct de start și câteva sau toate tronsoanele. Două puncte unite printr-un tronson sunt verificate pe model: un tronson care taie prin rocă apare în roșu.</value></data>
   <data name="MeshSurvey_Guide_Mode" xml:space="preserve"><value>Mod</value></data>
-  <data name="MeshSurvey_Guide_Blocked" xml:space="preserve"><value>La viză blocată</value></data>
+  <data name="MeshSurvey_Guide_Blocked" xml:space="preserve"><value>La tronson blocat</value></data>
   <data name="MeshSurvey_Guide_Frame" xml:space="preserve"><value>Coordonate</value></data>
   <data name="MeshSurvey_Guide_Load" xml:space="preserve"><value>Încarcă ghid…</value></data>
   <data name="MeshSurvey_Guide_Save" xml:space="preserve"><value>Salvează ghid…</value></data>
@@ -2658,10 +2658,10 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Guide_Up" xml:space="preserve"><value>Mută în sus</value></data>
   <data name="MeshSurvey_Guide_Down" xml:space="preserve"><value>Mută în jos</value></data>
   <data name="MeshSurvey_Guide_Remove" xml:space="preserve"><value>Elimină</value></data>
-  <data name="MeshSurvey_Guide_Legs" xml:space="preserve"><value>Vize</value></data>
-  <data name="MeshSurvey_Guide_AddLeg" xml:space="preserve"><value>Adaugă viză</value></data>
-  <data name="MeshSurvey_Guide_Chain" xml:space="preserve"><value>Înlănțuie punctele în vize</value></data>
-  <data name="MeshSurvey_Guide_LegsHint" xml:space="preserve"><value>Vizele sunt verificate pe model de îndată ce ambele puncte sunt valide. „Forțează” păstrează o viză chiar dacă nu trece verificarea.</value></data>
+  <data name="MeshSurvey_Guide_Legs" xml:space="preserve"><value>Tronsoane</value></data>
+  <data name="MeshSurvey_Guide_AddLeg" xml:space="preserve"><value>Adaugă tronson</value></data>
+  <data name="MeshSurvey_Guide_Chain" xml:space="preserve"><value>Înlănțuie punctele în tronsoane</value></data>
+  <data name="MeshSurvey_Guide_LegsHint" xml:space="preserve"><value>Tronsoanele sunt verificate pe model de îndată ce ambele puncte sunt valide. „Forțează” păstrează un tronson chiar dacă nu trece verificarea.</value></data>
   <data name="MeshSurvey_Guide_From" xml:space="preserve"><value>De la</value></data>
   <data name="MeshSurvey_Guide_To" xml:space="preserve"><value>La</value></data>
   <data name="MeshSurvey_Guide_Force" xml:space="preserve"><value>Forțează</value></data>
@@ -2675,8 +2675,8 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Leg_Blocked" xml:space="preserve"><value>blocată la {0:0.00} m de început ({1} treceri prin perete, {2:0.00} m de rocă)</value></data>
   <data name="MeshSurvey_Leg_StartOutside" xml:space="preserve"><value>începutul este în afara modelului</value></data>
   <data name="MeshSurvey_Leg_EndOutside" xml:space="preserve"><value>sfârșitul este în afara modelului</value></data>
-  <data name="MeshSurvey_Leg_StartInRock" xml:space="preserve"><value>începutul nu este în pasaj</value></data>
-  <data name="MeshSurvey_Leg_EndInRock" xml:space="preserve"><value>sfârșitul nu este în pasaj</value></data>
+  <data name="MeshSurvey_Leg_StartInRock" xml:space="preserve"><value>începutul nu este în galerie</value></data>
+  <data name="MeshSurvey_Leg_EndInRock" xml:space="preserve"><value>sfârșitul nu este în galerie</value></data>
   <data name="MeshSurvey_DebugLayers" xml:space="preserve"><value>Scrie și straturile de depanare (schelet, zone neacoperite, previzualizare)</value></data>
   <data name="MeshSurvey_Run" xml:space="preserve"><value>Rulează</value></data>
   <data name="MeshSurvey_Preview" xml:space="preserve"><value>Previzualizare 3D</value></data>
@@ -2690,17 +2690,17 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Stage_void" xml:space="preserve"><value>construirea golului</value></data>
   <data name="MeshSurvey_Stage_skeleton" xml:space="preserve"><value>schelet</value></data>
   <data name="MeshSurvey_Stage_chambers" xml:space="preserve"><value>săli</value></data>
-  <data name="MeshSurvey_Stage_plan" xml:space="preserve"><value>planificarea stațiilor și vizelor</value></data>
+  <data name="MeshSurvey_Stage_plan" xml:space="preserve"><value>planificarea stațiilor și tronsoanelor</value></data>
   <data name="MeshSurvey_Stage_splays" xml:space="preserve"><value>radiale</value></data>
   <data name="MeshSurvey_Report_Heading" xml:space="preserve"><value>Rezultat</value></data>
-  <data name="MeshSurvey_Report_Totals" xml:space="preserve"><value>Stații: {0}, vize: {1}, lungime {2:0.0} m (traseu principal {3:0.0} m)</value></data>
+  <data name="MeshSurvey_Report_Totals" xml:space="preserve"><value>Stații: {0}, tronsoane: {1}, lungime {2:0.0} m (traseu principal {3:0.0} m)</value></data>
   <data name="MeshSurvey_Report_Laterals" xml:space="preserve"><value>Galerii laterale: {0}, închideri de buclă: {1}, stații laterale: {2}</value></data>
-  <data name="MeshSurvey_Report_LegLengths" xml:space="preserve"><value>Lungimea vizelor cea mai mică / mediană / cea mai mare: {0:0.00} / {1:0.00} / {2:0.00} m</value></data>
+  <data name="MeshSurvey_Report_LegLengths" xml:space="preserve"><value>Lungimea tronsoanelor cea mai mică / mediană / cea mai mare: {0:0.00} / {1:0.00} / {2:0.00} m</value></data>
   <data name="MeshSurvey_Report_Coverage" xml:space="preserve"><value>Acoperire: {0:0.0} % atinsă, ținta {1:0.0} %</value></data>
   <data name="MeshSurvey_Report_Stop" xml:space="preserve"><value>S-a oprit deoarece: {0}</value></data>
   <data name="MeshSurvey_Report_Splays" xml:space="preserve"><value>Radiale: {0} ({1})</value></data>
-  <data name="MeshSurvey_Report_Problems" xml:space="preserve"><value>Vize blocate: {0}, vize strâmte: {1}, locuri unde setările au fost relaxate: {2}</value></data>
-  <data name="MeshSurvey_Report_Guide" xml:space="preserve"><value>Vize de ghid păstrate: {0} din {1}</value></data>
+  <data name="MeshSurvey_Report_Problems" xml:space="preserve"><value>Tronsoane blocate: {0}, tronsoane prea aproape de pereți: {1}, locuri unde setările au fost relaxate: {2}</value></data>
+  <data name="MeshSurvey_Report_Guide" xml:space="preserve"><value>Tronsoane din ghid păstrate: {0} din {1}</value></data>
   <data name="MeshSurvey_Units_Auto" xml:space="preserve"><value>Automat</value></data>
   <data name="MeshSurvey_Units_Metres" xml:space="preserve"><value>Metri (m)</value></data>
   <data name="MeshSurvey_Units_Centimetres" xml:space="preserve"><value>Centimetri (cm)</value></data>
@@ -2710,10 +2710,10 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_UpAxis_Z" xml:space="preserve"><value>Z în sus</value></data>
   <data name="MeshSurvey_UpAxis_Y" xml:space="preserve"><value>Y în sus</value></data>
   <data name="MeshSurvey_LegStrategy_Preferred" xml:space="preserve"><value>Aproape de lungimea preferată</value></data>
-  <data name="MeshSurvey_LegStrategy_Fewest" xml:space="preserve"><value>Cât mai puține vize</value></data>
+  <data name="MeshSurvey_LegStrategy_Fewest" xml:space="preserve"><value>Cât mai puține tronsoane</value></data>
   <data name="MeshSurvey_LegStrategy_Uniform" xml:space="preserve"><value>Distanțe egale</value></data>
   <data name="MeshSurvey_LegStrategy_Features" xml:space="preserve"><value>La joncțiuni și coturi</value></data>
-  <data name="MeshSurvey_Anchor_Axial" xml:space="preserve"><value>Pe axa pasajului</value></data>
+  <data name="MeshSurvey_Anchor_Axial" xml:space="preserve"><value>Pe axa galeriei</value></data>
   <data name="MeshSurvey_Anchor_Floor" xml:space="preserve"><value>Pe podea</value></data>
   <data name="MeshSurvey_Anchor_Ceiling" xml:space="preserve"><value>Pe tavan</value></data>
   <data name="MeshSurvey_Anchor_Wall" xml:space="preserve"><value>Pe perete</value></data>
@@ -2724,7 +2724,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Loops_Close" xml:space="preserve"><value>Închide buclele</value></data>
   <data name="MeshSurvey_Loops_IfCheap" xml:space="preserve"><value>Închide buclele dacă e ieftin</value></data>
   <data name="MeshSurvey_Loops_Never" xml:space="preserve"><value>Nu închide niciodată buclele</value></data>
-  <data name="MeshSurvey_Splay_None" xml:space="preserve"><value>Niciunul</value></data>
+  <data name="MeshSurvey_Splay_None" xml:space="preserve"><value>Fără</value></data>
   <data name="MeshSurvey_Splay_Lrud" xml:space="preserve"><value>LRUD (4 radiale)</value></data>
   <data name="MeshSurvey_Splay_Ring" xml:space="preserve"><value>Inel</value></data>
   <data name="MeshSurvey_Splay_Sphere" xml:space="preserve"><value>Sferă</value></data>
@@ -2742,7 +2742,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Snap_Wall" xml:space="preserve"><value>Perete</value></data>
   <data name="MeshSurvey_Snap_Surface" xml:space="preserve"><value>Suprafață</value></data>
   <data name="MeshSurvey_GuideMode_Complete" xml:space="preserve"><value>Completează restul automat</value></data>
-  <data name="MeshSurvey_GuideMode_OnlyGiven" xml:space="preserve"><value>Doar vizele indicate</value></data>
+  <data name="MeshSurvey_GuideMode_OnlyGiven" xml:space="preserve"><value>Doar tronsoanele indicate</value></data>
   <data name="MeshSurvey_Blocked_Error" xml:space="preserve"><value>Oprește cu eroare</value></data>
   <data name="MeshSurvey_Blocked_Warn" xml:space="preserve"><value>Păstrează și avertizează</value></data>
   <data name="MeshSurvey_Blocked_Drop" xml:space="preserve"><value>Omite</value></data>
@@ -2753,7 +2753,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Stop_MaxTotalLength" xml:space="preserve"><value>bugetul de lungime a fost epuizat</value></data>
   <data name="MeshSurvey_Stop_BelowEfficiency" xml:space="preserve"><value>galeriile rămase adaugă prea puțin</value></data>
   <data name="MeshSurvey_Stop_NoCandidates" xml:space="preserve"><value>nicio galerie nu se încadrează în limite</value></data>
-  <data name="MeshSurvey_Stop_GuideOnly" xml:space="preserve"><value>s-au dorit doar vizele indicate</value></data>
+  <data name="MeshSurvey_Stop_GuideOnly" xml:space="preserve"><value>s-au dorit doar tronsoanele indicate</value></data>
   <data name="MeshSurvey_Preset_scan-backbone" xml:space="preserve"><value>Schelet din scanare</value></data>
   <data name="MeshSurvey_Preset_mainline-only" xml:space="preserve"><value>Doar traseul principal</value></data>
   <data name="MeshSurvey_Preset_main-and-major-laterals" xml:space="preserve"><value>Traseul principal și galeriile mari</value></data>

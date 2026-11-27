@@ -47,6 +47,8 @@ described in them). If Therion is new to you, keep the **Therion Book** open alo
   at the end of this guide)
 - [Linking a survey file into the project](24-linking-surveys.md) — generated `input` and `equate`
   lines (page 24)
+- [A survey derived from a 3-D model](25-survey-from-3d-model.md) — a centreline and splays placed in a
+  scan or mesh that has none (page 25)
 
 ### Analyze your survey
 12. [Object Browser & Outline](12-object-browser-and-outline.md)
