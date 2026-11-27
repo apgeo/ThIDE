@@ -91,6 +91,7 @@ def fail(message):
 
 
 def play(plan_dir, plan_text=None, files=None, script=None):
+    tie_to_parent()
     args = arguments()
     api.Context.confined = args.confine
     api.report("player", PLAYER_VERSION)
@@ -312,10 +313,33 @@ def another_blender(script, args, plan_path, stage, frames_dir, keep_frames=Fals
         command.append("--confine")
     sys.stdout.flush()
     sys.stderr.flush()
+    env = dict(os.environ)
+    env[PARENT_VARIABLE] = str(os.getpid())
     try:
-        return subprocess.call(command)
+        return subprocess.call(command, env=env)
     except OSError as error:
         raise api.PlanError("the %s stage could not be started: %s" % ("second" if stage == "compose" else "first", error))
+
+
+PARENT_VARIABLE = "THIDE_PLAYER_PARENT"
+
+
+def tie_to_parent():
+    """A stage started by another Blender (another_blender) ends with it. Whoever started the
+    first Blender ties that one to itself; this ties the second to the first, so that killing the
+    first (a crash of ThIDE, a worker that is killed) leaves no Blender rendering on its own. On
+    Linux only (prctl); elsewhere the caller's tie (a Windows job) holds both."""
+    parent = os.environ.pop(PARENT_VARIABLE, None)
+    if parent is None or not sys.platform.startswith("linux"):
+        return
+    try:
+        import ctypes
+        import signal
+        ctypes.CDLL(None, use_errno=True).prctl(1, int(signal.SIGKILL))  # PR_SET_PDEATHSIG
+    except (OSError, AttributeError, ValueError):
+        return
+    if str(os.getppid()) != parent:
+        os._exit(EXIT_FAILED)  # the first Blender ended before the tie was made
 
 
 def rendered_from(plan, modules, ctx, inputs):

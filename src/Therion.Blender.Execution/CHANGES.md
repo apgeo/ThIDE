@@ -1,5 +1,73 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-27 — Blender's lifetime, the queue across instances and restarts, and the workers
+
+### Breaking changes
+- None. Every signature stays; what is new is additive. Two behaviours change for a caller that
+  relied on them, both noted below: `RenderQueue.Dispose` keeps a file queue's open jobs for the
+  next start instead of marking them cancelled, and a movie rendered with a `FramesDirectory`
+  (the queue's) takes two stages.
+
+### Blender's lifetime
+- `RealBlenderProcessLauncher` ties the Blender it starts to the process that starts it: on
+  Windows a Job Object with kill-on-close (Blender and what it starts end when ThIDE or the worker
+  ends, however it ends); on Linux `setpriv --pdeathsig KILL` when util-linux's setpriv takes the
+  option, started from one thread that lives as long as the process. macOS: no tie; only a stop
+  that is asked for ends Blender. A program that is not there fails to start as before.
+- Disposing a `RealBlenderProcessLauncher` process ends one that is still running.
+- `BlenderRunner.RunAsync` kills Blender whenever it leaves before Blender's output ended (a
+  progress listener that throws, anything else), not only on a cancel. A job log that cannot be
+  written (a full disk) no longer throws out of `RunAsync`: logging stops and a warning says so.
+- A token cancelled before the start starts no Blender. A cancel that comes after Blender said it
+  was done and exited 0 no longer turns a made render into a cancelled one.
+- The outputs are matched against what the output folder held before the start: a movie or a
+  still that is there unchanged is an earlier render's, not this one's (it was counted as a
+  success when Blender wrote nothing); unchanged frames numbered past the render's count are
+  left out. New: `OutputCollector.Snapshot(output)` and
+  `OutputCollector.Collect(output, frameCount, before)`.
+
+### The queue
+- **One queue per state file.** `RenderQueue` holds `<state file>.lock` for its life. A second
+  queue made on the same file (a second ThIDE of the same user) has `HeldElsewhere` true: it
+  neither reads nor writes the file, resumes nothing, and its jobs live in memory only.
+  New: `HeldElsewhere`, `KeepsJobs`, `IsShutDown`, `LockSuffix`.
+- **`Shutdown(wait)`** stops every job that has not ended and lets the file go, for closing the
+  application. A queue kept in a file leaves its open jobs in it as they stood, so the next start
+  resumes them with their frames; in memory they end as cancelled. `Dispose()` is
+  `Shutdown(TimeSpan.Zero)`; it used to cancel the jobs and write them as cancelled.
+- A handler of `Changed` or `JobEnded` that throws no longer leaves a job running for ever.
+- A job a restart cut short that cannot go on (its model moved) ends as failed, with why, instead
+  of leaving the history unseen.
+- `QueuedRenderService` keeps the render's options whole in the job record
+  (`RenderJobRequest.Options`, see Therion.Blender) and resumes with them: the builder, the parts,
+  compose only and the range are no longer lost after a restart. A record written before has
+  only some of them, and is read as before. The frames folder the queue gave a job goes when the
+  job ends, a resumed one included; a shutdown that keeps the job for the next start keeps it.
+- A movie of the player whose frames are given a folder (`RenderOptions.FramesDirectory`, which
+  the queue sets) takes two stages, texts or not, so that a render cut short goes on from its
+  frames; it used to keep no frames and start again from the first. Drafts, stills and frame
+  sequences are unchanged.
+
+### The workers
+- The folder worker takes a zip once it has arrived: one that cannot be read as a zip yet and
+  was written to within `RenderWorkerOptions.Arrival` (10 minutes) is left. A zip it cannot
+  remove after its job is not taken again while it stays as it was (it looped on it). Workers
+  sharing an inbox hold `<job>.zip.lock` (`RenderWorker.LockSuffix`) beside the zip they render.
+- Both workers render a movie in two stages (its frames stay in the scratch folder to go on with),
+  and remove the scratch folder of a job left untouched for `KeepScratch` (14 days), once an hour
+  at most; a folder that holds anything but a job's files is left alone.
+- The time limit is at most 30 days (`RenderWorkerOptions.LongestMaxTime`); a larger one, or a
+  server's `maxHours` beyond any `TimeSpan`, no longer crashes the worker.
+- A bundle whose plans the checks cannot even read (`null` for a section) is refused, not failed
+  as an error worth another try.
+- The node: the heartbeats end before `complete` (a 409 to a heartbeat of a completed job turned
+  its success into a lost lease); a transfer that moves no byte for `StallTimeout` (60 s) is
+  given up and tried again; a job with no bundle is a bad job; whatever one job throws is sent as
+  `fail` (`error`) and the worker claims the next, instead of ending; a stop while a file is
+  hashed is handled as any stop. New options: `StallTimeout`, `KeepScratch`.
+- `BlenderLocator` no longer believes a failed probe for the life of the process (for a minute
+  only), and is safe to use from several threads; an install upgraded in place is probed again.
+
 ## 2026-11-27 — private render folders, and a node that trusts its server less
 
 ### Breaking changes (for setups that were open to other users, and servers that broke the protocol)

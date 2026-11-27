@@ -23,14 +23,16 @@ namespace Therion.Blender.Tests;
 public sealed class RenderNodeTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"thide-node-{Guid.NewGuid():N}");
-    private readonly FakeRenderServer _server = new();
+    // Made only by the tests that talk to it: each server is one more chance for its port to be taken.
+    private readonly Lazy<FakeRenderServer> _lazyServer = new(() => new FakeRenderServer());
+    private FakeRenderServer _server => _lazyServer.Value;
     private readonly List<string> _log = [];
 
     public RenderNodeTests() => Directory.CreateDirectory(_dir);
 
     public void Dispose()
     {
-        _server.Dispose();
+        if (_lazyServer.IsValueCreated) _server.Dispose();
         try { Directory.Delete(_dir, recursive: true); } catch { /* best effort */ }
     }
 
@@ -568,5 +570,141 @@ public sealed class RenderNodeTests : IDisposable
         var (_, complete) = Assert.Single(_server.Completed);
         Assert.Contains(complete.Files, f => f.Name == "108.webm");
         Assert.Equal("webm", blender.Container);
+    }
+
+    // ---- a slow complete, huge limits, a bad claim, a stalled download ----
+
+    /// <summary>Holds the answer to `complete` (a server that checks big files, a slow link), and
+    /// can put a body of its own in place of the claim's answer.</summary>
+    private sealed class Tweak : DelegatingHandler
+    {
+        public TimeSpan HoldComplete = TimeSpan.Zero;
+        public bool StallBundle;
+        public string? ClaimBody;
+        public Tweak() : base(new SocketsHttpHandler { AllowAutoRedirect = false }) { }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            if (ClaimBody is { } body && request.RequestUri!.AbsolutePath.EndsWith("/claim", StringComparison.Ordinal))
+            {
+                ClaimBody = null;
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+            }
+            var response = await base.SendAsync(request, ct);
+            if (StallBundle && request.RequestUri!.AbsolutePath.StartsWith("/bundles/", StringComparison.Ordinal))
+                response.Content = new StreamContent(new StallingStream());
+            if (request.RequestUri!.AbsolutePath.EndsWith("/complete", StringComparison.Ordinal)) await Task.Delay(HoldComplete, ct);
+            return response;
+        }
+    }
+
+    private RenderNodeWorker Worker(FakeBlender blender, Tweak tweak, TimeSpan? maxTime = null) => new(
+        new BlenderLocator(new FakeProbe()), new BlenderRunner(blender), new RenderNodeOptions
+        {
+            Server = _server.Url, Token = _server.Token, NodeName = "test-node", Scratch = Path.Combine(_dir, "scratch"),
+            Poll = TimeSpan.FromMilliseconds(100), FirstBackoff = TimeSpan.FromMilliseconds(50), MaxBackoff = TimeSpan.FromMilliseconds(200),
+            DownloadTries = 3, MaxTime = maxTime ?? TimeSpan.FromHours(72), StallTimeout = TimeSpan.FromSeconds(1),
+        },
+        () => typeof(RenderNodeTests).Assembly.Location, line => { lock (_log) _log.Add(line); }, tweak);
+
+    [Fact]
+    public async Task AHeartbeatThatMeetsTheCompletedJob_DoesNotTurnItsSuccessIntoALostLease()
+    {
+        _server.Offer("201", Bundle(), lease: 3);
+        // A server answers 409 to a heartbeat of a job that is no longer running: it has completed.
+        _server.Heartbeat = _ => (_server.Completed.IsEmpty ? 200 : 409, RenderNodeProtocol.Continue);
+        using var worker = Worker(new FakeBlender(frames: 4), new Tweak { HoldComplete = TimeSpan.FromSeconds(2.5) });
+        await worker.RunAsync(once: true, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30));
+        lock (_log) Assert.True(_server.Completed.Count == 1, "the job did not complete; the worker said:\n" + string.Join("\n", _log));
+        lock (_log) Assert.DoesNotContain(_log, l => l.Contains("lease lost", StringComparison.Ordinal));
+        Assert.False(Directory.Exists(worker.JobFolder("201")), "a job that succeeded leaves its scratch folder behind");
+    }
+
+    [Fact]
+    public async Task AJobWhoseTimeLimitIsHuge_DoesNotStopTheWorker()
+    {
+        _server.Offer("202", Bundle(), limits: new RenderNodeLimits { MaxHours = 1e12 });
+        using var worker = Worker(new FakeBlender(frames: 2), new Tweak());
+        var ex = await Record.ExceptionAsync(() => worker.RunAsync(once: true, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)));
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task AWorkerWithALongTimeLimit_RendersItsJob()
+    {
+        _server.Offer("203", Bundle());
+        using var worker = Worker(new FakeBlender(frames: 2), new Tweak(), maxTime: TimeSpan.FromDays(60));
+        var ex = await Record.ExceptionAsync(() => worker.RunAsync(once: true, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)));
+        Assert.Null(ex);
+        lock (_log) Assert.True(_server.Completed.Count == 1, "the job did not complete; the worker said:\n" + string.Join("\n", _log));
+    }
+
+    [Fact]
+    public async Task AClaimAnsweredWithANullBundle_IsNotTakenAndDoesNotStopTheWorker()
+    {
+        var tweak = new Tweak { ClaimBody = "{\"protocol\":1,\"jobId\":\"204\",\"attempt\":1,\"leaseSeconds\":6,\"plan\":\"full\",\"bundle\":null}" };
+        using var worker = Worker(new FakeBlender(frames: 2), tweak);
+        var ex = await Record.ExceptionAsync(() => worker.RunAsync(once: true, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)));
+        Assert.Null(ex);
+        var (job, fail) = Assert.Single(_server.Failed);
+        Assert.Equal(("204", RenderNodeFailure.BadJob), (job, fail.Reason));
+    }
+
+    /// <summary>A body whose first bytes come and then nothing more, with the connection open.</summary>
+    private sealed class StallingStream : Stream
+    {
+        private bool _sent;
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+        {
+            if (!_sent) { _sent = true; buffer.Span[0] = 0x50; return 1; }
+            await Task.Delay(Timeout.Infinite, ct);
+            return 0;
+        }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    [Fact]
+    public async Task ADownloadThatStalls_EndsTheJob_ThoughTheHeartbeatsGetThrough()
+    {
+        _server.Offer("205", Bundle(), lease: 3);
+        using var worker = Worker(new FakeBlender(frames: 2), new Tweak { StallBundle = true });
+        var run = worker.RunAsync(once: true, CancellationToken.None);
+        var ended = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(12)));
+        Assert.True(ended == run, $"still downloading after 12 s, {_server.Beats.Count} heartbeats answered 200, the last '{_server.Beats.LastOrDefault()?.Phase}'");
+        var (_, fail) = Assert.Single(_server.Failed);
+        Assert.Equal(RenderNodeFailure.Download, fail.Reason);
+        Assert.Contains("nothing moved", fail.Message);
+    }
+
+    [Fact]
+    public async Task ABundleWhosePlanHasNullForASection_IsRefused_NotRetried()
+    {
+        string zip = Bundle();
+        using (var archive = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Update))
+        {
+            var entry = archive.Entries.Single(e => e.FullName.EndsWith("/" + Plan.ScenePlanSerializer.FileName, StringComparison.Ordinal) && e.FullName.Count(c => c == '/') == 1);
+            string name = entry.FullName;
+            System.Text.Json.Nodes.JsonObject plan;
+            using (var reader = new StreamReader(entry.Open())) plan = System.Text.Json.Nodes.JsonNode.Parse(reader.ReadToEnd())!.AsObject();
+            entry.Delete();
+            plan["look"] = null;
+            using var writer = new StreamWriter(archive.CreateEntry(name).Open(), new UTF8Encoding(false));
+            writer.Write(plan.ToJsonString());
+        }
+        _server.Offer("206", zip);
+        using var worker = Worker(new FakeBlender(frames: 2), new Tweak());
+        await worker.RunAsync(once: true, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30));
+        var (_, fail) = Assert.Single(_server.Failed);
+        Assert.Equal(RenderNodeFailure.Refused, fail.Reason);
+        Assert.False(fail.Retryable);
     }
 }

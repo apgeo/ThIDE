@@ -451,6 +451,10 @@ public sealed partial class BlenderAnimationViewModel
         if (row is not null) _queue?.Cancel(row.Id);
     }
 
+    /// <summary>Another ThIDE holds the render queue: this one's renders run beside its renders
+    /// and do not go on after a restart.</summary>
+    public bool QueueHeldElsewhere => _queue?.HeldElsewhere == true;
+
     /// <summary>A render a restart started again (ThIDE was closed in the middle of it) is running.</summary>
     public bool ResumedRendering => _queue?.Running is { Request.Owner: RenderQueue.RestartOwner };
 }

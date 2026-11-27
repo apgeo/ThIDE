@@ -63,7 +63,15 @@ public static class RenderWorkerVerb
         maxTime = TimeSpan.FromHours(72);
         modules = [];
         if (Number(args, "--max-hours", stderr, out double? hours) is false) return false;
-        if (hours is { } h) maxTime = TimeSpan.FromHours(h);
+        if (hours is { } h)
+        {
+            if (h > RenderWorkerOptions.LongestMaxTime.TotalHours)
+            {
+                stderr.WriteLine($"error: --max-hours takes at most {RenderWorkerOptions.LongestMaxTime.TotalHours:0} (30 days), not '{h}'.");
+                return false;
+            }
+            maxTime = TimeSpan.FromHours(h);
+        }
         if (Number(args, "--max-triangles", stderr, out double? triangles) is false) return false;
         if (triangles is { } t) limits = limits with { MaxTriangles = (long)t };
         if (Number(args, "--max-bundle-gb", stderr, out double? gb) is false) return false;

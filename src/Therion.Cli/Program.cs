@@ -29,11 +29,22 @@ switch (args[0])
     case "deps":          return await RequireArgAsync(args, a => Deps(a, args));
     case "gis":           return await RequireArgAsync(args, a => Gis(a, args));
     case "structural":    return RequireArg(args, a => Structural(a, args));
-    case "blender":       return await Therion.Cli.BlenderVerb.RunAsync(args, Console.Out, Console.Error);
+    case "blender":
+    {
+        // Ctrl+C and SIGTERM (a service manager, `kill`) stop the render and Blender with it.
+        using var cancel = new CancellationTokenSource();
+        using var stop = StopOnSignals(cancel);
+        try { return await Therion.Cli.BlenderVerb.RunAsync(args, Console.Out, Console.Error, cancel.Token); }
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested)
+        {
+            Console.Error.WriteLine("stopped");
+            return 130;
+        }
+    }
     case "render-worker":
     {
         using var cancel = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancel.Cancel(); };
+        using var stop = StopOnSignals(cancel);
         return await Therion.Cli.RenderWorkerVerb.RunAsync(args, Console.Out, Console.Error, cancel.Token);
     }
     case "new":           return Therion.Cli.NewVerb.Run(args, Console.Out, Console.Error);
@@ -49,6 +60,19 @@ switch (args[0])
     default:
         Console.Error.WriteLine($"error: unknown command '{args[0]}'. Use --help.");
         return 2;
+}
+
+// Ctrl+C, and SIGTERM where there are signals, cancel instead of ending the process at once, so
+// that what the command started (Blender) is stopped with it.
+static IDisposable StopOnSignals(CancellationTokenSource cancel)
+{
+    Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancel.Cancel(); };
+    if (OperatingSystem.IsWindows()) return cancel;
+    return System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, context =>
+    {
+        context.Cancel = true;
+        cancel.Cancel();
+    });
 }
 
 static void PrintHelp()

@@ -49,6 +49,12 @@ public sealed record RenderJobRequest
 
     /// <summary>Where the frames are kept, so that the job goes on with them.</summary>
     public string? FramesDirectory { get; init; }
+
+    /// <summary>The render's options, whole, so that a job started again after a restart is
+    /// rendered as it was asked for (its builder, its parts, its range, compose only). Null in a
+    /// record written before they were kept: <see cref="Draft"/>, <see cref="KeepFrames"/> and
+    /// <see cref="FramesDirectory"/> are then all there is.</summary>
+    public RenderOptions? Options { get; init; }
 }
 
 /// <summary>How far a running job has got.</summary>

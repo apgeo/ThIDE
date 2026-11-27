@@ -991,7 +991,7 @@ film of several shots:
   many frames, how long, how much disk and memory the film takes, and **Render film** shows that
   estimate and renders. The renders wait their turn in the render queue, listed under the buttons
   with a **Cancel** for each; a render that ThIDE was closed in the middle of goes on at the next
-  start and is listed as *resumed*.
+  start and is listed as *resumed* (see *One render at a time* below).
 
 ## Branch tours
 
@@ -1162,6 +1162,19 @@ panel says so. An agent's render that ends is listed in the panel's history. If 
 middle of a render (not when it is cancelled), the render goes on with its frames when ThIDE starts
 again.
 
+- **Closing ThIDE while renders run or wait** (the panel's, an agent's, or one that went on after a
+  restart) asks first. Closing stops Blender, and each of those renders goes on from its frames the
+  next time ThIDE starts. To drop a render instead, cancel it in the queue before closing.
+- No Blender outlives ThIDE: if ThIDE crashes or is killed, Blender stops with it (on Windows and
+  Linux; on macOS only when ThIDE closes normally).
+- A movie rendered through the queue keeps its frames until it is made, so that it can go on: it
+  takes two stages (the frames, then the movie from them), which needs the disk for the frames
+  for as long as it renders. A still, a draft and a render by the script generator are made in one
+  stage and start again from the first frame.
+- **A second ThIDE** of the same user, started while the first runs, does not share the first one's
+  queue: the panel says so. Its renders run beside the first one's, not after them, and do not go
+  on after a restart. Close the second ThIDE to have one queue again.
+
 ## The render worker
 
 `therion-cli render-worker` renders [render bundles](#a-render-bundle-to-render-on-another-machine)
@@ -1175,11 +1188,22 @@ are filled (a synced share, an SFTP drop) is up to you.
   how far it is: the shot, the frame, the seconds a frame takes and the time left. When it is done,
   the outbox has `<job>.mp4` (or the stills), its subtitles and `<job>.log`.
 - To stop a job, put an empty `<job>.cancel` beside its zip. Its frames are kept; remove the cancel
-  file and it goes on with them. A worker that is stopped (Ctrl+C) also goes on with its frames
-  when it starts again.
-- `--once` stops when the inbox is empty; `--blender` names the Blender; `--max-hours`,
-  `--max-triangles` and `--max-bundle-gb` set the limits of a job; `--scratch` is where bundles are
-  unpacked and their frames kept.
+  file and it goes on with them. A worker that is stopped (Ctrl+C, or SIGTERM from a service
+  manager) stops Blender, and goes on with the job's frames when it starts again. A worker that is
+  killed or crashes takes Blender with it (on Windows and Linux). A movie is rendered in two stages,
+  so that its frames are there to go on with.
+- A zip is taken once it has arrived: one that cannot be read as a zip yet, and was written to in
+  the last 10 minutes, is left to arrive. Better still, upload it as `<job>.zip.part` and rename it
+  to `<job>.zip` when it is complete. A zip the worker cannot remove after its job (a read-only
+  share) is not rendered again unless it changes.
+- Two workers can share one inbox on one machine or on a network share: each holds
+  `<job>.zip.lock` beside the zip it renders, and the other passes it over. A synced folder
+  (Dropbox, Syncthing) cannot tell two machines apart: give each machine an inbox of its own.
+- The scratch folder of a job that did not end here (it failed in Blender, or ran out of time) is
+  kept for the same bundle sent again, and removed after 14 days untouched.
+- `--once` stops when the inbox is empty; `--blender` names the Blender; `--max-hours` (at most
+  720, 30 days), `--max-triangles` and `--max-bundle-gb` set the limits of a job; `--scratch` is
+  where bundles are unpacked and their frames kept.
 
 **Security.** A bundle is data, and the worker treats it so. It never runs the bundle's own
 `render.py`, `render.sh` or `thide_player`: it reads the plans, the meshes and the images, and plays
@@ -1236,8 +1260,9 @@ The server never reaches the machine; the machine calls the server. The protocol
 - A job cancelled on the server stops Blender at the next heartbeat (a third of the lease, 40 s
   for a lease of 2 minutes). A network that fails is retried with waits that grow; if the server
   cannot be reached for a whole lease, the job is stopped and the server gives it to someone else.
-  Its frames stay: if the same job comes back to this machine it goes on from them. A token the
-  server refuses stops the worker (exit code 3).
+  Its frames stay: if the same job comes back to this machine it goes on from them, for 14 days. A
+  download or an upload that moves nothing for 60 s is tried again. A token the server refuses
+  stops the worker (exit code 3).
 
 **Setting up a GPU machine.**
 
