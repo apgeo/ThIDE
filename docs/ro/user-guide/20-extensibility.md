@@ -4,7 +4,7 @@
 
 Pentru utilizatorii avansați, felul în care ThIDE înțelege Therion este disponibil și *în afara*
 interfeței grafice și poate fi extins. Nimic din toate acestea nu este necesar în utilizarea de zi cu zi —
-dar există atunci când doriți să automatizați sau să integrați.
+dar vă stă la dispoziție atunci când doriți să automatizați sau să integrați.
 
 ## Instrumentul de linie de comandă (`therion-cli`)
 
@@ -15,7 +15,7 @@ pentru scripturi, CI sau o verificare rapidă fără a deschide interfața grafi
 therion-cli validate path/to/project.thconfig   # raportează diagnosticele
 therion-cli lint     path/to/file.th             # verificări de stil / convenții
 therion-cli format   path/to/file.th --write     # reindentare pe loc
-therion-cli format   caves --check               # listează fișierele care s-ar schimba; ieșire 1 dacă există (CI, pre-commit)
+therion-cli format   caves --check               # listează fișierele care s-ar schimba; cod de ieșire 1 dacă există (CI, pre-commit)
 therion-cli import   raw/trip.csv --out caves/trip.th   # Survex, Compass, GPX sau un tabel de vize → .th nou
 therion-cli report   path/to/project.thconfig --out output/report.html
 therion-cli stats    path/to/project.thconfig    # lungime/adâncime etc.
@@ -30,19 +30,19 @@ Există și `dump-ast` și `list-stations`. Lista completă de comenzi și exemp
 
 ## Serverul de limbaj (`therion-lsp`)
 
-Un **Language Server independent de editor**, care oferă diagnosticele Therion prin stdio — configurați
+Un **server de limbaj (Language Server) independent de editor**, care oferă diagnosticele Therion prin stdio — configurați
 orice editor compatibil LSP (VS Code, Neovim, …) să îl folosească și veți avea verificările ThIDE în
 editorul preferat. Instalarea și configurarea clientului: **[docs/lsp.md](../../lsp.md)**.
 
 ## Asistenți AI (MCP)
 
 > **Experimental — în lucru.** Integrarea MCP și panoul Asistent sunt recente și încă se schimbă.
-> Așteptați-vă la asperități și la setări sau comportamente care se modifică de la o versiune la alta.
+> Așteptați-vă la imperfecțiuni și la setări sau comportamente care se modifică de la o versiune la alta.
 
 ThIDE poate permite unui **asistent AI local** să răspundă la întrebări despre proiectul
 dumneavoastră — *„ce nu e în regulă cu această peșteră?”*, *„este totul o singură bucată conectată?”*,
 *„unde este declarată stația 12?”* — fără să lipiți fișiere într-o fereastră de chat. Face acest lucru
-vorbind **Model Context Protocol (MCP)**, la fel cum unelte precum Claude sau un model local din
+folosind **Model Context Protocol (MCP)**, la fel cum unelte precum Claude sau un model local din
 **LM Studio** comunică cu instrumentele lor.
 
 Trei moduri de utilizare:
@@ -54,7 +54,7 @@ Trei moduri de utilizare:
   este scris până nu permiteți. Înainte de prima întrebare vă întreabă ce are voie să trimită modelului:
   tot (implicit, pentru un model de pe propriul calculator), nimic din proiect sau rezultatele cu valorile
   ascunse.
-- **Pe fișierele de pe disc (fără ThIDE).** Un mic program, `therion-mcp`, rulează motoarele ThIDE fără
+- **Pe fișierele de pe disc (fără a fi nevoie de ThIDE).** Un mic program, `therion-mcp`, rulează motoarele ThIDE fără
   interfață grafică. Gazda AI (LM Studio, Claude Code, …) îl lansează și poate apoi pune întrebări despre
   un dosar de proiect. Citește fișierele dumneavoastră; poate de asemenea să formateze, să genereze
   structuri de proiect, să importe/exporte și să ruleze Therion — sau, dacă preferați, poate fi limitat
@@ -62,15 +62,15 @@ Trei moduri de utilizare:
 - **Pe aplicația pe care o aveți deschisă.** Activați **Setări → Extensii → Activează serverul de unelte
   AI din aplicație (MCP)**, iar ThIDE-ul *care rulează* oferă aceleași capabilități plus unele în timp
   real: asistentul poate vedea fișierul pe care îl editați (inclusiv modificările nesalvate), poate
-  deschide un fișier, focaliza un panou sau arăta o stație în vizualizarea 3D. Dacă are voie să *atingă*
-  fereastra — nu doar să o citească — decide caseta **„Urmează agentul”** de lângă această setare;
-  debifați-o ca asistentul să nu vă umble la aranjament, permițându-i în continuare să răspundă la
-  întrebări.
+  deschide un fișier, aduce în prim-plan un panou sau arăta o stație în vizualizarea 3D. Dacă are voie să
+  *intervină* în fereastră — nu doar să o citească — decide caseta **„Urmează agentul”** de lângă această
+  setare; debifați-o pentru ca asistentul să nu vă modifice aranjamentul, permițându-i în continuare să
+  răspundă la întrebări.
 
-**Este sigur?** Serverul din aplicație ascultă doar pe propriul calculator (loopback), în spatele unei
-parole aleatorii, și este **dezactivat implicit**. Un asistent nu poate ieși niciodată din dosarul
+**Este sigur?** Serverul din aplicație ascultă doar pe propriul calculator (loopback), protejat de o
+parolă aleatorie, și este **dezactivat implicit**. Un asistent nu poate ieși niciodată din dosarul
 proiectului, iar o editare a unui fișier pe care îl editați chiar acum (cu modificări nesalvate) este
-refuzată, în loc să vă suprascrie munca. Dacă sunteți precaut, porniți-l în modul doar citire.
+refuzată, în loc să vă suprascrie munca. Pentru mai multă prudență, porniți-l în modul doar citire.
 
 Configurarea unei anumite gazde AI (LM Studio, Claude Code) înseamnă câteva rânduri de configurație —
 vedeți pașii detaliați în **[docs/mcp-host-setup.md](../../mcp-host-setup.md)**.
@@ -97,7 +97,7 @@ Rulați o comandă externă în momentele-cheie:
    pornite și lăsate să ruleze singure. `{file}` este calea fișierului (la compilare, thconfig-ul care se
    compilează), acum pusă între ghilimele, astfel încât o cale cu spații rămâne un singur argument;
    *la salvare* urmează acum și **Salvează toate** și salvarea automată.
-3. **Alte hook-uri** adaugă oricâte doriți, fiecare pentru un eveniment — *WorkspaceOpened*,
+3. **Alte hook-uri** vă permite să adăugați oricâte doriți, fiecare pentru un eveniment — *WorkspaceOpened*,
    *FileOpened*, *FileSaved*, *BuildStarted*, *BuildFinished*, *BuildFailed* — cu un timp limită.
    Ieșirea lor ajunge în panoul **Automatizare** (**Vizualizare → Automatizare**), dacă nu sunt marcate
    *Detașat*.
@@ -112,7 +112,7 @@ commit în sistemul de versionare.
 
 ### Hook-uri și sarcini ale proiectului (`.thide/`)
 
-Un proiect își poate purta propria automatizare în dosarul său `.thide/` (inclus în commit odată cu
+Un proiect își poate include propria automatizare în dosarul său `.thide/` (inclus în commit odată cu
 peștera):
 
 ```jsonc
@@ -144,7 +144,7 @@ compilare, raport; *End of trip*: convertește un export Survex/Compass aflat î
 `incoming/`, de exemplu — și listează avertismentele), pe ale dumneavoastră (`macros/*.json` în dosarul
 de setări al ThIDE) și pe cele ale proiectului (`.thide/macros/*.json`). Fiecare rulare face **întâi o
 previzualizare** în panoul Automatizare: pașii care își pot arăta modificarea fără să o facă (`dryRun`
-sau `write: false`) o arată, pașii doar-citire rulează, iar restul sunt listați ca fiind în așteptare;
+sau `write: false`) o arată, pașii care doar citesc rulează, iar restul sunt listați ca fiind în așteptare;
 ThIDE întreabă apoi înainte de aplicare (o previzualizare eșuată nu este aplicată niciodată). Pentru
 instrumentele care previzualizează cu `dryRun`, un fișier modificat între previzualizare și aplicare
 este refuzat. Căile sunt relative la proiect: un fișier ales pentru o variabilă `file` trebuie să se
@@ -168,19 +168,19 @@ anterior, de exemplu `${steps.imp.data.target}`), `${file:basename(var)}`, `${fi
 adăugați `--apply` pentru a face modificările (`--json` pentru un raport, `therion-mcp macro list`
 pentru nume). Macrouri integrate: `audit` (diagnostice, graful topografiei, starea desenelor),
 `release-check` (diagnostice, compilare, raport HTML) și `end-of-trip` (importă un export
-Survex/Compass, apoi avertismentele).
+Survex/Compass, apoi listează avertismentele).
 
 **Un singur instrument din shell.** `therion-mcp call <tool> --workspace cave.thconfig --arg key=value`
 (sau `--args '{"key": …}'`, `--args-file f.json`) apelează un singur instrument și afișează rezultatul
-lui JSON; codul de ieșire este 1 când instrumentul raportează un eșec. `therion-mcp call --list`
-enumeră instrumentele. Instrumentele care modifică fișiere fac în continuare doar previzualizarea, dacă
+în format JSON; codul de ieșire este 1 când instrumentul raportează un eșec. `therion-mcp call --list`
+enumeră instrumentele. Instrumentele care modifică fișiere fac în continuare doar previzualizarea dacă
 nu transmiteți `dryRun=false` (sau `write=true` pentru `format_file`). Un `run_build` al unui thconfig
 cu linii `system` (comenzi shell pe care le rulează Therion) este refuzat din terminal dacă nu adăugați
 `--allow-system-commands`, la `call` sau la `macro run`; în ThIDE, în schimb, aplicația vă întreabă
 dacă aveți încredere în dosar.
 
 **Încredere.** Comenzile dintr-un proiect rulează doar după ce acordați încredere dosarului său: prima
-dată când ar trebui să ruleze ceva, ThIDE numește dosarul și vă întreabă. Răspunsul este reținut;
+dată când ar trebui să ruleze ceva, ThIDE indică dosarul și vă întreabă. Răspunsul este reținut;
 **Setări → Extensii → Dosare de încredere** le listează și puteți elimina unul de acolo. Citirea
 fragmentelor de cod și a șabloanelor proiectului nu cere niciodată confirmare. Comutatorul
 *Citește hook-uri, sarcini și macrouri din dosarul .thide al proiectului* dezactivează toate acestea.

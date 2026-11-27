@@ -3,14 +3,14 @@
 > [← Înapoi la pagina principală a Ghidului utilizatorului](README.md)
 
 Întrebări frecvente și soluții. Dacă ceva de aici nu corespunde cu ce vedeți, aplicația este în stadiul
-alpha și este posibil ca lucrurile să se fi mutat — vedeți [Despre acest ghid](about-this-guide.md)
-pentru cum să raportați sau să corectați. Pentru o descriere a configurației generată de aplicație
+alpha și este posibil ca lucrurile să se fi mutat — consultați [Despre acest ghid](about-this-guide.md)
+pentru a afla cum să raportați sau să corectați o astfel de neconcordanță. Pentru o descriere a configurației generată de aplicație
 (versiuni, unelte detectate, căi), folosiți **Ajutor → Informații de depanare** și
 **Copiază în clipboard**.
 
 ## Configurare și unelte
 
-**„Therion was not found” când compilez.**
+**„Therion nu a fost găsit” când compilez.**
 ThIDE nu include Therion. Instalați-l, apoi setați-i calea în **Setări → Unelte externe** și apăsați
 **Testează**. Vedeți [Instalare](02-installation-and-setup.md).
 
@@ -18,10 +18,10 @@ ThIDE nu include Therion. Instalați-l, apoi setați-i calea în **Setări → U
 1. Activați-l: **Setări → Vizualizare → Vizualizator 3D încorporat**.
 2. Asigurați-vă că există un motor web — Windows: WebView2 (inclus în Windows 11 / Edge modern);
    Linux: `apt install libwebkit2gtk-4.1-0`; macOS: inclus.
-3. Dacă tot nu se afișează, folosiți butonul **Deschide extern (Loch / Aven)** al panoului. Referință:
+3. Dacă tot nu se afișează, folosiți butonul **Deschide modelul extern (Loch / Aven)** al panoului. Referință:
    [docs/3d-viewer.md](../../3d-viewer.md).
 
-**„Mapiah not found.”**
+**„Mapiah nu a fost găsit.”**
 Instalați Mapiah și setați calea `mapiah` în **Setări → Unelte externe** (dialogul trimite acolo).
 
 **Loch / Aven nu se deschid.**
@@ -30,7 +30,7 @@ poate ghici una personalizată.
 
 ## Compilare
 
-**Compilarea eșuează cu o eroare de director lipsă.**
+**Compilarea eșuează cu o eroare de dosar lipsă.**
 Lăsați activată opțiunea **Creează dosarele de ieșire lipsă înainte de compilare**
 ([Setări → Compilare și ieșire](19-settings-and-preferences.md#compilare-și-ieșire)).
 
@@ -39,8 +39,8 @@ Aceasta este întrebarea pentru fișierele nesalvate. Activați **Salvează auto
 înainte de compilare** ca să o evitați, sau alegeți pur și simplu **Salvează și compilează**.
 
 **Rezultatele par vechi / a apărut un banner „învechit”.**
-O intrare este mai nouă decât rezultatele (acest lucru rămâne valabil și după o repornire, pentru că se
-bazează pe datele fișierelor) sau ultima compilare a eșuat. **Compilare → Recompilează**. Panoul
+Un fișier de intrare este mai nou decât rezultatele (acest lucru rămâne valabil și după o repornire,
+pentru că se bazează pe ora modificării fișierelor) sau ultima compilare a eșuat. **Compilare → Recompilează**. Panoul
 [Fișiere generate](10-compiling-and-output.md#rezultatele-panoul-fișiere-generate) marchează
 rezultatele învechite.
 
@@ -48,20 +48,20 @@ rezultatele învechite.
 
 **Lungimea/adâncimea din ThIDE nu corespund cu cele din Therion.**
 Este de așteptat. Analizele și previzualizările din aplicație sunt de **calitate de previzualizare**
-(fără compensarea buclelor), pentru un răspuns instantaneu. **Therion este sursa de adevăr** pentru
+(fără compensarea buclelor), pentru un răspuns instantaneu. **Therion rămâne sursa de referință** pentru
 valorile compensate — compilați pentru cifrele reale.
 Vedeți [Concepte de bază](04-core-concepts.md#graful-de-obiecte-modelul-semantic).
 
-**Avertisment „Disconnected survey” (TH_SEM_015) pe date pe care le consider corecte.**
-Bucata nu este legată de rețeaua principală *și* nu este georeferențiată. Fie adăugați `equate`-ul
+**Avertisment „Topografie deconectată” (TH_SEM_015) pe date pe care le consider corecte.**
+Porțiunea nu este legată de rețeaua principală *și* nu este georeferențiată. Fie adăugați `equate`-ul
 lipsă pentru a o lega, fie aplicați-i un `fix`. Dacă este ancorată doar printr-un `fix` simplu (fără
 sistem de coordonate) și acest lucru vă convine, activați **Un fix local (fără cs) ancorează o topografie
 deconectată** în [Setări → Vizualizare](19-settings-and-preferences.md#vizualizare) (grupul
 *Diagnostice*). Colorați [Previzualizarea principală](11-viewers.md#previzualizarea-principală) **după Componentă**
-pentru a vedea bucata izolată.
+pentru a vedea porțiunea izolată.
 
-**Calculatorul de declinație afișează „No magnetic model loaded”.**
-Puneți un `WMM.COF` (NOAA, domeniu public) în dosarul de setări al ThIDE (panoul indică exact calea) sau
+**Calculatorul de declinație afișează „Niciun model magnetic încărcat”.**
+Puneți un `WMM.COF` (NOAA, domeniu public) în dosarul de setări al ThIDE (panoul indică calea exactă) sau
 folosiți **Încarcă model…**. Vedeți
 [Calculatoare](18-calculators.md#calculator-de-declinație).
 
@@ -121,13 +121,13 @@ blocare înainte ca aranjamentul să fie reconstruit.
 **Unde sunt stocate setările mele?**
 În dosarul de setări al ThIDE (`%AppData%\ThIDE` pe Windows, `~/.config/ThIDE` pe Linux) — preferințe,
 scurtături de tastatură, indexul de simboluri, conținuturile pentru recuperare după blocare, pluginuri și
-fișierele auxiliare per proiect. Vedeți
+fișierele însoțitoare ale proiectelor. Vedeți
 [Instalare](02-installation-and-setup.md#6-unde-își-stochează-thide-setările).
 
 ## Tot nu ați rezolvat?
 
 - Verificați panoul **Jurnal** (**Vizualizare → Jurnal**) pentru erori apărute în fundal.
-- Copiați **Ajutor → Informații de depanare** și includeți-le în orice raport de eroare.
+- Copiați informațiile din **Ajutor → Informații de depanare** și includeți-le în orice raport de eroare.
 - Consultați documentele de referință din [`docs/`](../../README.md) și **Cartea Therion** inclusă
   (**Ajutor → Cartea Therion**).
 

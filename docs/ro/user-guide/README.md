@@ -4,7 +4,7 @@
      ghid, NU data la care a fost generat PDF-ul. Actualizați-o ori de câte ori actualizați ghidul (vezi
      about-this-guide.md) și păstrați forma „**For ThIDE <version>**”: build/build-user-guide.* citește
      această linie pentru a pune versiunea pe pagina de titlu a PDF-ului/HTML-ului. -->
-> **For ThIDE 0.4.0-alpha.1** — conținutul ghidului actualizat ultima dată la 2026-11-10.
+> **For ThIDE 0.4.0-alpha.1** — conținutul ghidului actualizat ultima dată la 2026-11-27.
 > Verificați în **Ajutor → Despre ThIDE** ce versiune rulați; dacă a dumneavoastră este mai nouă,
 > unele ecrane s-ar putea să se fi mutat.
 
@@ -16,8 +16,8 @@ folosesc **ThIDE** pentru a scrie, verifica, compila și explora proiecte de top
 
 Ghidul este orientat pe sarcini: explică *la ce folosește* fiecare parte a aplicației și cum o folosiți
 efectiv în drumul de la datele de teren la hartă. Nu presupune că sunteți programator. Presupune în
-schimb că sunteți întrucâtva familiarizat cu Therion (fișierele `.th` / `.th2` / `.thconfig` și modul în
-care este descrisă o peșteră în ele). Dacă Therion vă este nou, țineți **Cartea Therion** deschisă
+schimb că aveți o oarecare familiaritate cu Therion (fișierele `.th` / `.th2` / `.thconfig` și modul în
+care este descrisă o peșteră în ele). Dacă nu cunoașteți încă Therion, țineți **Cartea Therion** deschisă
 alături de acest ghid (**Ajutor → Cartea Therion**, inclusă în aplicație).
 
 > **Sunteți nou aici?** Citiți în ordine [Introducere](01-introduction.md) → [Instalare și configurare](02-installation-and-setup.md)
@@ -75,7 +75,7 @@ alături de acest ghid (**Ajutor → Cartea Therion**, inclusă în aplicație).
 
 Dosarul [`docs/`](../../README.md) conține și material de **referință** care aprofundează câteva
 subiecte (catalogul complet al codurilor de diagnostic, protocolul language server, API-ul pentru
-pluginuri, împachetarea). Acestea sunt legate din paginile relevante de aici. Ghidul utilizatorului este
+pluginuri, împachetarea). Paginile relevante din acest ghid trimit la ele. Ghidul utilizatorului este
 ușa de intrare; documentele de referință sunt anexa.
 
 - Prezentarea proiectului și pornirea rapidă: [README-ul principal](../../../README.md)

@@ -3,7 +3,7 @@
 > [← Înapoi la pagina principală a Ghidului utilizatorului](README.md)
 
 ThIDE vă verifică fișierele continuu și raportează problemele sub formă de **diagnostice** — chiar
-înainte să compilați. Acesta este unul dintre cele mai importante motive pentru a edita Therion în
+înainte să compilați. Acesta este unul dintre cele mai importante motive pentru a edita fișierele Therion în
 ThIDE și nu într-un simplu editor de text.
 
 ## Unde apar diagnosticele
@@ -20,7 +20,7 @@ ThIDE și nu într-un simplu editor de text.
 | **Tot spațiul de lucru** | Arată problemele din *toate* fișierele legate de thconfig, nu doar din cel deschis (necesită un spațiu de lucru). |
 | **Doar referințe** | Arată doar problemele de referințe fără țintă sau nerezolvate (de ex. un `input` lipsă). |
 | Coloanele **Cod · Severitate · Mesaj** | Faceți clic pe un rând pentru a sări la locul din sursă (Enter face același lucru de la tastatură). Mesajul și banda **Detalii** de sub tabel sunt afișate în limba aplicației. |
-| **Explică / Deschide documentația ↗** | Deschide documentația pentru **Codul** unui diagnostic. |
+| **Explică / Deschide documentația ↗** | Deschide documentația pentru codul unui diagnostic (coloana **Cod**). |
 | **Suprimă acest cod** | Nu mai raportează acel cod (în tot proiectul); **Șterge suprimările** anulează acest lucru. |
 
 ## Severitate și moduri
@@ -38,9 +38,9 @@ Fiecare diagnostic are un **cod stabil** (de ex. `TH0033`, `TH_SEM_015`, `TH2_00
 | Familie | Acoperă | Exemple |
 |---|---|---|
 | `TH00xx` | Parserul de bază (`.th` / `.thconfig`) | comandă necunoscută, `fix`/`equate`/`data` greșit formate, sistem de coordonate necunoscut |
-| `TH2_xxx` | Desenele `.th2` | tip necunoscut de punct/linie/arie, `line`/`area`/`scrap` neîncheiat |
+| `TH2_xxx` | Desenele `.th2` | tip necunoscut de punct/linie/suprafață, `line`/`area`/`scrap` neîncheiat |
 | `TH_XVI_xxx` | Schițele `.xvi` | `set XVI…` necunoscut, țintă `-sketch` lipsă |
-| `TH_SEM_xxx` | Semantica între fișiere | stație nerezolvată, `fix` duplicat, eroare de închidere a buclei, greșeală grosolană, **topografie deconectată** |
+| `TH_SEM_xxx` | Semantica între fișiere | stație nerezolvată, punct fix duplicat, eroare de închidere a buclei, greșeală grosolană, **topografie deconectată** |
 | `THIDE_DIR_xxx` | Directivele de aplicație `#@` | `#@region` / `#@endregion` fără pereche |
 | `TH_WS_xxx` | Spațiul de lucru | cale negăsită, niciun thconfig în dosar |
 
@@ -58,42 +58,46 @@ lucruri pe care un singur fișier nu le poate dezvălui:
   linia care o numește.
 - **Topografie deconectată** (`TH_SEM_015`) — o porțiune a peșterii care nu este nici legată de rețeaua
   principală, nici georeferențiată printr-un `fix`, așa că *plutește*. Sunt numite ambele stații de capăt
-  și fișierele sursă, ca să o puteți găsi și îmbina.
+  și fișierele sursă, ca să o puteți găsi și lega de rest.
 
 ## Validare în timp ce tastați (opțional)
 
 Implicit, revalidarea aprofundată a întregului thconfig rulează la **salvare**. Activați **Validează la
 tastare** (comutator în bara de instrumente sau [Setări → Editor](19-settings-and-preferences.md#editor))
 pentru a reanaliza întregul arbore de fișiere la o scurtă pauză în tastare. Opțiunea este dezactivată
-implicit pentru că poate solicita mult resursele în spațiile de lucru mari — lăsați-o dezactivată dacă
+implicit pentru că poate fi solicitantă în spațiile de lucru mari — lăsați-o dezactivată dacă
 observați întârzieri și bazați-vă pe validarea la salvare.
 
 ## Remedieri rapide
 
-Acolo unde ThIDE poate propune o reparație, **Remediere rapidă** (**Ctrl+.**) o oferă (și din Paleta de
+Acolo unde ThIDE poate propune o reparație, **Remediere rapidă** (**Ctrl+.**) o oferă (și din paleta de
 comenzi). Când nu există nimic de remediat la poziția cursorului, vă anunță. O reparație care ar elimina
-date nu apare niciodată singură și spune ce costă: pentru un tronson de lungime zero (`TH_SEM_012`) prima
+date nu este oferită niciodată singură și spune ce se pierde: pentru un tronson de lungime zero (`TH_SEM_012`) prima
 propunere este un `equate` între cele două stații, iar *Transformă linia în comentariu* indică stația pe
-care ar deconecta-o. O cale `export … -output` scrisă cu `\` (`TH0059`) se corectează rescriind
-separatoarele ca `/`.
+care ar deconecta-o. O cale `export … -output` scrisă cu `\` (`TH0059`) se corectează înlocuind
+separatoarele cu `/`.
 
 În **panoul Diagnostice**, faceți clic dreapta pe un rând pentru **Corectează** (prima sa remediere) și,
-pentru problemele cu o remediere sigură peste tot, **Corectează toate „<code>” din spațiul de lucru…**:
-un bloc fără cuvântul de închidere (`endsurvey` și altele asemenea, inserat după corpul blocului) și o
-stație necunoscută cu o singură sugestie „ați vrut să scrieți” (redenumită) într-un fișier verificat
-separat. O previzualizare listează fiecare modificare — fișier, linie, înainte și după — și debifați ce
-nu doriți; **Aplică** le scrie, iar proiectul este reverificat. Cazurile ambigue sunt numărate și lăsate
+pentru problemele a căror remediere poate fi aplicată sigur peste tot, **Corectează toate „<code>” din
+spațiul de lucru…**. Se califică două tipuri: un bloc fără cuvântul de închidere (`endsurvey` și altele
+asemenea, inserat după corpul blocului) și, într-un fișier verificat separat, nu ca parte a unui
+proiect, o stație necunoscută cu o singură sugestie „ați vrut să scrieți” (redenumită conform ei). O
+previzualizare listează fiecare modificare — fișier, linie, înainte și după — în care puteți debifa ce
+nu doriți; **Aplică** le scrie, iar proiectul este reverificat. Salvați mai întâi fișierele deschise
+care au modificări nesalvate: „Corectează toate” vă cere acest lucru, ca problemele lor să fie
+verificate din nou. Cazurile ambigue sunt numărate și lăsate
 neatinse. Într-un fișier deschis, remedierea este o modificare în editor; un fișier care nu este deschis
 este **rescris pe disc**, iar întreaga rulare este o singură intrare a
 [anulării la nivelul spațiului de lucru](05-interface-tour.md#anularea-unei-unelte-care-a-scris-în-mai-multe-fișiere)
 (**Editare → Anulează modificarea din mai multe fișiere**).
 
 Într-un proiect, un `equate` care numește o stație pe care niciun fișier nu o definește (`TH_SEM_001`,
-verificat în tot proiectul) primește și el o sugestie „ați vrut să scrieți” — cea mai apropiată stație
-din topografia proprie a echivalării, comparată după numele simplu — iar **Ctrl+.** sau **Corectează**
-oferă redenumirea pentru acea referință. „Corectează toate” le lasă deoparte: redenumirea fiecărei
-referințe nerezolvate cu cel mai apropiat nume ar putea lega stațiile greșite, așa că verificați-le pe
-fiecare în parte.
+verificat în tot proiectul) primește și el o sugestie „ați vrut să scrieți”: cel mai apropiat nume de
+stație din fișierul echivalării, unde o stație din topografia proprie a echivalării contează după
+numele simplu, iar oricare alta după calea topografiei. **Ctrl+.** sau **Corectează** oferă
+redenumirea doar pentru acea referință. „Corectează toate” le lasă deoparte, pentru că redenumirea
+fiecărei referințe nerezolvate cu cel mai apropiat nume ar putea lega stațiile greșite: verificați-le
+pe fiecare în parte.
 
 ## Curățenie în tot proiectul (meniul Unelte)
 
@@ -105,22 +109,22 @@ deschis, cu modificări nesalvate, primește schimbarea în editorul său și r�
 - **Adaugă scrap-urile nereferite în hărți…** — listează schițele desenate pe care nicio hartă nu le
   include (deci lipsesc din toate hărțile exportate), propune o hartă pentru fiecare (una din fișierul care
   include schița prin `input`, altfel cea cu numele cel mai apropiat) și le adaugă după ultimul membru al
-  hărții, scrise `scrap@survey` când este nevoie.
+  hărții, sub forma `scrap@survey` când este nevoie.
 - **Sugerează echivalări…** — stații mai apropiate decât o distanță aleasă de dumneavoastră, dar aflate în
   porțiuni diferite ale peșterii, georeferențiate separat: probabil `equate`-uri lipsă. Pozițiile sunt
   estimări, așa că fiecare pereche este un candidat de verificat; **Leagă…** deschide
-  [Leagă un fișier de topografie](24-linking-surveys.md) pe cele două stații și scrie doar `equate`-ul,
-  acolo unde ambele pot fi numite.
+  [Leagă un fișier de topografie](24-linking-surveys.md) pentru cele două stații și scrie doar `equate`-ul,
+  într-un loc de unde ambele stații pot fi numite.
 - **Formatează toate fișierele…** — trece fiecare fișier al proiectului prin formatator, cu previzualizare
   în prealabil (fiecare fișier modificat arată ce se schimbă, de exemplu *1 linie: spații de la sfârșitul
-  liniei eliminate*); fișierele care nu se analizează fără erori sunt lăsate neatinse, iar terminațiile de
-  linie sunt păstrate. Când nu este nimic de schimbat, dialogul vă spune (*Nimic de schimbat în 91 de
+  liniei eliminate*); fișierele care nu pot fi analizate fără erori sunt lăsate neatinse, iar terminațiile de
+  linie sunt păstrate. Când nu este nimic de schimbat, dialogul vă spune acest lucru (*Nimic de schimbat în 91 de
   fișiere*).
-- **Normalizează proiectul…** — Formatează toate fișierele plus întreținerea de care are nevoie un
+- **Normalizează proiectul…** — „Formatează toate fișierele” plus operațiile de întreținere de care are nevoie un
   depozit partajat: un singur stil de terminație de linie (LF sau CRLF), fișierele care declară o
   codificare veche (`encoding iso8859-2`, de exemplu) convertite în UTF-8 și — dacă bifați opțiunea —
-  fiecare șir de linii `input` consecutive sortat natural (`trip2` înainte de `trip10`). Previzualizare ca
-  la Formatează toate fișierele.
+  fiecare șir de linii `input` consecutive sortat natural (`trip2` înainte de `trip10`). Previzualizarea este
+  ca la „Formatează toate fișierele”.
 - **Renumerotează stațiile…** — un prefix nou (`1, 2, 3` → `A1, A2, A3`), un prefix înlocuit sau eliminat
   ori numerele decalate (`+100`, cu păstrarea zerourilor din față) pentru toate stațiile unei topografii,
   opțional și pentru subtopografiile ei. Stațiile ale căror nume nu se potrivesc (niciun număr de decalat,
@@ -133,8 +137,8 @@ deschis, cu modificări nesalvate, primește schimbarea în editorul său și r�
 ## Ajustarea anumitor verificări
 
 Câteva verificări se pot configura pe pagina **Vizualizare** din Setări (**Setări → Vizualizare**, grupul
-*Diagnostice*) — de exemplu, dacă un `fix` local simplu (fără sistem de coordonate) se consideră
-„ancorare” pentru o porțiune deconectată și, prin urmare, suprimă `TH_SEM_015`. Consultați
+*Diagnostice*) — de exemplu, dacă un `fix` local simplu (fără sistem de coordonate) contează ca
+„ancorare” a unei porțiuni deconectate și, prin urmare, suprimă `TH_SEM_015`. Consultați
 [Setări → Vizualizare](19-settings-and-preferences.md#vizualizare).
 
 ---
