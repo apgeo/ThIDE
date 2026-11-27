@@ -88,20 +88,20 @@ internal sealed class BundleJobRunner(
         catch (RenderBundleRefusedException ex)
         {
             refused = true;
-            result = RenderJobResult.Failure("refused", ex.Message);
+            result = RenderJobResult.Failure(RenderNodeFailure.Refused, ex.Message);
         }
         catch (OperationCanceledException)
         {
             cancelled = true;
-            result = RenderJobResult.Failure("cancelled", "The render was stopped.");
+            result = RenderJobResult.Failure(RenderNodeFailure.Cancelled, "The render was stopped.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
         {
-            result = RenderJobResult.Failure("error", ex.Message);
+            result = RenderJobResult.Failure(RenderNodeFailure.Error, ex.Message);
         }
         bool timedOut = cancelled && !cancel.IsCancellationRequested;
         if (timedOut)
-            result = RenderJobResult.Failure("timedOut", $"The render ran longer than the {job.MaxTime.TotalHours:0.#} h allowed; its frames are kept.");
+            result = RenderJobResult.Failure(RenderNodeFailure.TimedOut, $"The render ran longer than the {job.MaxTime.TotalHours:0.#} h allowed; its frames are kept.");
         return new BundleJobOutcome(record.Ended(result, DateTimeOffset.UtcNow, cancelled && result.FailureKind == "cancelled"), refused, timedOut);
     }
 
