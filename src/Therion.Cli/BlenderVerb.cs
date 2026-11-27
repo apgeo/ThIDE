@@ -415,37 +415,66 @@ public static partial class BlenderVerb
     {
         storyboard = null;
         shot = null;
-        string? path = Option(args, "--storyboard"), number = Option(args, "--shot");
-        if (path is null)
+        string? path = Option(args, "--storyboard"), number = Option(args, "--shot"), composite = Option(args, "--composite");
+        if (composite is null && Flag(args, "--composite"))
+        {
+            stderr.WriteLine($"error: --composite takes a composite preset's file (<name>{PresetStore.CompositeExtension}) or the name of a built-in one: {CompositeNames()}.");
+            return false;
+        }
+        if (path is null && composite is null)
         {
             if (number is null && !Flag(args, "--shot")) return true;
-            stderr.WriteLine("error: --shot goes with a storyboard (--storyboard <file.json>).");
+            stderr.WriteLine("error: --shot goes with a storyboard (--storyboard <file.json>) or a composite (--composite <file|name>).");
+            return false;
+        }
+        string option = composite is null ? "--storyboard" : "--composite";
+        if (path is not null && composite is not null)
+        {
+            stderr.WriteLine("error: --storyboard and --composite are two films: give one of them.");
             return false;
         }
         if (Option(args, "--spec") is not null || Option(args, "--preset") is not null)
         {
-            stderr.WriteLine("error: --storyboard does not go with --spec or --preset: a storyboard's shots say what they show.");
+            stderr.WriteLine($"error: {option} does not go with --spec or --preset: a storyboard's shots say what they show.");
             return false;
         }
-        if (!File.Exists(path))
+        if (composite is not null)
         {
-            stderr.WriteLine($"error: storyboard file not found: {path}");
-            return false;
+            if (!TryReadComposite(composite, stderr, out storyboard)) return false;
         }
-        try { storyboard = StoryboardSerializer.ReadFile(path); }
-        catch (StoryboardFormatException ex)
+        else
         {
-            stderr.WriteLine($"error: bad storyboard: {ex.Message}");
-            return false;
+            if (!File.Exists(path))
+            {
+                stderr.WriteLine($"error: storyboard file not found: {path}");
+                return false;
+            }
+            try { storyboard = StoryboardSerializer.ReadFile(path!); }
+            catch (StoryboardFormatException ex)
+            {
+                stderr.WriteLine($"error: bad storyboard: {ex.Message}");
+                return false;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                stderr.WriteLine($"error: {ex.Message}");
+                return false;
+            }
+            // A photo and an HDRI image are named relative to the storyboard's file, as an
+            // annotations file names them.
+            storyboard = StoryboardFiles.Rooted(storyboard, Path.GetDirectoryName(Path.GetFullPath(path!))!);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        // A storyboard says its own language; a composite takes the one it is given.
+        if (composite is not null && Option(args, "--tour-language") is { } language)
         {
-            stderr.WriteLine($"error: {ex.Message}");
-            return false;
+            if (!TourBuilder.Languages.Contains(language, StringComparer.Ordinal))
+            {
+                stderr.WriteLine($"error: --tour-language takes one of: {string.Join(", ", TourBuilder.Languages)}.");
+                storyboard = null;
+                return false;
+            }
+            storyboard = storyboard! with { Language = language };
         }
-        // A photo and an HDRI image are named relative to the storyboard's file, as an
-        // annotations file names them.
-        storyboard = StoryboardFiles.Rooted(storyboard, Path.GetDirectoryName(Path.GetFullPath(path))!);
 
         if (number is not null || Flag(args, "--shot"))
         {
@@ -462,6 +491,45 @@ public static partial class BlenderVerb
         stderr.WriteLine("error: invalid storyboard:");
         foreach (var error in errors) stderr.WriteLine($"  {error.Path}: {error.Message}");
         storyboard = null;
+        return false;
+    }
+
+    private static string CompositeNames() => string.Join(", ", BuiltInComposites.All.Select(c => $"\"{c.Name}\""));
+
+    /// <summary>
+    /// The film of <c>--composite</c>: a composite preset's file (one saved from ThIDE's panel, or
+    /// written by hand), or a built-in composite by its name in any case. A file wins over a name.
+    /// </summary>
+    private static bool TryReadComposite(string fileOrName, TextWriter stderr, out Storyboard? storyboard)
+    {
+        storyboard = null;
+        if (File.Exists(fileOrName))
+        {
+            try { storyboard = CompositePresetSerializer.ReadFile(fileOrName).Storyboard; }
+            catch (PresetFormatException ex)
+            {
+                stderr.WriteLine($"error: bad composite preset: {ex.Message}");
+                return false;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                stderr.WriteLine($"error: {ex.Message}");
+                return false;
+            }
+            // As a storyboard's file: the files it names are relative to it.
+            storyboard = StoryboardFiles.Rooted(storyboard, Path.GetDirectoryName(Path.GetFullPath(fileOrName))!);
+            return true;
+        }
+        if (BuiltInComposites.ByName(fileOrName) is { } builtIn)
+        {
+            storyboard = builtIn.Storyboard;
+            return true;
+        }
+        bool looksLikeFile = fileOrName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+                             || fileOrName.Contains(Path.DirectorySeparatorChar) || fileOrName.Contains(Path.AltDirectorySeparatorChar);
+        stderr.WriteLine(looksLikeFile
+            ? $"error: composite preset file not found: {fileOrName}"
+            : $"error: unknown composite preset '{fileOrName}'. Built in: {CompositeNames()}; or give the file of one (<name>{PresetStore.CompositeExtension}).");
         return false;
     }
 

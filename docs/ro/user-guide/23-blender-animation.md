@@ -919,7 +919,40 @@ iau locul. `"from": "newest"` zboară galeria din ultima zi de topografiere, de 
 apropiat de intrare la celălalt; un model fără date de topografiere zboară în schimb galeria
 principală. Ce s-a făcut apare în avertismentele randării. Presetările compuse proprii stau lângă
 presetările dumneavoastră, ca fișiere `*.composite.json` (un `name`, o `description` și
-`storyboard`).
+`storyboard`): **Salvează ca presetare compusă** din [fila Storyboard](#fila-storyboard) scrie una.
+
+Traseul unei secvențe de parcurs poate spune și ce galerii laterale vizitează turul. `include` și
+`exclude` primesc ce primesc `--include` și `--exclude` (numărul unei ramificații, ca `B3`, o
+stație din ea, numele unei topografii) și au întâietate față de regulile turului; `priority`
+listează numere de ramificații, cele mai dorite întâi: când filmul depășește timpul, galeriile
+laterale pe care le numește sunt lăsate deoparte după celelalte, de la coada listei în sus.
+`language` al unui storyboard (`en` sau `ro`) este limba textelor pe care filmul le scrie singur,
+textele din colț ale unui tur și notele pistelor lui. Când lipsește, ele sunt în limba ThIDE când
+panoul randează filmul și în engleză din linia de comandă.
+
+```json
+{ "version": 1, "name": "{cave}: turul meu", "language": "ro",
+  "texts": { "title": "{cave}", "titleSeconds": 3, "endCard": { "text": "Clubul de Speologie Inventat" } },
+  "shots": [
+    { "name": "Afară", "preset": "Orbit showcase", "seconds": 10 },
+    { "name": "Tur", "preset": "Full flythrough", "seconds": 120, "in": { "kind": "Dip", "seconds": 0.6 },
+      "camera": { "template": "Route",
+                  "route": { "branches": "auto", "exclude": ["B3"], "priority": ["B5", "B1"] } } } ] }
+```
+
+**Din linia de comandă**, `--composite` face dintr-o presetare compusă filmul modelului și îl
+randează, îl schițează sau îl pune într-un pachet, așa cum face `--storyboard` cu un storyboard.
+Primește o presetare compusă inclusă după nume (oricum ar fi scris cu majuscule) sau fișierul
+uneia: cele salvate din panou sunt în dosarul presetărilor dumneavoastră
+(`%AppData%\ThIDE\blender-presets` pe Windows, `~/.config/ThIDE/blender-presets` pe Linux).
+`--tour-language ro` scrie textele tururilor ei în română, orice ar spune presetarea; `--shot N`
+randează doar una dintre secvențele ei.
+
+```
+therion-cli blender cave.lox --composite "Grand tour" --draft
+therion-cli blender cave.lox --composite ~/.config/ThIDE/blender-presets/my-tour.composite.json --bundle film.zip
+therion-cli blender cave.lox --composite Showcase --tour-language ro --out renders
+```
 
 ## Fila Storyboard
 
@@ -935,6 +968,30 @@ Panoul are două file deasupra setărilor. **Scenă** este o singură randare, c
   iar orice schimbare făcută acolo se scrie în ea. **Începe cu** alege o tăietură, o trecere prin
   negru sau o suprapunere și secundele ei. Setările de ieșire (mărimea, cadrele pe secundă,
   numele fișierului) sunt ale filmului.
+- **Filmul**, sub secvențe: **Titlu** (cu un **Subtitlu** și secundele **Cadrului de titlu**,
+  pentru un titlu care stă în mijlocul imaginii înainte să se stingă; 0 îl ține sus), **Cadru de
+  final** (cu un subtitlu și secundele lui; gol înseamnă niciunul) și **Limba textelor**: limba în
+  care un parcurs își scrie textele din colț și notele pistelor. *Ca interfața* urmează limba ThIDE
+  (engleza, când un film nu poate fi scris în ea). O presetare compusă își aduce titlul, cadrul de
+  final și limba când este adăugată unui film gol.
+- **Salvează ca presetare compusă** păstrează filmul ca presetare compusă proprie, sub numele și
+  descrierea tastate alături; lista presetărilor compuse o oferă de atunci, iar linia de comandă
+  îi primește fișierul (`--composite`). Presetările dumneavoastră pe care le numesc secvențele
+  sunt scrise în ele, așa că presetarea compusă se randează la fel acolo unde nu sunt cunoscute;
+  unde se scrie filmul rămâne pe seama celui care îl randează. Numele unei presetări compuse
+  incluse este refuzat; una proprie cu același nume este înlocuită.
+- **O secvență de parcurs** (*parcurs* în listă, ca în Grand tour) are un tabel al galeriilor ei
+  laterale. **Arată galeriile** citește modelul și calculează turul așa cum îl va calcula
+  randarea: fiecare galerie laterală cu numărul ei, dacă este ramificație sau ocolire, ramificația
+  de unde pleacă, lungimea și ce face filmul cu ea (parcursă și tăietură înapoi, parcursă
+  dus-întors, parcursă de la un capăt la altul, o privire, sau de ce e lăsată deoparte: prea
+  scurtă, peste numărul pe care îl ia parcursul, peste timpul filmului). Lista este în ordinea în
+  care sunt dorite galeriile, cele mai bine clasate întâi. **Vizită** spune *după reguli*,
+  *vizitează* sau *lasă deoparte* pentru fiecare, iar săgețile mută una mai sus sau mai jos: când
+  filmul depășește timpul, galeriile de la coadă sunt lăsate deoparte primele. Orice schimbare se
+  scrie în traseul secvenței (`include`, `exclude`, `priority`, ca
+  [mai sus](#presetări-compuse-un-film-întreg-ca-șablon)), iar tabelul este calculat din nou;
+  notele de sub el spun ce a lăsat deoparte sau a scurtat turul.
 - **Schiță a tuturor** schițează toate secvențele, **Schiță a secvenței** doar pe cea selectată,
   **Estimare** spune câte cadre, cât timp, cât disc și câtă memorie cere filmul, iar **Randează
   filmul** arată estimarea și randează. Randările își așteaptă rândul în coada de randare, listată
@@ -1052,13 +1109,17 @@ apoi până la `s140`. (Tabelul afișat de comandă este în engleză.)
   "trunk": "farthest", "start": "e1",
   "minLength": 30, "maxCount": 8, "include": ["B2"], "exclude": ["B7"],
   "mode": "cut", "modes": { "B5": "return", "B9": "peek" },
+  "priority": ["B5", "B1"],
   "tourSeconds": 180, "branchSeconds": 20,
   "preset": "Full flythrough", "language": "ro",
   "output": { "width": 1920, "height": 1080, "baseName": "tur-pestera" }
 }
 ```
 
-`preset` (`--preset`) este presetarea din care filmul își ia materialele, iluminarea și motorul
+`priority` listează numere de ramificații, cele mai dorite întâi: peste timp, galeriile laterale
+pe care le numește sunt lăsate deoparte după celelalte, de la coada listei în sus (o privire tot
+înaintea unei vizite, iar o vizită aleasă de mână ultima). `preset` (`--preset`) este presetarea
+din care filmul își ia materialele, iluminarea și motorul
 de randare; ele sunt scrise în `defaults` din storyboard, unde le puteți schimba pentru toate
 secvențele deodată. `--bundle` scrie turul ca [pachet de
 randare](#un-pachet-de-randare-pentru-randarea-pe-alt-calculator), cu tabelul și notele în

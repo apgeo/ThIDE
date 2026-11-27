@@ -116,6 +116,11 @@ static void PrintHelp()
     Console.WriteLine("                                         it prints), within 180 s for the film and 20 s for each. It is made as a storyboard and");
     Console.WriteLine("                                         rendered, drafted or bundled like one; --write-storyboard keeps the storyboard, and alone");
     Console.WriteLine("                                         writes it without rendering, to edit by hand and render with --storyboard.");
+    Console.WriteLine("  therion-cli blender <model.lox|.3d> --composite <file.composite.json|\"<name>\"> [--tour-language en|ro] [--shot <n>] [--draft]");
+    Console.WriteLine("                     [--out <dir>] [--bundle <file.zip|folder>] ...");
+    Console.WriteLine("                                         A composite preset made into this cave's film: a built-in one by its name (Showcase,");
+    Console.WriteLine("                                         \"Grand tour\", \"Exploration history\") or the file of one saved from ThIDE's panel. It is");
+    Console.WriteLine("                                         rendered, drafted or bundled as a storyboard is; --tour-language writes its tours' texts.");
     Console.WriteLine("  therion-cli blender ... [--parts auto|on|off] [--frame-range <first>-<last> --frames <dir>] [--estimate]");
     Console.WriteLine("                                         --parts splits a large cave's walls into parts, and a camera inside it shows only those");
     Console.WriteLine("                                         near its path (auto: for a large cave). --frame-range renders those frames of the scene");

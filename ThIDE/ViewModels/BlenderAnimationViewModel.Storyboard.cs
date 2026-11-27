@@ -4,7 +4,9 @@
 // edit the shot that is selected: selecting one loads what it shows into them, and every change
 // made there is written back into it. The output settings are the film's. Draft all, Draft shot
 // and Render go through the render queue as the panel's (owner "panel"); the estimate is shown
-// before a render starts. The queue itself is listed, with a cancel for each job.
+// before a render starts. The queue itself is listed, with a cancel for each job. The film's
+// title, end card and language, and saving it as a composite, are in the .Film part; the branch
+// table of a tour shot is in the .Branches part.
 //
 // The VM holds no film logic: Storyboard, StoryboardValidator and StoryboardExpander compute.
 
@@ -79,6 +81,7 @@ public sealed partial class BlenderAnimationViewModel
     {
         Name = _filmName,
         Fps = _spec.Animation.Fps,
+        Language = FilmLanguage,
         Defaults = _filmDefaults,
         Texts = _filmTexts,
         Shots = Shots.Select(s => s.Shot).ToList(),
@@ -137,6 +140,8 @@ public sealed partial class BlenderAnimationViewModel
             _filmName = film.Name;
             _filmTexts = film.Texts;
             _filmDefaults = film.Defaults;
+            SetFilmLanguage(film.Language);
+            FilmTextsChanged();
         }
         for (int i = 0; i < film.Shots.Count; i++)
         {
@@ -171,7 +176,12 @@ public sealed partial class BlenderAnimationViewModel
         if (row is null || !Shots.Remove(row)) return;
         if (SelectedShot == row) SelectedShot = null;
         if (Shots.Count > 0 && Shots[0].Shot.In is not null) Shots[0].Shot = Shots[0].Shot with { In = null };
-        if (Shots.Count == 0) (_filmName, _filmTexts, _filmDefaults) = (null, null, new StoryboardDefaults());
+        if (Shots.Count == 0)
+        {
+            (_filmName, _filmTexts, _filmDefaults) = (null, null, new StoryboardDefaults());
+            SetFilmLanguage(null);
+            FilmTextsChanged();
+        }
         ShotsChanged();
     }
 
@@ -186,6 +196,7 @@ public sealed partial class BlenderAnimationViewModel
         if (oldValue is not null) oldValue.IsSelected = false;
         if (newValue is not null) newValue.IsSelected = true;
         DraftShotCommand.NotifyCanExecuteChanged();
+        ClearBranchTable();
     }
 
     partial void OnSelectedShotChanged(StoryboardShotViewModel? value)
@@ -252,6 +263,7 @@ public sealed partial class BlenderAnimationViewModel
         }
         OnPropertyChanged(nameof(FilmSeconds));
         RevalidateStoryboard();
+        BranchTableStale();
     }
 
     private void RevalidateStoryboard()
@@ -268,6 +280,8 @@ public sealed partial class BlenderAnimationViewModel
         DraftShotCommand.NotifyCanExecuteChanged();
         RenderFilmCommand.NotifyCanExecuteChanged();
         EstimateFilmCommand.NotifyCanExecuteChanged();
+        SaveCompositeCommand.NotifyCanExecuteChanged();
+        ListBranchesCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnPanelTabChanged(int value) => RevalidateStoryboard();
@@ -323,7 +337,8 @@ public sealed partial class BlenderAnimationViewModel
     /// the shots, so that a restart that starts it again renders the same.</summary>
     private Storyboard Film(StoryboardShotViewModel? only)
     {
-        var film = CurrentStoryboard;
+        // The texts a tour writes are in the film's language, or the interface's.
+        var film = CurrentStoryboard with { Language = FilmLanguage ?? InterfaceFilmLanguage };
         if (only is not null)
         {
             var shot = only.Shot;
@@ -395,6 +410,7 @@ public sealed partial class BlenderAnimationViewModel
         DraftShotCommand.NotifyCanExecuteChanged();
         RenderFilmCommand.NotifyCanExecuteChanged();
         EstimateFilmCommand.NotifyCanExecuteChanged();
+        ListBranchesCommand.NotifyCanExecuteChanged();
     }
 
     // ---- the queue ----
@@ -454,7 +470,7 @@ public sealed partial class StoryboardShotViewModel : ObservableObject
 
     /// <summary>The shot as the storyboard has it.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Name), nameof(Kind), nameof(Seconds), nameof(Transition), nameof(TransitionKind), nameof(TransitionSeconds))]
+    [NotifyPropertyChangedFor(nameof(Name), nameof(Kind), nameof(IsTour), nameof(Seconds), nameof(Transition), nameof(TransitionKind), nameof(TransitionSeconds))]
     private ShotSpec _shot;
 
     [ObservableProperty]
@@ -485,10 +501,14 @@ public sealed partial class StoryboardShotViewModel : ObservableObject
         }
     }
 
-    private CameraSpec? Camera => Shot.Camera ?? (Shot.Preset is { } name ? _presets(name)?.Spec.Camera : null);
+    /// <summary>The shot's camera, its own or its preset's.</summary>
+    internal CameraSpec? Camera => Shot.Camera ?? (Shot.Preset is { } name ? _presets(name)?.Spec.Camera : null);
+
+    /// <summary>True for a tour of the cave's branches: the tab lists its branches.</summary>
+    public bool IsTour => Camera is { Template: CameraTemplate.Route, Route.Branches: not null };
 
     /// <summary>What the camera does: its template, or a tour of the branches.</summary>
-    public string Kind => Camera is { Template: CameraTemplate.Route, Route.Branches: not null }
+    public string Kind => IsTour
         ? Tr.Get("Blender_Shot_Tour")
         : (Camera?.Template ?? CameraTemplate.Static).ToString();
 

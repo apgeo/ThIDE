@@ -518,10 +518,19 @@ public static class TourBuilder
             if (Total(1.0) <= budget) return 1.0;
 
             // The lowest first: a look before a visit, a visit the rules chose before one chosen
-            // by hand, what hangs deeper before what it hangs on, the worse rank before the better.
+            // by hand, what hangs deeper before what it hangs on; then one not in the priority
+            // list before one in it, the worse rank before the better, the lower in the list
+            // before the higher.
+            var priority = _spec.Priority ?? [];
+            int Wanted(Visit v)
+            {
+                for (int i = 0; i < priority.Count; i++)
+                    if (string.Equals(priority[i], v.Branch.Id, StringComparison.OrdinalIgnoreCase)) return priority.Count - i;
+                return 0;
+            }
             var lowestFirst = _visits
                 .OrderBy(v => v.Mode == TourBranchMode.Peek ? 0 : v.Branch.Choice == TourChoice.Included ? 2 : 1)
-                .ThenByDescending(v => v.Branch.Depth).ThenByDescending(v => v.Branch.Rank).ToList();
+                .ThenByDescending(v => v.Branch.Depth).ThenBy(Wanted).ThenByDescending(v => v.Branch.Rank).ToList();
             if (Total(MaxSpeedUp) > budget)
             {
                 foreach (var visit in lowestFirst.Where(v => v.Live && v.Mode == TourBranchMode.Return))
@@ -571,6 +580,8 @@ public static class TourBuilder
                     $"The tour stays in the part of the cave it starts in: {_plan.OtherComponents} other part(s), {Metres(_plan.OtherComponentsLength)} m of passage that no leg joins to it, get no visit.");
             foreach (string entry in _plan.Unmatched.Where(e => !_spec.Modes.ContainsKey(e)))
                 _notices.Add($"'{entry}' (include or exclude) names no side passage of this tour.");
+            foreach (string id in (_spec.Priority ?? []).Where(id => _plan.Branches.All(b => !string.Equals(b.Id, id, StringComparison.OrdinalIgnoreCase))).Distinct(StringComparer.OrdinalIgnoreCase))
+                _notices.Add($"'{id}' (priority) names no side passage of this tour.");
             if (_trunkCount < _plan.TrunkStations.Count)
             {
                 double flown = LengthOf(_plan.TrunkStations, _trunkCount);
