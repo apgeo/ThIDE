@@ -162,6 +162,67 @@ public sealed class SkeletonGraph
         return result;
     }
 
+    /// <summary>A deep copy (nodes and edges keep their ids), so planning can split edges without
+    /// touching the cached skeleton.</summary>
+    public SkeletonGraph Clone()
+    {
+        var g = new SkeletonGraph();
+        var map = new Dictionary<SkeletonNode, SkeletonNode>();
+        foreach (var n in Nodes)
+        {
+            var c = new SkeletonNode
+            {
+                Id = n.Id, Position = n.Position, Radius = n.Radius, Kind = n.Kind, Removed = n.Removed,
+                Protected = n.Protected, Chamber = n.Chamber, OpenEnd = n.OpenEnd,
+            };
+            g.Nodes.Add(c);
+            map[n] = c;
+        }
+        foreach (var e in Edges)
+        {
+            var c = new SkeletonEdge
+            {
+                Id = e.Id, A = map[e.A], B = map[e.B], Points = [.. e.Points], Radii = [.. e.Radii],
+                Removed = e.Removed, Synthetic = e.Synthetic,
+            };
+            g.Edges.Add(c);
+            if (!c.Removed)
+            {
+                c.A.Edges.Add(c);
+                if (c.B != c.A) c.B.Edges.Add(c);
+            }
+        }
+        return g;
+    }
+
+    /// <summary>The live edge point nearest <paramref name="p"/>: (edge, point index, distance).</summary>
+    public (SkeletonEdge? Edge, int Index, double Distance) NearestAxisPoint(CaveVector3 p)
+    {
+        SkeletonEdge? best = null;
+        int bestIndex = -1;
+        double bestD = double.PositiveInfinity;
+        foreach (var e in LiveEdges)
+            for (int i = 0; i < e.Points.Count; i++)
+            {
+                double d = (e.Points[i] - p).LengthSquared;
+                if (d < bestD) { bestD = d; best = e; bestIndex = i; }
+            }
+        return (best, bestIndex, Math.Sqrt(bestD));
+    }
+
+    /// <summary>Splits <paramref name="e"/> at point <paramref name="index"/> with a new node there, or
+    /// returns the end node when the index is an end.</summary>
+    internal SkeletonNode SplitAt(SkeletonEdge e, int index, SkeletonNodeKind kind)
+    {
+        if (index <= 0) return e.A;
+        if (index >= e.Points.Count - 1) return e.B;
+        var node = AddNode(e.Points[index], e.Radii[index], kind);
+        RemoveEdge(e);
+        AddEdge(e.A, node, e.Points.GetRange(0, index + 1), e.Radii.GetRange(0, index + 1), e.Synthetic);
+        AddEdge(node, e.B, e.Points.GetRange(index, e.Points.Count - index), e.Radii.GetRange(index, e.Radii.Count - index), e.Synthetic);
+        return node;
+    }
+
     // ---------------- building from voxels ----------------
 
     internal static SkeletonGraph FromVoxels(VoidGrid grid, bool[] alive)
