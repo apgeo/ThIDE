@@ -5,7 +5,7 @@
 La compilare, ThIDE predă proiectul dumneavoastră programului **Therion** propriu-zis, care produce
 hărțile și modelele efective. ThIDE coordonează rularea și vă ușurează lucrul cu rezultatele.
 
-> Pentru aceasta aveți nevoie de Therion instalat și detectat — consultați [Instalare și configurare](02-installation-and-setup.md).
+> Pentru aceasta este necesar ca Therion să fie instalat și detectat — consultați [Instalare și configurare](02-installation-and-setup.md).
 
 ## Rularea unei compilări
 
@@ -13,7 +13,7 @@ hărțile și modelele efective. ThIDE coordonează rularea și vă ușurează l
 |---|---|---|
 | **Compilează** | **Compilare → Compilează** (F5) · ciocanul din bara de instrumente · Paletă de comenzi | Compilează **thconfig-ul activ** (cel selectat în lista derulantă din Exploratorul spațiului de lucru), indiferent de fila care are focusul. Indicația sa îl numește. |
 | **Compilează acest thconfig (fila activă)** | **Compilare → Compilează acest thconfig (fila activă)** · Paletă de comenzi | Compilează thconfig-ul deschis în fila care are focusul, atunci când nu este cel activ, fără să-l facă activ. |
-| **Recompilează** | **Compilare → Recompilează** (Ctrl+F5) | Rulează din nou compilarea thconfig-ului activ (Therion procesează întotdeauna întregul thconfig; nu există un mod incremental de golit). |
+| **Recompilează** | **Compilare → Recompilează** (Ctrl+F5) | Rulează din nou compilarea thconfig-ului activ (Therion procesează întotdeauna întregul thconfig; nu există un mod incremental, deci nimic de golit). |
 | **Oprește compilarea** | **Compilare → Oprește compilarea** (Shift+F5) · bara de instrumente | Oprește o compilare în curs. |
 | **Compilează ținta** | **Compilare → Compilează ținta** | Compilează o singură țintă de export a thconfig-ului activ. *Build target* („țintă de compilare”) este termenul folosit de Therion pentru o linie `export`, de aceea își păstrează numele. |
 | **Compilează un anumit thconfig…** | Paletă de comenzi | Compilează o configurație diferită de cea activă. |
@@ -22,20 +22,20 @@ hărțile și modelele efective. ThIDE coordonează rularea și vă ușurează l
 
 Dacă fișierele implicate în compilare au modificări nesalvate, ThIDE vă întreabă: **Salvează și
 compilează** sau **Compilează fără salvare** (numind fișierele afectate). Preferați prima variantă. Puteți
-face acest lucru automat cu *Salvează automat fișierele modificate înainte de compilare*
+automatiza acest pas cu opțiunea *Salvează automat fișierele modificate înainte de compilare*
 ([Setări → Compilare și ieșire](19-settings-and-preferences.md#compilare-și-ieșire)).
 
 ### Compilare la salvare (opțional)
 
-Activați *Compilează la salvare* (**Setări → Compilare și ieșire**) pentru o compilare amânată, în
-fundal, a thconfig-ului activ la fiecare salvare — urmăriți indicatorul de activitate și panoul **Jurnal**.
+Activați *Compilează la salvare* (**Setări → Compilare și ieșire**) pentru o compilare în fundal a
+thconfig-ului activ, pornită la scurt timp după fiecare salvare — urmăriți indicatorul de activitate și panoul **Jurnal**.
 Dezactivată implicit.
 
 ### Dosare de ieșire lipsă
 
 Implicit, ThIDE **creează dosarele de ieșire lipsă** înainte de compilare (altfel Therion dă eroare la un
-dosar inexistent); când face acest lucru, se scrie o linie în jurnal. Opțiunea se comută din **Setări →
-Compilare și ieșire**.
+dosar inexistent); când face acest lucru, se scrie o linie în jurnal. Opțiunea se activează sau se dezactivează din
+**Setări → Compilare și ieșire**.
 
 ## Urmărirea rulării: panoul Ieșire compilator
 
@@ -51,7 +51,7 @@ Panoul **Ieșire compilator** afișează în timp real mesajele lui Therion.
 Prima linie de ieșire numește thconfig-ul care se compilează (faceți clic pe ea pentru a deschide
 fișierul). Bara de stare arată **Se compilează *nume*…** și apoi rezultatul; linia **Ultima compilare** din
 tabloul de bord al Prezentării generale numește thconfig-ul compilat (după o repornire afișează *Nicio
-compilare în această sesiune* până când compilați din nou). O notificare rezumă fișierele produse și
+compilare în această sesiune* până când compilați din nou). O notificare flotantă rezumă fișierele produse și
 avertismentele (cu **Arată ieșirea**).
 
 ## Rezultatele: panoul Fișiere generate
@@ -61,7 +61,7 @@ generate de *nume* · compilat la *ora***). Panoul urmează thconfig-ul activ: t
 ultimele rezultate ale acelui thconfig sau *„… nu a fost compilat încă.”*, cu un buton **Compilează**. După
 **Compilează acest thconfig (fila activă)**, arată rezultatele acelei compilări până când se schimbă
 thconfig-ul activ. Dacă o compilare eșuează, rezultatele ultimei compilări reușite rămân în listă și sunt
-marcate ca **învechite**, și după o repornire.
+marcate ca **învechite**, inclusiv după o repornire.
 
 Fiecare rezultat are coloanele **Nume fișier · Deschidere automată · Stare · Dimensiune · Modificat** și,
 pe fiecare rând, butoane de acțiune:
@@ -73,8 +73,8 @@ pe fiecare rând, butoane de acțiune:
 - **Deschidere automată** — un control cu 3 stări pentru fiecare fișier: **▣ implicit** (folosește setarea
   globală) · **✓ întotdeauna** · **✗ niciodată**. Alegerea se păstrează de la o compilare la alta.
 
-Dacă o intrare din spațiul de lucru este mai nouă decât un rezultat — și după o repornire, pentru că se
-compară orele fișierelor —, o bandă de avertizare **învechit** vă anunță că rezultatele nu mai sunt la zi;
+Dacă o intrare din spațiul de lucru este mai nouă decât un rezultat — inclusiv după o repornire, pentru că se
+compară datele de modificare ale fișierelor —, un banner vă avertizează că rezultatele sunt **învechite**;
 recompilați pentru a le reîmprospăta.
 
 ### Ce se deschide automat după o compilare
@@ -100,11 +100,11 @@ automat).
 **Compilare → Export rapid…** compune un singur export fără să vă modifice thconfig-ul: alegeți un
 **format**, opțional o **topografie** (gol = tot spațiul de lucru), o **scară** și un **nume de ieșire**.
 ThIDE generează un thconfig temporar din spațiul de lucru activ, îl compilează și deschide rezultatul.
-Excelent pentru un PDF rapid al unei singure ramuri.
+Foarte util pentru un PDF rapid al unei singure ramuri.
 
 ## Deschiderea rezultatelor în aplicații externe
 
-- **Compilare → Deschide în Loch** / **Deschide în Aven** pornește vizualizatorul extern 3D/2D pe rezultat.
+- **Compilare → Deschide în Loch** / **Deschide în Aven** deschide rezultatul în vizualizatorul extern 3D/2D.
 - **Compilare → Deschide ultimul dosar de ieșire** afișează dosarul în managerul de fișiere.
 
 ## Unelte suplimentare din lanțul de compilare
@@ -112,7 +112,7 @@ Excelent pentru un PDF rapid al unei singure ramuri.
 Dacă Survex/Therion le pun la dispoziție, meniul Compilare oferă:
 
 - **Unelte Survex (.3d):** **dump3d** (conținutul unui `.3d` ca text) și **extend** (profil desfășurat).
-- **Informații Therion:** **Afișează versiunea** și **Afișează mediul** (și în Paleta de comenzi). Utile
+- **Informații Therion:** **Afișează versiunea** și **Afișează mediul** (și în paleta de comenzi). Utile
   când vă verificați instalarea uneltelor sau raportați o eroare.
 
 ---

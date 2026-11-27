@@ -185,7 +185,7 @@
   <data name="Struct_Tab3" xml:space="preserve"><value>3 · Plane rezultate</value></data>
   <data name="Struct_Tab4" xml:space="preserve"><value>4 · Grafic 3D</value></data>
   <data name="Struct_DetectionSignals" xml:space="preserve"><value>Semnale de detectare</value></data>
-  <data name="Struct_DetectionHelp" xml:space="preserve"><value>O măsurătoare este structurală dacă se potrivește cu orice semn activat in date. Ajustați-le conform convenției topografiei.</value></data>
+  <data name="Struct_DetectionHelp" xml:space="preserve"><value>O măsurătoare este structurală dacă se potrivește cu orice semn activat în date. Ajustați-le conform convenției topografiei.</value></data>
   <data name="Struct_FromNameKeyword" xml:space="preserve"><value>Numele stației de plecare conține unul dintre cuvintele-cheie</value></data>
   <data name="Struct_CommentMarker" xml:space="preserve"><value>Comentariul vizei conține unul dintre marcaje</value></data>
   <data name="Struct_StationFlag" xml:space="preserve"><value>Stația de plecare sau de sosire poartă unul dintre indicatori</value></data>

@@ -4,7 +4,7 @@
      the PDF was generated. Bump it whenever you update the guide (see about-this-guide.md), and
      keep the "**For ThIDE <version>**" shape: build/build-user-guide.* parses this line to put the
      version on the PDF/HTML title page. -->
-> **For ThIDE 0.4.0-alpha.1** — guide content last updated 2026-11-10.
+> **For ThIDE 0.4.0-alpha.1** — guide content last updated 2026-11-27.
 > Check **Help → About ThIDE** for the version you are running; if yours is newer, some screens may have
 > moved.
 

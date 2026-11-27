@@ -13,7 +13,7 @@ numele de stații corecte.
 ## Deschiderea dialogului
 
 - **Unelte → Leagă un fișier de topografie…** (disponibil și în paleta de comenzi) sau
-- clic dreapta într-un editor `.th` și alegeți **Generează cod** ▸ **Leagă un fișier de
+- faceți clic dreapta într-un editor `.th` și alegeți **Generează cod** ▸ **Leagă un fișier de
   topografie…** — liniile ajung atunci în *acel* fișier, în blocul de topografie din jurul cursorului.
 
 Alegeți fișierul de topografie cu **Răsfoiește…** (sau scrieți calea și apăsați **Enter**). Linia de
@@ -24,10 +24,10 @@ sub cale arată câte stații și vize are fișierul și dacă a fost analizat f
 **Stația din topografia nouă** (stânga): filtrați lista tastând sau faceți clic pe o stație în mica
 previzualizare de sub ea. Stația aleasă este încercuită în previzualizare. **Deschide într-o
 fereastră…** afișează această previzualizare la dimensiune completă; butonul **Previzualizare** o
-pliază.
+restrânge.
 
 **Stația din proiect** (dreapta): alegeți o **Topografie** pentru a restrânge lista (topografiile sunt
-afișate ca arbore indentat, împreună cu fișierul în care se află fiecare), apoi **Stație**.
+afișate ca arbore indentat, împreună cu fișierul în care se află fiecare), apoi stația din lista **Stație**.
 **Arată în previzualizarea completă…** deschide Previzualizarea principală a întregului proiect, cu
 topografia nouă deja atașată la cele două stații — tronsoanele ei desenate cu magenta și ambele stații
 încercuite —, ca să puteți verifica, înainte de a scrie ceva, că ajunge unde trebuie. Cât timp este
@@ -45,7 +45,7 @@ equate 1@trip_2026_10_21 14@north
 Numele stațiilor sunt scrise relativ la topografia în care ajung liniile (`point@inner.outer`, așa cum
 așteaptă Therion), deci se rezolvă oricât de adânc ar fi imbricate fișierele.
 
-**Inserează în** listează fișierele care pot primi liniile, cele mai potrivite primele:
+**Inserează în** listează fișierele care pot primi liniile, începând cu cele mai potrivite:
 
 | Motivul afișat | Semnificație |
 |---|---|

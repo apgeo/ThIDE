@@ -1,15 +1,15 @@
 # 3. Primii pași: prima sesiune
 
-> [← Înapoi la pagina principală a ghidului](README.md)
+> [← Înapoi la pagina principală a Ghidului utilizatorului](README.md)
 
-Aceasta este o primă rulare ghidată. Presupune că aveți deja un proiect Therion (un dosar cu fișiere `.th`
+Aceasta este o primă utilizare ghidată. Presupune că aveți deja un proiect Therion (un dosar cu fișiere `.th`
 și cel puțin un `.thconfig`). Dacă nu aveți, luați orice proiect Therion de exemplu ca să puteți urmări
 pașii.
 
 ## Pasul 1 — Deschideți proiectul
 
-Puteți deschide la trei niveluri de cuprindere, toate din meniul **Fișier** (sau din bara de instrumente /
-pagina Bun venit):
+Puteți deschide un proiect la trei niveluri, de la întregul dosar la un singur fișier, toate din meniul
+**Fișier** (sau din bara de instrumente / de pe pagina Bun venit):
 
 | Comandă | Folosiți-o când… | Rezultat |
 |---|---|---|
@@ -17,7 +17,7 @@ pagina Bun venit):
 | **Deschide thconfig…** | Știți care este fișierul de configurare | Îl deschide *și* adoptă dosarul lui ca spațiu de lucru. |
 | **Deschide fișier…** | Doriți doar să vedeți sau să editați un fișier | Deschide un singur fișier; un spațiu de lucru poate fi totuși dedus din el. |
 
-Pentru lucrul propriu-zis, **Deschide dosar** (sau Deschide thconfig) este ce vă trebuie — asta îi oferă
+Pentru lucrul propriu-zis, **Deschide dosar** (sau Deschide thconfig) este ceea ce vă trebuie — asta îi oferă
 lui ThIDE înțelegerea peste granițele fișierelor descrisă în [Concepte de bază](04-core-concepts.md).
 
 **Porniți de la zero?** **Fișier → Nou din șablon…** (disponibil și pe pagina Bun venit) creează un dosar
@@ -29,7 +29,7 @@ cele câteva câmpuri (numele pot conține litere, cifre, `_` și `-`), alegeți
 fișierele și deschide thconfig-ul. **Importă un dosar de șablon…** / **Importă un .zip de șablon…** adaugă
 un șablon propriu al clubului: un dosar cu un `template.json` (`id`, `title`, `description`, `variables` —
 fiecare `{ "id", "prompt", "default", "type": "text|name|number|bool|choice|cs|date" }` — `directories`,
-`openAfterCreate`) și fișierele de scris, ale căror căi și conținut folosesc `${id}`. Aceleași șabloane
+`openAfterCreate`) și fișierele care trebuie scrise, ale căror căi și conținut folosesc `${id}`. Aceleași șabloane
 funcționează și din linia de comandă: `therion-cli new --list`, `therion-cli new single-cave --out ~/caves/pit
 --var project=pit`.
 
@@ -58,7 +58,7 @@ Lăsați-i lui ThIDE un moment pentru indexare (urmăriți indicația **Indexare
 - Deschideți un fișier `.th` și veți avea colorare sintactică, precum și o filă **Măsurători** lângă
   sursă.
 
-O hartă completă a interfeței găsiți în [Un tur al interfeței](05-interface-tour.md).
+Găsiți o hartă completă a interfeței în [Un tur al interfeței](05-interface-tour.md).
 
 ## Pasul 4 — Editați cu încredere
 
@@ -67,7 +67,7 @@ O hartă completă a interfeței găsiți în [Un tur al interfeței](05-interfa
 
 - Țineți mouse-ul deasupra numelui unei stații sau al unei topografii pentru un **card informativ**;
   faceți clic pe **Salt la definiție** (sau Ctrl+clic).
-- Apăsați **F2** pe o stație pentru a o **redenumi peste tot** unde este referită (cu o previzualizare
+- Apăsați **F2** pe o stație pentru a o **redenumi peste tot** unde apare (cu o previzualizare
   opțională).
 - Apăsați **Ctrl+Shift+P** pentru **Paletă de comenzi** — tastați pentru a rula orice comandă sau puneți
   în față prefixul `@` (simbol din acest fișier), `#` (simbol din spațiul de lucru) sau `:42` (salt la
@@ -93,11 +93,11 @@ Dacă compilarea eșuează, erorile sunt chiar acolo și se poate face clic pe e
 
 În funcție de ce exportă thconfig-ul dumneavoastră:
 
-- **Hărțile 2D** (PDF/SVG/PNG) se deschid în [Vizualizator hărți](11-viewers.md#vizualizatorul-de-hărți).
+- **Hărțile 2D** (PDF/SVG/PNG) se deschid în [vizualizatorul de hărți](11-viewers.md#vizualizatorul-de-hărți).
 - **Modelele 3D** (`.lox` / `.3d`) se deschid în [vizualizatorul 3D încorporat](11-viewers.md#vizualizatorul-3d) — unde
   puteți face clic pe o stație pentru a sări înapoi la sursa ei `.th` — sau extern, în Loch/Aven.
 - Nici măcar nu trebuie să compilați ca să aruncați o privire asupra poligonalelor:
-  [Previzualizare principală](11-viewers.md#previzualizarea-principală) le desenează direct din model.
+  [previzualizarea principală](11-viewers.md#previzualizarea-principală) le desenează direct din model.
 
 ## Pasul 7 — Înțelegeți-vă topografia
 
@@ -114,4 +114,4 @@ continuărilor cu [registrul de piste](14-leads-notes-and-metadata.md).
 
 ---
 
-Următoarea: [Concepte de bază și vocabular →](04-core-concepts.md)
+Următorul: [Concepte de bază și vocabular →](04-core-concepts.md)

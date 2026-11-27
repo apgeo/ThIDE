@@ -8,7 +8,7 @@ planele rezultate în 3D. Deschideți-l din **Vizualizare → Geologie structura
 
 > **Dezactivat implicit.** Activați *Modul Geologie structurală* în
 > [Setări → Vizualizare](19-settings-and-preferences.md#vizualizare). Pentru metodă și calcule,
-> vedeți documentul de referință **[docs/structural-geology.md](../../structural-geology.md)**.
+> consultați documentul de referință **[docs/structural-geology.md](../../structural-geology.md)**.
 
 Panoul este un **flux de lucru în cinci pași**, pe file:
 
@@ -35,20 +35,20 @@ Punctele detectate, grupate în plane candidate. Bifați punctele de inclus în 
 - **Radieri** — include radialele.
 - **Include punctul stației de plecare (origine) în ajustare** — doar când stația însăși se află pe
   plan; urmăriți coloana **RMS**.
-- **Declinație magnetică** — opțional, rotește direcția / direcția de înclinare spre nordul adevărat,
+- **Declinație magnetică** — opțional, rotește direcția și direcția de înclinare spre nordul adevărat,
   pe baza unei **surse** și a unei valori alese (înclinarea nu este afectată). Este dezactivată
-  implicit, ca să nu adunați de două ori declinația proprie a unei topografii. Pe întregul proiect,
+  implicit, ca să nu aplicați de două ori declinația proprie a unei topografii. Pe întregul proiect,
   sursa *declarată în topografie* folosește declinația din fișierul fiecărui plan, iar *WMM* data
   topografiei fiecărui plan, așa că linia de stare poate afișa un interval.
 
-Ajutoare pentru selecția în bloc: **☑ Toate**, **☐ Niciuna**, **⇄ Inversează**, grupare după stație.
+Comenzi pentru selecția în bloc: **☑ Toate**, **☐ Niciuna**, **⇄ Inversează**, grupare după stație.
 Dublu-clic pe un rând pentru a sări la viza sursă. **Export CSV…** salvează grila într-un fișier CSV.
 
 ## 3 · Plane rezultate
 
-Planele ajustate, câte unul pe rând: **Înclinare °**, **Direcție °**, **Dir. înclinare °**,
+Planele ajustate, câte un rând pentru fiecare: **Înclinare °**, **Direcție °**, **Dir. înclinare °**,
 **Ref. nord**, **Puncte** și **RMS** (calitatea ajustării — cu cât mai mică, cu atât mai bine).
-Comutați indicatorul **Vizibil** al fiecărui plan pentru a-i arăta sau ascunde discul în graficul 3D;
+Bifați sau debifați caseta **Vizibil** a fiecărui plan pentru a-i arăta sau ascunde discul în graficul 3D;
 **Export CSV…** salvează grila într-un fișier CSV.
 
 ## 4 · Grafic 3D
@@ -58,7 +58,7 @@ Planele, desenate ca **discuri** în 3D, alături de peșteră.
 - **Încadrează vederea** reîncadrează imaginea; **Dimensiune disc** mărește discurile (sunt minuscule
   lângă o peșteră); **Fundal alb** pentru tipărire sau export.
 - **Exportă imaginea…** salvează vederea curentă ca PNG.
-- **Stereogramă în colț** afișează în colț o mică stereogramă „bol” care **se rotește împreună cu
+- **Stereogramă în colț** afișează în colț o mică stereogramă în formă de „bol” care **se rotește împreună cu
   modelul peșterii** — cercul mare și polul fiecărui plan vizibil, în culoarea planului din grafic.
 - **Scoate în panou separat** mută graficul într-un panou propriu, care poate fi andocat sau plutitor.
 
@@ -68,7 +68,7 @@ Planele, desenate ca **discuri** în 3D, alături de peșteră.
 
 ## 5 · Stereogramă
 
-O **proiecție stereografică** clasică pe emisfera inferioară a planelor ajustate — fiecare plan ca
+O **proiecție stereografică** clasică, pe emisfera inferioară, a planelor ajustate — fiecare plan ca
 **cerc mare** (și, opțional, **polul** său), pe o rețea de 10°. Este desenată nativ, deci funcționează
 și acolo unde motorul web al graficului 3D nu este disponibil.
 
@@ -78,7 +78,7 @@ O **proiecție stereografică** clasică pe emisfera inferioară a planelor ajus
   viză inclusă ca un punct mic (în culoarea planului său).
 - **Grilă** / **Etichete** / **Fundal alb** — comutatoare de prezentare; **Exportă imaginea…**
   salvează un PNG clar.
-- Treceți cu mouse-ul peste rețea pentru o **citire în timp real a azimutului și înclinării
+- Treceți cu mouse-ul peste rețea pentru o **citire în timp real a azimutului și a înclinării
   (trend/plunge)** în poziția cursorului; **faceți clic pe un cerc mare sau pe un pol** pentru a
   selecta planul respectiv — selecția este sincronizată cu grila „Plane rezultate”, cu graficul 3D și
   cu suprapunerea din Previzualizarea principală.

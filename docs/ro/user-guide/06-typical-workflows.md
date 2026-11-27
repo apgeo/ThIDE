@@ -10,10 +10,10 @@ pașii implicați.
 1. **Fișier → Deschide dosar…** (sau **Fișier → Deschide thconfig…**) → alegeți proiectul.
 2. Dacă vi se cere sau dacă există mai multe configurații, setați **thconfig-ul activ**
    ([Concepte de bază](04-core-concepts.md#thconfig-ul-activ)).
-3. Lăsați-l să se **indexeze** (bara de stare), apoi parcurgeți panoul **Diagnostice** pentru a vedea
+3. Lăsați ThIDE să **indexeze** proiectul (bara de stare), apoi parcurgeți panoul **Diagnostice** pentru a vedea
    ce este deja stricat.
-4. Editați — bazați-vă pe **redenumirea cu F2**, pe **salt la definiție** și pe **Paleta de comenzi**
-   (Ctrl+Shift+P).
+4. Editați — bazați-vă pe **redenumirea cu F2**, pe **salt la definiție** și pe paleta de comenzi
+   (**Paletă de comenzi**, Ctrl+Shift+P).
 5. **Compilați** (**Compilare → Compilează**, F5), corectați erorile (pe care se poate face clic),
    repetați.
 6. Examinați rezultatul în **vizualizatoarele de hărți / 3D**; verificați cifrele în panoul
@@ -44,10 +44,10 @@ fișiere** anulează întreaga ieșire (vedeți
      duplicate, stațiile necunoscute.
 3. Folosiți **Inserează data de azi** și **Inserează membru echipă** (meniul contextual al
    editorului) pentru liniile `date`/`team`.
-4. Dacă doriți, cuprindeți ieșirea într-un bloc pliabil, cu nume, cu **Include în regiune**
+4. Dacă doriți, încadrați ieșirea într-un bloc pliabil cu nume, folosind **Include în regiune**
    (Ctrl+Shift+R) — vedeți [directivele](../../directives.md).
 5. Verificați că ieșirea se leagă de restul peșterii: deschideți **Previzualizare principală**,
-   colorați după **Componentă**; o bucată îngrămădită în origine este deconectată — adăugați
+   colorați după **Componentă**; o porțiune îngrămădită în origine este deconectată — adăugați
    `equate`-ul care lipsește.
 
 **Ieșirea a sosit ca fișier `.th` separat?** Folosiți **Unelte → Leagă un fișier de topografie…**:
@@ -60,7 +60,7 @@ alegeți o stație a ieșirii și stația din proiect din care o continuă, iar 
 1. Activați **Vizualizare → Mod parser strict** pentru o verificare mai severă.
 2. Parcurgeți panoul **Diagnostice** de sus în jos: faceți clic pe un rând pentru a sări la el;
    folosiți **Remediere rapidă** (Ctrl+.) acolo unde este oferită; **Suprimă acest cod** pentru
-   tiparele intenționate.
+   construcțiile intenționate.
 3. Urmăriți verificările la nivelul spațiului de lucru: topografii deconectate (TH_SEM_015), erori de
    închidere a buclelor, greșeli grosolane, includeri care nu duc nicăieri — vedeți
    [Diagnostice](09-diagnostics-and-validation.md).
@@ -77,7 +77,7 @@ alegeți o stație a ieșirii și stația din proiect din care o continuă, iar 
 3. Acțiuni pentru fiecare rezultat în Fișiere generate: deschidere într-o aplicație externă,
    **Vizualizează în vizualizatorul 3D intern**, afișare în managerul de fișiere, salt la linia
    `export` sau setarea unei excepții de **Deschidere automată** pentru fișierul respectiv.
-4. Aveți nevoie de un export ocazional care nu e în thconfig? **Compilare → Export rapid…** compune o
+4. Aveți nevoie de un export ocazional care nu este în thconfig? **Compilare → Export rapid…** compune o
    configurație temporară, o compilează și deschide rezultatul. Vedeți
    [Compilare și rezultate](10-compiling-and-output.md).
 
@@ -87,7 +87,7 @@ alegeți o stație a ieșirii și stația din proiect din care o continuă, iar 
    o schiță `.xvi`).
 2. Editați fișierul `.th2` în editorul ThIDE sau predați-l lui **Mapiah** cu **Editează cu Mapiah** din
    antetul fișierului — modificările se reîncarcă automat când salvați acolo.
-3. Verificați încrucișat cu **Navigator obiecte → Schițe / Puncte / Linii / Suprafețe** și cu panoul
+3. Verificați prin comparație cu **Navigator obiecte → Schițe / Puncte / Linii / Suprafețe** și cu panoul
    **XVI**.
 
 ## F. Importul dintr-un alt program

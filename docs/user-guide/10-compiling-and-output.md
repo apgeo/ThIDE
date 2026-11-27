@@ -46,7 +46,7 @@ The **Compiler Output** panel streams Therion's messages live.
 
 The first output line names the thconfig being compiled (click it to open the file). The status bar
 shows **Compiling *name*…** and then the result; the Overview dashboard's **Last compilation** line
-names the thconfig that was compiled (after a restart it reads *Never built this session* until you
+names the thconfig that was compiled (after a restart it reads *Not compiled this session* until you
 compile again). A toast notification summarizes artifacts and warnings (with **Show output**).
 
 ## The results: the Generated Files panel
