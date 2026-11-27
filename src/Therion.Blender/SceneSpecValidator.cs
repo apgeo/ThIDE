@@ -123,8 +123,7 @@ public static class SceneSpecValidator
             Bad("output.outputDirectory", "An output directory is required.");
         if (string.IsNullOrWhiteSpace(spec.Output.BaseName))
             Bad("output.baseName", "A base file name is required.");
-        else if (spec.Output.BaseName.AsSpan().IndexOfAny('/', '\\') >= 0
-                 || spec.Output.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        else if (!IsPlainFileName(spec.Output.BaseName))
             Bad("output.baseName", "The base name must be a plain file name (no separators or reserved characters).");
 
         return errors;
@@ -470,6 +469,12 @@ public static class SceneSpecValidator
                 bad($"{path}[{i}].end", "A caption ends after it starts.");
         }
     }
+
+    /// <summary>Whether <paramref name="name"/> is a plain file name on every system: no separator,
+    /// nothing any system refuses in a name (so no wildcard such as <c>*</c> or <c>?</c>, which
+    /// would make a search for the outputs find other files), and not a device name of Windows.</summary>
+    public static bool IsPlainFileName(string? name)
+        => !string.IsNullOrWhiteSpace(name) && name.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 && PortableNames.IsPortable(name);
 
     /// <summary>The frame count the emitter renders: a still set renders one frame per
     /// view; a single still renders one frame; every animated template renders

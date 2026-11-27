@@ -1,5 +1,66 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-27 — a bundle from elsewhere is held as Blender reads it
+
+The plan stays **version 1**. The player keeps its version; it has one more option (`--confine`)
+and no longer puts its own folder on Python's module path.
+
+### Breaking changes (for bundles that broke the rules only)
+- **`RenderBundleReader.Unpack`** refuses a plan whose `output.directory` (the scene's, the movie's
+  or a shot's) is not inside the bundle, and writes every plan's output into
+  `RenderBundleWriter.OutputDirectory` (`out`) whatever folder inside the bundle it names; the
+  subtitles that lie beside the named output go there with it. Bundles that `RenderBundleWriter`
+  writes are unchanged (their output is `out` already).
+- It refuses a GLB model that names any file by URI (images and buffers, `data:` URIs included),
+  whose images are not PNG or JPEG inside it, that uses an extension other than `KHR_materials_*`,
+  `KHR_texture_transform`, `KHR_lights_punctual` or `KHR_mesh_quantization`, whose accessors read
+  past their data, or whose nodes are not a tree. ThIDE's own GLBs (`GlbWriter`) pass.
+- Triangles are counted from the meshes' data: a PLY's faces whatever its header's length (a face of
+  n corners counts n − 2), a GLB's accessors for every node that shows a mesh. A mesh whose
+  triangles cannot be counted is refused; before, a GLB counted 0 and a PLY whose `element face`
+  came after its 200th header line counted 0.
+- A shot's plan must be named `scene-plan.<id>.json` or `scene-plan.<id>.draft.json`
+  (`RenderBundleReader.IsSegmentPlanName`), as `MoviePlan.SegmentFileName` names them.
+- Entries are refused when their name is not the same file on every system (a device name of
+  Windows such as `con.png`, a trailing dot or space, `<>:"|?*`, a control character), when two
+  differ only by their case, and when one holds other than its size and CRC-32 say (before, a
+  longer entry was cut at its stated size). Entries are counted before the zip is opened.
+- The images of textured materials must be PNG or JPEG by their content (`PlanImage.Identify`);
+  photos and the world's image are checked as before, now as `refused` rather than an error.
+- **`RenderNodeProtocol.IsAllowedAddress`** takes plain HTTP to `localhost`, `127.0.0.0/8` and `::1`
+  as written only: `http://loopback/` (which .NET reads as `localhost`) is refused.
+- **`RenderNodeProtocol.IsJobId`** refuses device names of Windows (`NUL`, `CON`, `COM1.x`…) and an
+  id that ends in a dot.
+- **`SceneSpecValidator`, `ScenePlanValidator`, `MoviePlanValidator`** refuse a base name that holds
+  a character any system refuses (`*`, `?`, `<`, `|`…) or is a device name of Windows, on every
+  system (before, Linux let `*` and `?` through).
+
+### Additive API
+- `RenderBundleReader.Triangles(path)`: the triangles of a PLY or GLB counted from its data.
+- `RenderBundleReader.IsSegmentPlanName(name)`.
+- `PortableNames.IsPortable`, `IsPortablePath` and `Printable` (text from elsewhere on one line,
+  its control characters as `\uXXXX`).
+- `RenderNodeProtocol.IsThisMachine(uri)`, `LeaseSeconds(seconds)` and `MaxLeaseSeconds` (a day):
+  `HeartbeatInterval` takes a lease of at most a day.
+- `SceneSpecValidator.IsPlainFileName(name)`; `PlanImage.Identify(stream)`.
+
+### Behaviour
+- `RenderBundleReader.PlyFaces` reads a header of any length (up to 1 MiB) and still only declares;
+  the limit of a bundle is held on `Triangles`.
+- The player: `render.py` loads `thide_player` from its own folder without putting that folder on
+  `sys.path`, so a file beside it is never imported in place of a standard module. `--confine`
+  makes every path of the plan (its output's too) lie in the plan's folder, and refuses a GLB that
+  names a file; the second stage and the shots' stages are started with it, and with
+  `--disable-autoexec`.
+- `AnnotationPlanner.Files` gives a photo whose name is a device name of Windows another name.
+- A bundle's README says, in English and Romanian, that its scripts run the bundle's own code, and
+  that the render worker renders a bundle without running it.
+
+### Documentation
+- `docs/dev/render-worker-protocol.md`: what a bundle may hold, and what it tells whoever renders
+  it (`frame.origin`, `crs`, a centreline's leg positions and dates; the plan is unchanged). The
+  doc comment of `RevealField.FromLegs` says that every leg passed may be shown.
+
 ## 2026-11-27 — render node protocol: receiver check and reason constants
 
 The plan stays **version 1**; the player does not change.

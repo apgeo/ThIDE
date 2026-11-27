@@ -56,6 +56,10 @@ public sealed class ThideApp : IAsyncDisposable
     /// when the app is disposed.</summary>
     public string TempDirectory { get; }
 
+    /// <summary>The app's own cache folder (its XDG_CACHE_HOME): where it keeps its render jobs and
+    /// render queue (<c>ThIDE/blender-jobs</c>).</summary>
+    public string CacheDirectory => Path.Combine(_home, "cache");
+
     public static string FixturesDir => Metadata("UiFixtures");
 
     /// <summary>Where screenshots worth keeping go (tests/ui-artifacts unless UI_ARTIFACTS says otherwise).</summary>
@@ -131,9 +135,9 @@ public sealed class ThideApp : IAsyncDisposable
         psi.Environment["XDG_CONFIG_HOME"] = Directory.CreateDirectory(Path.Combine(home, "config")).FullName;
         psi.Environment["XDG_DATA_HOME"] = Directory.CreateDirectory(Path.Combine(home, "data")).FullName;
         psi.Environment["XDG_CACHE_HOME"] = Directory.CreateDirectory(Path.Combine(home, "cache")).FullName;
-        // A temp folder of its own as well: the app keeps render jobs, tool probes and viewer models
-        // under fixed names in the temp folder (<temp>/ThIDE/...), where a ThIDE the developer has
-        // open keeps its own.
+        // A temp folder of its own as well: the app keeps tool probes and viewer models under fixed
+        // names in the temp folder (<temp>/ThIDE/...), where a ThIDE the developer has open keeps
+        // its own. Its render jobs are in its cache folder, above.
         var temp = CreateTempDirectory();
         foreach (var name in TempVariables) psi.Environment[name] = temp;
         foreach (var (name, value) in environment) psi.Environment[name] = value;
