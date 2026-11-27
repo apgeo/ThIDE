@@ -610,7 +610,7 @@ public sealed class RenderNodeTests : IDisposable
         _server.Heartbeat = _ => (_server.Completed.IsEmpty ? 200 : 409, RenderNodeProtocol.Continue);
         using var worker = Worker(new FakeBlender(frames: 4), new Tweak { HoldComplete = TimeSpan.FromSeconds(2.5) });
         await worker.RunAsync(once: true, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30));
-        Assert.Single(_server.Completed);
+        lock (_log) Assert.True(_server.Completed.Count == 1, "the job did not complete; the worker said:\n" + string.Join("\n", _log));
         lock (_log) Assert.DoesNotContain(_log, l => l.Contains("lease lost", StringComparison.Ordinal));
         Assert.False(Directory.Exists(worker.JobFolder("201")), "a job that succeeded leaves its scratch folder behind");
     }
@@ -631,7 +631,7 @@ public sealed class RenderNodeTests : IDisposable
         using var worker = Worker(new FakeBlender(frames: 2), new Tweak(), maxTime: TimeSpan.FromDays(60));
         var ex = await Record.ExceptionAsync(() => worker.RunAsync(once: true, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)));
         Assert.Null(ex);
-        Assert.Single(_server.Completed);
+        lock (_log) Assert.True(_server.Completed.Count == 1, "the job did not complete; the worker said:\n" + string.Join("\n", _log));
     }
 
     [Fact]
