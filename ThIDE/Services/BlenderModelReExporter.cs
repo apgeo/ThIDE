@@ -37,8 +37,8 @@ public sealed class BlenderModelReExporter : IModelReExporter
         _root = root ?? throw new ArgumentNullException(nameof(root));
     }
 
-    /// <summary>The temporary folder ThIDE uses for re-exports.</summary>
-    public static string DefaultRoot() => Path.Combine(Path.GetTempPath(), "ThIDE", "blender-reexport");
+    /// <summary>The folder ThIDE uses for re-exports: the user's alone, not the shared temp folder.</summary>
+    public static string DefaultRoot() => Therion.Blender.Execution.PrivateFolders.Of("blender-reexport");
 
     public async Task<ModelArtifact?> ReExportAsync(CancellationToken cancellationToken = default)
     {
@@ -46,6 +46,8 @@ public sealed class BlenderModelReExporter : IModelReExporter
         if (string.IsNullOrEmpty(config) || !File.Exists(config)) return null;
 
         Prune();
+        // Therion is started on the config written here, and Blender reads what it writes.
+        Therion.Blender.Execution.PrivateFolders.Ensure(_root, tighten: true);
         string folder = Path.Combine(_root, DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture)
             + "-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(folder);

@@ -109,6 +109,10 @@ public sealed record RevealField
     /// earliest one; by distance, from <see cref="RevealOptions.FromStation"/>, else from
     /// <paramref name="entrances"/>, else from the first station of each separate part.
     /// <see cref="RevealOptions.Dates"/> is not used. Null when there is nothing to reveal by.
+    /// Pass only legs that may be shown: every leg passed keeps its two positions in
+    /// <see cref="Legs"/>, which a centreline drawn from the field writes into a plan as they are;
+    /// its date colours the walls nearest to it, and it stretches the years the field spans
+    /// (<see cref="Min"/>, <see cref="Max"/>).
     /// </summary>
     /// <param name="entrances">The names of the stations that are entrances.</param>
     /// <exception cref="ArgumentException">A station that <see cref="RevealOptions.FromStation"/>

@@ -36,6 +36,9 @@ Options, after "--" on Blender's command line:
     --no-persistent-data
                       do not keep the scene's render data from one frame to the next (Cycles keeps
                       it by default in a render of several frames: faster, a little more memory)
+    --confine         every path of the plan, its output's too, must lie in the plan's folder: the
+                      plan came from elsewhere (a render worker's bundle), and nothing it names
+                      may be read or written outside the folder it was unpacked into
 """
 
 import argparse
@@ -89,6 +92,7 @@ def fail(message):
 
 def play(plan_dir, plan_text=None, files=None, script=None):
     args = arguments()
+    api.Context.confined = args.confine
     api.report("player", PLAYER_VERSION)
     api.report("blender", ".".join(str(v) for v in bpy.app.version))
     if bpy.app.version < (4, 2, 0):
@@ -294,7 +298,7 @@ def compose_in_a_blender_of_its_own(script, args, frames_dir):
 def another_blender(script, args, plan_path, stage, frames_dir, keep_frames=False):
     """Plays one stage of a plan in a Blender of its own, started as this one was, and returns
     its exit code. plan_path None is the plan beside the script."""
-    command = [bpy.app.binary_path, "-b", "--factory-startup", "--python-exit-code", str(EXIT_FAILED),
+    command = [bpy.app.binary_path, "-b", "--factory-startup", "--disable-autoexec", "--python-exit-code", str(EXIT_FAILED),
                "--python", script, "--", "--stage", stage, "--frames", frames_dir]
     if plan_path:
         command += ["--plan", os.path.abspath(plan_path)]
@@ -304,6 +308,8 @@ def another_blender(script, args, plan_path, stage, frames_dir, keep_frames=Fals
         command.append("--keep-frames")
     if getattr(args, "no_persistent_data", False):
         command.append("--no-persistent-data")
+    if getattr(args, "confine", False):
+        command.append("--confine")
     sys.stdout.flush()
     sys.stderr.flush()
     try:
@@ -358,6 +364,7 @@ def arguments():
     parser.add_argument("--keep-frames", action="store_true")
     parser.add_argument("--frame-range")
     parser.add_argument("--no-persistent-data", action="store_true")
+    parser.add_argument("--confine", action="store_true")
     # Other scripts of the same Blender run may have options of their own after the "--".
     return parser.parse_known_args(argv)[0]
 

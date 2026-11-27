@@ -7,8 +7,12 @@
 A model is a PLY or a GLB file. A GLB may hold several meshes under a tree of nodes; they are
 joined into one object with the placements of the nodes applied. The plan then stretches the
 model along its own axes, turns it about its own origin and moves it, in that order.
+
+A GLB of a plan from elsewhere (--confine) must hold everything it shows: Blender's importer opens
+whatever file a GLB names by its URI, wherever it lies, so such a GLB is refused before it is read.
 """
 
+import json
 import os
 
 import bmesh
@@ -64,7 +68,32 @@ def import_ply(path, where):
     return added[0]
 
 
+def self_contained(path, where):
+    """Refuses a GLB that names another file (an image's or a buffer's URI)."""
+    try:
+        with open(path, "rb") as stream:
+            head = stream.read(20)
+            length = int.from_bytes(head[12:16], "little") if len(head) == 20 else -1
+            if head[:4] != b"glTF" or head[16:20] != b"JSON" or not 0 <= length <= 64 << 20:
+                raise api.PlanError("%s: the file is not a GLB file: %s" % (where, path))
+            document = json.loads(stream.read(length))
+    except (OSError, ValueError, RecursionError) as error:
+        raise api.PlanError("%s: the GLB file cannot be read: %s" % (where, error))
+    pending = [document]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, dict):
+            if "uri" in value:
+                raise api.PlanError("%s: the GLB file names another file by its URI; a GLB of this plan "
+                                    "holds everything it shows inside itself" % where)
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+
+
 def import_glb(path, where):
+    if api.Context.confined:
+        self_contained(path, where)
     try:
         added = imported_by(bpy.ops.import_scene.gltf, path)
     except (AttributeError, RuntimeError) as error:

@@ -1136,7 +1136,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThIDE", "blender-gui", System.Guid.NewGuid().ToString("N")[..8]);
+            // The script Blender opens with lies in a folder of the user's alone, not in the temp
+            // folder every user shares.
+            var dir = System.IO.Path.Combine(
+                Therion.Blender.Execution.PrivateFolders.Ensure(GuiFolder, tighten: true), System.Guid.NewGuid().ToString("N")[..8]);
             var progress = new Progress<RenderProgress>(OnProgress);
             var source = await _sources.AcquireAsync(BuildRequest()).ConfigureAwait(true);
             // A render started from Blender's window writes where "Render" would.
@@ -1169,6 +1172,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     }
 
     private bool CanOpenInBlender => CanStart && _gui is not null;
+
+    /// <summary>Where the scenes opened in Blender's window are written, one folder each: a
+    /// folder of the user's alone (<see cref="Therion.Blender.Execution.PrivateFolders"/>).</summary>
+    internal string GuiFolder { get; set; } = Therion.Blender.Execution.PrivateFolders.Of("blender-gui");
 }
 
 /// <summary>

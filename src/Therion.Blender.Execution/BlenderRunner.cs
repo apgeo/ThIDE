@@ -115,7 +115,8 @@ public sealed class BlenderRunner
         string jobLogPath = Path.Combine(job.WorkingDirectory, job.LogFileName);
         // --python-exit-code: an UNcaught Python exception (e.g. a Blender API rename the
         // script's probes missed) otherwise exits 0 and looks like a silent no-output run.
-        string[] args = ["-b", "--factory-startup", "--python-exit-code", "64", "--python", job.ScriptPath];
+        // --disable-autoexec: no script a Blender file carries runs, whatever the preferences say.
+        string[] args = ["-b", "--factory-startup", "--disable-autoexec", "--python-exit-code", "64", "--python", job.ScriptPath];
         if (job.ScriptArguments.Count > 0) args = [.. args, "--", .. job.ScriptArguments];
         var parser = new RenderProgressParser(job.FrameCount);
 
@@ -276,6 +277,9 @@ public sealed class RealBlenderProcessLauncher : IBlenderProcessLauncher
 {
     public IBlenderProcess Start(string executablePath, IReadOnlyList<string> arguments, string workingDirectory)
     {
+        // A batch file's arguments would reach cmd.exe unescaped.
+        if (BlenderLocator.IsBatchFile(executablePath))
+            throw new InvalidOperationException($"{executablePath} is a batch file; Blender is started as blender.exe itself.");
         var psi = new ProcessStartInfo(executablePath)
         {
             RedirectStandardOutput = true,

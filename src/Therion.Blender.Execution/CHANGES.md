@@ -1,5 +1,47 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-27 — private render folders, and a node that trusts its server less
+
+### Breaking changes (for setups that were open to other users, and servers that broke the protocol)
+- **Scratch folders are the user's alone.** `RenderWorker.RunAsync`/`ProcessAsync` and
+  `RenderNodeWorker.RunAsync` throw the new `UnsafeFolderException` (an
+  `UnauthorizedAccessException`) when the scratch folder is not the user's own, its group or others
+  may write it, it is a link, or it lies in a folder anyone may write without the sticky bit. A
+  folder that is not there is made readable by the user only. `therion-cli render-worker` takes
+  its default scratch folder from the new `PrivateFolders` (`~/.cache/ThIDE/render-worker` and
+  `render-node`, `$XDG_CACHE_HOME` when set, `~/Library/Caches/ThIDE/…` on macOS,
+  `%LOCALAPPDATA%\ThIDE\…` on Windows) instead of `/tmp/thide-render-worker` and
+  `/tmp/thide-render-node`, and exits 2 with why for a `--scratch` it refuses. Frames kept in the old
+  folders are not taken over.
+- **A node token file** is refused (`RenderNodeToken.TryRead`) when its group may read it (before,
+  only others), when it is not the user's own, when it lies in a folder anyone may write, and on
+  Windows when its access list lets anyone but the user, SYSTEM and the Administrators read it.
+- **`RenderNodeWorker`** downloads a bundle from the server's own origin only: a job whose
+  `bundle.url` is on another origin fails with `badJob` before anything is fetched. Its `fail`
+  messages no longer say the lengths it read or the network's message (an address), and the node's
+  own paths in them, in the uploaded log and in the status's error and notices are replaced by
+  `<scratch>` and `~`. A server's answer is read up to 1 MiB (`MaxAnswerBytes`). A lease is held to
+  3 s to a day.
+
+### Additive API
+- **`PrivateFolders`**: `Root`, `Of(name)`, `Ensure(path, tighten)`, `SecretFileProblem(path, what)`
+  and `MoveQueueFile(oldRoot, newRoot, fileName)`; `UnsafeFolderException`.
+- `BlenderLocator.IsBatchFile(path)`.
+
+### Behaviour
+- The node's HTTP handler uses the environment's proxy for HTTPS to other machines only: plain HTTP
+  and calls to this machine never go through a proxy, so a proxy never sees the token in the clear.
+- On Windows a Blender that is a `.cmd` or `.bat` is refused by `BlenderLocator.Locate` and by
+  `RealBlenderProcessLauncher`: cmd.exe would read characters of the arguments as its own.
+- Blender is started with `--disable-autoexec` as well as `-b --factory-startup`. A bundle's stages
+  are played with the player's `--confine`.
+- What a worker logs is one line, the control characters of a bundle's names written as `\uXXXX`.
+- The app keeps its Blender job folders and its render queue in `PrivateFolders.Of("blender-jobs")`
+  (before: `<temp>/ThIDE/blender-jobs`), the scripts it opens Blender's window with in
+  `blender-gui`, and its model re-exports in `blender-reexport`. A render queue file left in the old
+  place is moved once, if it is the user's and others may not write it; the renders it had not
+  ended start again from their first frame (their old frames, in the shared folder, are not taken).
+
 ## 2026-11-27 — the disk preflight scales with resolution
 
 ### Breaking changes

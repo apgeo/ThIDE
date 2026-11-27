@@ -417,6 +417,10 @@ public static class RenderBundleWriter
         Line();
         Line("  Linux, macOS:   sh render.sh");
         Line("  Windows:        render.cmd");
+        Line();
+        Lines(
+            "These scripts run the player that came in this folder (render.py and thide_player/): Python\ncode, which runs with your rights. Run them only for a bundle from someone you trust. ThIDE's\nrender worker (therion-cli render-worker) renders a bundle from anyone else without running any\nof its code: it plays the plans with a player of its own.",
+            "Aceste scripturi rulează playerul venit în acest dosar (render.py și thide_player/): cod Python,\ncare rulează cu drepturile dumneavoastră. Rulați-le doar pentru un pachet de la cineva în care\naveți încredere. Executorul de randări al ThIDE (therion-cli render-worker) randează un pachet de\nla oricine altcineva fără să ruleze nimic din codul lui: redă planurile cu propriul player.");
         if (draftPlan is not null)
         {
             Line();

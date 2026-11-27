@@ -96,8 +96,10 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
      [Doi constructori de scenă](#doi-constructori-de-scenă).
    - **Folder randare** — unde se salvează videoclipul, cadrele sau imaginea; implicit
      *Documents/ThIDE/Renders* (*ThIDE/Renders* din dosarul personal, acolo unde nu există un dosar
-     Documents). Lăsați-l gol pentru a le păstra în dosarul temporar al lucrării, pe care sistemul de
-     operare îl poate șterge.
+     Documents). Lăsați-l gol pentru a le păstra în dosarul de lucrări al ThIDE, din dosarul
+     dumneavoastră de cache: `~/.cache/ThIDE/blender-jobs` pe Linux,
+     `~/Library/Caches/ThIDE/blender-jobs` pe macOS, `%LOCALAPPDATA%\ThIDE\blender-jobs` pe Windows.
+     Doar dumneavoastră îl puteți citi; tot acolo își ține ThIDE și coada de randări.
 
    Dacă ceva nu este în regulă (o rezoluție video neobișnuită, zero cadre, …) apare la **De
    corectat înainte de randare**, iar butonul **Randează** rămâne dezactivat, cu motivul afișat.
@@ -751,6 +753,19 @@ sau `render.cmd` în acel dosar; rezultatul ajunge în dosarul `out` al pachetul
 Blender în PATH (și în dosarul obișnuit de instalare pe macOS și Windows); variabila de mediu `BLENDER` indică altă instalare, de exemplu
 `BLENDER=/opt/blender-4.5/blender sh render.sh`.
 
+**Scripturile de rulare rulează cod venit odată cu pachetul.** `render.sh`, `render.cmd` și
+`blender --python render.py` rulează playerul pachetului (`render.py`, `thide_player/`), cod Python
+cu drepturile dumneavoastră: rulați-le doar pentru un pachet de la cineva în care aveți încredere,
+ca pe orice program. [Executorul de randări](#executorul-de-randări) randează un pachet de la
+oricine altcineva fără să ruleze nimic din codul lui. Fișierul `README.txt` al pachetului spune și
+el acest lucru.
+
+**Un pachet spune unde se află peștera.** Fiecare plan conține poziția peșterii în sistemul de
+coordonate al topografiei ei (`frame.origin`, `crs`), iar un plan care desenează linia poligonală
+conține pozițiile vizelor ei, cu datele topografierii atunci când dezvăluirea se face după dată.
+Oricine are pachetul le poate citi: gândiți-vă la asta înainte de a trimite pachetul unei peșteri
+a cărei poziție nu este publică.
+
 Un pachet conține suprafața terenului și imaginea ei atunci când scena le desenează (`surface.ply`,
 `surface.png`), adnotările cu fotografiile lor (`photos/`), imaginea care luminează scena
 (`hdri/`) și textele de peste imagine, la `texts` în plan. O scenă cu texte se randează și acolo în
@@ -1253,13 +1268,28 @@ dosar partajat sincronizat, un dosar SFTP) rămâne la alegerea dumneavoastră.
 niciodată `render.py`, `render.sh` sau `thide_player` din pachet: citește planurile, rețelele de
 poligoane și imaginile și le redă cu propriul player. Refuză, înainte să pornească Blender, un pachet
 ale cărui planuri numesc dosare de module sau funcționalități din afara celor ale playerului, o cale care
-iese din pachet, o legătură simbolică, un plan care nu trece verificările și un pachet peste limite
-(dimensiunea lui, dimensiunea dezarhivată, triunghiurile, cadre × pixeli × eșantioane, timpul).
-Module în plus vin doar dintr-un dosar numit de operator (`--modules`). Blender rulează cu `-b
---factory-startup` (fără add-on-uri, fără scripturi de pornire) și în dosarul de ieșire ajung doar
-fișierele pe care executorul le numește. Rămâne riscul unui defect în cititoarele de rețele de
-poligoane și imagini ale Blender: rulați executorul ca un utilizator care poate citi și scrie cele
-două dosare și prea puțin altceva.
+iese din pachet (și un dosar de ieșire: orice dosar din pachet ar numi un plan, randarea este scrisă
+în dosarul `out` al pachetului), un model GLB care numește alt fișier (o imagine sau un buffer prin
+URI-ul lui) sau folosește o extensie dincolo de materiale (rețele de poligoane comprimate, imagini
+WebP sau KTX2), o legătură simbolică, un nume care nu este același fișier pe orice sistem
+(`con.png`, un punct la final, două nume care diferă doar prin majuscule), o intrare care nu
+conține ce spune arhiva, o imagine care nu este ce spune numele ei, un plan care nu trece
+verificările și un pachet peste limite (dimensiunea lui, intrările lui, dimensiunea dezarhivată,
+triunghiurile, cadre × pixeli × eșantioane, timpul). Triunghiurile sunt numărate din rețelele de
+poligoane însele, nu după ce spune un antet. Module în plus vin doar dintr-un dosar numit de
+operator (`--modules`). Blender rulează cu `-b --factory-startup --disable-autoexec` (fără add-on-uri,
+fără scripturi de pornire), playerului i se cere să nu deschidă și să nu scrie nimic în afara
+dosarului pachetului, iar în dosarul de ieșire ajung doar fișierele pe care executorul le numește.
+Rămâne riscul unui defect în cititoarele de rețele de poligoane și imagini ale Blender: rulați
+executorul ca un utilizator care poate citi și scrie cele două dosare și prea puțin altceva.
+
+Dosarul de lucru (`--scratch`) este doar al dumneavoastră: implicit `~/.cache/ThIDE/render-worker`
+(`render-node` pentru un server; `~/Library/Caches/ThIDE/…` pe macOS, `%LOCALAPPDATA%\ThIDE\…` pe
+Windows), pe care doar dumneavoastră îl puteți citi. Un dosar de lucru care nu este al
+dumneavoastră, în care pot scrie alții sau care se află într-un dosar în care poate scrie oricine
+(de exemplu un nume fix în `/tmp`, fără bitul sticky) este refuzat, pentru că oricine îl poate
+schimba poate schimba ce rulează Blender. Executorul scrie câte un rând pentru fiecare lucru pe
+care îl face, iar orice caracter de control din numele unui pachet apare scris ca `\uXXXX`.
 
 ### Randarea pentru un server
 
@@ -1274,10 +1304,18 @@ serverul. Protocolul este descris în
         --token-file ~/.config/thide-node/token --node-name gpu-1
 
 - `--server` este adresa dată de administratorul serverului; trebuie să fie HTTPS (HTTP simplu
-  este acceptat doar către acest calculator, pentru teste). `--token-file` este un fișier al cărui
-  prim rând este tokenul nodului, dat de administrator; trebuie să poată fi citit doar de
-  dumneavoastră (`chmod 600`), altfel executorul refuză să pornească. Tokenul nu este scris
-  niciodată în jurnal.
+  este acceptat doar către acest calculator, pentru teste, și niciodată printr-un proxy).
+  `--token-file` este un fișier al cărui prim rând este tokenul nodului, dat de administrator;
+  trebuie să fie al dumneavoastră, să poată fi citit doar de dumneavoastră (`chmod 600`) și să se
+  afle într-un dosar în care nu poate scrie oricine; pe Windows, un fișier pe care doar
+  dumneavoastră (și sistemul și administratorii) îl puteți citi: unul din profilul dumneavoastră
+  este astfel. Altfel executorul refuză să pornească. Tokenul nu este scris niciodată în jurnal și
+  ajunge doar la adresa serverului.
+- Executorul descarcă un pachet doar de la adresa serverului: o lucrare al cărei pachet se află în
+  altă parte eșuează cu `badJob`, așa că un server nu poate folosi calculatorul pentru a ajunge la
+  ce doar calculatorul poate ajunge (serviciile lui, rețeaua lui). Ce îi spune serverului despre un
+  eșec nu numește nicio cale a calculatorului (dosarul de lucru apare ca `<scratch>`, dosarul
+  personal ca `~`) și nimic din ce a atins.
 - `--node-name` este numele afișat de server (implicit numele calculatorului); `--scratch` este
   locul unde se descarcă pachetele și se păstrează cadrele (câte un dosar pentru fiecare lucrare);
   `--poll-seconds` (30) este cât așteaptă o lucrare înainte de a întreba din nou; `--once` face o

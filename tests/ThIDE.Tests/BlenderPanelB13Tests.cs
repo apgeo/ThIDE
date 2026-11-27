@@ -87,6 +87,7 @@ public class BlenderPanelB13Tests
         var vm = new BlenderAnimationViewModel(render ?? new FakeRender(), new FakeSources(), null, notify, shell, gui);
         vm.UseExternalFile = true;
         vm.ExternalFilePath = "m.lox";
+        vm.GuiFolder = Path.Combine(Path.GetTempPath(), "thide-b13-gui-" + Guid.NewGuid().ToString("N")[..8]);
         return vm;
     }
 
