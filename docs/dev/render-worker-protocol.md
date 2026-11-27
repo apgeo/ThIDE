@@ -234,7 +234,9 @@ Blender starts) unless:
 - **Its entries are files with portable names**: no link, no device name of Windows, no name that
   ends in a dot or a space or holds `<>:"|?*` or a control character, no two that differ only by
   their case; each holds what the zip says (its size and its CRC-32). Its entries are counted
-  (`maxEntries`, 20,000) before the zip is opened.
+  (20,000 at most) before the zip is opened.
+- **Its plans are JSON objects that give each key once**: a key given twice could be read one way by
+  the checks and another by the player.
 - **Its images are what they say**, by their content: photos and images over the picture as a plan's
   photos are checked, materials' images PNG or JPEG, the world's PNG, JPEG, Radiance HDR or OpenEXR.
 
