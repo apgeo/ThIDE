@@ -151,6 +151,11 @@ public sealed record Storyboard
     /// <summary>The frame rate of every shot and of the film.</summary>
     public int Fps { get; init; } = 30;
 
+    /// <summary>The language of the texts the film writes itself (a tour's corner texts and lead
+    /// notes): <c>en</c> or <c>ro</c>. Null is the language of whoever renders it: ThIDE's
+    /// interface, or English.</summary>
+    public string? Language { get; init; }
+
     public StoryboardDefaults Defaults { get; init; } = new();
 
     /// <summary>What is written over the film as a whole, in the film's time: a title, credits,

@@ -10,6 +10,7 @@
     "version": { "const": 1 },
     "name": { "type": "string", "description": "The film's name. {cave}, {length} and {depth} are filled in from the model, here and in every text." },
     "fps": { "type": "integer", "minimum": 1, "maximum": 240, "description": "The frame rate of every shot and of the film. Default 30." },
+    "language": { "enum": ["en", "ro"], "description": "The language of the texts the film writes itself: a tour's corner texts and lead notes. Left out: the language of whoever renders it (ThIDE's interface, or English)." },
     "defaults": {
       "description": "What every shot has unless it says otherwise, or names a preset. A section left out is what a render spec has by default.",
       "type": "object",
@@ -39,7 +40,7 @@
           "name": { "type": "string", "description": "Shown in the progress of the render and in its notices." },
           "seconds": { "type": "number", "exclusiveMinimum": 0, "description": "How long the shot is. Default: the preset's length, or 10; or, for a camera that flies a route with the timing Natural, the time the route takes. Given, such a route is fitted to it." },
           "preset": { "type": "string", "minLength": 1, "description": "The name of a preset the shot starts from: its camera, materials, lighting, engine, labels in the scene and reveal, and its length when 'seconds' is left out. The preset's texts over the picture are not taken. The keys below override it." },
-          "camera": { "type": "object", "description": "A render spec's 'camera': any template but the set of stills. Default: the preset's, or a camera that stands still and frames the cave." },
+          "camera": { "type": "object", "description": "A render spec's 'camera': any template but the set of stills. Default: the preset's, or a camera that stands still and frames the cave. A storyboard's route may also say \"branches\": \"auto\" (a tour of the cave's branches, with 'include', 'exclude' and 'priority' to choose them) or \"from\": \"newest\"." },
           "materials": { "$ref": "#/$defs/materials" },
           "lighting": { "$ref": "#/$defs/lighting" },
           "engine": { "$ref": "#/$defs/engine" },

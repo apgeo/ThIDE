@@ -62,6 +62,8 @@ public static class CameraRoutes
         // The symbols of a storyboard's routes are made into stations before a plan is made.
         if (route.Branches is not null)
             throw new ArgumentException("A route with branches is a tour of the cave's branches: a storyboard's shot, made into the tour's shots when the model is read.", "camera.route.branches");
+        if (route.HasTourChoices)
+            throw new ArgumentException("include, exclude and priority choose the side passages of a tour: they go with \"branches\": \"auto\" in a storyboard's shot.", "camera.route");
         if (string.Equals(route.From, RouteParams.Newest, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"'{RouteParams.Newest}' is a storyboard's route, made into stations when the model is read.", "camera.route.from");
         var lookup = new StationLookup(framing);

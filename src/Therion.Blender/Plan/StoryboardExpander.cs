@@ -49,7 +49,8 @@ public static class StoryboardExpander
     /// tour shot made into its tour's shots, every route from <see cref="RouteParams.Newest"/>
     /// into a route between two stations. A storyboard without symbols comes back as it is.
     /// </summary>
-    /// <param name="language">The language of the texts a tour writes (<c>en</c>, <c>ro</c>).</param>
+    /// <param name="language">The language of the texts a tour writes (<c>en</c>, <c>ro</c>) when
+    /// the storyboard does not say one (<see cref="Storyboard.Language"/>).</param>
     /// <exception cref="ArgumentException">A tour cannot be made for this model; the message
     /// names the shot.</exception>
     public static ExpandedStoryboard Expand(
@@ -60,6 +61,7 @@ public static class StoryboardExpander
         ArgumentNullException.ThrowIfNull(geometry);
         presets ??= BuiltInPresets.ByName;
         if (!IsSymbolic(storyboard, presets)) return new ExpandedStoryboard { Storyboard = storyboard };
+        language = storyboard.Language ?? language;
 
         var shots = new List<ShotSpec>();
         var tours = new List<Tour>();
@@ -153,25 +155,51 @@ public static class StoryboardExpander
             : string.Equals(route.From, RouteParams.Newest, StringComparison.OrdinalIgnoreCase) ? Kind.Newest
             : null;
 
-    private static Tour TourOf(
-        Storyboard storyboard, ShotSpec shot, RouteParams route, GeometryResult geometry, IReadOnlyList<SourceLead>? leads,
-        Func<string, RenderPreset?> presets, string language, string name, int index)
+    /// <summary>
+    /// The tour the shot <paramref name="index"/> of <paramref name="storyboard"/> stands for,
+    /// as rules: what the expansion builds for it, and what a branch table is made from.
+    /// </summary>
+    /// <param name="language">The language when the storyboard does not say one.</param>
+    /// <exception cref="ArgumentException">The shot is not a tour of the branches.</exception>
+    public static TourSpec TourSpecOf(Storyboard storyboard, int index, Func<string, RenderPreset?>? presets = null, string language = "en")
+    {
+        ArgumentNullException.ThrowIfNull(storyboard);
+        presets ??= BuiltInPresets.ByName;
+        if (index < 0 || index >= storyboard.Shots.Count || storyboard.Shots[index] is not { } shot)
+            throw new ArgumentException($"The storyboard has no shot {index + 1}.", nameof(index));
+        var route = RouteOf(shot, presets);
+        if (Symbol(route) != Kind.Tour)
+            throw new ArgumentException($"shots[{index}] is not a tour of the cave's branches.", nameof(index));
+        return TourSpecOf(storyboard, shot, route!, storyboard.Language ?? language, index);
+    }
+
+    private static TourSpec TourSpecOf(Storyboard storyboard, ShotSpec shot, RouteParams route, string language, int index)
     {
         if (!string.Equals(route.Branches, RouteParams.AutoBranches, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"shots[{index}].camera.route.branches: a route's branches are \"{RouteParams.AutoBranches}\" or not said.", nameof(storyboard));
         bool via = route.Via.Count > 0;
-        var spec = new TourSpec
+        return new TourSpec
         {
             Name = storyboard.Name,
             Start = route.From is null || string.Equals(route.From, RouteParams.Entrance, StringComparison.OrdinalIgnoreCase) ? null : route.From,
             Trunk = via ? TourTrunkKind.Via : TourTrunkKind.Auto,
             Via = route.Via,
             End = via ? route.To : null,
+            Include = route.Include ?? [],
+            Exclude = route.Exclude ?? [],
+            Priority = route.Priority,
             TourSeconds = shot.Seconds ?? DefaultTourSeconds,
             Preset = shot.Preset ?? new TourSpec().Preset,
             Fps = storyboard.Fps,
             Language = TourBuilder.Languages.Contains(language, StringComparer.Ordinal) ? language : "en",
         };
+    }
+
+    private static Tour TourOf(
+        Storyboard storyboard, ShotSpec shot, RouteParams route, GeometryResult geometry, IReadOnlyList<SourceLead>? leads,
+        Func<string, RenderPreset?> presets, string language, string name, int index)
+    {
+        var spec = TourSpecOf(storyboard, shot, route, language, index);
         try { return TourBuilder.Build(geometry, spec, leads, presets); }
         catch (ArgumentException ex)
         {
