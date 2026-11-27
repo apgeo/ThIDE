@@ -226,6 +226,10 @@ public sealed record LateralOptions
     /// <summary>Galleries narrower than this are not surveyed.</summary>
     public double MinWidth { get; init; } = 0.5;
 
+    /// <summary>Galleries at least this long are surveyed whatever the coverage (within the other limits);
+    /// null = coverage alone decides. A short dead end seen from its junction is otherwise left out.</summary>
+    public double? SurveyAllLongerThan { get; init; }
+
     /// <summary>The most laterals; null = no limit.</summary>
     public int? MaxCount { get; init; }
 

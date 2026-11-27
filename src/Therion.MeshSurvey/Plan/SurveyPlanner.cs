@@ -712,6 +712,29 @@ internal sealed class SurveyPlanner
                     if (PassesFilters(c) && !pool.Any(x => SamePath(x, c))) pool.Add(c);
         }
 
+        // Galleries long enough to be surveyed whatever the coverage.
+        if (l.SurveyAllLongerThan is { } longer)
+        {
+            bool any = true;
+            while (any)
+            {
+                any = false;
+                foreach (var s in _stations.Where(s => !s.Removed && s.Node is not null).ToList())
+                {
+                    var c = CandidatesFrom(s.Node!).Where(c => c.Kind == CandidateKind.Lateral && c.Length >= longer && PassesFilters(c))
+                        .OrderByDescending(c => c.Length).ThenBy(c => c.From!.Id).FirstOrDefault();
+                    if (c is null) continue;
+                    if (l.MaxCount is { } maxCount && laterals >= maxCount) break;
+                    if (l.MaxTotalLength is { } budget && lateralLength + c.Length > budget) continue;
+                    Accept(c);
+                    laterals++;
+                    lateralLength += _branches[^1].Length;
+                    any = true;
+                    break;
+                }
+            }
+        }
+
         // Loops left open are closed when the policy says so, whatever the coverage.
         if (l.Loops == LoopPolicy.Close)
         {

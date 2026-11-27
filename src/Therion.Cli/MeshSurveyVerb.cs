@@ -24,6 +24,7 @@ public static class MeshSurveyVerb
         "            [--preferred m] [--min m] [--max m] [--max-vertical m] [--strategy preferred|fewest|uniform|features]\n" +
         "            [--clearance m] [--anchor axial|floor|ceiling|wall] [--max-depth n] [--max-laterals n] [--budget m]\n" +
         "            [--coverage 0..1] [--min-feature m] [--loops close|ifcheap|never] [--no-side-stations]\n" +
+        "            [--all-longer-than m]\n" +
         "            [--splays none|lrud|ring|sphere|adaptive|walluniform[:count]] [--chambers hub|axis|perimeter|keep]\n" +
         "            [--voxel m] [--min-width m] [--pillar m] [--noise] [--seed n] [--naming sequential|branch]\n" +
         "            [--stations-per-survey n] [--cartesian] [--debug]\n" +
@@ -231,6 +232,7 @@ public static class MeshSurveyVerb
         if (a.Number("--budget") is { } budget) lat = lat with { MaxTotalLength = budget };
         if (a.Enum<LoopPolicy>("--loops") is { } loops) lat = lat with { Loops = loops };
         if (a.Flag("--no-side-stations")) lat = lat with { SideStations = false };
+        if (a.Number("--all-longer-than") is { } longer) lat = lat with { SurveyAllLongerThan = longer };
         options = options with { Laterals = lat };
         if (a.Number("--coverage") is { } target) options = options with { Coverage = options.Coverage with { Target = target } };
         if (a.Number("--min-feature") is { } feature) options = options with { Coverage = options.Coverage with { MinFeature = feature } };
