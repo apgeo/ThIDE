@@ -26,6 +26,7 @@ public class CapsAuditTests
     private static readonly string[] TextTools =
     [
         "read_file", "format_file", "import_survey", "export_gis", "export_tables", "generate_report", "deps_graph",
+        "mesh_survey_run",
     ];
 
     [Fact]

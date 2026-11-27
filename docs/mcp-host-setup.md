@@ -19,7 +19,7 @@ ThIDE implements the **server**. The model lives in the host.
 
 ## What it can do
 
-**Twenty-two read-only tools.** Nothing here changes anything:
+**Twenty-four read-only tools.** Nothing here changes anything:
 
 | Area | Tools |
 |---|---|
@@ -30,20 +30,21 @@ ThIDE implements the **server**. The model lives in the host.
 | Field notes | `list_todos`, `list_leads` |
 | Calculation | `structural_analysis`, `convert_units`, `convert_coordinates`, `get_declination` |
 | Reference | `search_thbook` |
+| 3-D models | `mesh_survey_inspect`, `mesh_survey_check_leg` |
 
-**Twelve that write.** These are withheld entirely by the `data` profile:
+**Thirteen that write.** These are withheld entirely by the `data` profile:
 
 | Area | Tools |
 |---|---|
 | Editing | `rename_symbol`, `format_file`, `edit_file` |
-| Creating | `scaffold_th2`, `scaffold_topodroid_project`, `import_survey` |
+| Creating | `scaffold_th2`, `scaffold_topodroid_project`, `import_survey`, `mesh_survey_run` |
 | Exporting | `export_gis`, `export_tables`, `generate_report` |
 | Your notes | `project_metadata_set`, `set_lead_status` |
 | Compiling | `run_build` |
 
 `rename_symbol`, `format_file` and `edit_file` change survey files — `edit_file` is a find-and-replace
 that only touches text you asked for and only when you pass `dryRun:false` (it previews otherwise). The
-scaffolds and `import_survey` only ever create new files — they refuse rather than overwrite. The exports
+scaffolds, `import_survey` and `mesh_survey_run` only ever create new files — they refuse rather than overwrite. The exports
 replace their own output.
 `project_metadata_set` and `set_lead_status` write a sidecar the IDE shares, never a `.th`. `run_build`
 runs the real Therion compiler.

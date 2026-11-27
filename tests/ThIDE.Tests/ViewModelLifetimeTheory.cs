@@ -112,6 +112,7 @@ public sealed class ViewModelLifetimeTheory : IAsyncLifetime
         "LogFieldViewModel", "LogSectionViewModel", "LogSummaryViewModel", "NavigableSymbolViewModel",
         "MeasurementsViewModel", "NewProjectViewModel", "PasteShotsViewModel", "QuickPickViewModel",
         "CaptionRowViewModel", "StoryboardShotViewModel", "QueueRowViewModel", "TourBranchRowViewModel",
+        "MeshSurveyViewModel",
     ];
 
     // One per app; MainWindowMruLifetimeTests covers what it keeps of closed documents.

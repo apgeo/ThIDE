@@ -57,6 +57,8 @@
   <ItemGroup>
     <!-- The fixed-seed runner for the generated-input tests. -->
     <Compile Include="..\Shared\Properties\*.cs" LinkBase="Shared\Properties" />
+    <!-- Invented caves as meshes, for the mesh survey tools. -->
+    <Compile Include="..\Shared\MeshSurvey\*.cs" LinkBase="Shared\MeshSurvey" />
   </ItemGroup>
 
 </Project>

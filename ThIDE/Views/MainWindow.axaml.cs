@@ -113,6 +113,7 @@ public partial class MainWindow : Window
                 vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm);
                 vm.ScaffoldProjectRequested += (_, mode) => _ = ShowScaffoldProjectAsync(vm, mode);
                 vm.LinkSurveyRequested += (_, _) => _ = ShowLinkSurveyAsync(null, 0);
+                vm.MeshSurveyRequested += (_, _) => ShowMeshSurvey(vm);
                 vm.NewFileRequested += (_, folder) => _ = ShowNewFileAsync(folder);
                 vm.NewProjectRequested += (_, _) => _ = ShowNewProjectAsync();
                 vm.NewTripRequested += (_, _) => _ = ShowNewTripAsync();
@@ -574,6 +575,21 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(root)) return;
 
         await vm.RunScaffoldAsync(model.BuildOptions(), source, root);
+    }
+
+    // ----- derive a survey from a 3-D model ---------------------------------
+
+    private MeshSurveyWindow? _meshSurveyWindow;
+
+    /// <summary>Tools ▸ Derive Survey from 3-D Model…: one non-modal window, so the preview can be looked at while it is open.</summary>
+    private void ShowMeshSurvey(MainWindowViewModel vm)
+    {
+        if (_meshSurveyWindow is { } open) { open.Activate(); return; }
+        var model = new MeshSurveyViewModel(vm.StoragePicker, vm.Notifications, vm.OpenFileInEditorAsync, vm.ShowModelIn3DViewer);
+        var window = new MeshSurveyWindow(model);
+        window.Closed += (_, _) => _meshSurveyWindow = null;
+        _meshSurveyWindow = window;
+        window.Show(this);
     }
 
     // ----- new file -------------------------------------------------------

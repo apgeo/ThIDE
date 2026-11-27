@@ -13,6 +13,7 @@
     <ProjectReference Include="..\Therion.Syntax\Therion.Syntax.csproj" />
     <ProjectReference Include="..\Therion.Semantics\Therion.Semantics.csproj" />
     <ProjectReference Include="..\Therion.Processing.Abstractions\Therion.Processing.Abstractions.csproj" />
+    <ProjectReference Include="..\Therion.MeshSurvey\Therion.MeshSurvey.csproj" />
   </ItemGroup>
 
 </Project>

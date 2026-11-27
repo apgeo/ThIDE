@@ -745,17 +745,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 OnUiThread(() => Model3DViewerTool.Viewer.ShowLatest(Build.Artifacts));
         };
         // Generated Files → "View in internal 3D viewer".
-        Build.View3DRequested += (_, path) => OnUiThread(() =>
-        {
-            if (!Model3DViewerEnabled)
-            {
-                _notifications.Info(Tr.Get("Notif_3DDisabledTitle"),
-                    Tr.Get("Notif_3DDisabledMsg"));
-                return;
-            }
-            _factory.ShowTool(Model3DViewerTool);
-            Model3DViewerTool.Viewer.LoadModel(path);
-        });
+        Build.View3DRequested += (_, path) => ShowModelIn3DViewer(path);
         // open a clicked PDF in the in-app map viewer (BuildViewModel gates this on the setting).
         Build.ViewMapRequested += (_, path) => OnUiThread(() =>
         {
@@ -1529,6 +1519,29 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Build a compilable Therion project (dirs + wrapper .th + thconfig) around a bare survey .th.</summary>
     [RelayCommand]
     private void ScaffoldProject(string? mode) => ScaffoldProjectRequested?.Invoke(this, mode);
+
+    /// <summary>Opens the 3-D viewer panel and loads a .lox / .3d model into it (also from a background thread).</summary>
+    public void ShowModelIn3DViewer(string path) => OnUiThread(() =>
+    {
+        if (!Model3DViewerEnabled)
+        {
+            _notifications.Info(Tr.Get("Notif_3DDisabledTitle"),
+                Tr.Get("Notif_3DDisabledMsg"));
+            return;
+        }
+        _factory.ShowTool(Model3DViewerTool);
+        Model3DViewerTool.Viewer.LoadModel(path);
+    });
+
+    /// <summary>Raised to open the "Derive survey from 3-D model" dialog (the view owns the window).</summary>
+    public event EventHandler? MeshSurveyRequested;
+
+    /// <summary>Tools ▸ Derive Survey from 3-D Model…</summary>
+    [RelayCommand]
+    private void MeshSurvey() => MeshSurveyRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Opens a file in the editor (for the dialogs that write a file and then show it).</summary>
+    public Task OpenFileInEditorAsync(string path) => _documents.OpenFileAsync(path);
 
     /// <summary>Raised to run "Link survey file" in the view (it owns the dialog and the pickers).</summary>
     public event EventHandler? LinkSurveyRequested;

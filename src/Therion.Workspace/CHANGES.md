@@ -4,6 +4,16 @@ What a consumer of this library can notice, newest first. Each entry says what c
 and what to do. Entries also cover behaviour that reaches you through `Therion.Syntax` and
 `Therion.Semantics`, which this library is built on.
 
+## 2026-11 — surveys derived from 3-D models
+
+### Additive API
+- **`MeshSurveyImport`** (`Therion.Workspace.Import`): `Run(model, options, guide)` /
+  `Plan(session, cave, …)` → `MeshSurveyImportResult` (Therion text, report JSON, the survey);
+  `ReadGuide(path)` for `.json`, `.th` (a centreline placed from its `fix`), `.lox` and `.3d`;
+  `ReportPath`; `WriteDebugLayers`. `TherionGuideReader` turns a centreline into a guide.
+- The library now references **Therion.MeshSurvey** (and through it Therion.Cave3D and
+  Therion.CaveGeometry). Migration: none.
+
 ## 2026-11 (round 6)
 
 ### Behaviour changes

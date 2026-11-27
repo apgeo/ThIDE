@@ -26,6 +26,7 @@ Guides and reference for ThIDE. See the [project README](../README.md) for the o
 | Language Server (LSP) | [lsp.md](lsp.md) |
 | AI hosts, the Assistant panel, macros (`therion-mcp`) | [mcp-host-setup.md](mcp-host-setup.md) |
 | Linking a survey file into the project | [user-guide/24-linking-surveys.md](user-guide/24-linking-surveys.md) |
+| A survey derived from a 3-D model | [user-guide/25-survey-from-3d-model.md](user-guide/25-survey-from-3d-model.md) |
 | Semantic-rule plugins | [plugins.md](plugins.md) |
 | File associations | [file-association.md](file-association.md) |
 | Packaging & release | [release.md](release.md) |

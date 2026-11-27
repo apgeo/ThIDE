@@ -1,0 +1,289 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.MeshSurveyWindow"
+        x:DataType="vm:MeshSurveyViewModel"
+        x:CompileBindings="False"
+        Title="{l:Loc MeshSurvey_Title}" Width="900" Height="820" MinWidth="720" MinHeight="560"
+        AutomationProperties.AutomationId="MeshSurvey.Window"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <Window.Styles>
+        <Style Selector="Grid.fields > TextBlock"><Setter Property="VerticalAlignment" Value="Center" /></Style>
+        <Style Selector="Grid.fields > :is(Control)"><Setter Property="Margin" Value="0,0,12,0" /></Style>
+        <Style Selector="TextBlock.hint"><Setter Property="Foreground" Value="Gray" /><Setter Property="FontSize" Value="11" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
+        <Style Selector="Expander"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
+    </Window.Styles>
+
+    <DockPanel Margin="12">
+        <!-- Run, progress, report, preview, save -->
+        <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
+            <TextBlock AutomationProperties.AutomationId="MeshSurvey.Issues" Text="{Binding IssueText}" IsVisible="{Binding HasIssues}" Foreground="#D13438" TextWrapping="Wrap" />
+            <TextBlock AutomationProperties.AutomationId="MeshSurvey.Error" Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="#D13438" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding ProgressText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <ProgressBar AutomationProperties.AutomationId="MeshSurvey.Progress" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Height="8" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Margin="10,0,0,0" Text="{Binding ProgressText}" />
+            </Grid>
+            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="8" MaxHeight="170"
+                    IsVisible="{Binding HasResult}">
+                <ScrollViewer>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{l:Loc MeshSurvey_Report_Heading}" FontWeight="SemiBold" />
+                        <SelectableTextBlock AutomationProperties.AutomationId="MeshSurvey.Report" Text="{Binding ReportSummary}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+            <WrapPanel>
+                <CheckBox AutomationProperties.AutomationId="MeshSurvey.DebugLayers" Content="{l:Loc MeshSurvey_DebugLayers}" IsChecked="{Binding WriteDebugLayers}" Margin="0,0,16,0" />
+            </WrapPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button AutomationProperties.AutomationId="MeshSurvey.Run" Content="{l:Loc MeshSurvey_Run}" Command="{Binding RunCommand}" MinWidth="90" Classes="accent" />
+                <Button AutomationProperties.AutomationId="MeshSurvey.Cancel" Content="{l:Loc Common_Cancel}" Command="{Binding CancelCommand}" IsEnabled="{Binding IsRunning}" MinWidth="90" />
+                <Button AutomationProperties.AutomationId="MeshSurvey.Preview" Content="{l:Loc MeshSurvey_Preview}" Command="{Binding PreviewCommand}" MinWidth="120" />
+                <Button AutomationProperties.AutomationId="MeshSurvey.Save" Content="{l:Loc MeshSurvey_Save}" Command="{Binding SaveCommand}" MinWidth="110" />
+                <Button AutomationProperties.AutomationId="MeshSurvey.Close" Content="{l:Loc Common_Close}" Click="OnClose" MinWidth="80" />
+            </StackPanel>
+        </StackPanel>
+
+        <TabControl>
+            <!-- ================= Model ================= -->
+            <TabItem Header="{l:Loc MeshSurvey_Tab_Model}" AutomationProperties.AutomationId="MeshSurvey.Tab.Model">
+                <ScrollViewer>
+                    <StackPanel Spacing="10" Margin="0,8,0,0">
+                        <TextBlock Classes="hint" Text="{l:Loc MeshSurvey_Intro}" />
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                            <TextBlock Text="{l:Loc MeshSurvey_Model}" VerticalAlignment="Center" />
+                            <TextBox x:Name="ModelPathBox" Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.ModelPath" AutomationProperties.Name="{l:Loc MeshSurvey_Model}"
+                                     Text="{Binding ModelPath, Mode=TwoWay}" />
+                            <Button Grid.Column="2" AutomationProperties.AutomationId="MeshSurvey.Browse" Content="{l:Loc MeshSurvey_Browse}" Command="{Binding BrowseCommand}" />
+                            <Button Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.Open" Content="{l:Loc MeshSurvey_Open}" Command="{Binding OpenModelCommand}" />
+                        </Grid>
+                        <TextBlock Classes="hint" Text="{l:Loc MeshSurvey_FormatsHint}" />
+
+                        <TextBlock Text="{l:Loc MeshSurvey_Input}" FontWeight="SemiBold" />
+                        <Grid Classes="fields" ColumnDefinitions="170,*,170,*" RowDefinitions="Auto,Auto" RowSpacing="8">
+                            <TextBlock Text="{l:Loc MeshSurvey_Input_Units}" />
+                            <ComboBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.Units" AutomationProperties.Name="{l:Loc MeshSurvey_Input_Units}" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding UnitChoices}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding Units, Mode=TwoWay}" />
+                            <TextBlock Grid.Column="2" Text="{l:Loc MeshSurvey_Input_Up}" />
+                            <ComboBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.UpAxis" AutomationProperties.Name="{l:Loc MeshSurvey_Input_Up}" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding UpAxisChoices}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding UpAxis, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="1" Text="{l:Loc MeshSurvey_Input_North}" />
+                            <TextBox Grid.Row="1" Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.North" AutomationProperties.Name="{l:Loc MeshSurvey_Input_North}" Text="{Binding NorthRotation, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="{l:Loc MeshSurvey_Input_Cs}" />
+                            <TextBox Grid.Row="1" Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.CoordinateSystem" AutomationProperties.Name="{l:Loc MeshSurvey_Input_Cs}" Text="{Binding CoordinateSystem, Mode=TwoWay}" PlaceholderText="{l:Loc MeshSurvey_Input_CsHint}" />
+                        </Grid>
+                        <TextBlock Classes="hint" Foreground="#E0A100" IsVisible="{Binding InputChanged}" Text="{l:Loc MeshSurvey_InputChanged}" />
+
+                        <TextBlock Text="{l:Loc MeshSurvey_Inspect}" FontWeight="SemiBold" />
+                        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="8">
+                            <Grid>
+                                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsOpening}" Height="6" VerticalAlignment="Top" />
+                                <SelectableTextBlock AutomationProperties.AutomationId="MeshSurvey.InspectSummary" TextWrapping="Wrap" Text="{Binding InspectSummary}" MinHeight="60" Margin="0,8,0,0" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ================= Settings ================= -->
+            <TabItem Header="{l:Loc MeshSurvey_Tab_Settings}" AutomationProperties.AutomationId="MeshSurvey.Tab.Settings">
+                <ScrollViewer>
+                    <StackPanel Spacing="6" Margin="0,8,0,0">
+                        <Grid Classes="fields" ColumnDefinitions="170,*" Margin="0,0,0,4">
+                            <TextBlock Text="{l:Loc MeshSurvey_Preset}" />
+                            <ComboBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.Preset" AutomationProperties.Name="{l:Loc MeshSurvey_Preset}" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding Presets}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding SelectedPreset, Mode=TwoWay}" />
+                        </Grid>
+
+                        <Expander Header="{l:Loc MeshSurvey_Legs}" IsExpanded="True" AutomationProperties.AutomationId="MeshSurvey.Group.Legs">
+                            <Grid Classes="fields" ColumnDefinitions="170,*,170,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                                <TextBlock Text="{l:Loc MeshSurvey_Legs_Preferred}" />
+                                <TextBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.LegPreferred" AutomationProperties.Name="{l:Loc MeshSurvey_Legs_Preferred}" Text="{Binding LegPreferred, Mode=TwoWay}" />
+                                <TextBlock Grid.Column="2" Text="{l:Loc MeshSurvey_Legs_Strategy}" />
+                                <ComboBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.LegStrategy" AutomationProperties.Name="{l:Loc MeshSurvey_Legs_Strategy}" HorizontalAlignment="Stretch"
+                                          ItemsSource="{Binding LegStrategies}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding LegStrategy, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Text="{l:Loc MeshSurvey_Legs_Min}" />
+                                <TextBox Grid.Row="1" Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.LegMin" AutomationProperties.Name="{l:Loc MeshSurvey_Legs_Min}" Text="{Binding LegMin, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="{l:Loc MeshSurvey_Legs_Max}" />
+                                <TextBox Grid.Row="1" Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.LegMax" AutomationProperties.Name="{l:Loc MeshSurvey_Legs_Max}" Text="{Binding LegMax, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="2" Text="{l:Loc MeshSurvey_Legs_MaxVertical}" />
+                                <TextBox Grid.Row="2" Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.LegMaxVertical" AutomationProperties.Name="{l:Loc MeshSurvey_Legs_MaxVertical}" Text="{Binding LegMaxVertical, Mode=TwoWay}" PlaceholderText="{l:Loc MeshSurvey_Unlimited}" />
+                                <TextBlock Grid.Row="2" Grid.Column="2" Text="{l:Loc MeshSurvey_Legs_Clearance}" />
+                                <TextBox Grid.Row="2" Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.LegClearance" AutomationProperties.Name="{l:Loc MeshSurvey_Legs_Clearance}" Text="{Binding LegClearance, Mode=TwoWay}" />
+                            </Grid>
+                        </Expander>
+
+                        <Expander Header="{l:Loc MeshSurvey_Anchor}" AutomationProperties.AutomationId="MeshSurvey.Group.Stations">
+                            <Grid Classes="fields" ColumnDefinitions="170,*,170,*">
+                                <TextBlock Text="{l:Loc MeshSurvey_Anchor_Mode}" />
+                                <ComboBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.Anchor" AutomationProperties.Name="{l:Loc MeshSurvey_Anchor_Mode}" HorizontalAlignment="Stretch"
+                                          ItemsSource="{Binding AnchorModes}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding AnchorMode, Mode=TwoWay}" />
+                                <TextBlock Grid.Column="2" Text="{l:Loc MeshSurvey_Anchor_FloorOffset}" />
+                                <TextBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.FloorOffset" AutomationProperties.Name="{l:Loc MeshSurvey_Anchor_FloorOffset}" Text="{Binding FloorOffset, Mode=TwoWay}" />
+                            </Grid>
+                        </Expander>
+
+                        <Expander Header="{l:Loc MeshSurvey_Laterals}" AutomationProperties.AutomationId="MeshSurvey.Group.Laterals">
+                            <Grid Classes="fields" ColumnDefinitions="170,*,170,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                                <TextBlock Text="{l:Loc MeshSurvey_Laterals_Depth}" />
+                                <ComboBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.LateralDepth" AutomationProperties.Name="{l:Loc MeshSurvey_Laterals_Depth}" HorizontalAlignment="Stretch"
+                                          ItemsSource="{Binding DepthChoices}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding LateralDepth, Mode=TwoWay}" />
+                                <TextBlock Grid.Column="2" Text="{l:Loc MeshSurvey_Laterals_Loops}" />
+                                <ComboBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.Loops" AutomationProperties.Name="{l:Loc MeshSurvey_Laterals_Loops}" HorizontalAlignment="Stretch"
+                                          ItemsSource="{Binding LoopPolicies}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding LoopPolicy, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Text="{l:Loc MeshSurvey_Laterals_MinLength}" />
+                                <TextBox Grid.Row="1" Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.LateralMinLength" AutomationProperties.Name="{l:Loc MeshSurvey_Laterals_MinLength}" Text="{Binding LateralMinLength, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="{l:Loc MeshSurvey_Laterals_MinWidth}" />
+                                <TextBox Grid.Row="1" Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.LateralMinWidth" AutomationProperties.Name="{l:Loc MeshSurvey_Laterals_MinWidth}" Text="{Binding LateralMinWidth, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="2" Text="{l:Loc MeshSurvey_Laterals_MaxCount}" />
+                                <TextBox Grid.Row="2" Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.LateralMaxCount" AutomationProperties.Name="{l:Loc MeshSurvey_Laterals_MaxCount}" Text="{Binding LateralMaxCount, Mode=TwoWay}" PlaceholderText="{l:Loc MeshSurvey_NoLimit}" />
+                                <TextBlock Grid.Row="2" Grid.Column="2" Text="{l:Loc MeshSurvey_Laterals_Budget}" />
+                                <TextBox Grid.Row="2" Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.LateralBudget" AutomationProperties.Name="{l:Loc MeshSurvey_Laterals_Budget}" Text="{Binding LateralLengthBudget, Mode=TwoWay}" PlaceholderText="{l:Loc MeshSurvey_NoLimit}" />
+                                <CheckBox Grid.Row="3" Grid.ColumnSpan="4" AutomationProperties.AutomationId="MeshSurvey.SideStations" Content="{l:Loc MeshSurvey_Laterals_SideStations}" IsChecked="{Binding SideStations}" />
+                            </Grid>
+                        </Expander>
+
+                        <Expander Header="{l:Loc MeshSurvey_Coverage}" AutomationProperties.AutomationId="MeshSurvey.Group.Coverage">
+                            <Grid Classes="fields" ColumnDefinitions="170,*,70,170,*" RowDefinitions="Auto,Auto" RowSpacing="8">
+                                <TextBlock Text="{l:Loc MeshSurvey_Coverage_Target}" />
+                                <Slider Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.CoverageSlider" AutomationProperties.Name="{l:Loc MeshSurvey_Coverage_Target}" Minimum="0" Maximum="100" Value="{Binding CoverageTargetPercent, Mode=TwoWay}" />
+                                <TextBox Grid.Column="2" AutomationProperties.AutomationId="MeshSurvey.CoverageTarget" AutomationProperties.Name="{l:Loc MeshSurvey_Coverage_Target}" Text="{Binding CoverageTargetText, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Text="{l:Loc MeshSurvey_Coverage_MinFeature}" />
+                                <TextBox Grid.Row="1" Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.CoverageMinFeature" AutomationProperties.Name="{l:Loc MeshSurvey_Coverage_MinFeature}" Text="{Binding CoverageMinFeature, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="3" Text="{l:Loc MeshSurvey_Coverage_Range}" />
+                                <TextBox Grid.Row="1" Grid.Column="4" AutomationProperties.AutomationId="MeshSurvey.CoverageRange" AutomationProperties.Name="{l:Loc MeshSurvey_Coverage_Range}" Text="{Binding CoverageRange, Mode=TwoWay}" />
+                            </Grid>
+                        </Expander>
+
+                        <Expander Header="{l:Loc MeshSurvey_Splays}" AutomationProperties.AutomationId="MeshSurvey.Group.Splays">
+                            <Grid Classes="fields" ColumnDefinitions="170,*,170,*" RowDefinitions="Auto,Auto" RowSpacing="8">
+                                <TextBlock Text="{l:Loc MeshSurvey_Splays_Mode}" />
+                                <ComboBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.SplayMode" AutomationProperties.Name="{l:Loc MeshSurvey_Splays_Mode}" HorizontalAlignment="Stretch"
+                                          ItemsSource="{Binding SplayModes}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding SplayMode, Mode=TwoWay}" />
+                                <TextBlock Grid.Column="2" Text="{l:Loc MeshSurvey_Splays_Count}" />
+                                <TextBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.SplayCount" AutomationProperties.Name="{l:Loc MeshSurvey_Splays_Count}" Text="{Binding SplayCount, Mode=TwoWay}" />
+                                <CheckBox Grid.Row="1" Grid.ColumnSpan="4" AutomationProperties.AutomationId="MeshSurvey.SplayScale" Content="{l:Loc MeshSurvey_Splays_Scale}" IsChecked="{Binding SplayScaleBySize}" />
+                            </Grid>
+                        </Expander>
+
+                        <Expander Header="{l:Loc MeshSurvey_Void}" AutomationProperties.AutomationId="MeshSurvey.Group.Void">
+                            <Grid Classes="fields" ColumnDefinitions="170,*,170,*" RowDefinitions="Auto,Auto" RowSpacing="8">
+                                <TextBlock Text="{l:Loc MeshSurvey_Void_Voxel}" />
+                                <TextBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.VoxelSize" AutomationProperties.Name="{l:Loc MeshSurvey_Void_Voxel}" Text="{Binding VoxelSize, Mode=TwoWay}" />
+                                <TextBlock Grid.Column="2" Text="{l:Loc MeshSurvey_Void_PassageWidth}" />
+                                <TextBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.PassageWidth" AutomationProperties.Name="{l:Loc MeshSurvey_Void_PassageWidth}" Text="{Binding MinPassageWidth, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Text="{l:Loc MeshSurvey_Void_Pillar}" />
+                                <TextBox Grid.Row="1" Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.PillarSize" AutomationProperties.Name="{l:Loc MeshSurvey_Void_Pillar}" Text="{Binding MinPillarSize, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="{l:Loc MeshSurvey_Void_Chamber}" />
+                                <ComboBox Grid.Row="1" Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.ChamberPolicy" AutomationProperties.Name="{l:Loc MeshSurvey_Void_Chamber}" HorizontalAlignment="Stretch"
+                                          ItemsSource="{Binding ChamberPolicies}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding ChamberPolicy, Mode=TwoWay}" />
+                            </Grid>
+                        </Expander>
+
+                        <Expander Header="{l:Loc MeshSurvey_Output}" AutomationProperties.AutomationId="MeshSurvey.Group.Output">
+                            <Grid Classes="fields" ColumnDefinitions="170,*,170,*" RowDefinitions="Auto,Auto" RowSpacing="8">
+                                <TextBlock Text="{l:Loc MeshSurvey_Output_Naming}" />
+                                <ComboBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.Naming" AutomationProperties.Name="{l:Loc MeshSurvey_Output_Naming}" HorizontalAlignment="Stretch"
+                                          ItemsSource="{Binding NamingChoices}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding Naming, Mode=TwoWay}" />
+                                <TextBlock Grid.Column="2" Text="{l:Loc MeshSurvey_Output_PerSurvey}" />
+                                <TextBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.PerSurvey" AutomationProperties.Name="{l:Loc MeshSurvey_Output_PerSurvey}" Text="{Binding StationsPerSurvey, Mode=TwoWay}" PlaceholderText="{l:Loc MeshSurvey_NoSplit}" />
+                                <CheckBox Grid.Row="1" Grid.ColumnSpan="2" AutomationProperties.AutomationId="MeshSurvey.Noise" Content="{l:Loc MeshSurvey_Output_Noise}" IsChecked="{Binding SyntheticNoise}" />
+                                <CheckBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" AutomationProperties.AutomationId="MeshSurvey.Cartesian" Content="{l:Loc MeshSurvey_Output_Cartesian}" IsChecked="{Binding CartesianReadings}" />
+                            </Grid>
+                        </Expander>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ================= Guide ================= -->
+            <TabItem Header="{l:Loc MeshSurvey_Tab_Guide}" AutomationProperties.AutomationId="MeshSurvey.Tab.Guide">
+                <ScrollViewer>
+                    <StackPanel Spacing="8" Margin="0,8,0,0">
+                        <TextBlock Classes="hint" Text="{l:Loc MeshSurvey_Guide_Intro}" />
+
+                        <Grid Classes="fields" ColumnDefinitions="170,*,170,*,170,*" RowDefinitions="Auto,Auto" RowSpacing="8">
+                            <TextBlock Text="{l:Loc MeshSurvey_Guide_Mode}" />
+                            <ComboBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.GuideMode" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Mode}" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding GuideModes}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding GuideMode, Mode=TwoWay}" />
+                            <TextBlock Grid.Column="2" Text="{l:Loc MeshSurvey_Guide_Blocked}" />
+                            <ComboBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.OnBlocked" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Blocked}" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding BlockedPolicies}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding OnBlocked, Mode=TwoWay}" />
+                            <TextBlock Grid.Column="4" Text="{l:Loc MeshSurvey_Guide_Frame}" />
+                            <ComboBox Grid.Column="5" AutomationProperties.AutomationId="MeshSurvey.GuideFrame" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Frame}" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding FrameChoices}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding GuideFrame, Mode=TwoWay}" />
+                            <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="8">
+                                <Button AutomationProperties.AutomationId="MeshSurvey.LoadGuide" Content="{l:Loc MeshSurvey_Guide_Load}" Command="{Binding LoadGuideFileCommand}" />
+                                <Button AutomationProperties.AutomationId="MeshSurvey.SaveGuide" Content="{l:Loc MeshSurvey_Guide_Save}" Command="{Binding SaveGuideFileCommand}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Start point -->
+                        <TextBlock Text="{l:Loc MeshSurvey_Guide_Start}" FontWeight="SemiBold" />
+                        <CheckBox AutomationProperties.AutomationId="MeshSurvey.StartAuto" Content="{l:Loc MeshSurvey_Guide_StartAuto}" IsChecked="{Binding StartAutomatic}" />
+                        <Grid ColumnDefinitions="110,90,90,90,130" ColumnSpacing="6" IsEnabled="{Binding !StartAutomatic}" DataContext="{Binding StartPoint}">
+                            <TextBox AutomationProperties.AutomationId="MeshSurvey.Start.Name" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Name}" PlaceholderText="{l:Loc MeshSurvey_Guide_Name}" Text="{Binding Name, Mode=TwoWay}" />
+                            <TextBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.Start.X" AutomationProperties.Name="X" PlaceholderText="X" Text="{Binding X, Mode=TwoWay}" />
+                            <TextBox Grid.Column="2" AutomationProperties.AutomationId="MeshSurvey.Start.Y" AutomationProperties.Name="Y" PlaceholderText="Y" Text="{Binding Y, Mode=TwoWay}" />
+                            <TextBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.Start.Z" AutomationProperties.Name="Z" PlaceholderText="Z" Text="{Binding Z, Mode=TwoWay}" />
+                            <ComboBox Grid.Column="4" AutomationProperties.AutomationId="MeshSurvey.Start.Snap" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Snap}" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding $parent[Window].DataContext.SnapChoices}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding Snap, Mode=TwoWay}" />
+                        </Grid>
+
+                        <!-- Points -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{l:Loc MeshSurvey_Guide_Points}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Button AutomationProperties.AutomationId="MeshSurvey.AddPoint" Content="{l:Loc MeshSurvey_Guide_AddPoint}" Command="{Binding AddPointCommand}" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Points}" AutomationProperties.AutomationId="MeshSurvey.PointList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="110,90,90,90,130,Auto,Auto,Auto" ColumnSpacing="6" Margin="0,2">
+                                        <TextBox AutomationProperties.AutomationId="MeshSurvey.Point.Name" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Name}" Text="{Binding Name, Mode=TwoWay}" />
+                                        <TextBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.Point.X" AutomationProperties.Name="X" Text="{Binding X, Mode=TwoWay}" />
+                                        <TextBox Grid.Column="2" AutomationProperties.AutomationId="MeshSurvey.Point.Y" AutomationProperties.Name="Y" Text="{Binding Y, Mode=TwoWay}" />
+                                        <TextBox Grid.Column="3" AutomationProperties.AutomationId="MeshSurvey.Point.Z" AutomationProperties.Name="Z" Text="{Binding Z, Mode=TwoWay}" />
+                                        <ComboBox Grid.Column="4" AutomationProperties.AutomationId="MeshSurvey.Point.Snap" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Snap}" HorizontalAlignment="Stretch"
+                                                  ItemsSource="{Binding $parent[Window].DataContext.SnapChoices}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding Snap, Mode=TwoWay}" />
+                                        <Button Grid.Column="5" AutomationProperties.AutomationId="MeshSurvey.Point.Up" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Up}" Content="↑" ToolTip.Tip="{l:Loc MeshSurvey_Guide_Up}"
+                                                Command="{Binding $parent[Window].DataContext.MovePointUpCommand}" CommandParameter="{Binding}" />
+                                        <Button Grid.Column="6" AutomationProperties.AutomationId="MeshSurvey.Point.Down" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Down}" Content="↓" ToolTip.Tip="{l:Loc MeshSurvey_Guide_Down}"
+                                                Command="{Binding $parent[Window].DataContext.MovePointDownCommand}" CommandParameter="{Binding}" />
+                                        <Button Grid.Column="7" AutomationProperties.AutomationId="MeshSurvey.Point.Remove" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Remove}" Content="✕" ToolTip.Tip="{l:Loc MeshSurvey_Guide_Remove}"
+                                                Command="{Binding $parent[Window].DataContext.RemovePointCommand}" CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Legs -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                            <TextBlock Text="{l:Loc MeshSurvey_Guide_Legs}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Button AutomationProperties.AutomationId="MeshSurvey.AddLeg" Content="{l:Loc MeshSurvey_Guide_AddLeg}" Command="{Binding AddLegCommand}" />
+                            <Button AutomationProperties.AutomationId="MeshSurvey.Chain" Content="{l:Loc MeshSurvey_Guide_Chain}" Command="{Binding ChainPointsCommand}" />
+                        </StackPanel>
+                        <TextBlock Classes="hint" Text="{l:Loc MeshSurvey_Guide_LegsHint}" />
+                        <ItemsControl ItemsSource="{Binding Legs}" AutomationProperties.AutomationId="MeshSurvey.LegList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="110,110,Auto,16,*,Auto" ColumnSpacing="6" Margin="0,2">
+                                        <ComboBox AutomationProperties.AutomationId="MeshSurvey.Leg.From" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_From}" HorizontalAlignment="Stretch" IsEditable="True"
+                                                  ItemsSource="{Binding $parent[Window].DataContext.PointNames}" Text="{Binding From, Mode=TwoWay}" />
+                                        <ComboBox Grid.Column="1" AutomationProperties.AutomationId="MeshSurvey.Leg.To" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_To}" HorizontalAlignment="Stretch" IsEditable="True"
+                                                  ItemsSource="{Binding $parent[Window].DataContext.PointNames}" Text="{Binding To, Mode=TwoWay}" />
+                                        <CheckBox Grid.Column="2" AutomationProperties.AutomationId="MeshSurvey.Leg.Force" Content="{l:Loc MeshSurvey_Guide_Force}" IsChecked="{Binding Force}" />
+                                        <Ellipse Grid.Column="3" Width="12" Height="12" Fill="{Binding StatusColor}" VerticalAlignment="Center"
+                                                 AutomationProperties.AutomationId="MeshSurvey.Leg.Status" AutomationProperties.Name="{Binding StatusText}" />
+                                        <TextBlock Grid.Column="4" Text="{Binding StatusText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        <Button Grid.Column="5" AutomationProperties.AutomationId="MeshSurvey.Leg.Remove" AutomationProperties.Name="{l:Loc MeshSurvey_Guide_Remove}" Content="✕" ToolTip.Tip="{l:Loc MeshSurvey_Guide_Remove}"
+                                                Command="{Binding $parent[Window].DataContext.RemoveLegCommand}" CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

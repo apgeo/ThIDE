@@ -45,6 +45,7 @@
 
 ## Import / export și GIS
 - **Import:** Survex (`.svx`), Compass (`.dat`), DEM (ESRI ASCII → `surface`) și puncte GPX (→ `fix`).
+- **Topografie derivată dintr-un model 3D** (STL, PLY, OBJ, glb, XYZ — o scanare sau o rețea 3D fără topografie): traseu principal, galerii laterale până la o țintă de acoperire, tronsoane apropiate de o lungime preferată și verificate să nu taie prin rocă, LRUD și radiale; opțional un punct de start și câteva sau toate tronsoanele date de voi, fiecare verificat pe model. Fișierul spune că este derivat, nu măsurat. Instrumente → Derivă topografie din model 3D…, `therion-cli mesh-survey`, MCP `mesh_survey_*`. Vedeți [ghidul utilizatorului, capitolul 25](user-guide/25-survey-from-3d-model.md).
 - **Export:** intrări și puncte fixe în **KML / GeoJSON / GPX / CSV**.
 - **Generarea unui proiect** în jurul unui fișier de topografie `.th` simplu (de exemplu din TopoDroid): arborele de dosare, topografia de legătură, georeferențierea și aspectul (layout) opționale, plus un thconfig cu exporturile alese.
 - Generarea de fișiere `.th2` (schiță nouă; schiță din imagine / `.xvi`) și transformări de coordonate (WGS84 ↔ UTM, lat-long).

@@ -45,6 +45,7 @@
 
 ## Import / export & GIS
 - **Import:** Survex (`.svx`), Compass (`.dat`), DEM (ESRI ASCII → `surface`), and GPX waypoints (→ `fix`).
+- **Survey derived from a 3-D model** (STL, PLY, OBJ, glb, XYZ — a scan or mesh with no survey): a mainline, side galleries up to a coverage target, legs near a preferred length checked never to cut through rock, LRUD and splays; optional start point and some or all legs given by you, each checked against the model. The file says it is derived, not measured. Tools → Derive Survey from 3-D Model…, `therion-cli mesh-survey`, MCP `mesh_survey_*`. See [user guide 25](user-guide/25-survey-from-3d-model.md).
 - **Export:** entrances and fixed points to **KML / GeoJSON / GPX / CSV**.
 - **Scaffold a project** around a bare (e.g. TopoDroid) survey `.th`: folder tree, wrapper survey, optional georeference and layout, and a thconfig with the chosen exports.
 - `.th2` scaffolding (new scrap; sketch-from-image / `.xvi`) and coordinate transforms (WGS84 ↔ UTM, lat-long).
