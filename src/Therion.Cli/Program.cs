@@ -38,6 +38,7 @@ switch (args[0])
     }
     case "new":           return Therion.Cli.NewVerb.Run(args, Console.Out, Console.Error);
     case "import":        return Therion.Cli.ImportVerb.Run(args, Console.Out, Console.Error);
+    case "flatten":       return await Therion.Cli.FlattenVerb.RunAsync(args, Console.Out, Console.Error);
     case "report":        return await Therion.Cli.ReportVerb.RunAsync(args, Console.Out, Console.Error);
     case "build":
     {
@@ -146,6 +147,7 @@ static void PrintHelp()
     Console.WriteLine("  therion-cli import <file.svx|.dat|.gpx|.csv|.tsv> [--out <new.th>] [--format compass|survex|gpx|csv] [--survey <name>]");
     Console.WriteLine("                     [--columns \"from to length compass clino\"] [--start <station>] [--length-unit m|ft] [--angle-unit deg|grad] [--merge N]");
     Console.WriteLine("                                         Convert another program's survey (or a shot table) to Therion; never overwrites.");
+    Console.WriteLine(Therion.Cli.FlattenVerb.Usage);
     Console.WriteLine("  therion-cli report <file|thconfig|folder> [--out <report.html>] [--title <name>]");
     Console.WriteLine("                                         Write the HTML survey report (stdout without --out).");
     Console.WriteLine("  therion-cli dump-ast <file>            Print the parsed AST as JSON.");
