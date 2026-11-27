@@ -38,6 +38,12 @@ switch (args[0])
     }
     case "new":           return Therion.Cli.NewVerb.Run(args, Console.Out, Console.Error);
     case "import":        return Therion.Cli.ImportVerb.Run(args, Console.Out, Console.Error);
+    case "mesh-survey":
+    {
+        using var cancel = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancel.Cancel(); };
+        return Therion.Cli.MeshSurveyVerb.Run(args, Console.Out, Console.Error, cancel.Token);
+    }
     case "report":        return await Therion.Cli.ReportVerb.RunAsync(args, Console.Out, Console.Error);
     case "build":
     {
@@ -146,6 +152,9 @@ static void PrintHelp()
     Console.WriteLine("  therion-cli import <file.svx|.dat|.gpx|.csv|.tsv> [--out <new.th>] [--format compass|survex|gpx|csv] [--survey <name>]");
     Console.WriteLine("                     [--columns \"from to length compass clino\"] [--start <station>] [--length-unit m|ft] [--angle-unit deg|grad] [--merge N]");
     Console.WriteLine("                                         Convert another program's survey (or a shot table) to Therion; never overwrites.");
+    Console.WriteLine("  therion-cli mesh-survey inspect|check-leg|run <model.stl|.ply|.obj|.glb|.xyz> …");
+    Console.WriteLine("                                         A survey derived from a 3-D model with none: inspect the model, check a leg,");
+    Console.WriteLine("                                         or write the derived .th and its report (mesh-survey with no arguments lists the options).");
     Console.WriteLine("  therion-cli report <file|thconfig|folder> [--out <report.html>] [--title <name>]");
     Console.WriteLine("                                         Write the HTML survey report (stdout without --out).");
     Console.WriteLine("  therion-cli dump-ast <file>            Print the parsed AST as JSON.");

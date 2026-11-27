@@ -29,6 +29,8 @@
   <ItemGroup>
     <!-- The fixed-seed runner for the generated-input tests. -->
     <Compile Include="..\Shared\Properties\*.cs" LinkBase="Shared\Properties" />
+    <!-- Invented caves, shared with the CLI and MCP tests. -->
+    <Compile Include="..\Shared\MeshSurvey\*.cs" LinkBase="Shared\MeshSurvey" />
   </ItemGroup>
 
 </Project>

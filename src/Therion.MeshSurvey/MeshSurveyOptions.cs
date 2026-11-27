@@ -255,7 +255,7 @@ public sealed record LateralOptions
 public sealed record CoverageOptions
 {
     /// <summary>Fraction of the significant wall (or void) that must be visible; reaching it stops adding laterals.</summary>
-    public double Target { get; init; } = 0.85;
+    public double Target { get; init; } = 0.9;
 
     public CoverageMeasure Measure { get; init; } = CoverageMeasure.WallArea;
 
