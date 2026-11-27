@@ -2685,9 +2685,9 @@ This cannot be undone.</value></data>
   <data name="MeshSurvey_Progress_Start" xml:space="preserve"><value>starting…</value></data>
   <data name="MeshSurvey_Progress_Stage" xml:space="preserve"><value>{0}: {1:0} %</value></data>
   <data name="MeshSurvey_Progress_Done" xml:space="preserve"><value>done</value></data>
-  <data name="MeshSurvey_Progress_Cancelled" xml:space="preserve"><value>cancelled</value></data>
+  <data name="MeshSurvey_Progress_Cancelled" xml:space="preserve"><value>canceled</value></data>
   <data name="MeshSurvey_Progress_Rejected" xml:space="preserve"><value>the guide was rejected</value></data>
-  <data name="MeshSurvey_Stage_void" xml:space="preserve"><value>building the void</value></data>
+  <data name="MeshSurvey_Stage_void" xml:space="preserve"><value>finding the void</value></data>
   <data name="MeshSurvey_Stage_skeleton" xml:space="preserve"><value>skeleton</value></data>
   <data name="MeshSurvey_Stage_chambers" xml:space="preserve"><value>chambers</value></data>
   <data name="MeshSurvey_Stage_plan" xml:space="preserve"><value>planning stations and legs</value></data>
@@ -2702,9 +2702,9 @@ This cannot be undone.</value></data>
   <data name="MeshSurvey_Report_Problems" xml:space="preserve"><value>Blocked legs: {0}, tight legs: {1}, places where settings were relaxed: {2}</value></data>
   <data name="MeshSurvey_Report_Guide" xml:space="preserve"><value>Guide legs kept: {0} of {1}</value></data>
   <data name="MeshSurvey_Units_Auto" xml:space="preserve"><value>Automatic</value></data>
-  <data name="MeshSurvey_Units_Metres" xml:space="preserve"><value>Metres (m)</value></data>
-  <data name="MeshSurvey_Units_Centimetres" xml:space="preserve"><value>Centimetres (cm)</value></data>
-  <data name="MeshSurvey_Units_Millimetres" xml:space="preserve"><value>Millimetres (mm)</value></data>
+  <data name="MeshSurvey_Units_Metres" xml:space="preserve"><value>Meters (m)</value></data>
+  <data name="MeshSurvey_Units_Centimetres" xml:space="preserve"><value>Centimeters (cm)</value></data>
+  <data name="MeshSurvey_Units_Millimetres" xml:space="preserve"><value>Millimeters (mm)</value></data>
   <data name="MeshSurvey_Units_Feet" xml:space="preserve"><value>Feet (ft)</value></data>
   <data name="MeshSurvey_UpAxis_Auto" xml:space="preserve"><value>Automatic</value></data>
   <data name="MeshSurvey_UpAxis_Z" xml:space="preserve"><value>Z up</value></data>
@@ -2718,8 +2718,8 @@ This cannot be undone.</value></data>
   <data name="MeshSurvey_Anchor_Ceiling" xml:space="preserve"><value>On the roof</value></data>
   <data name="MeshSurvey_Anchor_Wall" xml:space="preserve"><value>On the wall</value></data>
   <data name="MeshSurvey_Depth_Mainline" xml:space="preserve"><value>Mainline only</value></data>
-  <data name="MeshSurvey_Depth_One" xml:space="preserve"><value>1 level</value></data>
-  <data name="MeshSurvey_Depth_Two" xml:space="preserve"><value>2 levels</value></data>
+  <data name="MeshSurvey_Depth_OneLevel" xml:space="preserve"><value>1 level</value></data>
+  <data name="MeshSurvey_Depth_TwoLevels" xml:space="preserve"><value>2 levels</value></data>
   <data name="MeshSurvey_Depth_Unlimited" xml:space="preserve"><value>Unlimited</value></data>
   <data name="MeshSurvey_Loops_Close" xml:space="preserve"><value>Close loops</value></data>
   <data name="MeshSurvey_Loops_IfCheap" xml:space="preserve"><value>Close loops if cheap</value></data>

@@ -154,7 +154,7 @@ public sealed partial class MeshSurveyViewModel
             LegClearance = Num(o.Legs.Clearance);
             AnchorMode = o.Anchor.Mode;
             FloorOffset = Num(o.Anchor.FloorOffset);
-            LateralDepth = o.Laterals.MaxDepth switch { 0 => LateralDepthChoice.Mainline, 1 => LateralDepthChoice.One, 2 => LateralDepthChoice.Two, _ => LateralDepthChoice.Unlimited };
+            LateralDepth = o.Laterals.MaxDepth switch { 0 => LateralDepthChoice.Mainline, 1 => LateralDepthChoice.OneLevel, 2 => LateralDepthChoice.TwoLevels, _ => LateralDepthChoice.Unlimited };
             LateralMinLength = Num(o.Laterals.MinLength);
             LateralMinWidth = Num(o.Laterals.MinWidth);
             LateralMaxCount = o.Laterals.MaxCount is { } mc ? mc.ToString(CultureInfo.InvariantCulture) : "";
@@ -247,7 +247,7 @@ public sealed partial class MeshSurveyViewModel
             Skeleton = o.Skeleton with { ChamberPolicy = ChamberPolicy },
             Laterals = o.Laterals with
             {
-                MaxDepth = LateralDepth switch { LateralDepthChoice.Mainline => 0, LateralDepthChoice.One => 1, LateralDepthChoice.Two => 2, _ => null },
+                MaxDepth = LateralDepth switch { LateralDepthChoice.Mainline => 0, LateralDepthChoice.OneLevel => 1, LateralDepthChoice.TwoLevels => 2, _ => null },
                 MinLength = D(LateralMinLength, "MeshSurvey_Laterals_MinLength", o.Laterals.MinLength),
                 MinWidth = D(LateralMinWidth, "MeshSurvey_Laterals_MinWidth", o.Laterals.MinWidth),
                 MaxCount = IOpt(LateralMaxCount, "MeshSurvey_Laterals_MaxCount"),

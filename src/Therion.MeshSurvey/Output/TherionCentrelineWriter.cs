@@ -212,7 +212,7 @@ public static class TherionCentrelineWriter
         {
             sb.Append(i2).Append("declination 0 degrees\n");
         }
-        if (fixHere)
+        if (fixHere && survey.StartStation < survey.Stations.Count)
         {
             var start = survey.Stations[survey.StartStation];
             sb.Append(i2).Append("fix ").Append(start.Name).Append(' ').Append(F(start.Position.X, 3)).Append(' ')

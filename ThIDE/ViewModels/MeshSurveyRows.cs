@@ -20,7 +20,7 @@ public sealed record Choice<T>(T Value, string Label)
 }
 
 /// <summary>How deep the laterals go; the four choices of the depth combo box.</summary>
-public enum LateralDepthChoice { Mainline, One, Two, Unlimited }
+public enum LateralDepthChoice { Mainline, OneLevel, TwoLevels, Unlimited }
 
 public static class MeshSurveyChoices
 {

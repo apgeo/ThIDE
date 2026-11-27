@@ -180,6 +180,23 @@ public class RobustnessTests
     }
 
     [Fact]
+    public void An_empty_model_or_one_with_no_inside_says_so()
+    {
+        var empty = MeshSurveySession.Open(new RawModel(CaveMesh.Empty, null, false, true, "empty"), Options.Input);
+        Assert.Throws<InvalidOperationException>(() => empty.Prepare(Options));
+        // A single flat square: a surface, but nothing enclosed.
+        var sheet = new CaveMesh
+        {
+            Vertices = [new(0, 0, 0), new(10, 0, 0), new(10, 10, 0), new(0, 10, 0)],
+            Triangles = [new CaveTriangle(0, 1, 2), new CaveTriangle(0, 2, 3)],
+        };
+        var flat = MeshSurveySession.Open(new RawModel(sheet, null, false, true, "sheet"), Options.Input);
+        var prepared = flat.Prepare(Options);
+        var ex = Assert.Throws<InvalidOperationException>(() => flat.Plan(prepared, Options));
+        Assert.Contains("No enclosed space", ex.Message);
+    }
+
+    [Fact]
     public void The_library_needs_only_the_model_and_geometry_libraries_and_starts_no_process()
     {
         var assembly = typeof(MeshSurveySession).Assembly;

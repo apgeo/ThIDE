@@ -39,6 +39,8 @@ public sealed partial class MeshSurveySession
         guide ??= SurveyGuide.None;
         var issues = options.Validate();
         if (issues.Count > 0) throw new ArgumentException(string.Join(" ", issues), nameof(options));
+        if (Model.Mesh is { } mesh ? mesh.Triangles.Count == 0 : (Model.Points?.Count ?? 0) < 10)
+            throw new InvalidOperationException("The model has no surface to work on (no triangles, or almost no points).");
         var points = GuidePointsInternal(guide);
         string key = PrepareKey(options, points);
         if (_cached is { } c && c.Key == key) return c;
@@ -60,6 +62,9 @@ public sealed partial class MeshSurveySession
         ArgumentNullException.ThrowIfNull(options);
         guide ??= SurveyGuide.None;
         PreparedVoid = cave.Grid;
+        if (cave.Grid.Count == 0)
+            throw new InvalidOperationException("No enclosed space was found in the model: check the unit and the up axis, and for a "
+                + "point cloud give a start point inside the cave or raise void.holeClosing.");
         var sw = Stopwatch.StartNew();
         progress?.Report(new MeshSurveyProgress("plan", 0));
         string name = options.Output.SurveyName ?? Model.Name;

@@ -2718,8 +2718,8 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="MeshSurvey_Anchor_Ceiling" xml:space="preserve"><value>Pe tavan</value></data>
   <data name="MeshSurvey_Anchor_Wall" xml:space="preserve"><value>Pe perete</value></data>
   <data name="MeshSurvey_Depth_Mainline" xml:space="preserve"><value>Doar traseul principal</value></data>
-  <data name="MeshSurvey_Depth_One" xml:space="preserve"><value>1 nivel</value></data>
-  <data name="MeshSurvey_Depth_Two" xml:space="preserve"><value>2 niveluri</value></data>
+  <data name="MeshSurvey_Depth_OneLevel" xml:space="preserve"><value>1 nivel</value></data>
+  <data name="MeshSurvey_Depth_TwoLevels" xml:space="preserve"><value>2 niveluri</value></data>
   <data name="MeshSurvey_Depth_Unlimited" xml:space="preserve"><value>Nelimitat</value></data>
   <data name="MeshSurvey_Loops_Close" xml:space="preserve"><value>Închide buclele</value></data>
   <data name="MeshSurvey_Loops_IfCheap" xml:space="preserve"><value>Închide buclele dacă e ieftin</value></data>
