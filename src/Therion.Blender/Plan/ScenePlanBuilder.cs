@@ -7,7 +7,8 @@
 // planner, and so are the overlays: the title, the scale bar, the north arrow, the depth legend,
 // the credits and corner lines, the captions and the end card become the plan's texts, laid out
 // by ScreenTextPlanner and drawn in two dimensions over the rendered frames. The terrain surface
-// is a second model with a material of its own, which drapes the surface image over it. The
+// is a second model with a material of its own, which drapes the surface image over it and may
+// open a cut-away over the cave (CutawayPlanner), with a change that opens it. The
 // visibility events of the labels become the plan's changes: each group is shown and hidden on
 // the frames the generated scripts show and hide it on, and where a script grows a group in, the
 // plan fades it in over the same frames. The events of the overlays become the times of the
@@ -110,7 +111,9 @@ public static class ScenePlanBuilder
         var labels = meta is null ? null : Labels(spec, meta, near);
         var texts = OverlayEvents(ScreenTextPlanner.Plan(spec, camera), spec, camera.FrameCount);
         var changes = Changes(spec, labels, camera.FrameCount);
-        var terrain = Terrain(spec);
+        var terrain = Terrain(spec, framing);
+        // The terrain's cut-away opens while the clip runs.
+        if (terrain is not null && CutawayPlanner.Change(spec, TerrainId) is { } opening) changes = [.. changes ?? [], opening];
         var timeline = new PlanTimeline { Fps = spec.Animation.Fps, FrameCount = camera.FrameCount };
         var walls = Walls(spec, near);
         var annotations = AnnotationPlanner.Plan(spec.Annotations, meta, framing.LocalBounds, planCamera, timeline);
@@ -378,6 +381,9 @@ public static class ScenePlanBuilder
                 notices.Add("The model has no terrain surface; rendering without one.");
             else if (spec.Surface.Mode == SurfaceMode.Textured && string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath))
                 notices.Add("The model has no surface image; drawing the terrain in one colour.");
+            if (!string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath) && framing is not null
+                && spec.Surface.Cutaway is { Shape: CutawayShape.Footprint } && !CutawayPlanner.HasFootprint(framing))
+                notices.Add("The model has no centreline; the terrain's cut-away is a circle round the cave.");
         }
         var near = framing is not null && IsInside(spec)
             ? NearPath.OfCamera(Camera(CameraPlanner.PlanPoses(spec, framing), spec.Animation.Fps))
@@ -432,9 +438,10 @@ public static class ScenePlanBuilder
 
     /// <summary>The terrain's material, as the generated scripts make it: see-through from above
     /// by the spec's opacity, not there from below, and casting no shadow, with the surface image
-    /// on it when the spec asks for one and the model has one. Null when the spec draws no
-    /// terrain or the model has none.</summary>
-    private static PlanTexturedMaterial? Terrain(SceneSpec spec)
+    /// on it when the spec asks for one and the model has one; and with its cut-away over the
+    /// cave (<see cref="CutawayPlanner"/>), which only the player draws. Null when the spec draws
+    /// no terrain or the model has none.</summary>
+    private static PlanTexturedMaterial? Terrain(SceneSpec spec, CameraFraming framing)
     {
         if (spec.Surface.Mode == SurfaceMode.Off || string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath)) return null;
         bool textured = spec.Surface.Mode == SurfaceMode.Textured && !string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath);
@@ -447,6 +454,7 @@ public static class ScenePlanBuilder
             Opacity = Rounded(spec.Surface.Opacity),
             BackOpacity = 0,
             Shadow = false,
+            Cutaway = CutawayPlanner.Plan(spec, framing),
         };
     }
 

@@ -47,6 +47,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         nameof(DurationSeconds), nameof(OutputKind), nameof(Container), nameof(Width), nameof(Height),
         nameof(BaseName), nameof(SelfContained), nameof(EmbedMesh), nameof(ShowStationLabels), nameof(ShowLeadMarkers),
         nameof(LeadMarkerSizing), nameof(LabelRoof), nameof(SurfaceMode), nameof(SurfaceOpacity),
+        nameof(TerrainCutaway), nameof(CutawayMargin), nameof(CutawayOpenSeconds),
         nameof(Title), nameof(Credits), nameof(EndCardText), nameof(EndCardSeconds),
         nameof(Subtitle), nameof(ShowScaleBar), nameof(ShowNorthArrow), nameof(ShowDepthLegend),
         nameof(FadeFromBlack), nameof(FadeToBlack),
@@ -143,7 +144,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     [ObservableProperty] private LeadMarkerSizing _leadMarkerSizing;
     [ObservableProperty] private LabelRoofSource _labelRoof;
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSurface))]
+    [NotifyPropertyChangedFor(nameof(HasSurface), nameof(HasCutaway))]
     private SurfaceMode _surfaceMode;
 
     /// <summary>How opaque the terrain is seen from above, 0–1.</summary>
@@ -151,6 +152,26 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     /// <summary>True when a terrain is drawn: only then does its opacity matter.</summary>
     public bool HasSurface => SurfaceMode != SurfaceMode.Off;
+
+    /// <summary>The hole through the terrain over the cave; <see cref="CutawayChoice.Off"/> is none.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCutaway))]
+    private CutawayChoice _terrainCutaway;
+
+    /// <summary>How far the hole reaches past the cave, in metres.</summary>
+    [ObservableProperty] private double _cutawayMargin = new CutawaySpec().Margin;
+
+    /// <summary>How long the hole takes to open from the start of the clip, in seconds; 0 has it
+    /// open throughout.</summary>
+    [ObservableProperty] private double _cutawayOpenSeconds;
+
+    /// <summary>True when a terrain is drawn with a cut-away: only then do its margin and its
+    /// opening matter.</summary>
+    public bool HasCutaway => HasSurface && TerrainCutaway != CutawayChoice.Off;
+
+    /// <summary>What a cut-away has beside what the panel shows (its edge, its rim, when it
+    /// starts to open): kept while it is off, for when it is turned on again.</summary>
+    private CutawaySpec _cutawayKept = new();
 
     /// <summary>The title; empty is none. <see cref="TextPlaceholders.Cave"/> in it, as in the
     /// other texts, stands for the cave's name, which is filled in from the model.</summary>
@@ -512,6 +533,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     public IReadOnlyList<LeadMarkerSizing> LeadMarkerSizings { get; } = Enum.GetValues<LeadMarkerSizing>();
     public IReadOnlyList<LabelRoofSource> LabelRoofSources { get; } = Enum.GetValues<LabelRoofSource>();
     public IReadOnlyList<SurfaceMode> SurfaceModes { get; } = Enum.GetValues<SurfaceMode>();
+    public IReadOnlyList<CutawayChoice> CutawayChoices { get; } = Enum.GetValues<CutawayChoice>();
     public IReadOnlyList<SceneBuilder> Builders { get; } = Enum.GetValues<SceneBuilder>();
     public IReadOnlyList<LightingRig> LightRigs { get; } = Enum.GetValues<LightingRig>();
     public IReadOnlyList<RevealChoice> RevealChoices { get; } = Enum.GetValues<RevealChoice>();
@@ -583,7 +605,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
                 },
             },
             // A slider's steps are not exact in binary; the spec keeps whole percents.
-            Surface = _spec.Surface with { Mode = SurfaceMode, Opacity = Math.Round(SurfaceOpacity, 2) },
+            Surface = _spec.Surface with { Mode = SurfaceMode, Opacity = Math.Round(SurfaceOpacity, 2), Cutaway = CutawayFromKnobs() },
             // The image stays with the scene while another rig lights it, for when it is chosen again.
             Lighting = _spec.Lighting with
             {
@@ -597,12 +619,22 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             Annotations = _annotations,
         };
         if (_spec.Reveal is { } reveal) _revealKept = reveal;
+        if (_spec.Surface.Cutaway is { } cut) _cutawayKept = cut;
         WriteSettingsToShot();
         Revalidate();
     }
 
     /// <summary>The reveal the knobs say, or none: what the panel does not show of it (the
     /// color of its glow, the counter of the years) is kept as it was.</summary>
+    private CutawaySpec? CutawayFromKnobs() => TerrainCutaway == CutawayChoice.Off
+        ? null
+        : (_spec.Surface.Cutaway ?? _cutawayKept) with
+        {
+            Shape = TerrainCutaway == CutawayChoice.Circle ? CutawayShape.Circle : CutawayShape.Footprint,
+            Margin = CutawayMargin,
+            OpenSeconds = CutawayOpenSeconds,
+        };
+
     private RevealSpec? RevealFromKnobs()
     {
         if (RevealMode == RevealChoice.Off) return null;
@@ -651,6 +683,15 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         LabelRoof = spec.Labels.Roof;
         SurfaceMode = spec.Surface.Mode;
         SurfaceOpacity = spec.Surface.Opacity;
+        _cutawayKept = spec.Surface.Cutaway ?? new CutawaySpec();
+        TerrainCutaway = spec.Surface.Cutaway?.Shape switch
+        {
+            null => CutawayChoice.Off,
+            CutawayShape.Circle => CutawayChoice.Circle,
+            _ => CutawayChoice.Footprint,
+        };
+        CutawayMargin = _cutawayKept.Margin;
+        CutawayOpenSeconds = _cutawayKept.OpenSeconds;
         Title = spec.Labels.Overlays.Title ?? "";
         Credits = spec.Labels.Overlays.Credits ?? "";
         Captions.Clear();
@@ -1186,6 +1227,14 @@ public sealed partial class CaptionRowViewModel : ObservableObject
         StripStart = timed ? Math.Clamp(Start / stripSeconds, 0, 1) : 0;
         StripEnd = timed ? Math.Clamp(End / stripSeconds, 0, 1) : 0;
     }
+}
+
+/// <summary>The terrain cut-away the panel offers: none, or a <see cref="CutawayShape"/>.</summary>
+public enum CutawayChoice
+{
+    Off,
+    Footprint,
+    Circle,
 }
 
 /// <summary>What the panel reveals a cave by; <see cref="Off"/> is no reveal.</summary>

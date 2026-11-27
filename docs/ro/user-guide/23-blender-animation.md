@@ -65,6 +65,8 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
      terenului**, alături, alege cât din peșteră se vede prin el de sus: la 0 % terenul nu se
      vede, la 100 % ascunde peștera de sub el; implicit 40 %. O grilă foarte mare e rărită la cel
      mult 512 × 512 puncte.
+     **Decupaj în teren** deschide terenul deasupra peșterii, ca peștera să se vadă dedesubt:
+     vedeți [Deschiderea terenului deasupra peșterii](#deschiderea-terenului-deasupra-peșterii).
    - **Lumină** — *sistemul de lumini*: o lampă frontală pe cameră, un soare și un cer, trei
      lumini de studio sau o imagine de jur împrejurul scenei (*HdriFile*), cu **intensitatea** ei.
      Vedeți [Iluminarea cu o imagine (HDRI)](#iluminarea-cu-o-imagine-hdri).
@@ -105,7 +107,8 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
    umbre), o fracțiune de secundă pe cadru acolo unde randarea adevărată poate dura un minut.
    Folosiți-o pentru a verifica mișcarea camerei, încadrarea și textele înainte de randarea lungă.
    Schița se salvează lângă randare, cu `-draft` adăugat la nume. Un teren transparent nu apare
-   într-o schiță, iar schița semnalează acest lucru.
+   într-o schiță, iar schița semnalează acest lucru; la un teren opac cu decupaj, golul e tăiat
+   pe fețele terenului, fără marginea estompată și fără bordură.
 
 5. **Randați.** Progresul arată etapa și, cât timp randează Blender, numărul de cadre (sau un
    indicator rotativ pentru etapele fără procentaj). Randările lungi sunt normale; **Renunță**
@@ -452,6 +455,48 @@ therion-cli blender cave.lox --hdri skies/evening.hdr --hdri-rotation 90 --hdri-
   că un pachet se randează pe alt calculator fără el.
 - O previzualizare nu desenează nicio imagine: fundalul ei este un gri simplu, la fel de puternic
   cum este setată imaginea.
+
+## Deschiderea terenului deasupra peșterii
+
+Când terenul e desenat, el poate fi **deschis deasupra peșterii**, astfel încât un film văzut de
+sus arată suprafața și, printr-un gol în ea, peștera de dedesubt. Alegeți forma în **Decupaj în
+teren**:
+
+- *Off* (implicit): fără gol.
+- *Footprint*: conturul peșterii văzut de sus — orice loc aflat la cel mult **Marginea
+  decupajului** de poligonală. Terenul din jurul peșterii rămâne, iar golul urmează fiecare
+  galerie.
+- *Circle*: un gol rotund care cuprinde toată peștera, plus marginea.
+
+**Marginea decupajului (metri)** spune cât de departe trece golul de peșteră (implicit 15 m): de la
+poligonală pentru *Footprint*, deci alegeți-o mai mare decât cea mai largă galerie; dincolo de
+peșteră pentru *Circle*. **Deschiderea decupajului (secunde)** face ca golul să se deschidă în timpul
+clipului, crescând dinspre peșteră în afară, în atâtea secunde de la început; la 0 e deschis din
+primul cadru.
+
+Golul are o **margine estompată** (implicit 4 m) și o **bordură mai întunecată** pe teren în jurul
+lui, ca deschiderea să se citească drept o tăietură, nu drept o pată. Terenul în sine nu se
+schimbă: materialul lui lasă peștera să se vadă, la fel în Cycles și în EEVEE. Arată cel mai bine
+cu **Opacitatea terenului** la 100 %: terenul ascunde atunci totul în afară de ce arată golul. O
+peșteră fără poligonală primește un cerc, iar randarea o spune. O previzualizare taie golul pe
+fețele terenului, fără marginea estompată și fără bordură.
+
+Într-o specificație de randare sau într-un storyboard, decupajul este `surface.cutaway`:
+
+```json
+"surface": {
+  "mode": "Textured", "opacity": 1,
+  "cutaway": { "shape": "Footprint", "margin": 20, "edge": 4, "rim": 0.6, "openAt": 2, "openSeconds": 3 }
+}
+```
+
+`shape` este `Footprint` sau `Circle`; `margin` și `edge` sunt în metri; `rim` spune cât de
+întunecată e bordura, de la 0 (fără) la 1; `openAt` e momentul în care golul începe să se
+deschidă, iar `openSeconds` cât durează (ambele implicit 0: deschis tot timpul; doar `openAt` îl
+deschide dintr-odată în acel moment). Într-un storyboard suprafața e una pentru tot filmul
+(`defaults.surface`), iar fiecare cadru deschide golul din nou, în timpul lui. Decupajul îl
+desenează doar playerul: generatorul de scripturi (**Constructor de scenă** *Generator*) desenează
+terenul fără el.
 
 ## O peșteră privită de departe: bătaia lămpii
 
