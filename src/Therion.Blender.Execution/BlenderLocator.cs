@@ -33,7 +33,7 @@ public sealed class BlenderLocator
     private readonly System.Collections.Concurrent.ConcurrentDictionary<(string Path, DateTime WrittenUtc), (BlenderVersion? Version, DateTime ProbedUtc)> _cache = new();
 
     /// <summary>How long a probe that found no version is believed.</summary>
-    internal static readonly TimeSpan FailedProbeKept = TimeSpan.FromMinutes(1);
+    internal TimeSpan FailedProbeKept { get; set; } = TimeSpan.FromMinutes(1);
 
     /// <param name="probe">Version prober (real runs the exe; fake for tests).</param>
     /// <param name="candidateProvider">Conventional candidate paths; defaults to the per-OS
