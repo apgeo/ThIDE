@@ -90,7 +90,8 @@ public class PresetStoreTests : IDisposable
     }
 
     [Theory]
-    [InlineData("Peștera de Aur", "pe-tera-de-aur")]
+    [InlineData("Peștera de Aur", "pestera-de-aur")]   // a letter keeps its base letter
+    [InlineData("Țânțar ăî", "tantar-ai")]
     [InlineData("  Orbit / Showcase!  ", "orbit-showcase")]
     [InlineData("***", "preset")]
     public void Slug_IsFilesystemSafe(string name, string expected)
@@ -99,12 +100,15 @@ public class PresetStoreTests : IDisposable
     }
 
     [Fact]
-    public void NamesWithSameSlug_ShareAFile_LastWins()
+    public void NamesWithSameSlug_AreKeptApart_AndTheSameNameReplacesItsOwn()
     {
-        // Distinct display names that slug identically collapse to one file (documented).
+        // Distinct names that slug identically get a file each; saving a name again replaces its own.
         var store = new PresetStore(_dir);
         store.Save(Preset("Cave A"));
         store.Save(Preset("cave  a"));
-        Assert.Single(store.Load());
+        store.Save(Preset("cave  a"));
+        Assert.Equal(["Cave A", "cave  a"], store.Load().Select(p => p.Name));
+        Assert.True(store.Exists("cave  a"));
+        Assert.False(store.Exists("CAVE A"));
     }
 }

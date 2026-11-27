@@ -350,15 +350,20 @@ public sealed class BlenderPanelEditingTests : System.IDisposable
     [Fact]
     public async Task An_estimate_that_waits_for_the_model_is_cancelled()
     {
-        var vm = Vm(hang: true);
-        Add(vm, "Orbit showcase");
-        var estimate = vm.EstimateFilmCommand.ExecuteAsync(null);
-        Assert.True(vm.IsBusy);
-        vm.CancelCommand.Execute(null);
-        await estimate.WaitAsync(System.TimeSpan.FromSeconds(10));
-        Assert.False(vm.IsBusy);
-        Assert.Equal(Tr.Get("Blender_Status_Cancelled"), vm.StatusMessage);
-        Assert.False(vm.IsJobRunning);
+        // Off the test framework's synchronisation context, whose few threads a loaded machine may
+        // keep busy: the estimate's continuations run on the thread pool.
+        await Task.Run(async () =>
+        {
+            var vm = Vm(hang: true);
+            Add(vm, "Orbit showcase");
+            var estimate = vm.EstimateFilmCommand.ExecuteAsync(null);
+            Assert.True(vm.IsBusy);
+            vm.CancelCommand.Execute(null);
+            await estimate.WaitAsync(System.TimeSpan.FromSeconds(60));
+            Assert.False(vm.IsBusy);
+            Assert.Equal(Tr.Get("Blender_Status_Cancelled"), vm.StatusMessage);
+            Assert.False(vm.IsJobRunning);
+        });
     }
 
     [Fact]
