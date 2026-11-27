@@ -183,7 +183,7 @@ public class BlenderRevealVerbTests : IDisposable
         Assert.InRange(keys[1].Value, 16, 17.5);
 
         string folder = Path.Combine(_dir, "exported");
-        (code, _, stderr) = await Run("blender", _lox, "--export", folder, "--reveal", "distance");
+        (code, _, stderr) = await Run("blender", _lox, "--export", folder, "--builder", "generator", "--reveal", "distance");
         Assert.True(code == 0, stderr);
         Assert.Contains("warning: the exported script does not show reveal", stderr);
     }

@@ -31,7 +31,7 @@ public static class RenderWorkerVerb
         }
         if (!Shared(args, stderr, out var limits, out var maxTime, out var modules)) return 2;
         var poll = TimeSpan.FromSeconds(5);
-        if (Number(args, "--poll", stderr, out double? seconds) is false) return 2;
+        if (!Poll(args, stderr, out double? seconds)) return 2;
         if (seconds is { } s) poll = TimeSpan.FromSeconds(s);
 
         var options = new RenderWorkerOptions
@@ -48,7 +48,7 @@ public static class RenderWorkerVerb
         var worker = new RenderWorker(
             new BlenderLocator(new ProcessBlenderProbe()), new BlenderRunner(new RealBlenderProcessLauncher()), options,
             () => blender, line => stderr.WriteLine(line));
-        bool once = args.Contains("--once");
+        bool once = args.Contains("--once", StringComparer.OrdinalIgnoreCase);
         stderr.WriteLine($"render worker: {options.Inbox} -> {options.Outbox}{(once ? " (until the inbox is empty)" : "")}");
         int taken = await worker.RunAsync(once, ct).ConfigureAwait(false);
         stdout.WriteLine($"{taken} job(s)");
@@ -61,11 +61,11 @@ public static class RenderWorkerVerb
         limits = new RenderBundleLimits();
         maxTime = TimeSpan.FromHours(72);
         modules = [];
-        if (Number(args, "--max-hours", stderr, out double? hours) is false) return false;
+        if (Number(args, "--max-hours", stderr, out double? hours, MaxHours) is false) return false;
         if (hours is { } h) maxTime = TimeSpan.FromHours(h);
-        if (Number(args, "--max-triangles", stderr, out double? triangles) is false) return false;
+        if (Number(args, "--max-triangles", stderr, out double? triangles, MaxTriangles) is false) return false;
         if (triangles is { } t) limits = limits with { MaxTriangles = (long)t };
-        if (Number(args, "--max-bundle-gb", stderr, out double? gb) is false) return false;
+        if (Number(args, "--max-bundle-gb", stderr, out double? gb, MaxBundleGb) is false) return false;
         if (gb is { } g) limits = limits with { MaxZipBytes = (long)(g * 1024 * 1024 * 1024) };
         for (int i = 1; i < args.Count - 1; i++)
             if (args[i] == "--modules") modules.Add(Path.GetFullPath(args[i + 1]));
@@ -93,7 +93,7 @@ public static class RenderWorkerVerb
             return 2;
         }
         if (!Shared(args, stderr, out var limits, out var maxTime, out var modules)) return 2;
-        if (Number(args, "--poll-seconds", stderr, out double? seconds) is false) return 2;
+        if (!Poll(args, stderr, out double? seconds)) return 2;
         var options = new RenderNodeOptions
         {
             Server = url,
@@ -110,28 +110,47 @@ public static class RenderWorkerVerb
         using var worker = new RenderNodeWorker(
             new BlenderLocator(new ProcessBlenderProbe()), new BlenderRunner(new RealBlenderProcessLauncher()), options,
             () => blender, line => stderr.WriteLine(line));
-        var run = await worker.RunAsync(args.Contains("--once"), ct).ConfigureAwait(false);
+        var run = await worker.RunAsync(args.Contains("--once", StringComparer.OrdinalIgnoreCase), ct).ConfigureAwait(false);
         stdout.WriteLine($"{run.Jobs} job(s)");
         return run.Unauthorized ? 3 : 0;
     }
 
-    private static bool? Number(IReadOnlyList<string> args, string name, TextWriter stderr, out double? value)
+    // The most each number may be: a time a TimeSpan holds, a count a long holds, with room to spare.
+    private const double MaxHours = 24 * 365 * 100, MaxTriangles = 1e15, MaxBundleGb = 1e6, MaxPollSeconds = 24 * 3600;
+
+    /// <summary>How often to look for work, in seconds: <c>--poll</c> or <c>--poll-seconds</c>,
+    /// whichever mode it is (both spellings once meant one mode each).</summary>
+    private static bool Poll(IReadOnlyList<string> args, TextWriter stderr, out double? seconds)
+    {
+        seconds = null;
+        if (Option(args, "--poll") is not null && Option(args, "--poll-seconds") is not null)
+        {
+            stderr.WriteLine("error: --poll and --poll-seconds are one option: give it once.");
+            return false;
+        }
+        string name = Option(args, "--poll") is not null ? "--poll" : "--poll-seconds";
+        return Number(args, name, stderr, out seconds, MaxPollSeconds) is not false;
+    }
+
+    private static bool? Number(IReadOnlyList<string> args, string name, TextWriter stderr, out double? value, double most)
     {
         value = null;
         if (Option(args, name) is not { } text) return null;
-        if (double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v) && v > 0)
+        if (double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v)
+            && v > 0 && v <= most)
         {
             value = v;
             return true;
         }
-        stderr.WriteLine($"error: {name} takes a number above 0, not '{text}'.");
+        stderr.WriteLine($"error: {name} takes a number above 0 and at most {most.ToString(System.Globalization.CultureInfo.InvariantCulture)}, not '{text}'.");
         return false;
     }
 
+    // In any case, as the blender verb's options are.
     private static string? Option(IReadOnlyList<string> args, string name)
     {
         for (int i = 1; i < args.Count - 1; i++)
-            if (string.Equals(args[i], name, StringComparison.Ordinal))
+            if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
                 return args[i + 1];
         return null;
     }

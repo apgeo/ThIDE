@@ -302,18 +302,45 @@ public class BlenderBundleVerbTests : IDisposable
     }
 
     [Fact]
-    public async Task AnExportedScript_IsTheGenerators_AndSaysItLeavesAnnotationsOut()
+    public async Task TheGeneratorsExportedScript_SaysItLeavesAnnotationsOut()
     {
         string folder = Path.Combine(_dir, "exported");
         string file = Annotations("""[{ "kind": "marker", "station": "main0" }]""");
 
-        var (code, stdout, stderr) = await Run("blender", _lox, "--export", folder, "--annotations", file, "--caption", "1-2:Sala Mare");
+        var (code, stdout, stderr) = await Run("blender", _lox, "--export", folder, "--builder", "generator", "--annotations", file, "--caption", "1-2:Sala Mare");
 
         Assert.True(code == 0, stderr);
         Assert.Equal(Path.Combine(folder, "render.py"), stdout.Trim());
         Assert.Contains("warning: the exported script does not show labels.overlays.captions, annotations", stderr);
         // Without anything only the player draws, an export says nothing of the kind.
-        Assert.DoesNotContain("warning", (await Run("blender", _lox, "--export", folder)).Err);
+        Assert.DoesNotContain("warning", (await Run("blender", _lox, "--export", folder, "--builder", "generator")).Err);
+    }
+
+    [Fact]
+    public async Task AnExport_IsWhatThePanelExports_ThePlayersFolder_OrOneScript()
+    {
+        string file = Annotations("""[{ "kind": "marker", "station": "main0" }]""");
+
+        // The player's folder, which draws the annotations and the captions.
+        string folder = Path.Combine(_dir, "player");
+        var (code, stdout, stderr) = await Run("blender", _lox, "--export", folder, "--annotations", file, "--caption", "1-2:Sala Mare", "--readme-language", "ro");
+        Assert.True(code == 0, stderr);
+        Assert.DoesNotContain("does not show", stderr);
+        Assert.True(File.Exists(Path.Combine(folder, "scene-plan.json")));
+        Assert.True(File.Exists(stdout.Trim()), stdout);
+        Assert.Contains("the player's folder", stderr);
+
+        // One script that carries all of it.
+        string one = Path.Combine(_dir, "one");
+        (code, stdout, stderr) = await Run("blender", _lox, "--export", one, "--one-file");
+        Assert.True(code == 0, stderr);
+        Assert.Equal(Path.Combine(one, "render.py"), stdout.Trim());
+        Assert.Equal(["render.py"], Directory.GetFiles(one).Select(Path.GetFileName));
+
+        // --one-file is an export's.
+        (code, _, stderr) = await Run("blender", _lox, "--bundle", Path.Combine(_dir, "x.zip"), "--one-file");
+        Assert.Equal(2, code);
+        Assert.Contains("--one-file", stderr);
     }
 
     [Fact]
@@ -349,7 +376,7 @@ public class BlenderBundleVerbTests : IDisposable
         Assert.Equal(2, code);
         Assert.Contains("go with a render", stderr);
         Assert.Equal(2, (await Run("blender", _lox, "--export", Path.Combine(_dir, "x"), flag)).Code);
-        Assert.Equal(2, (await Run("blender", _lox, "--export", Path.Combine(_dir, "x"), "--builder", "player")).Code);
+        Assert.Equal(2, (await Run("blender", _lox, "--bundle", Path.Combine(_dir, "x.zip"), "--builder", "player")).Code);
         Assert.Equal(2, (await Run("blender", _lox, "--export", Path.Combine(_dir, "x"), "--draft")).Code);
         Assert.False(File.Exists(Path.Combine(_dir, "x.zip")));
         Assert.False(Directory.Exists(Path.Combine(_dir, "x")));

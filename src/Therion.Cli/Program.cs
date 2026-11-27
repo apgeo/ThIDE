@@ -66,7 +66,7 @@ static void PrintHelp()
     Console.WriteLine("  therion-cli gis <file|thconfig> [--format kml|geojson|gpx|csv] [--out <path>]");
     Console.WriteLine("  therion-cli structural <file.th> [--keyword geo] [--declination <deg>|survey] [--format table|csv]");
     Console.WriteLine("                                         Fit geological planes (strike/dip) from 'geo' shots.");
-    Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] [--out <dir>] [--export <dir>] [--blender <path>]");
+    Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] [--out <dir>] [--export <dir> [--one-file]] [--blender <path>]");
     Console.WriteLine("                     [--draft] [--builder auto|player|generator] [--keep-frames] [--compose-only] [--frames <dir>]");
     Console.WriteLine("                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] [--caption \"<start>-<end>:<text>\"]…");
     Console.WriteLine("                     [--annotations <file.json>]… [--reveal date|order|distance [--reveal-from <station>] [--reveal-dates <file.3d>]");
@@ -76,6 +76,10 @@ static void PrintHelp()
     Console.WriteLine("                                         preview instead. A render with texts over the picture takes two stages: its frames, then the");
     Console.WriteLine("                                         movie; run again after it was stopped, it goes on. --compose-only writes the movie again from");
     Console.WriteLine("                                         the frames (kept with --keep-frames) after a text changed.");
+    Console.WriteLine("                                         --export writes the scene a render shows for Blender to render elsewhere, as the panel's");
+    Console.WriteLine("                                         Export script… does: the player's folder (scene plan, player, meshes, run scripts), or one");
+    Console.WriteLine("                                         render.py that carries it all with --one-file; --builder generator writes the script");
+    Console.WriteLine("                                         generator's render.py with its mesh instead.");
     Console.WriteLine("                                         --annotations adds labels, callouts, markers and photos from a JSON list, each at a station");
     Console.WriteLine("                                         or a point, for a time or while the camera is near; it goes with --bundle too.");
     Console.WriteLine("                                         --reveal shows the cave part by part while the clip runs: by the dates of its survey (with a");
